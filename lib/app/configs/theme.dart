@@ -27,11 +27,20 @@ class AppTheme {
 
   static final ThemeData lightTheme = ThemeData(
     primaryColor: AppColors.primaryColor,
-    backgroundColor: AppColors.whiteColor,
     scaffoldBackgroundColor: AppColors.whiteColor,
     navigationBarTheme: const NavigationBarThemeData(
-      // indicatorColor: AppColors.backgroundColor,
       indicatorColor: AppColors.whiteColor,
+    ),
+    colorScheme: const ColorScheme(
+      primary: AppColors.primaryColor,
+      secondary: AppColors.primaryColor,
+      surface: AppColors.whiteColor,
+      error: Colors.red,
+      onPrimary: AppColors.whiteColor,
+      onSecondary: AppColors.whiteColor,
+      onSurface: AppColors.blackTextColor,
+      onError: Colors.white,
+      brightness: Brightness.light,
     ),
   );
 }

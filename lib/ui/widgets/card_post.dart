@@ -13,7 +13,7 @@ import 'clip_status_bar.dart';
 class CardPost extends StatelessWidget {
   final PostModel post;
 
-  const CardPost({required this.post, Key? key}) : super(key: key);
+  const CardPost({required this.post, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -124,7 +124,7 @@ class CardPost extends StatelessWidget {
                   strokeWidth: 1.2,
                   value: loadingProgress.expectedTotalBytes != null
                       ? loadingProgress.cumulativeBytesLoaded /
-                      loadingProgress.expectedTotalBytes!
+                          loadingProgress.expectedTotalBytes!
                       : null,
                 ),
               ),
@@ -191,31 +191,31 @@ class CardPost extends StatelessWidget {
     );
   }
 
-  _itemStatus(String icon, String text, BuildContext context) => [
-    GestureDetector(
-      onTap: icon == "assets/images/ic_message.png"
-          ? () => customBottomSheetComments(context)
-          : () {},
-      child: Container(
-        height: 40,
-        width: 40,
-        decoration: BoxDecoration(
-          color: AppColors.whiteColor.withOpacity(0.5),
-          borderRadius: BorderRadius.circular(30),
-          image: DecorationImage(
-            scale: 2.3,
-            image: AssetImage(icon),
+  List<Widget> _itemStatus(String icon, String text, BuildContext context) => [
+        GestureDetector(
+          onTap: icon == "assets/images/ic_message.png"
+              ? () => customBottomSheetComments(context)
+              : () {},
+          child: Container(
+            height: 40,
+            width: 40,
+            decoration: BoxDecoration(
+              color: AppColors.whiteColor.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(30),
+              image: DecorationImage(
+                scale: 2.3,
+                image: AssetImage(icon),
+              ),
+            ),
           ),
         ),
-      ),
-    ),
-    const SizedBox(height: 4),
-    Text(
-      text,
-      style: AppTheme.whiteTextStyle.copyWith(
-        fontSize: 12,
-        fontWeight: AppTheme.regular,
-      ),
-    ),
-  ];
+        const SizedBox(height: 4),
+        Text(
+          text,
+          style: AppTheme.whiteTextStyle.copyWith(
+            fontSize: 12,
+            fontWeight: AppTheme.regular,
+          ),
+        ),
+      ];
 }

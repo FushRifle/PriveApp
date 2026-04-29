@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:social_media_app/app/configs/colors.dart';
 import 'package:social_media_app/app/configs/theme.dart';
+import 'package:social_media_app/app/resources/constant/named_routes.dart';
 import 'package:social_media_app/ui/bloc/post_cubit.dart';
 import 'package:social_media_app/ui/widgets/card_post.dart';
 import 'package:social_media_app/ui/widgets/clip_status_bar.dart';
@@ -10,7 +11,7 @@ import 'package:social_media_app/ui/widgets/clip_status_bar.dart';
 import '../widgets/custom_app_bar.dart';
 
 class HomePage extends StatelessWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -42,8 +43,12 @@ class HomePage extends StatelessWidget {
                           return Column(
                             children: state.posts
                                 .map((post) => GestureDetector(
-                              child: CardPost(post: post),
-                            ))
+                                      onTap: () {
+                                        // Add navigation to post detail
+                                        // TODO: Navigate to post detail
+                                      },
+                                      child: CardPost(post: post),
+                                    ))
                                 .toList(),
                           );
                         } else {
@@ -62,28 +67,34 @@ class HomePage extends StatelessWidget {
             bottom: 91,
             child: Transform.rotate(
               angle: 11,
-              child: ClipPath(
-                clipper: ClipStatusBar(),
-                child: Container(
-                  height: 110,
-                  width: 40,
-                  color: AppColors.blackColor,
-                  child: const Icon(
-                    Icons.add,
-                    size: 24,
-                    color: AppColors.whiteColor,
+              child: InkWell(
+                onTap: () {
+                  print('Add button tapped');
+                  // TODO: Add create post functionality
+                },
+                child: ClipPath(
+                  clipper: ClipStatusBar(),
+                  child: Container(
+                    height: 110,
+                    width: 40,
+                    color: AppColors.blackColor,
+                    child: const Icon(
+                      Icons.add,
+                      size: 24,
+                      color: AppColors.whiteColor,
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-          _buildBottomNavBar(),
+          _buildBottomNavBar(context),
         ],
       ),
     );
   }
 
-  Container _buildBottomNavBar() {
+  Container _buildBottomNavBar(BuildContext context) {
     return Container(
       width: double.infinity,
       height: 110,
@@ -96,66 +107,90 @@ class HomePage extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _buildItemBottomNavBar("assets/images/ic_home.png", "Home", true),
           _buildItemBottomNavBar(
-              "assets/images/ic_discorvery.png", "Discover", false),
-          _buildItemBottomNavBar("assets/images/ic_inbox.png", "Inbox", false),
+              "assets/images/ic_home.png", "Home", true, 0, context),
           _buildItemBottomNavBar(
-              "assets/images/ic_profile.png", "Profile", false),
+              "assets/images/ic_discorvery.png", "Discover", false, 1, context),
+          _buildItemBottomNavBar(
+              "assets/images/ic_inbox.png", "Inbox", false, 2, context),
+          _buildItemBottomNavBar(
+              "assets/images/ic_profile.png", "Profile", false, 3, context),
         ],
       ),
     );
   }
 
-  _buildItemBottomNavBar(String icon, String title, bool selected) {
-    return Container(
-      width: 70,
-      height: 70,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: selected ? AppColors.whiteColor : Colors.transparent,
-        boxShadow: [
-          if (selected)
-            BoxShadow(
-              color: AppColors.blackColor.withOpacity(0.1),
-              blurRadius: 35,
-              offset: const Offset(0, 10),
-            ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Image.asset(
-            icon,
-            width: 24,
-            height: 24,
-            color: selected ? AppColors.purpleColor : AppColors.blackColor,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: AppTheme.blackTextStyle.copyWith(
-              fontWeight: AppTheme.bold,
-              fontSize: 12,
+  Widget _buildItemBottomNavBar(String icon, String title, bool selected,
+      int index, BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        print('Bottom nav tapped: $title');
+        // Handle navigation
+        switch (index) {
+          case 0:
+            // Already on home
+            break;
+          case 1:
+            // Navigate to discover
+            break;
+          case 2:
+            // Navigate to inbox
+            break;
+          case 3:
+            // Navigate to profile
+            Navigator.pushNamed(context, NamedRoutes.profileScreen);
+            break;
+        }
+      },
+      child: Container(
+        width: 70,
+        height: 70,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          color: selected ? AppColors.whiteColor : Colors.transparent,
+          boxShadow: [
+            if (selected)
+              BoxShadow(
+                color: AppColors.blackColor.withOpacity(0.1),
+                blurRadius: 35,
+                offset: const Offset(0, 10),
+              ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              icon,
+              width: 24,
+              height: 24,
               color: selected ? AppColors.purpleColor : AppColors.blackColor,
             ),
-          ),
-        ],
+            const SizedBox(height: 4),
+            Text(
+              title,
+              style: AppTheme.blackTextStyle.copyWith(
+                fontWeight: AppTheme.bold,
+                fontSize: 12,
+                color: selected ? AppColors.purpleColor : AppColors.blackColor,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  _buildBackgroundGradient() => Container(
-    width: double.infinity,
-    height: 150,
-    decoration: BoxDecoration(
-      gradient: LinearGradient(colors: [
-        AppColors.whiteColor.withOpacity(0),
-        AppColors.whiteColor.withOpacity(0.8),
-      ], begin: Alignment.topCenter, end: Alignment.bottomCenter),
-    ),
-  );
+  Container _buildBackgroundGradient() => Container(
+        width: double.infinity,
+        height: 150,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: [
+            AppColors.whiteColor.withOpacity(0),
+            AppColors.whiteColor.withOpacity(0.8),
+          ], begin: Alignment.topCenter, end: Alignment.bottomCenter),
+        ),
+      );
 
   CustomAppBar _buildCustomAppBar(BuildContext context) {
     return CustomAppBar(
@@ -181,58 +216,83 @@ class HomePage extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Image.asset("assets/images/ic_notification.png",
-              width: 24, height: 24),
-          const SizedBox(width: 12),
-          Image.asset("assets/images/ic_search.png", width: 24, height: 24),
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(35),
-              color: AppColors.backgroundColor,
+          InkWell(
+            onTap: () {
+              print('Notification tapped');
+              // TODO: Navigate to notifications
+            },
+            child: Image.asset(
+              "assets/images/ic_notification.png",
+              width: 24,
+              height: 24,
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.whiteColor,
-                      width: 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.blackColor.withOpacity(0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 10),
+          ),
+          const SizedBox(width: 12),
+          InkWell(
+            onTap: () {
+              print('Search tapped');
+              // TODO: Navigate to search
+            },
+            child: Image.asset(
+              "assets/images/ic_search.png",
+              width: 24,
+              height: 24,
+            ),
+          ),
+          const Spacer(),
+          InkWell(
+            onTap: () {
+              print('Profile tapped');
+              Navigator.pushNamed(context, NamedRoutes.profileScreen);
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(35),
+                color: AppColors.backgroundColor,
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.whiteColor,
+                        width: 1,
                       ),
-                    ],
-                    image: const DecorationImage(
-                      fit: BoxFit.cover,
-                      image: AssetImage(
-                        "assets/images/img_profile.jpeg",
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.blackColor.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                      image: const DecorationImage(
+                        fit: BoxFit.cover,
+                        image: AssetImage(
+                          "assets/images/img_profile.jpeg",
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  "Sajon.co",
-                  style: AppTheme.blackTextStyle
-                      .copyWith(fontWeight: AppTheme.bold, fontSize: 12),
-                ),
-                const SizedBox(width: 2),
-                Image.asset(
-                  "assets/images/ic_checklist.png",
-                  width: 16,
-                ),
-                const SizedBox(width: 4),
-              ],
+                  const SizedBox(width: 6),
+                  Text(
+                    "Sajon.co",
+                    style: AppTheme.blackTextStyle
+                        .copyWith(fontWeight: AppTheme.bold, fontSize: 12),
+                  ),
+                  const SizedBox(width: 2),
+                  Image.asset(
+                    "assets/images/ic_checklist.png",
+                    width: 16,
+                  ),
+                  const SizedBox(width: 4),
+                ],
+              ),
             ),
-          )
+          ),
         ],
       ),
     );

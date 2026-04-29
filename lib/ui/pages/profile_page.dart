@@ -6,7 +6,7 @@ import 'package:social_media_app/app/configs/theme.dart';
 import 'package:social_media_app/ui/bloc/gallery_profile_cubit.dart';
 
 class ProfilePage extends StatelessWidget {
-  const ProfilePage({Key? key}) : super(key: key);
+  const ProfilePage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -181,7 +181,7 @@ class ProfilePage extends StatelessWidget {
         ElevatedButton(
           onPressed: () {},
           style: ElevatedButton.styleFrom(
-            primary: AppColors.greenColor,
+            backgroundColor: AppColors.greenColor,
             minimumSize: const Size(120, 45),
             elevation: 8,
             shadowColor: AppColors.primaryColor.withOpacity(0.3),

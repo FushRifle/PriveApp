@@ -144,7 +144,7 @@ Padding _buildCommentCardSheet(
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size(12, 38),
-                        primary: AppColors.backgroundColor,
+                        backgroundColor: AppColors.backgroundColor,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(
