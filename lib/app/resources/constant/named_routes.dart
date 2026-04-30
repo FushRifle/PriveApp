@@ -7,6 +7,9 @@ class NamedRoutes {
   //Profile
   static const profileScreen = '/profile-screen';
   static const editProfileScreen = '/edit_profile-screen';
+  static const insightsScreen = '/insights-screen';
+  static const friendListScreen = '/friends-screen';
+  static const matchScreen = '/match-screen';
 
   static const createPostScreen = '/create-post-screen';
   static const createStatusScreen = '/create-status-screen';

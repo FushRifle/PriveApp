@@ -6,7 +6,7 @@ import 'package:flutter_blurhash/flutter_blurhash.dart';
 import 'package:social_media_app/app/configs/colors.dart';
 import 'package:social_media_app/app/configs/theme.dart';
 import 'package:social_media_app/app/resources/constant/named_routes.dart';
-import 'package:social_media_app/data/post_model.dart';
+import 'package:social_media_app/data/models/post_model.dart';
 import 'package:social_media_app/ui/widgets/home/custom_bottom_sheet_comments.dart';
 
 import 'clip_status_bar.dart';

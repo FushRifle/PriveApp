@@ -2,7 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:social_media_app/app/configs/colors.dart';
-import 'package:social_media_app/data/post_model.dart';
+import 'package:social_media_app/data/models/post_model.dart';
 import 'package:social_media_app/ui/widgets/home/card_post.dart';
 
 class PostDetailPage extends StatefulWidget {

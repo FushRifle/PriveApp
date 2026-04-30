@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:social_media_app/app/resources/constant/named_routes.dart';
-import 'package:social_media_app/data/reel_model.dart';
+import 'package:social_media_app/data/models/reel_model.dart';
 import 'package:social_media_app/ui/widgets/reels/reel_item.dart';
 
 class ReelsPage extends StatefulWidget {

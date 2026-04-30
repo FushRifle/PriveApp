@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:social_media_app/app/configs/colors.dart';
-import 'package:social_media_app/data/profile_model.dart';
+import 'package:social_media_app/data/models/profile_model.dart';
 import 'package:social_media_app/ui/widgets/discover/profile_card.dart';
 
 class SwipeableCard extends StatelessWidget {

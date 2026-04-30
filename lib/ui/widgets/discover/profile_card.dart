@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:social_media_app/app/configs/colors.dart';
 import 'package:social_media_app/app/configs/theme.dart';
-import 'package:social_media_app/data/profile_model.dart';
+import 'package:social_media_app/data/models/profile_model.dart';
 
 class ProfileCard extends StatelessWidget {
   final ProfileModel profile;

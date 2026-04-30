@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:social_media_app/app/configs/colors.dart';
 import 'package:social_media_app/app/configs/theme.dart';
 import 'package:social_media_app/app/resources/constant/named_routes.dart';
-import 'package:social_media_app/data/onboarding_model.dart';
+import 'package:social_media_app/data/models/onboarding_model.dart';
 
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key});

@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:social_media_app/data/gallery_model.dart';
+import 'package:social_media_app/data/models/gallery_model.dart';
 
 part 'gallery_profile_state.dart';
 

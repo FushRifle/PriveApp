@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_chat_types/flutter_chat_types.dart' as types;
-import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:social_media_app/app/configs/colors.dart';
 import 'package:social_media_app/app/configs/theme.dart';
@@ -26,7 +25,7 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> {
   final List<types.Message> _messages = [];
-  final _user = const types.User(
+  final _user = types.User(
     id: 'current-user',
     firstName: 'Sajon.co',
     imageUrl: 'profiles/profile_1.jpeg',
@@ -34,6 +33,7 @@ class _ChatPageState extends State<ChatPage> {
 
   late types.User _otherUser;
   final TextEditingController _textController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -49,6 +49,7 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void dispose() {
     _textController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -94,14 +95,6 @@ class _ChatPageState extends State<ChatPage> {
         id: const Uuid().v4(),
         text: 'Perfect! Looking forward to it.',
       ),
-      types.TextMessage(
-        author: _otherUser,
-        createdAt: DateTime.now()
-            .subtract(const Duration(minutes: 5))
-            .millisecondsSinceEpoch,
-        id: const Uuid().v4(),
-        text: 'Love this! Did you take this today?',
-      ),
     ]);
   }
 
@@ -118,7 +111,20 @@ class _ChatPageState extends State<ChatPage> {
     });
 
     _textController.clear();
+    _scrollToBottom();
     _simulateReply();
+  }
+
+  void _scrollToBottom() {
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   void _simulateReply() {
@@ -184,7 +190,7 @@ class _ChatPageState extends State<ChatPage> {
             children: [
               Container(
                 width: 40,
-                height: 40,
+                height: 50,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
@@ -211,9 +217,9 @@ class _ChatPageState extends State<ChatPage> {
                   Text(
                     'Online',
                     style: AppTheme.greyTextStyle.copyWith(
-                      fontSize: 12,
-                      color: AppColors.greenColor,
-                    ),
+                        fontSize: 12,
+                        color: AppColors.greenColor,
+                        fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -231,115 +237,159 @@ class _ChatPageState extends State<ChatPage> {
           ),
         ],
       ),
-      body: Chat(
-        messages: _messages,
-        onSendPressed: _handleSendPressed,
-        user: _user,
-        theme: DefaultChatTheme(
-          primaryColor: AppColors.purpleColor,
-          secondaryColor: AppColors.purpleColor.withOpacity(0.1),
-          backgroundColor: AppColors.backgroundColor,
-          inputBackgroundColor: Colors.white,
-          inputTextColor: AppColors.blackColor,
-          inputTextStyle: AppTheme.blackTextStyle.copyWith(fontSize: 16),
-          emptyChatPlaceholderTextStyle: AppTheme.greyTextStyle,
-          dateDividerTextStyle: AppTheme.greyTextStyle.copyWith(fontSize: 12),
-          sentMessageBodyTextStyle:
-              AppTheme.whiteTextStyle.copyWith(fontSize: 14),
-          sentMessageCaptionTextStyle:
-              AppTheme.greyTextStyle.copyWith(fontSize: 10),
-          receivedMessageBodyTextStyle:
-              AppTheme.blackTextStyle.copyWith(fontSize: 14),
-          receivedMessageCaptionTextStyle:
-              AppTheme.greyTextStyle.copyWith(fontSize: 10),
-          userNameTextStyle: AppTheme.blackTextStyle.copyWith(
-            fontWeight: AppTheme.bold,
-            fontSize: 12,
-          ),
-        ),
-        showUserAvatars: true,
-        showUserNames: false,
-        customBottomWidget: Container(
-          color: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: SafeArea(
-            bottom: true,
-            child: Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.backgroundColor,
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: Icon(Icons.mood_outlined,
-                              color: AppColors.greyColor, size: 24),
-                          onPressed: () {},
-                        ),
-                        Expanded(
-                          child: TextField(
-                            controller: _textController,
-                            style:
-                                AppTheme.blackTextStyle.copyWith(fontSize: 16),
-                            decoration: InputDecoration(
-                              hintText: 'Message...',
-                              hintStyle: AppTheme.greyTextStyle,
-                              border: InputBorder.none,
-                              contentPadding:
-                                  const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                            onSubmitted: (text) {
-                              if (text.isNotEmpty) {
-                                _handleSendPressed(
-                                    types.PartialText(text: text));
-                              }
-                            },
-                          ),
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.attach_file,
-                              color: AppColors.greyColor, size: 24),
-                          onPressed: () {},
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.camera_alt_outlined,
-                              color: AppColors.greyColor, size: 24),
-                          onPressed: () async {
-                            final ImagePicker picker = ImagePicker();
-                            await picker.pickImage(source: ImageSource.camera);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: () {
-                    if (_textController.text.isNotEmpty) {
-                      _handleSendPressed(
-                          types.PartialText(text: _textController.text));
-                    }
-                  },
-                  child: Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: AppColors.purpleColor,
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child:
-                        const Icon(Icons.send, color: Colors.white, size: 22),
-                  ),
-                ),
-              ],
+      body: Column(
+        children: [
+          // Messages list
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollController,
+              reverse: true,
+              padding: const EdgeInsets.all(16),
+              itemCount: _messages.length,
+              itemBuilder: (context, index) {
+                final message = _messages[index];
+                final isMe = message.author.id == _user.id;
+                return _buildMessageBubble(message, isMe);
+              },
             ),
           ),
-        ),
+          // Input bar
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: SafeArea(
+              bottom: true,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.backgroundColor,
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.mood_outlined,
+                                color: AppColors.greyColor, size: 24),
+                            onPressed: () {},
+                          ),
+                          Expanded(
+                            child: TextField(
+                              controller: _textController,
+                              style: AppTheme.blackTextStyle
+                                  .copyWith(fontSize: 16),
+                              decoration: InputDecoration(
+                                hintText: 'Message...',
+                                hintStyle: AppTheme.greyTextStyle,
+                                border: InputBorder.none,
+                                contentPadding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                              onSubmitted: (text) {
+                                if (text.isNotEmpty) {
+                                  _handleSendPressed(
+                                      types.PartialText(text: text));
+                                }
+                              },
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.attach_file,
+                                color: AppColors.greyColor, size: 24),
+                            onPressed: () {},
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.camera_alt_outlined,
+                                color: AppColors.greyColor, size: 24),
+                            onPressed: () async {
+                              final ImagePicker picker = ImagePicker();
+                              await picker.pickImage(
+                                  source: ImageSource.camera);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () {
+                      if (_textController.text.isNotEmpty) {
+                        _handleSendPressed(
+                            types.PartialText(text: _textController.text));
+                      }
+                    },
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: AppColors.purpleColor,
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child:
+                          const Icon(Icons.send, color: Colors.white, size: 22),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  Widget _buildMessageBubble(types.Message message, bool isMe) {
+    if (message is types.TextMessage) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(
+          mainAxisAlignment:
+              isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (!isMe) ...[
+              CircleAvatar(
+                radius: 14,
+                backgroundImage: AssetImage(widget.userAvatar),
+              ),
+              const SizedBox(width: 8),
+            ],
+            Flexible(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isMe ? AppColors.purpleColor : Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(18),
+                    topRight: const Radius.circular(18),
+                    bottomLeft: Radius.circular(isMe ? 18 : 4),
+                    bottomRight: Radius.circular(isMe ? 4 : 18),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 5,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  message.text,
+                  style: TextStyle(
+                    color: isMe ? Colors.white : AppColors.blackColor,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+            ),
+            if (isMe) const SizedBox(width: 8),
+          ],
+        ),
+      );
+    }
+    return const SizedBox.shrink();
   }
 }

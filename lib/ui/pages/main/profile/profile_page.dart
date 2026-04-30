@@ -7,6 +7,9 @@ import 'package:social_media_app/app/resources/constant/named_routes.dart';
 import 'package:social_media_app/ui/bloc/gallery_profile_cubit.dart';
 import 'package:social_media_app/ui/pages/main/profile/edit_profile_page.dart';
 import 'package:social_media_app/ui/pages/settings/settings_page.dart';
+import 'package:social_media_app/ui/pages/social/friends_list_page.dart';
+import 'package:social_media_app/ui/pages/social/insights_page.dart';
+import 'package:social_media_app/ui/pages/social/matches_page.dart';
 
 class ProfilePage extends StatefulWidget {
   final bool isOwnProfile;
@@ -35,7 +38,7 @@ class _ProfilePageState extends State<ProfilePage> {
     {
       'name': 'Creative Studio',
       'username': '@creative',
-      'avatar': 'profiles/profile_1.jpeg',
+      'avatar': 'assets/profiles/profile_1.jpeg',
     },
   ];
 
@@ -67,6 +70,8 @@ class _ProfilePageState extends State<ProfilePage> {
                     const SizedBox(height: 24),
                     _buildStatsRow(),
                     const SizedBox(height: 24),
+                    if (widget.isOwnProfile) _buildInsightsButton(),
+                    const SizedBox(height: 12),
                     _buildActionButtons(),
                     const SizedBox(height: 32),
                   ],
@@ -99,6 +104,47 @@ class _ProfilePageState extends State<ProfilePage> {
                     const SizedBox(height: 12),
                     Text("Tagged Posts", style: AppTheme.greyTextStyle),
                   ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInsightsButton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const InsightsPage(),
+            ),
+          );
+        },
+        child: Container(
+          height: 44,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.greyColor.withOpacity(0.2)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.insights,
+                  color: AppColors.purpleColor, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'View Insights',
+                style: AppTheme.blackTextStyle.copyWith(
+                  fontWeight: AppTheme.bold,
+                  fontSize: 14,
+                  color: AppColors.purpleColor,
                 ),
               ),
             ],
@@ -234,13 +280,6 @@ class _ProfilePageState extends State<ProfilePage> {
         icon:
             const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 20),
       ),
-      title: Text(
-        _accounts[_selectedAccount]['username']!,
-        style: AppTheme.blackTextStyle.copyWith(
-          fontWeight: AppTheme.bold,
-          fontSize: 14,
-        ),
-      ),
       actions: [
         if (widget.isOwnProfile)
           IconButton(
@@ -324,9 +363,42 @@ class _ProfilePageState extends State<ProfilePage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        _statItem("29", "Following"),
-        _statItem("121.9k", "Followers"),
-        _statItem("7.5M", "Likes"),
+        GestureDetector(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const FriendsListPage(isFollowers: false),
+              ),
+            );
+          },
+          child: _statItem("29", "Following"),
+        ),
+        GestureDetector(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const FriendsListPage(isFollowers: true),
+              ),
+            );
+          },
+          child: _statItem("121.9k", "Followers"),
+        ),
+        GestureDetector(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const InsightsPage(),
+              ),
+            );
+          },
+          child: _statItem("7.5M", "Likes"),
+        ),
       ],
     );
   }
@@ -375,8 +447,6 @@ class _ProfilePageState extends State<ProfilePage> {
                   decoration: BoxDecoration(
                     color: AppColors.purpleColor,
                     borderRadius: BorderRadius.circular(16),
-                    border:
-                        Border.all(color: AppColors.greyColor.withOpacity(0.3)),
                   ),
                   child: Center(
                     child: Text(
@@ -391,16 +461,28 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
             const SizedBox(width: 12),
-            Container(
-              height: 50,
-              width: 50,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.greyColor.withOpacity(0.3)),
+            GestureDetector(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MatchesPage(),
+                  ),
+                );
+              },
+              child: Container(
+                height: 50,
+                width: 50,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border:
+                      Border.all(color: AppColors.greyColor.withOpacity(0.3)),
+                ),
+                child: const Icon(Icons.favorite_outline,
+                    color: AppColors.redColor),
               ),
-              child:
-                  const Icon(Icons.person_add_outlined, color: Colors.black87),
             ),
           ],
         ),

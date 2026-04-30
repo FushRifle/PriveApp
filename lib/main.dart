@@ -4,13 +4,14 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:social_media_app/app/configs/colors.dart';
 import 'package:social_media_app/app/configs/theme.dart';
 import 'package:social_media_app/app/resources/constant/named_routes.dart';
-import 'package:social_media_app/data/post_model.dart';
+import 'package:social_media_app/data/models/post_model.dart';
 import 'package:social_media_app/ui/pages/main/discover/discover_page.dart';
 import 'package:social_media_app/ui/pages/main/chat/inbox_page.dart';
 import 'package:social_media_app/ui/pages/main/home/home_page.dart';
 import 'package:social_media_app/ui/pages/main/home/post_detail_page.dart';
 import 'package:social_media_app/ui/pages/main/notification/notification_page.dart';
 import 'package:social_media_app/ui/pages/main/profile/edit_profile_page.dart';
+import 'package:social_media_app/ui/pages/social/insights_page.dart';
 import 'package:social_media_app/ui/pages/main/profile/profile_page.dart';
 import 'package:social_media_app/ui/pages/main/reels/reels_page.dart';
 import 'package:social_media_app/ui/pages/main/post/create_post_page.dart';
@@ -20,6 +21,8 @@ import 'package:social_media_app/ui/pages/auth/login_page.dart';
 import 'package:social_media_app/ui/pages/auth/register_page.dart';
 import 'package:social_media_app/ui/pages/settings/settings_page.dart';
 import 'package:social_media_app/ui/pages/settings/subscribe_page.dart';
+import 'package:social_media_app/ui/pages/social/friends_list_page.dart';
+import 'package:social_media_app/ui/pages/social/matches_page.dart';
 import 'package:social_media_app/ui/widgets/home/clip_status_bar.dart';
 
 void main() {
@@ -53,6 +56,9 @@ class MyApp extends StatelessWidget {
         NamedRoutes.homeScreen: (context) => const MainWrapper(),
         NamedRoutes.profileScreen: (context) => const ProfilePage(),
         NamedRoutes.editProfileScreen: (context) => const EditProfilePage(),
+        NamedRoutes.friendListScreen: (context) => const FriendsListPage(),
+        NamedRoutes.insightsScreen: (context) => const InsightsPage(),
+        NamedRoutes.matchScreen: (context) => const MatchesPage(),
         NamedRoutes.postDetailScreen: (context) {
           final post = ModalRoute.of(context)!.settings.arguments as PostModel;
           return PostDetailPage(post: post);

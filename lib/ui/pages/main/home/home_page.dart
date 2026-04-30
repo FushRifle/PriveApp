@@ -4,7 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:social_media_app/app/configs/colors.dart';
 import 'package:social_media_app/app/configs/theme.dart';
 import 'package:social_media_app/app/resources/constant/named_routes.dart';
-import 'package:social_media_app/data/status_model.dart';
+import 'package:social_media_app/data/models/status_model.dart';
 import 'package:social_media_app/ui/bloc/post_cubit.dart';
 import 'package:social_media_app/ui/pages/main/status/status_view_page.dart';
 import 'package:social_media_app/ui/widgets/home/card_post.dart';
@@ -126,7 +126,7 @@ class HomePage extends StatelessWidget {
           StatusWidget(
             status: const StatusModel(
               name: 'Your Story',
-              imgProfile: 'assets/profiles/profile_1.jpeg',
+              imgProfile: 'profiles/profile_1.jpeg',
               statusImage: '',
               time: '',
             ),
@@ -167,7 +167,7 @@ class HomePage extends StatelessWidget {
           const SizedBox(width: 8),
           Container(
             width: 40,
-            height: 40,
+            height: 30,
             decoration: BoxDecoration(
               boxShadow: [
                 BoxShadow(
