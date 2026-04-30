@@ -1,20 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:social_media_app/app/configs/colors.dart';
 import 'package:social_media_app/app/configs/theme.dart';
 import 'package:social_media_app/app/resources/constant/named_routes.dart';
-import 'package:social_media_app/ui/pages/home_page.dart';
-import 'package:social_media_app/ui/pages/profile_page.dart';
+import 'package:social_media_app/ui/pages/discover/discover_page.dart';
+import 'package:social_media_app/ui/pages/chat/inbox_page.dart';
+import 'package:social_media_app/ui/pages/home/home_page.dart';
+import 'package:social_media_app/ui/pages/reels/reels_page.dart';
+import 'package:social_media_app/ui/pages/post/create_post_page.dart';
+import 'package:social_media_app/ui/pages/status/create_status_page.dart';
+import 'package:social_media_app/ui/pages/auth/onboarding_page.dart';
+import 'package:social_media_app/ui/pages/auth/login_page.dart';
+import 'package:social_media_app/ui/pages/auth/register_page.dart';
+import 'package:social_media_app/ui/widgets/home/clip_status_bar.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Only apply these fixes on web
   if (kIsWeb) {
-    // Disable system overlays to prevent keyboard inset issues
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
-
-    // Set preferred orientations
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
@@ -30,20 +35,24 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Social Media App',
+      title: 'Prive',
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
-      // Critical fix for web view insets error
+      initialRoute: NamedRoutes.onboardingScreen,
+      routes: {
+        NamedRoutes.onboardingScreen: (context) => const OnboardingPage(),
+        NamedRoutes.loginScreen: (context) => const LoginPage(),
+        NamedRoutes.registerScreen: (context) => const RegisterPage(),
+        NamedRoutes.homeScreen: (context) => const MainWrapper(),
+        NamedRoutes.createPostScreen: (context) => const CreatePostPage(),
+        NamedRoutes.createStatusScreen: (context) => const CreateStatusPage(),
+      },
       builder: (context, child) {
-        // Get the current media query data
         final mediaQueryData = MediaQuery.of(context);
-
-        // On web, force viewInsets to zero to prevent negative values
         if (kIsWeb) {
           return MediaQuery(
             data: mediaQueryData.copyWith(
               viewInsets: EdgeInsets.zero,
-              // Keep viewPadding for safe areas
               viewPadding: EdgeInsets.only(
                 top: mediaQueryData.padding.top,
                 bottom: mediaQueryData.padding.bottom,
@@ -52,21 +61,178 @@ class MyApp extends StatelessWidget {
             child: child!,
           );
         }
-
         return child!;
-      },
-      onGenerateRoute: (RouteSettings settings) {
-        switch (settings.name) {
-          case NamedRoutes.homeScreen:
-            return MaterialPageRoute(builder: (context) => const HomePage());
-          case NamedRoutes.profileScreen:
-            return MaterialPageRoute(
-              builder: (context) => const ProfilePage(),
-            );
-          default:
-            return MaterialPageRoute(builder: (context) => const HomePage());
-        }
       },
     );
   }
+}
+
+class MainWrapper extends StatefulWidget {
+  const MainWrapper({super.key});
+
+  @override
+  State<MainWrapper> createState() => _MainWrapperState();
+}
+
+class _MainWrapperState extends State<MainWrapper> {
+  int _currentIndex = 0;
+
+  final List<Widget> _pages = [
+    const HomePage(),
+    const DiscoverPage(),
+    const ReelsPage(),
+    const InboxPage(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          // Main content
+          IndexedStack(
+            index: _currentIndex,
+            children: _pages,
+          ),
+          // Gradient overlay
+          if (_currentIndex != 2) _buildBackgroundGradient(),
+          // Add button (positioned above bottom nav)
+          if (_currentIndex != 2)
+            Positioned(
+              bottom: 91,
+              child: Transform.rotate(
+                angle: 11,
+                child: InkWell(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.pushNamed(
+                      context,
+                      NamedRoutes.createPostScreen,
+                    );
+                  },
+                  child: ClipPath(
+                    clipper: ClipStatusBar(),
+                    child: Container(
+                      height: 110,
+                      width: 40,
+                      color: AppColors.blackColor,
+                      child: const Icon(
+                        Icons.add,
+                        size: 24,
+                        color: AppColors.whiteColor,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          // Bottom navigation bar
+          if (_currentIndex != 2) _buildBottomNavBar(),
+        ],
+      ),
+    );
+  }
+
+  Container _buildBottomNavBar() {
+    return Container(
+      width: double.infinity,
+      height: 110,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      margin: const EdgeInsets.only(right: 24, left: 24, bottom: 16),
+      decoration: BoxDecoration(
+        color: AppColors.whiteColor,
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(child: _buildItemBottomNavBar(Icons.home, "Home", 0)),
+          Expanded(child: _buildItemBottomNavBar(Icons.explore, "Discover", 1)),
+          Expanded(
+              child:
+                  _buildItemBottomNavBar(Icons.play_circle_fill, "Reels", 2)),
+          Expanded(child: _buildItemBottomNavBar(Icons.message, "Inbox", 3)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItemBottomNavBar(
+    IconData icon,
+    String title,
+    int index,
+  ) {
+    final isSelected = _currentIndex == index;
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() {
+          _currentIndex = index;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          color: isSelected ? AppColors.whiteColor : Colors.transparent,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.blackColor.withOpacity(0.1),
+                    blurRadius: 35,
+                    offset: const Offset(0, 10),
+                  ),
+                ]
+              : [],
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 24,
+              color: isSelected ? AppColors.purpleColor : AppColors.blackColor,
+            ),
+            const SizedBox(height: 4),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  title,
+                  style: AppTheme.blackTextStyle.copyWith(
+                    fontWeight: isSelected ? AppTheme.bold : AppTheme.medium,
+                    fontSize: 11,
+                    color: isSelected
+                        ? AppColors.purpleColor
+                        : AppColors.blackColor,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Container _buildBackgroundGradient() => Container(
+        width: double.infinity,
+        height: 150,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.whiteColor.withOpacity(0),
+              AppColors.whiteColor.withOpacity(0.8),
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+      );
 }

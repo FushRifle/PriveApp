@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 class AppColors {
   static const Color primaryColor = Color(0xFF7D50F0);
   static const Color primaryLightColor = Color(0xFFFEECE9);
-
   static const Color backgroundColor = Color(0xffe9e9e9);
 
   // static const Color borderColor = Color(0xFFededed);
@@ -14,9 +13,8 @@ class AppColors {
   static const Color greyColor = Color(0xFF9698A9);
   static const Color dashedLineColor = Color(0xFFDDDDE5);
   static const Color blackColor = Color(0xFF040303);
-
+  static const Color redColor = Color(0xFFFF7675);
   static const Color blackTextColor = Color(0xFF040303);
   static const Color greyTextColor = Color(0xFF9698A9);
-
   static const Color backgroundColorDark = Color(0xFF303030);
 }

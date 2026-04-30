@@ -1,19 +1,70 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_blurhash/flutter_blurhash.dart';
 import 'package:social_media_app/app/configs/colors.dart';
 import 'package:social_media_app/app/configs/theme.dart';
 import 'package:social_media_app/app/resources/constant/named_routes.dart';
 import 'package:social_media_app/data/post_model.dart';
-import 'package:social_media_app/ui/widgets/custom_bottom_sheet_comments.dart';
+import 'package:social_media_app/ui/widgets/home/custom_bottom_sheet_comments.dart';
 
 import 'clip_status_bar.dart';
 
-class CardPost extends StatelessWidget {
+class CardPost extends StatefulWidget {
   final PostModel post;
 
   const CardPost({required this.post, super.key});
+
+  @override
+  State<CardPost> createState() => _CardPostState();
+}
+
+class _CardPostState extends State<CardPost> {
+  bool isLiked = false;
+  bool isSaved = false;
+  late int likeCount;
+
+  @override
+  void initState() {
+    super.initState();
+    likeCount = int.tryParse(widget.post.like) ?? 0;
+  }
+
+  void toggleLike() {
+    setState(() {
+      isLiked = !isLiked;
+      if (isLiked) {
+        likeCount++;
+        HapticFeedback.lightImpact();
+      } else {
+        likeCount--;
+      }
+    });
+  }
+
+  void toggleSave() {
+    setState(() {
+      isSaved = !isSaved;
+      HapticFeedback.lightImpact();
+    });
+  }
+
+  void onCommentTap(BuildContext context) {
+    HapticFeedback.lightImpact();
+    customBottomSheetComments(context);
+  }
+
+  void onShareTap() {
+    HapticFeedback.lightImpact();
+    // TODO: Implement share functionality
+    print('Share tapped');
+  }
+
+  void onProfileTap(BuildContext context) {
+    HapticFeedback.lightImpact();
+    Navigator.of(context).pushNamed(NamedRoutes.profileScreen);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,17 +99,33 @@ class CardPost extends StatelessWidget {
             right: 20,
             child: Column(
               children: [
-                ..._itemStatus(
-                    "assets/images/ic_heart.png", post.like, context),
+                _buildStatusButton(
+                  icon: isLiked ? Icons.favorite : Icons.favorite_border,
+                  text: likeCount.toString(),
+                  onTap: toggleLike,
+                  isActive: isLiked,
+                  activeColor: AppColors.redColor,
+                ),
                 const SizedBox(height: 10),
-                ..._itemStatus(
-                    "assets/images/ic_message.png", post.comment, context),
+                _buildStatusButton(
+                  icon: Icons.message,
+                  text: widget.post.comment,
+                  onTap: () => onCommentTap(context),
+                ),
                 const SizedBox(height: 10),
-                ..._itemStatus(
-                    "assets/images/ic_bookmark.png", "Save", context),
+                _buildStatusButton(
+                  icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
+                  text: "Save",
+                  onTap: toggleSave,
+                  isActive: isSaved,
+                  activeColor: AppColors.greenColor,
+                ),
                 const SizedBox(height: 10),
-                ..._itemStatus(
-                    "assets/images/ic_send.png", post.share, context),
+                _buildStatusButton(
+                  icon: Icons.send,
+                  text: widget.post.share,
+                  onTap: onShareTap,
+                ),
               ],
             ),
           ),
@@ -75,6 +142,55 @@ class CardPost extends StatelessWidget {
             ),
           ),
           _buildItemPublisher(context),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusButton({
+    required IconData icon,
+    required String text,
+    required VoidCallback onTap,
+    bool isActive = false,
+    Color? activeColor,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            height: 40,
+            width: 40,
+            decoration: BoxDecoration(
+              color: isActive && activeColor != null
+                  ? activeColor
+                  : AppColors.whiteColor.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: isActive
+                  ? [
+                      BoxShadow(
+                        color: (activeColor ?? Colors.white).withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : [],
+            ),
+            child: Icon(
+              icon,
+              size: 20,
+              color: isActive ? Colors.white : AppColors.whiteColor,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            text,
+            style: AppTheme.whiteTextStyle.copyWith(
+              fontSize: 13,
+              fontWeight: isActive ? AppTheme.bold : AppTheme.bold,
+            ),
+          ),
         ],
       ),
     );
@@ -107,10 +223,10 @@ class CardPost extends StatelessWidget {
       child: Stack(children: [
         BlurHash(
           imageFit: BoxFit.cover,
-          hash: post.pictureHash,
+          hash: widget.post.pictureHash,
         ),
         Image.network(
-          post.picture,
+          widget.post.picture,
           width: double.infinity,
           fit: BoxFit.cover,
           loadingBuilder: (_, child, ImageChunkEvent? loadingProgress) {
@@ -143,14 +259,13 @@ class CardPost extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           GestureDetector(
-            onTap: () =>
-                Navigator.of(context).pushNamed(NamedRoutes.profileScreen),
+            onTap: () => onProfileTap(context),
             child: Row(
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(50),
                   child: Image.asset(
-                    post.imgProfile,
+                    widget.post.imgProfile,
                     width: 32,
                     height: 32,
                     fit: BoxFit.cover,
@@ -158,7 +273,7 @@ class CardPost extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  post.name,
+                  widget.post.name,
                   style: AppTheme.whiteTextStyle.copyWith(
                     fontSize: 16,
                     fontWeight: AppTheme.bold,
@@ -169,17 +284,17 @@ class CardPost extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            post.caption,
+            widget.post.caption,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: AppTheme.whiteTextStyle.copyWith(
               fontSize: 12,
-              fontWeight: AppTheme.regular,
+              fontWeight: AppTheme.bold,
             ),
           ),
           const SizedBox(height: 2),
           Text(
-            post.hashtags.join(" "),
+            widget.post.hashtags.join(" "),
             style: AppTheme.whiteTextStyle.copyWith(
               color: AppColors.greenColor,
               fontSize: 12,
@@ -190,32 +305,4 @@ class CardPost extends StatelessWidget {
       ),
     );
   }
-
-  List<Widget> _itemStatus(String icon, String text, BuildContext context) => [
-        GestureDetector(
-          onTap: icon == "assets/images/ic_message.png"
-              ? () => customBottomSheetComments(context)
-              : () {},
-          child: Container(
-            height: 40,
-            width: 40,
-            decoration: BoxDecoration(
-              color: AppColors.whiteColor.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(30),
-              image: DecorationImage(
-                scale: 2.3,
-                image: AssetImage(icon),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          text,
-          style: AppTheme.whiteTextStyle.copyWith(
-            fontSize: 12,
-            fontWeight: AppTheme.regular,
-          ),
-        ),
-      ];
 }
