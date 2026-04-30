@@ -316,7 +316,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
   }
 
   void _pickImage() {
-    setState(() => _selectedImage = 'assets/images/profile_1.jpeg');
+    setState(() => _selectedImage = 'assets/profiles/profile_1.jpeg');
   }
 
   void _addHashtag(String tag) {

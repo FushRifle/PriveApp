@@ -20,7 +20,7 @@ class ReelItem extends StatefulWidget {
 
 class _ReelItemState extends State<ReelItem> {
   bool _isLiked = false;
-  bool _isMuted = false;
+  final bool _isMuted = false;
   bool _isFollowing = false;
 
   @override
@@ -36,7 +36,6 @@ class _ReelItemState extends State<ReelItem> {
         // Bottom info
         _buildBottomInfo(),
         // Top header
-        _buildTopHeader(),
       ],
     );
   }
@@ -87,40 +86,6 @@ class _ReelItemState extends State<ReelItem> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildTopHeader() {
-    return Positioned(
-      top: MediaQuery.of(context).padding.top + 10,
-      left: 0,
-      right: 0,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          children: [
-            Text(
-              'Reels',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const Spacer(),
-            IconButton(
-              icon: const Icon(
-                Icons.camera_alt_outlined,
-                color: Colors.white,
-                size: 28,
-              ),
-              onPressed: () {
-                // TODO: Open camera
-              },
-            ),
-          ],
-        ),
-      ),
     );
   }
 

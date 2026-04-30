@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:social_media_app/app/configs/colors.dart';
 import 'package:social_media_app/app/configs/theme.dart';
-import '../../widgets/home/custom_app_bar.dart';
+import 'package:social_media_app/ui/pages/main/chat/chat_page.dart';
+import '../../../widgets/home/custom_app_bar.dart';
 
 class InboxPage extends StatelessWidget {
   const InboxPage({super.key});
@@ -17,14 +18,13 @@ class InboxPage extends StatelessWidget {
     );
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 30),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         child: Column(
           children: [
             const SizedBox(height: 12),
             _buildCustomAppBar(context),
             const SizedBox(height: 18),
-            _buildMessageList(),
-            // Add bottom padding to account for bottom nav bar
+            _buildMessageList(context),
             const SizedBox(height: 130),
           ],
         ),
@@ -37,27 +37,8 @@ class InboxPage extends StatelessWidget {
       child: Row(
         children: [
           const SizedBox(width: 8),
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.blackColor.withOpacity(0.2),
-                  blurRadius: 35,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Image.asset(
-              'assets/images/ic_logo.png',
-              width: 40,
-              height: 40,
-            ),
-          ),
-          const SizedBox(width: 12),
           const Text(
-            "Messages",
+            "Chat",
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -68,31 +49,18 @@ class InboxPage extends StatelessWidget {
           InkWell(
             onTap: () {
               print('Search tapped');
-              // TODO: Navigate to search
-            },
-            child: Image.asset(
-              "assets/images/ic_search.png",
-              width: 24,
-              height: 24,
-            ),
-          ),
-          const SizedBox(width: 12),
-          InkWell(
-            onTap: () {
-              print('New message tapped');
-              // TODO: Create new message
             },
             child: Container(
               width: 40,
               height: 40,
               decoration: BoxDecoration(
+                color: AppColors.backgroundColor,
                 borderRadius: BorderRadius.circular(12),
-                color: AppColors.purpleColor.withOpacity(0.1),
               ),
               child: const Icon(
-                Icons.edit,
-                size: 20,
+                Icons.search,
                 color: AppColors.purpleColor,
+                size: 20,
               ),
             ),
           ),
@@ -101,13 +69,13 @@ class InboxPage extends StatelessWidget {
     );
   }
 
-  Widget _buildMessageList() {
+  Widget _buildMessageList(BuildContext context) {
     final messages = [
       {
         'name': 'Sarah Johnson',
         'message': 'Hey! How are you doing?',
         'time': '2m ago',
-        'avatar': 'assets/images/img_profile.jpeg',
+        'avatar': 'assets/images/profile_1.jpeg',
         'unread': true,
         'online': true,
       },
@@ -115,7 +83,7 @@ class InboxPage extends StatelessWidget {
         'name': 'Michael Chen',
         'message': 'Did you see the new post?',
         'time': '1h ago',
-        'avatar': 'assets/images/img_profile.jpeg',
+        'avatar': 'assets/images/profile_2.jpeg',
         'unread': true,
         'online': false,
       },
@@ -123,7 +91,7 @@ class InboxPage extends StatelessWidget {
         'name': 'Emma Wilson',
         'message': 'Thanks for the follow back! 🙌',
         'time': '3h ago',
-        'avatar': 'assets/images/img_profile.jpeg',
+        'avatar': 'assets/images/profile_3.jpeg',
         'unread': false,
         'online': true,
       },
@@ -131,7 +99,7 @@ class InboxPage extends StatelessWidget {
         'name': 'James Rodriguez',
         'message': 'Great content! Keep it up 🔥',
         'time': 'Yesterday',
-        'avatar': 'assets/images/img_profile.jpeg',
+        'avatar': 'assets/images/profile_4.jpeg',
         'unread': false,
         'online': false,
       },
@@ -139,7 +107,7 @@ class InboxPage extends StatelessWidget {
         'name': 'Lisa Kim',
         'message': 'When is the next event?',
         'time': 'Yesterday',
-        'avatar': 'assets/images/img_profile.jpeg',
+        'avatar': 'assets/images/profile_5.jpeg',
         'unread': false,
         'online': false,
       },
@@ -147,7 +115,7 @@ class InboxPage extends StatelessWidget {
         'name': 'David Brown',
         'message': 'Check out my latest post!',
         'time': '2d ago',
-        'avatar': 'assets/images/img_profile.jpeg',
+        'avatar': 'assets/images/profile_1.jpeg',
         'unread': false,
         'online': true,
       },
@@ -160,6 +128,7 @@ class InboxPage extends StatelessWidget {
       itemBuilder: (context, index) {
         final message = messages[index];
         return _buildMessageItem(
+          context: context,
           name: message['name']! as String,
           message: message['message']! as String,
           time: message['time']! as String,
@@ -172,6 +141,7 @@ class InboxPage extends StatelessWidget {
   }
 
   Widget _buildMessageItem({
+    required BuildContext context,
     required String name,
     required String message,
     required String time,
@@ -181,8 +151,17 @@ class InboxPage extends StatelessWidget {
   }) {
     return GestureDetector(
       onTap: () {
-        print('Open chat with: $name');
-        // TODO: Navigate to chat screen
+        HapticFeedback.lightImpact();
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChatPage(
+              userName: name,
+              userAvatar: avatar,
+              userId: name.toLowerCase().replaceAll(' ', '_'),
+            ),
+          ),
+        );
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),

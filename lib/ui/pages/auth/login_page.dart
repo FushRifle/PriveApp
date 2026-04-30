@@ -252,21 +252,24 @@ class _LoginPageState extends State<LoginPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   _buildSocialButton(
-                    icon: 'assets/images/ic_google.png',
+                    icon: Icons.g_mobiledata, // Closest to Google
+                    color: Colors.red,
                     onTap: () {
                       // TODO: Google sign in
                     },
                   ),
                   const SizedBox(width: 20),
                   _buildSocialButton(
-                    icon: 'assets/images/ic_apple.png',
+                    icon: Icons.apple, // Apple icon exists!
+                    color: Colors.black,
                     onTap: () {
                       // TODO: Apple sign in
                     },
                   ),
                   const SizedBox(width: 20),
                   _buildSocialButton(
-                    icon: 'assets/images/ic_facebook.png',
+                    icon: Icons.facebook, // Facebook icon exists!
+                    color: Colors.blue,
                     onTap: () {
                       // TODO: Facebook sign in
                     },
@@ -360,7 +363,8 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Widget _buildSocialButton({
-    required String icon,
+    required IconData icon,
+    required Color color,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
@@ -377,10 +381,10 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ),
         child: Center(
-          child: Image.asset(
+          child: Icon(
             icon,
-            width: 28,
-            height: 28,
+            size: 30,
+            color: color,
           ),
         ),
       ),

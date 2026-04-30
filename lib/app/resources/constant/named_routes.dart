@@ -1,8 +1,13 @@
 class NamedRoutes {
+  // Tabs
   static const homeScreen = '/home-screen';
   static const discoverScreen = '/discover-screen';
   static const inboxScreen = '/inbox-screen';
+
+  //Profile
   static const profileScreen = '/profile-screen';
+  static const editProfileScreen = '/edit_profile-screen';
+
   static const createPostScreen = '/create-post-screen';
   static const createStatusScreen = '/create-status-screen';
   static const statusViewScreen = '/status-view-screen';
@@ -16,4 +21,9 @@ class NamedRoutes {
   static const onboardingScreen = '/onboarding-screen';
   static const loginScreen = '/login-screen';
   static const registerScreen = '/register-screen';
+
+  // Settings routes
+  static const settingsScreen = '/settings-screen';
+  static const subscribeScreen = '/subscribe-screen';
+  static const notificationScreen = '/notification-screen';
 }

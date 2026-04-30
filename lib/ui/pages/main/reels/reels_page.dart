@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:social_media_app/app/resources/constant/named_routes.dart';
 import 'package:social_media_app/data/reel_model.dart';
 import 'package:social_media_app/ui/widgets/reels/reel_item.dart';
 
@@ -17,7 +18,7 @@ class _ReelsPageState extends State<ReelsPage> {
   final List<ReelModel> _reels = [
     ReelModel(
       username: 'sophie.anderson',
-      userProfile: 'assets/images/profile_1.jpeg',
+      userProfile: 'assets/profiles/profile_1.jpeg',
       videoUrl: '',
       caption: 'Beautiful sunset at the beach 🌅',
       hashtags: ['sunset', 'beach', 'nature'],
@@ -30,7 +31,7 @@ class _ReelsPageState extends State<ReelsPage> {
     ),
     ReelModel(
       username: 'marcus.fitness',
-      userProfile: 'assets/images/profile_2.jpeg',
+      userProfile: 'assets/profiles/profile_2.jpeg',
       videoUrl: '',
       caption: 'Morning workout routine 💪',
       hashtags: ['fitness', 'workout', 'motivation'],
@@ -43,7 +44,7 @@ class _ReelsPageState extends State<ReelsPage> {
     ),
     ReelModel(
       username: 'elena.travels',
-      userProfile: 'assets/images/profile_3.jpeg',
+      userProfile: 'assets/profiles/profile_3.jpeg',
       videoUrl: '',
       caption: 'Exploring hidden gems in Bali 🏝️',
       hashtags: ['travel', 'bali', 'adventure'],
@@ -56,7 +57,7 @@ class _ReelsPageState extends State<ReelsPage> {
     ),
     ReelModel(
       username: 'alex.tech',
-      userProfile: 'assets/images/profile_4.jpeg',
+      userProfile: 'assets/profiles/profile_4.jpeg',
       videoUrl: '',
       caption: 'New gadget unboxing! 📱',
       hashtags: ['tech', 'unboxing', 'gadgets'],
@@ -66,19 +67,6 @@ class _ReelsPageState extends State<ReelsPage> {
       comment: '567',
       share: '1.2K',
       isVerified: false,
-    ),
-    ReelModel(
-      username: 'olivia.yoga',
-      userProfile: 'assets/images/profile_5.jpeg',
-      videoUrl: '',
-      caption: 'Morning yoga flow 🧘‍♀️',
-      hashtags: ['yoga', 'wellness', 'mindfulness'],
-      audio: 'Calm Mind',
-      audioArtist: 'Meditation Music',
-      like: '34.8K',
-      comment: '890',
-      share: '2.1K',
-      isVerified: true,
     ),
   ];
 
@@ -131,43 +119,58 @@ class _ReelsPageState extends State<ReelsPage> {
               );
             },
           ),
-          // Back button
+          // Header - Back button and Camera on same line
           Positioned(
             top: MediaQuery.of(context).padding.top + 10,
-            left: 8,
-            child: IconButton(
-              icon: const Icon(
-                Icons.arrow_back_ios,
-                color: Colors.white,
-                size: 24,
-              ),
-              onPressed: () {
-                HapticFeedback.lightImpact();
-                Navigator.pop(context);
-              },
-            ),
-          ),
-          // Progress indicator
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 60,
             left: 16,
             right: 16,
             child: Row(
-              children: List.generate(
-                _reels.length,
-                (index) => Expanded(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Back button
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.pushReplacementNamed(
+                      context,
+                      NamedRoutes.homeScreen,
+                    );
+                  },
                   child: Container(
-                    height: 2,
-                    margin: const EdgeInsets.symmetric(horizontal: 1),
+                    width: 40,
+                    height: 40,
                     decoration: BoxDecoration(
-                      color: index <= _currentIndex
-                          ? Colors.white
-                          : Colors.white.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(1),
+                      color: Colors.black.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.arrow_back_ios_new,
+                      color: Colors.white,
+                      size: 20,
                     ),
                   ),
                 ),
-              ),
+                // Camera button
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    // TODO: Open camera for reel
+                  },
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt_outlined,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

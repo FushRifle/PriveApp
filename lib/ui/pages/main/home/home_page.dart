@@ -6,11 +6,11 @@ import 'package:social_media_app/app/configs/theme.dart';
 import 'package:social_media_app/app/resources/constant/named_routes.dart';
 import 'package:social_media_app/data/status_model.dart';
 import 'package:social_media_app/ui/bloc/post_cubit.dart';
-import 'package:social_media_app/ui/pages/status/status_view_page.dart';
+import 'package:social_media_app/ui/pages/main/status/status_view_page.dart';
 import 'package:social_media_app/ui/widgets/home/card_post.dart';
-import 'package:social_media_app/ui/widgets/home/status_widget.dart';
+import 'package:social_media_app/ui/widgets/status/status_widget.dart';
 
-import '../../widgets/home/custom_app_bar.dart';
+import '../../../widgets/home/custom_app_bar.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -18,37 +18,30 @@ class HomePage extends StatelessWidget {
   final List<StatusModel> _statuses = const [
     StatusModel(
       name: 'Sarah',
-      imgProfile: 'assets/images/profile_1.jpeg',
-      statusImage: 'assets/images/profile_1.jpeg',
+      imgProfile: 'profiles/profile_1.jpeg',
+      statusImage: 'profiles/profile_1.jpeg',
       time: '2m ago',
       isViewed: false,
     ),
     StatusModel(
       name: 'Mike',
-      imgProfile: 'assets/images/profile_2.jpeg',
-      statusImage: 'assets/images/profile_2.jpeg',
+      imgProfile: 'profiles/profile_2.jpeg',
+      statusImage: 'profiles/profile_2.jpeg',
       time: '15m ago',
       isViewed: false,
     ),
     StatusModel(
       name: 'Emma',
-      imgProfile: 'assets/images/profile_3.jpeg',
-      statusImage: 'assets/images/profile_3.jpeg',
+      imgProfile: 'profiles/profile_3.jpeg',
+      statusImage: 'profiles/profile_3.jpeg',
       time: '1h ago',
       isViewed: true,
     ),
     StatusModel(
       name: 'James',
-      imgProfile: 'assets/images/profile_4.jpeg',
-      statusImage: 'assets/images/profile_4.jpeg',
+      imgProfile: 'profiles/profile_4.jpeg',
+      statusImage: 'profiles/profile_4.jpeg',
       time: '2h ago',
-      isViewed: true,
-    ),
-    StatusModel(
-      name: 'Lisa',
-      imgProfile: 'assets/images/profile_5.jpeg',
-      statusImage: 'assets/images/profile_5.jpeg',
-      time: '3h ago',
       isViewed: true,
     ),
   ];
@@ -133,7 +126,7 @@ class HomePage extends StatelessWidget {
           StatusWidget(
             status: const StatusModel(
               name: 'Your Story',
-              imgProfile: 'assets/images/img_profile.jpeg',
+              imgProfile: 'assets/profiles/profile_1.jpeg',
               statusImage: '',
               time: '',
             ),
@@ -193,8 +186,7 @@ class HomePage extends StatelessWidget {
           const SizedBox(width: 12),
           InkWell(
             onTap: () {
-              print('Notification tapped');
-              // TODO: Navigate to notifications
+              Navigator.pushNamed(context, NamedRoutes.notificationScreen);
             },
             child: Image.asset(
               "assets/images/ic_notification.png",
@@ -217,7 +209,6 @@ class HomePage extends StatelessWidget {
           const Spacer(),
           InkWell(
             onTap: () {
-              print('Profile tapped');
               Navigator.pushNamed(context, NamedRoutes.profileScreen);
             },
             child: Container(
@@ -254,7 +245,7 @@ class HomePage extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    "Sajon.co",
+                    "Fush ",
                     style: AppTheme.blackTextStyle
                         .copyWith(fontWeight: AppTheme.bold, fontSize: 12),
                   ),

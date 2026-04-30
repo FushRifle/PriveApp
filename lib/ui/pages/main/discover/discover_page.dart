@@ -3,8 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:social_media_app/app/configs/colors.dart';
 import 'package:social_media_app/app/configs/theme.dart';
 import 'package:social_media_app/data/profile_model.dart';
-import 'package:social_media_app/app/resources/constant/named_routes.dart';
-import 'package:social_media_app/ui/widgets/home/custom_app_bar.dart';
 import 'package:social_media_app/ui/widgets/discover/action_buttons.dart';
 import 'package:social_media_app/ui/widgets/discover/discover_header.dart';
 import 'package:social_media_app/ui/widgets/discover/no_more_profiles.dart';
@@ -62,7 +60,7 @@ class _DiscoverPageState extends State<DiscoverPage>
         bio:
             'Digital artist & photographer 📸\nExploring the world one frame at a time',
         interests: ['Photography', 'Art', 'Travel', 'Music'],
-        image: 'assets/images/profile_1.jpeg',
+        image: 'assets/profiles/profile_1.jpeg',
         isOnline: true,
         distance: '2 km away',
         isVerified: true,
@@ -76,7 +74,7 @@ class _DiscoverPageState extends State<DiscoverPage>
         bio:
             'Fitness coach & nutritionist 💪\nHelping people transform their lives',
         interests: ['Fitness', 'Health', 'Cooking', 'Motivation'],
-        image: 'assets/images/profile_2.jpeg',
+        image: 'assets/profiles/profile_2.jpeg',
         isOnline: false,
         distance: '5 km away',
         isVerified: false,
@@ -90,7 +88,7 @@ class _DiscoverPageState extends State<DiscoverPage>
         bio:
             'Travel blogger & food lover 🌎\nCurrently exploring Southeast Asia',
         interests: ['Travel', 'Food', 'Culture', 'Photography'],
-        image: 'assets/images/profile_3.jpeg',
+        image: 'assets/profiles/profile_3.jpeg',
         isOnline: true,
         distance: '1 km away',
         isVerified: true,
@@ -103,7 +101,7 @@ class _DiscoverPageState extends State<DiscoverPage>
         location: 'Chicago, USA',
         bio: 'Tech entrepreneur & coffee addict ☕\nBuilding the next big thing',
         interests: ['Technology', 'Business', 'Coffee', 'Reading'],
-        image: 'assets/images/profile_4.jpeg',
+        image: 'assets/profiles/profile_4.jpeg',
         isOnline: false,
         distance: '8 km away',
         isVerified: true,
@@ -117,7 +115,7 @@ class _DiscoverPageState extends State<DiscoverPage>
         bio:
             'Yoga instructor & mindfulness coach 🧘‍♀️\nFinding balance in chaos',
         interests: ['Yoga', 'Meditation', 'Nature', 'Wellness'],
-        image: 'assets/images/profile_5.jpeg',
+        image: 'assets/profiles/profile_5.jpeg',
         isOnline: true,
         distance: '3 km away',
         isVerified: false,
@@ -149,7 +147,6 @@ class _DiscoverPageState extends State<DiscoverPage>
         child: Column(
           children: [
             const SizedBox(height: 12),
-            _buildCustomAppBar(context),
             const SizedBox(height: 24),
             DiscoverHeader(
               remainingCount: profiles.length - currentIndex,
@@ -337,106 +334,5 @@ class _DiscoverPageState extends State<DiscoverPage>
     HapticFeedback.lightImpact();
     print('Send message to: ${profile.name}');
     // TODO: Navigate to chat with this person
-  }
-
-  CustomAppBar _buildCustomAppBar(BuildContext context) {
-    return CustomAppBar(
-      child: Row(
-        children: [
-          const SizedBox(width: 8),
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.blackColor.withOpacity(0.2),
-                  blurRadius: 35,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Image.asset(
-              'assets/images/prive.png',
-              width: 35,
-              height: 35,
-            ),
-          ),
-          const Spacer(),
-          InkWell(
-            onTap: () {
-              print('Filter tapped');
-            },
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.backgroundColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                Icons.tune,
-                color: AppColors.purpleColor,
-                size: 20,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          InkWell(
-            onTap: () {
-              print('Profile tapped');
-              Navigator.pushNamed(context, NamedRoutes.profileScreen);
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(35),
-                color: AppColors.backgroundColor,
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.whiteColor,
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.blackColor.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                      image: const DecorationImage(
-                        fit: BoxFit.cover,
-                        image: AssetImage(
-                          "assets/images/img_profile.jpeg",
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    "Sajon.co",
-                    style: AppTheme.blackTextStyle
-                        .copyWith(fontWeight: AppTheme.bold, fontSize: 12),
-                  ),
-                  const SizedBox(width: 2),
-                  Image.asset(
-                    "assets/images/ic_checklist.png",
-                    width: 16,
-                  ),
-                  const SizedBox(width: 4),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

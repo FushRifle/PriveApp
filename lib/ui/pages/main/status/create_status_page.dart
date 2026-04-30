@@ -13,7 +13,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   final TextEditingController _textController = TextEditingController();
   String? _selectedImage;
   Color _selectedColor = const Color(0xFF1D1B20);
-  double _fontSize = 32;
+  final double _fontSize = 32;
   TextAlign _textAlign = TextAlign.center;
   bool _isEditingText = false;
 
@@ -261,6 +261,6 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
 
   void _showImagePicker() {
     // Placeholder logic for image gallery selection
-    setState(() => _selectedImage = 'assets/images/profile_2.jpeg');
+    setState(() => _selectedImage = 'assets/profiles/profile_2.jpeg');
   }
 }
