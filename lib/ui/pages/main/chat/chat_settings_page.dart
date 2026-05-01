@@ -129,7 +129,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
                       onChanged: (value) {
                         setState(() => _isMuted = value);
                       },
-                      activeColor: AppColors.purpleColor,
+                      activeThumbColor: AppColors.purpleColor,
                     ),
                     if (_isMuted) ...[
                       const Divider(height: 1, indent: 56),
@@ -176,7 +176,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
                       onChanged: (value) {
                         setState(() => _isPinned = value);
                       },
-                      activeColor: AppColors.purpleColor,
+                      activeThumbColor: AppColors.purpleColor,
                     ),
                     const Divider(height: 1, indent: 56),
                     _buildNavigationTile(

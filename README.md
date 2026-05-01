@@ -1,4 +1,4 @@
-# Social Media App
+# Prive
 
 This is a Flutter-based Social Media App with a sleek and modern design.
 

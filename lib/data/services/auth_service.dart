@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'api_service.dart';
 
 class AuthService {
@@ -14,10 +15,10 @@ class AuthService {
         'password': password,
       });
 
-      // Save token
+      // Save token using instance method
       final token = response.data['token'];
       if (token != null) {
-        ApiService.setToken(token);
+        await _api.setToken(token);
       }
 
       return response.data;
@@ -41,7 +42,7 @@ class AuthService {
 
       final token = response.data['token'];
       if (token != null) {
-        ApiService.setToken(token);
+        await _api.setToken(token);
       }
 
       return response.data;
@@ -57,7 +58,7 @@ class AuthService {
     } catch (e) {
       // Still clear token even if request fails
     } finally {
-      ApiService._clearToken();
+      await _api.clearToken();
     }
   }
 

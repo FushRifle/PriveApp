@@ -31,7 +31,6 @@ class ApiService {
       onRequest: (options, handler) async {
         final token = await _storage.read(key: 'clerk_token');
         if (token != null) {
-          // Use Clerk token for authenticated requests
           options.headers['Authorization'] = 'Bearer $token';
         }
         return handler.next(options);
@@ -48,6 +47,7 @@ class ApiService {
     ));
   }
 
+  // Token methods - use instance, not static
   Future<void> setToken(String token) async {
     await _storage.write(key: 'clerk_token', value: token);
   }

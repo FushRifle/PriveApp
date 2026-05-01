@@ -8,7 +8,7 @@
 PRODUCT_NAME = social_media_app
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.rrdhoi.socialMediaApp
+PRODUCT_BUNDLE_IDENTIFIER = com.example.socialMediaApp
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.rrdhoi. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 com.example. All rights reserved.
