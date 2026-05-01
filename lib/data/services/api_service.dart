@@ -11,16 +11,15 @@ class ApiService {
 
   ApiService._internal() {
     dio = Dio(BaseOptions(
-      baseUrl: ApiConfig.supabaseRestUrl,
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 15),
-      sendTimeout: const Duration(seconds: 15),
+      baseUrl: ApiConfig.baseUrl,
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
+      sendTimeout: const Duration(seconds: 30),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'apikey': ApiConfig.supabaseAnonKey,
-        'Authorization': 'Bearer ${ApiConfig.supabaseAnonKey}',
       },
+      validateStatus: (status) => status! < 600,
     ));
 
     _setupInterceptors();
@@ -29,7 +28,7 @@ class ApiService {
   void _setupInterceptors() {
     dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
-        final token = await _storage.read(key: 'clerk_token');
+        final token = await _storage.read(key: 'auth_token');
         if (token != null) {
           options.headers['Authorization'] = 'Bearer $token';
         }
@@ -47,25 +46,23 @@ class ApiService {
     ));
   }
 
-  // Token methods - use instance, not static
   Future<void> setToken(String token) async {
-    await _storage.write(key: 'clerk_token', value: token);
+    await _storage.write(key: 'auth_token', value: token);
   }
 
   Future<void> clearToken() async {
-    await _storage.delete(key: 'clerk_token');
+    await _storage.delete(key: 'auth_token');
   }
 
   Future<String?> getToken() async {
-    return await _storage.read(key: 'clerk_token');
+    return await _storage.read(key: 'auth_token');
   }
 
   Future<bool> hasToken() async {
-    final token = await _storage.read(key: 'clerk_token');
-    return token != null;
+    final token = await _storage.read(key: 'auth_token');
+    return token != null && token.isNotEmpty;
   }
 
-  // HTTP methods
   Future<Response> get(String path,
       {Map<String, dynamic>? queryParameters}) async {
     return await dio.get(path, queryParameters: queryParameters);

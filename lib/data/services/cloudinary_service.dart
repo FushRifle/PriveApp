@@ -33,7 +33,6 @@ class CloudinaryService {
 
       final response = await _cloudinary.uploadFile(cloudinaryFile);
 
-      // Check if secureUrl exists (means upload was successful)
       if (response.secureUrl.isNotEmpty) {
         return CloudinaryResponseModel(
           url: response.secureUrl,

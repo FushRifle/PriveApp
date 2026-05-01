@@ -1,6 +1,8 @@
+import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:social_media_app/app/configs/api_config.dart';
 import 'package:social_media_app/app/configs/colors.dart';
 import 'package:social_media_app/app/configs/theme.dart';
 import 'package:social_media_app/app/resources/constant/named_routes.dart';
@@ -44,51 +46,58 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Prive',
-      theme: AppTheme.lightTheme,
-      debugShowCheckedModeBanner: false,
-      initialRoute: NamedRoutes.onboardingScreen,
-      routes: {
-        NamedRoutes.onboardingScreen: (context) => const OnboardingPage(),
-        NamedRoutes.loginScreen: (context) => const LoginPage(),
-        NamedRoutes.registerScreen: (context) => const RegisterPage(),
-        NamedRoutes.homeScreen: (context) => const MainWrapper(),
-        NamedRoutes.profileScreen: (context) => const ProfilePage(),
-        NamedRoutes.editProfileScreen: (context) => const EditProfilePage(),
-        NamedRoutes.friendListScreen: (context) => const FriendsListPage(),
-        NamedRoutes.insightsScreen: (context) => const InsightsPage(),
-        NamedRoutes.matchScreen: (context) => const MatchesPage(),
-        NamedRoutes.postDetailScreen: (context) {
-          final post = ModalRoute.of(context)!.settings.arguments as PostModel;
-          return PostDetailPage(post: post);
+    return ClerkAuth(
+      config: ClerkAuthConfig(
+        publishableKey: ApiConfig.clerkPublishableKey,
+      ),
+      child: MaterialApp(
+        title: 'Prive',
+        theme: AppTheme.lightTheme,
+        debugShowCheckedModeBanner: false,
+        initialRoute: NamedRoutes.onboardingScreen,
+        routes: {
+          NamedRoutes.onboardingScreen: (context) => const OnboardingPage(),
+          NamedRoutes.loginScreen: (context) => const LoginPage(),
+          NamedRoutes.registerScreen: (context) => const RegisterPage(),
+          NamedRoutes.homeScreen: (context) => const MainWrapper(),
+          NamedRoutes.profileScreen: (context) => const ProfilePage(),
+          NamedRoutes.editProfileScreen: (context) => const EditProfilePage(),
+          NamedRoutes.friendListScreen: (context) => const FriendsListPage(),
+          NamedRoutes.insightsScreen: (context) => const InsightsPage(),
+          NamedRoutes.matchScreen: (context) => const MatchesPage(),
+          NamedRoutes.postDetailScreen: (context) {
+            final post =
+                ModalRoute.of(context)!.settings.arguments as PostModel;
+            return PostDetailPage(post: post);
+          },
+          NamedRoutes.createPostScreen: (context) => const CreatePostPage(),
+          NamedRoutes.createStatusScreen: (context) => const CreateStatusPage(),
+          NamedRoutes.settingsScreen: (context) => const SettingsPage(),
+          NamedRoutes.subscribeScreen: (context) => const SubscribePage(),
+          NamedRoutes.notificationScreen: (context) => const NotificationPage(),
         },
-        NamedRoutes.createPostScreen: (context) => const CreatePostPage(),
-        NamedRoutes.createStatusScreen: (context) => const CreateStatusPage(),
-        NamedRoutes.settingsScreen: (context) => const SettingsPage(),
-        NamedRoutes.subscribeScreen: (context) => const SubscribePage(),
-        NamedRoutes.notificationScreen: (context) => const NotificationPage(),
-      },
-      builder: (context, child) {
-        final mediaQueryData = MediaQuery.of(context);
-        if (kIsWeb) {
-          return MediaQuery(
-            data: mediaQueryData.copyWith(
-              viewInsets: EdgeInsets.zero,
-              viewPadding: EdgeInsets.only(
-                top: mediaQueryData.padding.top,
-                bottom: mediaQueryData.padding.bottom,
+        builder: (context, child) {
+          final mediaQueryData = MediaQuery.of(context);
+          if (kIsWeb) {
+            return MediaQuery(
+              data: mediaQueryData.copyWith(
+                viewInsets: EdgeInsets.zero,
+                viewPadding: EdgeInsets.only(
+                  top: mediaQueryData.padding.top,
+                  bottom: mediaQueryData.padding.bottom,
+                ),
               ),
-            ),
-            child: child!,
-          );
-        }
-        return child!;
-      },
+              child: child!,
+            );
+          }
+          return child!;
+        },
+      ),
     );
   }
 }
 
+// MainWrapper stays exactly the same...
 class MainWrapper extends StatefulWidget {
   const MainWrapper({super.key});
 
@@ -112,14 +121,8 @@ class _MainWrapperState extends State<MainWrapper> {
       body: Stack(
         alignment: Alignment.bottomCenter,
         children: [
-          // Main content
-          IndexedStack(
-            index: _currentIndex,
-            children: _pages,
-          ),
-          // Gradient overlay
+          IndexedStack(index: _currentIndex, children: _pages),
           if (_currentIndex != 2) _buildBackgroundGradient(),
-          // Add button (positioned above bottom nav)
           if (_currentIndex != 2)
             Positioned(
               bottom: 91,
@@ -128,10 +131,7 @@ class _MainWrapperState extends State<MainWrapper> {
                 child: InkWell(
                   onTap: () {
                     HapticFeedback.lightImpact();
-                    Navigator.pushNamed(
-                      context,
-                      NamedRoutes.createPostScreen,
-                    );
+                    Navigator.pushNamed(context, NamedRoutes.createPostScreen);
                   },
                   child: ClipPath(
                     clipper: ClipStatusBar(),
@@ -139,17 +139,13 @@ class _MainWrapperState extends State<MainWrapper> {
                       height: 110,
                       width: 40,
                       color: AppColors.blackColor,
-                      child: const Icon(
-                        Icons.add,
-                        size: 24,
-                        color: AppColors.whiteColor,
-                      ),
+                      child: const Icon(Icons.add,
+                          size: 24, color: AppColors.whiteColor),
                     ),
                   ),
                 ),
               ),
             ),
-          // Bottom navigation bar
           if (_currentIndex != 2) _buildBottomNavBar(),
         ],
       ),
@@ -163,9 +159,7 @@ class _MainWrapperState extends State<MainWrapper> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       margin: const EdgeInsets.only(right: 24, left: 24, bottom: 16),
       decoration: BoxDecoration(
-        color: AppColors.whiteColor,
-        borderRadius: BorderRadius.circular(30),
-      ),
+          color: AppColors.whiteColor, borderRadius: BorderRadius.circular(30)),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -180,19 +174,12 @@ class _MainWrapperState extends State<MainWrapper> {
     );
   }
 
-  Widget _buildItemBottomNavBar(
-    IconData icon,
-    String title,
-    int index,
-  ) {
+  Widget _buildItemBottomNavBar(IconData icon, String title, int index) {
     final isSelected = _currentIndex == index;
-
     return GestureDetector(
       onTap: () {
         HapticFeedback.selectionClick();
-        setState(() {
-          _currentIndex = index;
-        });
+        setState(() => _currentIndex = index);
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -202,10 +189,9 @@ class _MainWrapperState extends State<MainWrapper> {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppColors.blackColor.withOpacity(0.1),
-                    blurRadius: 35,
-                    offset: const Offset(0, 10),
-                  ),
+                      color: AppColors.blackColor.withOpacity(0.1),
+                      blurRadius: 35,
+                      offset: const Offset(0, 10))
                 ]
               : [],
         ),
@@ -214,27 +200,24 @@ class _MainWrapperState extends State<MainWrapper> {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 24,
-              color: isSelected ? AppColors.purpleColor : AppColors.blackColor,
-            ),
+            Icon(icon,
+                size: 24,
+                color:
+                    isSelected ? AppColors.purpleColor : AppColors.blackColor),
             const SizedBox(height: 4),
             Flexible(
               child: FittedBox(
                 fit: BoxFit.scaleDown,
-                child: Text(
-                  title,
-                  style: AppTheme.blackTextStyle.copyWith(
-                    fontWeight: isSelected ? AppTheme.bold : AppTheme.medium,
-                    fontSize: 11,
-                    color: isSelected
-                        ? AppColors.purpleColor
-                        : AppColors.blackColor,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                child: Text(title,
+                    style: AppTheme.blackTextStyle.copyWith(
+                      fontWeight: isSelected ? AppTheme.bold : AppTheme.medium,
+                      fontSize: 11,
+                      color: isSelected
+                          ? AppColors.purpleColor
+                          : AppColors.blackColor,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
               ),
             ),
           ],
@@ -250,7 +233,7 @@ class _MainWrapperState extends State<MainWrapper> {
           gradient: LinearGradient(
             colors: [
               AppColors.whiteColor.withOpacity(0),
-              AppColors.whiteColor.withOpacity(0.8),
+              AppColors.whiteColor.withOpacity(0.8)
             ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,

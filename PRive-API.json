@@ -1,0 +1,655 @@
+{
+     "info": {
+          "name": "PRive",
+          "description": "Complete API documentation for PRive dating app backend",
+          "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+     },
+     "item": [
+          {
+               "name": "Users",
+               "description": "User management endpoints",
+               "item": [
+                    {
+                         "name": "Get Current User",
+                         "description": "Returns the authenticated user's profile information",
+                         "request": {
+                              "method": "GET",
+                              "url": "{{base_url}}/api/users/me",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ]
+                         }
+                    },
+                    {
+                         "name": "Update Current User",
+                         "description": "Updates the authenticated user's information. All fields are optional.",
+                         "request": {
+                              "method": "PUT",
+                              "url": "{{base_url}}/api/users/me",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ],
+                              "body": {
+                                   "mode": "raw",
+                                   "raw": "{\n  \"name\": \"John Doe\",\n  \"username\": \"johndoe\",\n  \"phone\": \"+1234567890\",\n  \"age\": 28,\n  \"occupation\": \"Photographer\",\n  \"bio\": \"Love meeting new people\",\n  \"location\": \"New York, NY\",\n  \"work\": \"Freelance Photographer\",\n  \"education\": \"NYU\",\n  \"languages\": [\"English\", \"Spanish\"],\n  \"avatar\": \"https://example.com/avatar.jpg\",\n  \"coverImage\": \"https://example.com/cover.jpg\"\n}",
+                                   "options": {
+                                        "raw": {
+                                             "language": "json"
+                                        }
+                                   }
+                              }
+                         }
+                    },
+                    {
+                         "name": "Delete Current User",
+                         "description": "Soft deletes the authenticated user's account",
+                         "request": {
+                              "method": "DELETE",
+                              "url": "{{base_url}}/api/users/me",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ]
+                         }
+                    },
+                    {
+                         "name": "Get User By ID",
+                         "description": "Returns a user's public profile by their ID",
+                         "request": {
+                              "method": "GET",
+                              "url": "{{base_url}}/api/users/1",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ]
+                         }
+                    }
+               ]
+          },
+          {
+               "name": "Profiles",
+               "description": "Dating profile management",
+               "item": [
+                    {
+                         "name": "Get My Profile",
+                         "description": "Returns the authenticated user's dating profile",
+                         "request": {
+                              "method": "GET",
+                              "url": "{{base_url}}/api/profiles/me",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ]
+                         }
+                    },
+                    {
+                         "name": "Update My Profile",
+                         "description": "Creates or updates the user's dating profile",
+                         "request": {
+                              "method": "PUT",
+                              "url": "{{base_url}}/api/profiles/me",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ],
+                              "body": {
+                                   "mode": "raw",
+                                   "raw": "{\n  \"bio\": \"Looking for meaningful connections and adventures\",\n  \"age\": 25,\n  \"gender\": \"male\",\n  \"lookingFor\": \"female\",\n  \"interests\": [\"hiking\", \"photography\", \"travel\", \"coffee\"],\n  \"locationLat\": 40.7128,\n  \"locationLng\": -74.0060\n}",
+                                   "options": {
+                                        "raw": {
+                                             "language": "json"
+                                        }
+                                   }
+                              }
+                         }
+                    },
+                    {
+                         "name": "Get Profile By User ID",
+                         "description": "Returns a user's dating profile by their user ID",
+                         "request": {
+                              "method": "GET",
+                              "url": "{{base_url}}/api/profiles/1",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ]
+                         }
+                    }
+               ]
+          },
+          {
+               "name": "Matches",
+               "description": "Matching and likes system",
+               "item": [
+                    {
+                         "name": "Get My Matches",
+                         "description": "Returns all users that you have matched with",
+                         "request": {
+                              "method": "GET",
+                              "url": "{{base_url}}/api/matches",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ]
+                         }
+                    },
+                    {
+                         "name": "Like User",
+                         "description": "Like another user. If they like you back, it becomes a match.",
+                         "request": {
+                              "method": "POST",
+                              "url": "{{base_url}}/api/matches/like",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ],
+                              "body": {
+                                   "mode": "raw",
+                                   "raw": "{\n  \"userId\": 2\n}",
+                                   "options": {
+                                        "raw": {
+                                             "language": "json"
+                                        }
+                                   }
+                              }
+                         }
+                    },
+                    {
+                         "name": "Accept Match",
+                         "description": "Accept a pending match request",
+                         "request": {
+                              "method": "POST",
+                              "url": "{{base_url}}/api/matches/1/accept",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ]
+                         }
+                    },
+                    {
+                         "name": "Reject Match",
+                         "description": "Reject a pending match request",
+                         "request": {
+                              "method": "POST",
+                              "url": "{{base_url}}/api/matches/1/reject",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ]
+                         }
+                    },
+                    {
+                         "name": "Get Recommendations",
+                         "description": "Get potential matches based on preferences and location",
+                         "request": {
+                              "method": "GET",
+                              "url": "{{base_url}}/api/recommendations",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ]
+                         }
+                    }
+               ]
+          },
+          {
+               "name": "Feed",
+               "description": "Social feed with posts and stories",
+               "item": [
+                    {
+                         "name": "Get Stories",
+                         "description": "Returns stories from matches and the user's own story",
+                         "request": {
+                              "method": "GET",
+                              "url": "{{base_url}}/api/feed/stories",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ]
+                         }
+                    },
+                    {
+                         "name": "Get Feed Posts",
+                         "description": "Returns paginated feed posts from matches. Use page parameter for pagination.",
+                         "request": {
+                              "method": "GET",
+                              "url": "{{base_url}}/api/feed/posts?page=1",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ]
+                         }
+                    },
+                    {
+                         "name": "Create Post",
+                         "description": "Create a new feed post",
+                         "request": {
+                              "method": "POST",
+                              "url": "{{base_url}}/api/feed/posts",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ],
+                              "body": {
+                                   "mode": "raw",
+                                   "raw": "{\n  \"content\": \"Just had an amazing day at the beach! 🌊☀️\"\n}",
+                                   "options": {
+                                        "raw": {
+                                             "language": "json"
+                                        }
+                                   }
+                              }
+                         }
+                    },
+                    {
+                         "name": "Like Post",
+                         "description": "Like a feed post",
+                         "request": {
+                              "method": "POST",
+                              "url": "{{base_url}}/api/feed/posts/1/like",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ]
+                         }
+                    },
+                    {
+                         "name": "Unlike Post",
+                         "description": "Remove like from a feed post",
+                         "request": {
+                              "method": "DELETE",
+                              "url": "{{base_url}}/api/feed/posts/1/like",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ]
+                         }
+                    },
+                    {
+                         "name": "Get Post Comments",
+                         "description": "Returns comments on a specific post",
+                         "request": {
+                              "method": "GET",
+                              "url": "{{base_url}}/api/feed/posts/1/comments?page=1",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ]
+                         }
+                    },
+                    {
+                         "name": "Add Comment",
+                         "description": "Add a comment to a feed post",
+                         "request": {
+                              "method": "POST",
+                              "url": "{{base_url}}/api/feed/posts/1/comments",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ],
+                              "body": {
+                                   "mode": "raw",
+                                   "raw": "{\n  \"content\": \"This is awesome! 🔥\"\n}",
+                                   "options": {
+                                        "raw": {
+                                             "language": "json"
+                                        }
+                                   }
+                              }
+                         }
+                    }
+               ]
+          },
+          {
+               "name": "Chat",
+               "description": "Real-time messaging system",
+               "item": [
+                    {
+                         "name": "Get Conversations",
+                         "description": "Returns all chat conversations for the authenticated user",
+                         "request": {
+                              "method": "GET",
+                              "url": "{{base_url}}/api/chat/conversations",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ]
+                         }
+                    },
+                    {
+                         "name": "Get Messages",
+                         "description": "Returns paginated messages between you and another user",
+                         "request": {
+                              "method": "GET",
+                              "url": "{{base_url}}/api/chat/messages/2?page=1",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ]
+                         }
+                    },
+                    {
+                         "name": "Send Message",
+                         "description": "Send a message to another user",
+                         "request": {
+                              "method": "POST",
+                              "url": "{{base_url}}/api/chat/messages",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ],
+                              "body": {
+                                   "mode": "raw",
+                                   "raw": "{\n  \"receiverId\": 2,\n  \"message\": \"Hey! How are you doing today?\"\n}",
+                                   "options": {
+                                        "raw": {
+                                             "language": "json"
+                                        }
+                                   }
+                              }
+                         }
+                    },
+                    {
+                         "name": "Mark Messages as Read",
+                         "description": "Mark all messages from a user as read",
+                         "request": {
+                              "method": "POST",
+                              "url": "{{base_url}}/api/chat/messages/2/read",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ]
+                         }
+                    },
+                    {
+                         "name": "Get Chat Preferences",
+                         "description": "Returns user's chat preferences",
+                         "request": {
+                              "method": "GET",
+                              "url": "{{base_url}}/api/chat/preferences",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ]
+                         }
+                    },
+                    {
+                         "name": "Update Chat Preferences",
+                         "description": "Update chat settings like wallpaper, font size, etc.",
+                         "request": {
+                              "method": "PUT",
+                              "url": "{{base_url}}/api/chat/preferences",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ],
+                              "body": {
+                                   "mode": "raw",
+                                   "raw": "{\n  \"wallpaper\": \"gradient\",\n  \"fontSize\": 18,\n  \"enterToSend\": true,\n  \"saveToGallery\": false,\n  \"readReceipts\": true,\n  \"typingIndicators\": true,\n  \"autoDownloadMedia\": \"wifi\",\n  \"messagePreview\": true,\n  \"suggestedReplies\": true\n}",
+                                   "options": {
+                                        "raw": {
+                                             "language": "json"
+                                        }
+                                   }
+                              }
+                         }
+                    },
+                    {
+                         "name": "Set Online Status",
+                         "description": "Update user's online/offline status",
+                         "request": {
+                              "method": "POST",
+                              "url": "{{base_url}}/api/chat/status/online",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ],
+                              "body": {
+                                   "mode": "raw",
+                                   "raw": "{\n  \"isOnline\": true\n}",
+                                   "options": {
+                                        "raw": {
+                                             "language": "json"
+                                        }
+                                   }
+                              }
+                         }
+                    },
+                    {
+                         "name": "Set Typing Status",
+                         "description": "Send typing indicator to another user",
+                         "request": {
+                              "method": "POST",
+                              "url": "{{base_url}}/api/chat/status/typing",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ],
+                              "body": {
+                                   "mode": "raw",
+                                   "raw": "{\n  \"receiverId\": 2,\n  \"isTyping\": true\n}",
+                                   "options": {
+                                        "raw": {
+                                             "language": "json"
+                                        }
+                                   }
+                              }
+                         }
+                    }
+               ]
+          },
+          {
+               "name": "Reels",
+               "description": "Short video content similar to Instagram Reels",
+               "item": [
+                    {
+                         "name": "Get Reels",
+                         "description": "Returns paginated reels feed from matches",
+                         "request": {
+                              "method": "GET",
+                              "url": "{{base_url}}/api/reels?page=1",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ]
+                         }
+                    },
+                    {
+                         "name": "Create Reel",
+                         "description": "Upload a new reel video",
+                         "request": {
+                              "method": "POST",
+                              "url": "{{base_url}}/api/reels",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ],
+                              "body": {
+                                   "mode": "raw",
+                                   "raw": "{\n  \"videoUrl\": \"https://example.com/video.mp4\",\n  \"caption\": \"Check out this amazing view! 🏔️\",\n  \"music\": \"Original Sound - Adventure\"\n}",
+                                   "options": {
+                                        "raw": {
+                                             "language": "json"
+                                        }
+                                   }
+                              }
+                         }
+                    },
+                    {
+                         "name": "Like Reel",
+                         "description": "Like a reel video",
+                         "request": {
+                              "method": "POST",
+                              "url": "{{base_url}}/api/reels/1/like",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ]
+                         }
+                    },
+                    {
+                         "name": "Unlike Reel",
+                         "description": "Remove like from a reel",
+                         "request": {
+                              "method": "DELETE",
+                              "url": "{{base_url}}/api/reels/1/like",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ]
+                         }
+                    },
+                    {
+                         "name": "Share Reel",
+                         "description": "Share a reel (increments share count)",
+                         "request": {
+                              "method": "POST",
+                              "url": "{{base_url}}/api/reels/1/share",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ]
+                         }
+                    },
+                    {
+                         "name": "Get Reel Comments",
+                         "description": "Returns comments on a specific reel",
+                         "request": {
+                              "method": "GET",
+                              "url": "{{base_url}}/api/reels/1/comments?page=1",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ]
+                         }
+                    },
+                    {
+                         "name": "Add Reel Comment",
+                         "description": "Add a comment to a reel",
+                         "request": {
+                              "method": "POST",
+                              "url": "{{base_url}}/api/reels/1/comments",
+                              "header": [
+                                   {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                   }
+                              ],
+                              "body": {
+                                   "mode": "raw",
+                                   "raw": "{\n  \"comment\": \"This is so cool! 🔥\"\n}",
+                                   "options": {
+                                        "raw": {
+                                             "language": "json"
+                                        }
+                                   }
+                              }
+                         }
+                    }
+               ]
+          },
+          {
+               "name": "Health",
+               "description": "Health check endpoints",
+               "item": [
+                    {
+                         "name": "Health Check",
+                         "description": "Returns API health status",
+                         "request": {
+                              "method": "GET",
+                              "url": "{{base_url}}/health"
+                         }
+                    },
+                    {
+                         "name": "Ping",
+                         "description": "Simple ping-pong test",
+                         "request": {
+                              "method": "GET",
+                              "url": "{{base_url}}/ping"
+                         }
+                    }
+               ]
+          }
+     ],
+     "variable": [
+          {
+               "key": "base_url",
+               "value": "http://localhost:8080",
+               "type": "string"
+          },
+          {
+               "key": "token",
+               "value": "",
+               "type": "string",
+               "description": "Your Clerk JWT token"
+          }
+     ]
+}

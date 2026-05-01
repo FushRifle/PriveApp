@@ -1,18 +1,14 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_blurhash/flutter_blurhash.dart';
 import 'package:social_media_app/app/configs/colors.dart';
 import 'package:social_media_app/app/configs/theme.dart';
 import 'package:social_media_app/app/resources/constant/named_routes.dart';
-import 'package:social_media_app/data/models/post_model.dart';
-import 'package:social_media_app/ui/widgets/home/custom_bottom_sheet_comments.dart';
-
+import 'package:social_media_app/data/hooks/home/feed_hook.dart';
 import 'clip_status_bar.dart';
 
 class CardPost extends StatefulWidget {
-  final PostModel post;
+  final dynamic post;
 
   const CardPost({required this.post, super.key});
 
@@ -21,6 +17,7 @@ class CardPost extends StatefulWidget {
 }
 
 class _CardPostState extends State<CardPost> {
+  final FeedHook _feedHook = FeedHook();
   bool isLiked = false;
   bool isSaved = false;
   late int likeCount;
@@ -28,7 +25,70 @@ class _CardPostState extends State<CardPost> {
   @override
   void initState() {
     super.initState();
-    likeCount = int.tryParse(widget.post.like) ?? 0;
+    _parsePost();
+  }
+
+  void _parsePost() {
+    final post =
+        widget.post is Map ? widget.post as Map<String, dynamic> : null;
+    isLiked = post?['isLiked'] ?? false;
+    likeCount = post?['likes'] ?? 0;
+  }
+
+  String get _imageUrl {
+    final post =
+        widget.post is Map ? widget.post as Map<String, dynamic> : null;
+    if (post == null) return '';
+
+    // Check attachments first
+    final attachments = post['attachments'];
+    if (attachments is List && attachments.isNotEmpty) {
+      final firstAttachment = attachments[0] as Map<String, dynamic>?;
+      return firstAttachment?['url']?.toString() ??
+          firstAttachment?['uri']?.toString() ??
+          '';
+    }
+
+    // Fallback to image field
+    return post['image']?.toString() ?? '';
+  }
+
+  String get _caption {
+    final post =
+        widget.post is Map ? widget.post as Map<String, dynamic> : null;
+    if (post == null) return '';
+    return (post['content'] ?? post['caption'] ?? '').toString();
+  }
+
+  String get _userName {
+    final post =
+        widget.post is Map ? widget.post as Map<String, dynamic> : null;
+    if (post == null) return 'User';
+
+    final user = post['user'];
+    if (user is Map<String, dynamic>) {
+      return (user['name'] ?? 'User').toString();
+    }
+    return (post['name'] ?? 'User').toString();
+  }
+
+  String get _userAvatar {
+    final post =
+        widget.post is Map ? widget.post as Map<String, dynamic> : null;
+    if (post == null) return 'assets/profiles/profile_1.jpeg';
+
+    final user = post['user'];
+    if (user is Map<String, dynamic>) {
+      return (user['avatar'] ?? 'assets/profiles/profile_1.jpeg').toString();
+    }
+    return (post['imgProfile'] ?? 'assets/profiles/profile_1.jpeg').toString();
+  }
+
+  int get _postId {
+    final post =
+        widget.post is Map ? widget.post as Map<String, dynamic> : null;
+    if (post == null) return 0;
+    return post['id'] ?? 0;
   }
 
   void toggleLike() {
@@ -36,10 +96,12 @@ class _CardPostState extends State<CardPost> {
       isLiked = !isLiked;
       if (isLiked) {
         likeCount++;
-        HapticFeedback.lightImpact();
+        _feedHook.likePost(_postId);
       } else {
         likeCount--;
+        _feedHook.unlikePost(_postId);
       }
+      HapticFeedback.lightImpact();
     });
   }
 
@@ -52,18 +114,15 @@ class _CardPostState extends State<CardPost> {
 
   void onCommentTap(BuildContext context) {
     HapticFeedback.lightImpact();
-    customBottomSheetComments(context);
+    Navigator.pushNamed(
+      context,
+      NamedRoutes.postDetailScreen,
+      arguments: widget.post,
+    );
   }
 
   void onShareTap() {
     HapticFeedback.lightImpact();
-    // TODO: Implement share functionality
-    print('Share tapped');
-  }
-
-  void onProfileTap(BuildContext context) {
-    HapticFeedback.lightImpact();
-    Navigator.of(context).pushNamed(NamedRoutes.profileScreen);
   }
 
   @override
@@ -109,7 +168,7 @@ class _CardPostState extends State<CardPost> {
                 const SizedBox(height: 10),
                 _buildStatusButton(
                   icon: Icons.message,
-                  text: widget.post.comment,
+                  text: 'Comment',
                   onTap: () => onCommentTap(context),
                 ),
                 const SizedBox(height: 10),
@@ -123,7 +182,7 @@ class _CardPostState extends State<CardPost> {
                 const SizedBox(height: 10),
                 _buildStatusButton(
                   icon: Icons.send,
-                  text: widget.post.share,
+                  text: 'Share',
                   onTap: onShareTap,
                 ),
               ],
@@ -170,27 +229,20 @@ class _CardPostState extends State<CardPost> {
               boxShadow: isActive
                   ? [
                       BoxShadow(
-                        color: (activeColor ?? Colors.white).withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
+                          color: (activeColor ?? Colors.white).withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4))
                     ]
                   : [],
             ),
-            child: Icon(
-              icon,
-              size: 20,
-              color: isActive ? Colors.white : AppColors.whiteColor,
-            ),
+            child: Icon(icon,
+                size: 20,
+                color: isActive ? Colors.white : AppColors.whiteColor),
           ),
           const SizedBox(height: 4),
-          Text(
-            text,
-            style: AppTheme.whiteTextStyle.copyWith(
-              fontSize: 13,
-              fontWeight: isActive ? AppTheme.bold : AppTheme.bold,
-            ),
-          ),
+          Text(text,
+              style: AppTheme.whiteTextStyle
+                  .copyWith(fontSize: 13, fontWeight: AppTheme.bold)),
         ],
       ),
     );
@@ -209,7 +261,7 @@ class _CardPostState extends State<CardPost> {
             colors: [
               Colors.transparent,
               Colors.black.withOpacity(0.2),
-              Colors.black.withOpacity(0.6),
+              Colors.black.withOpacity(0.6)
             ],
           ),
         ),
@@ -218,36 +270,44 @@ class _CardPostState extends State<CardPost> {
   }
 
   Widget _buildImageCover() {
+    final imageUrl = _imageUrl;
     return ClipRRect(
       borderRadius: BorderRadius.circular(30),
-      child: Stack(children: [
-        BlurHash(
-          imageFit: BoxFit.cover,
-          hash: widget.post.pictureHash,
-        ),
-        Image.network(
-          widget.post.picture,
-          width: double.infinity,
-          fit: BoxFit.cover,
-          loadingBuilder: (_, child, ImageChunkEvent? loadingProgress) {
-            if (loadingProgress == null) return child;
-            return Center(
-              child: SizedBox(
-                height: 55,
-                width: 55,
-                child: CircularProgressIndicator(
-                  color: Colors.white.withOpacity(0.8),
-                  strokeWidth: 1.2,
-                  value: loadingProgress.expectedTotalBytes != null
-                      ? loadingProgress.cumulativeBytesLoaded /
-                          loadingProgress.expectedTotalBytes!
-                      : null,
-                ),
-              ),
-            );
-          },
-        )
-      ]),
+      child: imageUrl.isNotEmpty
+          ? Image.network(
+              imageUrl,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _buildPlaceholder(),
+              loadingBuilder: (_, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Center(
+                  child: SizedBox(
+                    height: 55,
+                    width: 55,
+                    child: CircularProgressIndicator(
+                      color: Colors.white.withOpacity(0.8),
+                      strokeWidth: 1.2,
+                      value: loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded /
+                              loadingProgress.expectedTotalBytes!
+                          : null,
+                    ),
+                  ),
+                );
+              },
+            )
+          : _buildPlaceholder(),
+    );
+  }
+
+  Widget _buildPlaceholder() {
+    return Container(
+      color: AppColors.purpleColor.withOpacity(0.2),
+      child: Center(
+        child: Icon(Icons.image,
+            size: 60, color: AppColors.purpleColor.withOpacity(0.5)),
+      ),
     );
   }
 
@@ -259,48 +319,34 @@ class _CardPostState extends State<CardPost> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           GestureDetector(
-            onTap: () => onProfileTap(context),
+            onTap: () =>
+                Navigator.of(context).pushNamed(NamedRoutes.profileScreen),
             child: Row(
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(50),
-                  child: Image.asset(
-                    widget.post.imgProfile,
-                    width: 32,
-                    height: 32,
-                    fit: BoxFit.cover,
-                  ),
+                  child: Image.asset(_userAvatar,
+                      width: 32, height: 32, fit: BoxFit.cover),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  widget.post.name,
-                  style: AppTheme.whiteTextStyle.copyWith(
-                    fontSize: 16,
-                    fontWeight: AppTheme.bold,
-                  ),
-                ),
+                Text(_userName,
+                    style: AppTheme.whiteTextStyle
+                        .copyWith(fontSize: 16, fontWeight: AppTheme.bold)),
               ],
             ),
           ),
           const SizedBox(height: 12),
-          Text(
-            widget.post.caption,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: AppTheme.whiteTextStyle.copyWith(
-              fontSize: 12,
-              fontWeight: AppTheme.bold,
-            ),
-          ),
+          Text(_caption,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTheme.whiteTextStyle
+                  .copyWith(fontSize: 12, fontWeight: AppTheme.bold)),
           const SizedBox(height: 2),
-          Text(
-            widget.post.hashtags.join(" "),
-            style: AppTheme.whiteTextStyle.copyWith(
-              color: AppColors.greenColor,
-              fontSize: 12,
-              fontWeight: AppTheme.medium,
-            ),
-          ),
+          Text('#trending #prive',
+              style: AppTheme.whiteTextStyle.copyWith(
+                  color: AppColors.greenColor,
+                  fontSize: 12,
+                  fontWeight: AppTheme.medium)),
         ],
       ),
     );
