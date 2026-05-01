@@ -3,10 +3,14 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:social_media_app/app/configs/api_config.dart';
 
 class ClerkAuthService {
-  final Dio _api = Dio(BaseOptions(
-    baseUrl: ApiConfig.baseUrl,
-    connectTimeout: const Duration(seconds: 30),
-    headers: {'Content-Type': 'application/json'},
+  // Use YOUR specific Clerk Frontend API URL + publishable key
+  final Dio _clerk = Dio(BaseOptions(
+    baseUrl: ApiConfig.clerkFrontendUrl,
+    connectTimeout: const Duration(seconds: 15),
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ${ApiConfig.clerkPublishableKey}',
+    },
   ));
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage(
@@ -16,88 +20,87 @@ class ClerkAuthService {
 
   Future<ClerkResult> signIn(String email, String password) async {
     try {
-      final res = await _api.post('/auth/login', data: {
-        'email': email.trim().toLowerCase(),
+      final res = await _clerk.post('/client/sign_ins', data: {
+        'identifier': email.trim().toLowerCase(),
         'password': password,
       });
-      final data = res.data;
+      final body = res.data['response'] ?? res.data;
 
-      if (data['token'] != null) {
-        await _storage.write(key: 'auth_token', value: data['token']);
+      if (body['status'] == 'complete') {
+        final token = await _getToken(body['created_session_id']);
+        if (token != null) await _saveToken(token);
         return ClerkResult(success: true, status: 'complete');
       }
-      if (data['needsVerification'] == true) {
+
+      if (body['status'] == 'needs_second_factor') {
         return ClerkResult(
-            success: false,
-            status: 'needs_verification',
-            signInId: data['signInId']);
+            success: false, status: 'needs_verification', signInId: body['id']);
       }
-      return ClerkResult(
-          success: false, error: data['message'] ?? 'Login failed');
+
+      return ClerkResult(success: false, error: 'Status: ${body['status']}');
     } on DioException catch (e) {
-      return ClerkResult(success: false, error: e.message ?? 'Network error');
+      return ClerkResult(success: false, error: _handleError(e));
     }
   }
 
   Future<ClerkResult> signUp(
       String email, String password, String firstName, String lastName) async {
     try {
-      final res = await _api.post('/auth/register', data: {
-        'email': email.trim().toLowerCase(),
+      final res = await _clerk.post('/client/sign_ups', data: {
+        'email_address': email.trim().toLowerCase(),
         'password': password,
-        'firstName': firstName,
-        'lastName': lastName,
+        'first_name': firstName,
+        'last_name': lastName,
       });
-      final data = res.data;
+      final body = res.data['response'] ?? res.data;
 
-      if (data['needsVerification'] == true) {
+      if (body['status'] == 'missing_requirements') {
+        await _clerk.post('/client/sign_ups/${body['id']}/prepare_verification',
+            data: {'strategy': 'email_code'});
         return ClerkResult(
-            success: false,
-            status: 'needs_verification',
-            signInId: data['signUpId']);
+            success: false, status: 'needs_verification', signInId: body['id']);
       }
-      return ClerkResult(
-          success: false, error: data['message'] ?? 'Registration failed');
+
+      return ClerkResult(success: false, error: 'Status: ${body['status']}');
     } on DioException catch (e) {
-      return ClerkResult(success: false, error: e.message ?? 'Network error');
+      return ClerkResult(success: false, error: _handleError(e));
     }
   }
 
   Future<ClerkResult> verify(String signInId, String code,
       {required bool isSignUp}) async {
     try {
-      final endpoint = isSignUp ? '/auth/verify-signup' : '/auth/verify-login';
-      final res = await _api.post(endpoint, data: {
-        'signInId': signInId,
+      final path = isSignUp
+          ? '/client/sign_ups/$signInId/attempt_verification'
+          : '/client/sign_ins/$signInId/attempt_second_factor';
+
+      final res = await _clerk.post(path, data: {
+        'strategy': 'email_code',
         'code': code.trim(),
       });
-      final data = res.data;
+      final body = res.data['response'] ?? res.data;
 
-      if (data['token'] != null) {
-        await _storage.write(key: 'auth_token', value: data['token']);
+      if (body['status'] == 'complete') {
+        final token = await _getToken(body['created_session_id']);
+        if (token != null) await _saveToken(token);
         return ClerkResult(success: true, status: 'complete');
       }
-      return ClerkResult(
-          success: false, error: data['message'] ?? 'Verification failed');
+
+      return ClerkResult(success: false, error: 'Verification failed');
     } on DioException catch (e) {
-      return ClerkResult(success: false, error: e.message ?? 'Network error');
+      return ClerkResult(success: false, error: _handleError(e));
     }
   }
 
   Future<void> resendCode(String signInId, {required bool isSignUp}) async {
-    final endpoint =
-        isSignUp ? '/auth/resend-signup-code' : '/auth/resend-login-code';
-    await _api.post(endpoint, data: {'signInId': signInId});
+    final path = isSignUp
+        ? '/client/sign_ups/$signInId/prepare_verification'
+        : '/client/sign_ins/$signInId/prepare_second_factor';
+    await _clerk.post(path, data: {'strategy': 'email_code'});
   }
 
   Future<void> signOut() async {
-    try {
-      await _api.post('/auth/logout');
-    } catch (_) {}
     await _storage.delete(key: 'auth_token');
-    await _storage.delete(key: 'email');
-    await _storage.delete(key: 'password');
-    await _storage.write(key: 'remember_me', value: 'false');
   }
 
   Future<bool> isAuthenticated() async {
@@ -128,6 +131,31 @@ class ClerkAuthService {
       await _storage.delete(key: 'password');
       await _storage.write(key: 'remember_me', value: 'false');
     }
+  }
+
+  Future<String?> _getToken(String sessionId) async {
+    try {
+      final res = await _clerk.get('/client/sessions/$sessionId/token');
+      return res.data['jwt'] ?? res.data['response']?['jwt'];
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _saveToken(String token) async {
+    await _storage.write(key: 'auth_token', value: token);
+  }
+
+  String _handleError(DioException e) {
+    final data = e.response?.data;
+    final body = data is Map ? (data['response'] ?? data) : null;
+    if (body != null && body['errors'] is List && body['errors'].isNotEmpty) {
+      final msg = body['errors'][0]['message']?.toString() ?? '';
+      if (msg.contains('identifier')) return 'No account found';
+      if (msg.contains('password')) return 'Incorrect password';
+      return msg.isNotEmpty ? msg : 'Login failed';
+    }
+    return 'Network error. Check your connection.';
   }
 }
 
