@@ -4,7 +4,6 @@ import '../api_service.dart';
 class UserService {
   final ApiService _api = ApiService();
 
-  // Parse languages field (handles Array, String, or null)
   List<String> _parseLanguages(dynamic languages) {
     if (languages == null) return [];
     if (languages is List) return languages.cast<String>();

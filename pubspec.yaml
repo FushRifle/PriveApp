@@ -22,7 +22,7 @@ dependencies:
   # Image & Media
   flutter_blurhash: ^0.9.1
   image_picker: ^1.0.7
-  mime: ^1.0.4
+  mime: ^2.0.0
 
   # Chat
   flutter_chat_ui: ^2.11.1
@@ -33,7 +33,6 @@ dependencies:
   dio: ^5.9.2
 
   # Auth & Backend
-  clerk_flutter: ^0.0.14-beta
   supabase_flutter: ^2.12.4
   flutter_secure_storage: ^10.0.0
 

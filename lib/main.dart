@@ -1,8 +1,6 @@
-import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:social_media_app/app/configs/api_config.dart';
 import 'package:social_media_app/app/configs/colors.dart';
 import 'package:social_media_app/app/configs/theme.dart';
 import 'package:social_media_app/app/resources/constant/named_routes.dart';
@@ -46,53 +44,48 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClerkAuth(
-      config: ClerkAuthConfig(
-        publishableKey: ApiConfig.clerkPublishableKey,
-      ),
-      child: MaterialApp(
-        title: 'Prive',
-        theme: AppTheme.lightTheme,
-        debugShowCheckedModeBanner: false,
-        initialRoute: NamedRoutes.onboardingScreen,
-        routes: {
-          NamedRoutes.onboardingScreen: (context) => const OnboardingPage(),
-          NamedRoutes.loginScreen: (context) => const LoginPage(),
-          NamedRoutes.registerScreen: (context) => const RegisterPage(),
-          NamedRoutes.homeScreen: (context) => const MainWrapper(),
-          NamedRoutes.profileScreen: (context) => const ProfilePage(),
-          NamedRoutes.editProfileScreen: (context) => const EditProfilePage(),
-          NamedRoutes.friendListScreen: (context) => const FriendsListPage(),
-          NamedRoutes.insightsScreen: (context) => const InsightsPage(),
-          NamedRoutes.matchScreen: (context) => const MatchesPage(),
-          NamedRoutes.postDetailScreen: (context) {
-            final post =
-                ModalRoute.of(context)!.settings.arguments as PostModel;
-            return PostDetailPage(post: post);
-          },
-          NamedRoutes.createPostScreen: (context) => const CreatePostPage(),
-          NamedRoutes.createStatusScreen: (context) => const CreateStatusPage(),
-          NamedRoutes.settingsScreen: (context) => const SettingsPage(),
-          NamedRoutes.subscribeScreen: (context) => const SubscribePage(),
-          NamedRoutes.notificationScreen: (context) => const NotificationPage(),
+    // ClerkAuth wrapper removed – using plain MaterialApp
+    return MaterialApp(
+      title: 'Prive',
+      theme: AppTheme.lightTheme,
+      debugShowCheckedModeBanner: false,
+      initialRoute: NamedRoutes.onboardingScreen,
+      routes: {
+        NamedRoutes.onboardingScreen: (context) => const OnboardingPage(),
+        NamedRoutes.loginScreen: (context) => const LoginPage(),
+        NamedRoutes.registerScreen: (context) => const RegisterPage(),
+        NamedRoutes.homeScreen: (context) => const MainWrapper(),
+        NamedRoutes.profileScreen: (context) => const ProfilePage(),
+        NamedRoutes.editProfileScreen: (context) => const EditProfilePage(),
+        NamedRoutes.friendListScreen: (context) => const FriendsListPage(),
+        NamedRoutes.insightsScreen: (context) => const InsightsPage(),
+        NamedRoutes.matchScreen: (context) => const MatchesPage(),
+        NamedRoutes.postDetailScreen: (context) {
+          final post = ModalRoute.of(context)!.settings.arguments as PostModel;
+          return PostDetailPage(post: post);
         },
-        builder: (context, child) {
-          final mediaQueryData = MediaQuery.of(context);
-          if (kIsWeb) {
-            return MediaQuery(
-              data: mediaQueryData.copyWith(
-                viewInsets: EdgeInsets.zero,
-                viewPadding: EdgeInsets.only(
-                  top: mediaQueryData.padding.top,
-                  bottom: mediaQueryData.padding.bottom,
-                ),
+        NamedRoutes.createPostScreen: (context) => const CreatePostPage(),
+        NamedRoutes.createStatusScreen: (context) => const CreateStatusPage(),
+        NamedRoutes.settingsScreen: (context) => const SettingsPage(),
+        NamedRoutes.subscribeScreen: (context) => const SubscribePage(),
+        NamedRoutes.notificationScreen: (context) => const NotificationPage(),
+      },
+      builder: (context, child) {
+        final mediaQueryData = MediaQuery.of(context);
+        if (kIsWeb) {
+          return MediaQuery(
+            data: mediaQueryData.copyWith(
+              viewInsets: EdgeInsets.zero,
+              viewPadding: EdgeInsets.only(
+                top: mediaQueryData.padding.top,
+                bottom: mediaQueryData.padding.bottom,
               ),
-              child: child!,
-            );
-          }
-          return child!;
-        },
-      ),
+            ),
+            child: child!,
+          );
+        }
+        return child!;
+      },
     );
   }
 }

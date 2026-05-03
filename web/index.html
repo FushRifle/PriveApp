@@ -27,7 +27,7 @@
 <body>
   <script>
     // Force HTML renderer for better compatibility
-    window.flutterWebRenderer = "html";
+    engineInitializer.initializeEngine(config) = "html";
 
     // Disable service workers during development to avoid caching issues
     if ('serviceWorker' in navigator) {
