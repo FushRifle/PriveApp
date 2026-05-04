@@ -1,19 +1,29 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:social_media_app/data/services/api_service.dart'; // Add this
 
 class SupabaseAuthService {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final ApiService _apiService = ApiService(); // Add this
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
     iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
   );
 
-  Future<AuthResponse> signIn(String email, String password) {
-    return _supabase.auth.signInWithPassword(
+  Future<AuthResponse> signIn(String email, String password) async {
+    final response = await _supabase.auth.signInWithPassword(
       email: email.trim().toLowerCase(),
       password: password,
     );
+
+    // Save token after successful sign in
+    if (response.session != null) {
+      await _apiService.setToken(response.session!.accessToken);
+      print('Token saved to ApiService');
+    }
+
+    return response;
   }
 
   Future<AuthResponse> signUp(
@@ -21,8 +31,8 @@ class SupabaseAuthService {
     String password,
     String firstName,
     String lastName,
-  ) {
-    return _supabase.auth.signUp(
+  ) async {
+    final response = await _supabase.auth.signUp(
       email: email.trim().toLowerCase(),
       password: password,
       data: {
@@ -31,6 +41,14 @@ class SupabaseAuthService {
         'name': '$firstName $lastName'.trim(),
       },
     );
+
+    // Save token after successful sign up (if session exists)
+    if (response.session != null) {
+      await _apiService.setToken(response.session!.accessToken);
+      print('Token saved to ApiService');
+    }
+
+    return response;
   }
 
   Future<bool> verifyOtp({
@@ -43,6 +61,12 @@ class SupabaseAuthService {
       type: OtpType.signup,
     );
 
+    // Save token after OTP verification (if session exists)
+    if (res.session != null) {
+      await _apiService.setToken(res.session!.accessToken);
+      print('Token saved to ApiService after OTP');
+    }
+
     return res.user != null;
   }
 
@@ -53,8 +77,10 @@ class SupabaseAuthService {
     );
   }
 
-  Future<void> signOut() {
-    return _supabase.auth.signOut();
+  Future<void> signOut() async {
+    await _supabase.auth.signOut();
+    await _apiService.clearToken(); // Clear token on sign out
+    print('Token cleared from ApiService');
   }
 
   bool isAuthenticated() {
@@ -74,7 +100,12 @@ class SupabaseAuthService {
   }
 
   Future<String?> getAuthToken() async {
-    return accessToken;
+    // First try to get from supabase session
+    if (accessToken != null) {
+      return accessToken;
+    }
+    // Fallback to stored token
+    return await _apiService.getToken();
   }
 
   Future<Map<String, dynamic>> getSavedCredentials() async {

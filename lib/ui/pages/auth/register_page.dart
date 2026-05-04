@@ -18,21 +18,22 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
-  final TextEditingController _codeController = TextEditingController();
 
   final AuthHook _authHook = AuthHook();
 
   bool _agreeToTerms = false;
   bool _showConfirmPassword = false;
+  bool _isInitializing = true;
 
   @override
   void initState() {
     super.initState();
-    _authHook.addListener(_onAuthChanged);
+    _initialize();
   }
 
-  void _onAuthChanged() {
-    if (mounted) setState(() {});
+  Future<void> _initialize() async {
+    await _authHook.initialize();
+    setState(() => _isInitializing = false);
   }
 
   @override
@@ -41,8 +42,6 @@ class _RegisterPageState extends State<RegisterPage> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _codeController.dispose();
-    _authHook.removeListener(_onAuthChanged);
     _authHook.dispose();
     super.dispose();
   }
@@ -56,19 +55,71 @@ class _RegisterPageState extends State<RegisterPage> {
       ),
     );
 
+    if (_isInitializing || _authHook.isLoadingStorage) {
+      return _buildLoadingScreen();
+    }
+
     return Scaffold(
       backgroundColor: AppColors.whiteColor,
       body: SafeArea(
-        child: _authHook.showVerification
-            ? _buildVerificationView()
-            : _buildRegisterView(),
+        child: ListenableBuilder(
+          listenable: _authHook,
+          builder: (context, _) {
+            return _buildRegisterView();
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingScreen() {
+    return Scaffold(
+      backgroundColor: AppColors.whiteColor,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.purpleColor.withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Image.asset(
+                  'assets/images/prive.png',
+                  width: 80,
+                  height: 80,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+            const SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                color: AppColors.purpleColor,
+                strokeWidth: 2.5,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildRegisterView() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -76,7 +127,7 @@ class _RegisterPageState extends State<RegisterPage> {
           GestureDetector(
             onTap: () {
               HapticFeedback.lightImpact();
-              Navigator.pop(context);
+              Navigator.pushReplacementNamed(context, NamedRoutes.loginScreen);
             },
             child: Container(
               width: 40,
@@ -161,8 +212,13 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
           ),
           const SizedBox(height: 16),
-          if (_authHook.loginError.isNotEmpty)
-            _buildErrorBox(_authHook.loginError),
+          ListenableBuilder(
+            listenable: _authHook,
+            builder: (_, __) {
+              if (_authHook.loginError.isEmpty) return const SizedBox.shrink();
+              return _buildErrorBox(_authHook.loginError);
+            },
+          ),
           Row(
             children: [
               GestureDetector(
@@ -216,46 +272,51 @@ class _RegisterPageState extends State<RegisterPage> {
             ],
           ),
           const SizedBox(height: 32),
-          GestureDetector(
-            onTap: _authHook.loading ? null : _handleRegister,
-            child: Container(
-              width: double.infinity,
-              height: 56,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.purpleColor,
-                    AppColors.purpleColor.withOpacity(0.8),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.purpleColor.withOpacity(0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: _authHook.loading
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : Text(
-                        'Sign Up',
-                        style: AppTheme.whiteTextStyle.copyWith(
-                          fontWeight: AppTheme.bold,
-                          fontSize: 18,
-                        ),
+          ListenableBuilder(
+            listenable: _authHook,
+            builder: (_, __) {
+              return GestureDetector(
+                onTap: _authHook.loading ? null : _handleRegister,
+                child: Container(
+                  width: double.infinity,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.purpleColor,
+                        AppColors.purpleColor.withOpacity(0.8),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.purpleColor.withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
                       ),
-              ),
-            ),
+                    ],
+                  ),
+                  child: Center(
+                    child: _authHook.loading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            'Sign Up',
+                            style: AppTheme.whiteTextStyle.copyWith(
+                              fontWeight: AppTheme.bold,
+                              fontSize: 18,
+                            ),
+                          ),
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 24),
           Row(
@@ -268,7 +329,8 @@ class _RegisterPageState extends State<RegisterPage> {
               GestureDetector(
                 onTap: () {
                   HapticFeedback.lightImpact();
-                  Navigator.pop(context);
+                  Navigator.pushReplacementNamed(
+                      context, NamedRoutes.loginScreen);
                 },
                 child: Text(
                   'Sign In',
@@ -280,124 +342,6 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVerificationView() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 20),
-          GestureDetector(
-            onTap: _authHook.backToLogin,
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.backgroundColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.arrow_back_ios_new,
-                color: Colors.black,
-                size: 18,
-              ),
-            ),
-          ),
-          const SizedBox(height: 40),
-          Center(
-            child: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: AppColors.purpleColor.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.email_outlined,
-                color: AppColors.purpleColor,
-                size: 40,
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Verify Your Email',
-            style: AppTheme.blackTextStyle.copyWith(
-              fontWeight: AppTheme.bold,
-              fontSize: 28,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "We've sent a verification code to your email",
-            style: AppTheme.greyTextStyle.copyWith(fontSize: 14),
-          ),
-          const SizedBox(height: 32),
-          _buildInputField(
-            controller: _codeController,
-            label: 'Verification Code',
-            hint: 'Enter 6-digit code',
-            icon: Icons.pin_outlined,
-            keyboardType: TextInputType.number,
-            onChanged: _authHook.updateCode,
-          ),
-          const SizedBox(height: 12),
-          if (_authHook.verificationError.isNotEmpty)
-            _buildErrorBox(_authHook.verificationError),
-          const SizedBox(height: 24),
-          GestureDetector(
-            onTap: _authHook.loading ? null : _handleVerify,
-            child: Container(
-              width: double.infinity,
-              height: 56,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.purpleColor,
-                    AppColors.purpleColor.withOpacity(0.8),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(28),
-              ),
-              child: Center(
-                child: _authHook.loading
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : Text(
-                        'Verify',
-                        style: AppTheme.whiteTextStyle.copyWith(
-                          fontWeight: AppTheme.bold,
-                          fontSize: 18,
-                        ),
-                      ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Center(
-            child: GestureDetector(
-              onTap: _authHook.resendCode,
-              child: Text(
-                'Resend Code',
-                style: AppTheme.blackTextStyle.copyWith(
-                  color: AppColors.purpleColor,
-                  fontWeight: AppTheme.bold,
-                  fontSize: 14,
-                ),
-              ),
-            ),
           ),
         ],
       ),
@@ -485,16 +429,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
   Future<void> _handleRegister() async {
     if (!_agreeToTerms) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please agree to the Terms of Service'),
-          backgroundColor: AppColors.redColor,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
+      _showSnack('Please agree to the Terms of Service');
       return;
     }
 
@@ -504,6 +439,11 @@ class _RegisterPageState extends State<RegisterPage> {
 
     if (fullName.isEmpty) {
       _showSnack('Please enter your full name');
+      return;
+    }
+
+    if (password.isEmpty) {
+      _showSnack('Please enter a password');
       return;
     }
 
@@ -526,21 +466,15 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
-  Future<void> _handleVerify() async {
-    final success = await _authHook.handleVerify();
-
-    if (success && mounted) {
-      Navigator.pushReplacementNamed(context, NamedRoutes.homeScreen);
-    }
-  }
-
   void _showSnack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: AppColors.redColor,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
       ),
     );
   }

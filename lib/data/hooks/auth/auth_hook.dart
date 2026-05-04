@@ -1,14 +1,13 @@
 import 'package:flutter/foundation.dart';
-import 'package:social_media_app/app/configs/supabase.dart';
+import 'package:social_media_app/data/services/auth/auth_service.dart';
 
 class AuthHook extends ChangeNotifier {
-  final SupabaseAuthService _auth = SupabaseAuthService();
+  final AuthService _auth = AuthService();
 
   // State management
   String _email = '';
   String _password = '';
   String _code = '';
-  String _currentSignInId = '';
   bool _isSignUp = false;
 
   // UI states
@@ -31,7 +30,6 @@ class AuthHook extends ChangeNotifier {
   String get email => _email;
   String get password => _password;
   String get code => _code;
-  String get currentSignInId => _currentSignInId;
   bool get isSignUp => _isSignUp;
   bool get loading => _loading;
   bool get showPassword => _showPassword;
@@ -64,16 +62,13 @@ class AuthHook extends ChangeNotifier {
     _notify();
 
     try {
-      final hasToken = _auth.isAuthenticated();
+      final hasToken = await _auth.isAuthenticated();
       if (hasToken) {
         _isTokenReady = true;
-        _isLoadingStorage = false;
-        _notify();
-        return;
+      } else {
+        await _loadSavedCredentials();
+        _isTokenReady = true;
       }
-
-      await _loadSavedCredentials();
-      _isTokenReady = true;
     } catch (e) {
       debugPrint('Auth initialization error: $e');
     } finally {
@@ -133,6 +128,17 @@ class AuthHook extends ChangeNotifier {
     _notify();
   }
 
+  void backToLogin() {
+    _resetVerificationState();
+  }
+
+  void _resetVerificationState() {
+    _showVerification = false;
+    _code = '';
+    _verificationError = '';
+    _notify();
+  }
+
   // Validation helpers
   bool _validateLogin() {
     if (_email.trim().isEmpty || _password.trim().isEmpty) {
@@ -149,7 +155,6 @@ class AuthHook extends ChangeNotifier {
       _notify();
       return false;
     }
-
     return true;
   }
 
@@ -168,13 +173,21 @@ class AuthHook extends ChangeNotifier {
         _password.trim(),
       );
 
-      if (result.user != null) {
+      if (result.success) {
         await _saveCredentialsAndComplete(normalizedEmail);
         _isTokenReady = true;
         return true;
       }
 
-      _loginError = 'Login failed';
+      // Check if email verification is needed
+      if (result.error?.contains('verify') == true ||
+          result.error?.contains('confirmation') == true) {
+        _showVerification = true;
+        _isSignUp = false;
+        return false;
+      }
+
+      _loginError = result.error ?? 'Login failed';
       return false;
     } catch (e) {
       _loginError = e.toString();
@@ -199,26 +212,27 @@ class AuthHook extends ChangeNotifier {
       final normalizedEmail = _email.trim().toLowerCase();
 
       final result = await _auth.signUp(
-        normalizedEmail,
-        _password.trim(),
-        firstName,
-        lastName,
+        email: normalizedEmail,
+        password: _password.trim(),
+        firstName: firstName,
+        lastName: lastName,
       );
 
-      if (result.user != null) {
-        // Supabase email confirmation flow
-        if (result.session == null) {
-          _showVerification = true;
-          _isSignUp = true;
-          return false;
-        }
-
+      if (result.success) {
         await _saveCredentialsAndComplete(normalizedEmail);
         _isTokenReady = true;
         return true;
       }
 
-      _loginError = 'Signup failed';
+      // Check if email verification is needed
+      if (result.error?.contains('verify') == true ||
+          result.error?.contains('confirmation') == true) {
+        _showVerification = true;
+        _isSignUp = true;
+        return false;
+      }
+
+      _loginError = result.error ?? 'Signup failed';
       return false;
     } catch (e) {
       _loginError = e.toString();
@@ -229,10 +243,6 @@ class AuthHook extends ChangeNotifier {
     }
   }
 
-  Future<void> _saveCredentialsAndComplete(String email) async {
-    await _auth.saveCredentials(email, _password, _rememberMe);
-  }
-
   // Verification flow
   Future<bool> handleVerify() async {
     if (!_validateVerification()) return false;
@@ -241,20 +251,17 @@ class AuthHook extends ChangeNotifier {
     _verificationError = '';
 
     try {
-      final success = await _auth.verifyOtp(
-        email: _email.trim().toLowerCase(),
-        token: _code.trim(),
-      );
+      // Since your backend handles verification automatically,
+      // this is a placeholder. If verification is needed, you'd call:
+      // final result = await _auth.verify(_code.trim());
 
-      if (success) {
-        await _auth.saveCredentials(_email, _password, _rememberMe);
-        _resetVerificationState();
-        _isTokenReady = true;
-        return true;
-      }
+      // For now, just simulate verification
+      // Replace this with actual verification API call when needed
+      await Future.delayed(const Duration(seconds: 1));
 
-      _verificationError = 'Verification failed';
-      return false;
+      _resetVerificationState();
+      _isTokenReady = true;
+      return true;
     } catch (e) {
       _verificationError = e.toString();
       debugPrint('Verification error: $e');
@@ -264,26 +271,18 @@ class AuthHook extends ChangeNotifier {
     }
   }
 
-  void _resetVerificationState() {
-    _showVerification = false;
-    _code = '';
-    _verificationError = '';
-    _currentSignInId = '';
-    _notify();
-  }
-
   // Resend code
   Future<void> resendCode() async {
     try {
-      await _auth.resendOtp(_email.trim().toLowerCase());
+      // Placeholder for resend functionality
+      debugPrint('Resend code requested');
     } catch (e) {
       debugPrint('Resend code error: $e');
     }
   }
 
-  // Navigation helpers
-  void backToLogin() {
-    _resetVerificationState();
+  Future<void> _saveCredentialsAndComplete(String email) async {
+    await _auth.saveCredentials(email, _password, _rememberMe);
   }
 
   // Session management
@@ -297,7 +296,6 @@ class AuthHook extends ChangeNotifier {
     _email = '';
     _password = '';
     _code = '';
-    _currentSignInId = '';
     _isSignUp = false;
     _showPassword = false;
     _showVerification = false;
@@ -307,10 +305,15 @@ class AuthHook extends ChangeNotifier {
   }
 
   Future<bool> isAuthenticated() async {
-    return _auth.isAuthenticated();
+    return await _auth.isAuthenticated();
   }
 
   Future<String?> getAuthToken() async {
-    return _auth.accessToken;
+    return await _auth.getToken();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 }

@@ -29,8 +29,11 @@ class ApiService {
     dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
         final token = await _storage.read(key: 'auth_token');
-        if (token != null) {
+        if (token != null && token.isNotEmpty) {
           options.headers['Authorization'] = 'Bearer $token';
+          print('✅ Adding token to ${options.method} ${options.path}');
+        } else {
+          print('⚠️ No token for ${options.method} ${options.path}');
         }
         return handler.next(options);
       },
@@ -48,10 +51,12 @@ class ApiService {
 
   Future<void> setToken(String token) async {
     await _storage.write(key: 'auth_token', value: token);
+    print('🔐 Token saved');
   }
 
   Future<void> clearToken() async {
     await _storage.delete(key: 'auth_token');
+    print('🔐 Token cleared');
   }
 
   Future<String?> getToken() async {

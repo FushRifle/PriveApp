@@ -1,85 +1,144 @@
 import 'package:dio/dio.dart';
-import '../api_service.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:social_media_app/app/configs/api_config.dart';
+import '../../services/api_service.dart';
 
-class UserService {
-  final ApiService _api = ApiService();
+class AuthService {
+  final Dio _dio = Dio(BaseOptions(
+    baseUrl: ApiConfig.baseUrl,
+    connectTimeout: const Duration(seconds: 30),
+    headers: {'Content-Type': 'application/json'},
+  ));
 
-  List<String> _parseLanguages(dynamic languages) {
-    if (languages == null) return [];
-    if (languages is List) return languages.cast<String>();
-    if (languages is String) {
-      final cleaned = languages.replaceAll(RegExp(r'^{|}$'), '');
-      return cleaned.isNotEmpty ? cleaned.split(',') : [];
-    }
-    return [];
-  }
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final ApiService _apiService = ApiService();
 
-  // Complete onboarding
-  Future<Map<String, dynamic>> completeOnboarding() async {
+  // Sign In
+  Future<AuthResult> signIn(String email, String password) async {
     try {
-      final response = await _api.put('/users/onboard');
-      return response.data;
-    } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to complete onboarding';
-    }
-  }
+      final response = await _dio.post('/api/auth/signin', data: {
+        'email': email.trim().toLowerCase(),
+        'password': password,
+      });
 
-  // Get current user
-  Future<Map<String, dynamic>> getCurrentUser() async {
-    try {
-      final response = await _api.get('/users/me');
+      final data = response.data;
+      final token = data['token'];
 
-      if (response.data != null && response.data['languages'] != null) {
-        response.data['languages'] =
-            _parseLanguages(response.data['languages']);
+      if (token != null && token.isNotEmpty) {
+        await _apiService.setToken(token);
+        return AuthResult(success: true, token: token, user: data['user']);
       }
 
-      return response.data;
+      return AuthResult(success: false, error: 'No token received');
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to get user';
+      return AuthResult(success: false, error: _handleError(e));
     }
   }
 
-  // Update current user
-  Future<Map<String, dynamic>> updateCurrentUser(
-      Map<String, dynamic> data) async {
+  // Sign Up
+  Future<AuthResult> signUp({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+  }) async {
     try {
-      final response = await _api.put('/users/me', data: data);
+      final response = await _dio.post('/api/auth/signup', data: {
+        'email': email.trim().toLowerCase(),
+        'password': password,
+        'firstName': firstName,
+        'lastName': lastName,
+      });
 
-      if (response.data != null && response.data['languages'] != null) {
-        response.data['languages'] =
-            _parseLanguages(response.data['languages']);
+      final data = response.data;
+      final token = data['token'];
+
+      if (token != null && token.isNotEmpty) {
+        await _apiService.setToken(token);
+        return AuthResult(success: true, token: token, user: data['user']);
       }
 
-      return response.data;
+      return AuthResult(success: false, error: 'No token received');
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to update user';
+      return AuthResult(success: false, error: _handleError(e));
     }
   }
 
-  // Delete current user
-  Future<Map<String, dynamic>> deleteCurrentUser() async {
-    try {
-      final response = await _api.delete('/users/me');
-      return response.data;
-    } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to delete account';
+  // Sign Out
+  Future<void> signOut() async {
+    await _apiService.clearToken();
+    await _storage.delete(key: 'remember_me');
+    await _storage.delete(key: 'email');
+    await _storage.delete(key: 'password');
+  }
+
+  // Get Token
+  Future<String?> getToken() async {
+    return await _apiService.getToken();
+  }
+
+  // Check if authenticated
+  Future<bool> isAuthenticated() async {
+    return await _apiService.hasToken();
+  }
+
+  // Get saved credentials (Remember Me)
+  Future<Map<String, dynamic>> getSavedCredentials() async {
+    final rememberMe = await _storage.read(key: 'remember_me') == 'true';
+
+    if (rememberMe) {
+      return {
+        'rememberMe': true,
+        'email': await _storage.read(key: 'email') ?? '',
+        'password': await _storage.read(key: 'password') ?? '',
+      };
+    }
+
+    return {
+      'rememberMe': false,
+      'email': '',
+      'password': '',
+    };
+  }
+
+  // Save credentials (Remember Me)
+  Future<void> saveCredentials(
+      String email, String password, bool remember) async {
+    if (remember) {
+      await _storage.write(key: 'email', value: email);
+      await _storage.write(key: 'password', value: password);
+      await _storage.write(key: 'remember_me', value: 'true');
+    } else {
+      await _storage.delete(key: 'email');
+      await _storage.delete(key: 'password');
+      await _storage.write(key: 'remember_me', value: 'false');
     }
   }
 
-  // Get user by ID
-  Future<Map<String, dynamic>> getUserById(int userId) async {
-    try {
-      final response = await _api.get('/users/$userId');
-
-      if (response.data != null && response.data['languages'] != null) {
-        response.data['languages'] =
-            _parseLanguages(response.data['languages']);
-      }
-
-      return response.data;
-    } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to get user';
+  String _handleError(DioException e) {
+    final data = e.response?.data;
+    if (data is Map && data['message'] != null) {
+      return data['message'];
     }
+    if (e.response?.statusCode == 401) return 'Invalid email or password';
+    if (e.type == DioExceptionType.connectionTimeout)
+      return 'Connection timeout';
+    if (e.type == DioExceptionType.unknown)
+      return 'Network error. Check your connection';
+    return 'Authentication failed. Please try again';
   }
+}
+
+class AuthResult {
+  final bool success;
+  final String? token;
+  final Map<String, dynamic>? user;
+  final String? error;
+
+  AuthResult({
+    required this.success,
+    this.token,
+    this.user,
+    this.error,
+  });
 }

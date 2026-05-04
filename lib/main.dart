@@ -17,8 +17,10 @@ import 'package:social_media_app/ui/pages/main/reels/reels_page.dart';
 import 'package:social_media_app/ui/pages/main/post/create_post_page.dart';
 import 'package:social_media_app/ui/pages/main/status/create_status_page.dart';
 import 'package:social_media_app/ui/pages/auth/onboarding_page.dart';
+
 import 'package:social_media_app/ui/pages/auth/login_page.dart';
 import 'package:social_media_app/ui/pages/auth/register_page.dart';
+
 import 'package:social_media_app/ui/pages/settings/settings_page.dart';
 import 'package:social_media_app/ui/pages/settings/subscribe_page.dart';
 import 'package:social_media_app/ui/pages/social/friends_list_page.dart';
