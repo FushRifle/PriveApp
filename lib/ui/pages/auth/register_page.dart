@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:social_media_app/app/configs/colors.dart';
 import 'package:social_media_app/app/configs/theme.dart';
 import 'package:social_media_app/app/resources/constant/named_routes.dart';
-import 'package:social_media_app/data/hooks/auth/register_hook.dart';
+import 'package:social_media_app/data/hooks/auth/auth_hook.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -19,8 +19,21 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
   final TextEditingController _codeController = TextEditingController();
-  final RegisterHook _registerHook = RegisterHook();
+
+  final AuthHook _authHook = AuthHook();
+
   bool _agreeToTerms = false;
+  bool _showConfirmPassword = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _authHook.addListener(_onAuthChanged);
+  }
+
+  void _onAuthChanged() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
@@ -29,7 +42,8 @@ class _RegisterPageState extends State<RegisterPage> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _codeController.dispose();
-    _registerHook.dispose();
+    _authHook.removeListener(_onAuthChanged);
+    _authHook.dispose();
     super.dispose();
   }
 
@@ -45,7 +59,7 @@ class _RegisterPageState extends State<RegisterPage> {
     return Scaffold(
       backgroundColor: AppColors.whiteColor,
       body: SafeArea(
-        child: _registerHook.showVerification
+        child: _authHook.showVerification
             ? _buildVerificationView()
             : _buildRegisterView(),
       ),
@@ -59,7 +73,6 @@ class _RegisterPageState extends State<RegisterPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 20),
-          // Back button
           GestureDetector(
             onTap: () {
               HapticFeedback.lightImpact();
@@ -72,15 +85,20 @@ class _RegisterPageState extends State<RegisterPage> {
                 color: AppColors.backgroundColor,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.arrow_back_ios_new,
-                  color: AppColors.blackColor, size: 18),
+              child: const Icon(
+                Icons.arrow_back_ios_new,
+                color: AppColors.blackColor,
+                size: 18,
+              ),
             ),
           ),
           const SizedBox(height: 32),
           Text(
             'Create Account',
-            style: AppTheme.blackTextStyle
-                .copyWith(fontWeight: AppTheme.bold, fontSize: 32),
+            style: AppTheme.blackTextStyle.copyWith(
+              fontWeight: AppTheme.bold,
+              fontSize: 32,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -88,89 +106,63 @@ class _RegisterPageState extends State<RegisterPage> {
             style: AppTheme.greyTextStyle.copyWith(fontSize: 16),
           ),
           const SizedBox(height: 32),
-          // Name field
           _buildInputField(
             controller: _nameController,
             label: 'Full Name',
             hint: 'Enter your full name',
             icon: Icons.person_outline,
-            onChanged: (value) => _registerHook.updateForm('fullName', value),
           ),
           const SizedBox(height: 20),
-          // Email field
           _buildInputField(
             controller: _emailController,
             label: 'Email',
             hint: 'Enter your email',
             icon: Icons.email_outlined,
             keyboardType: TextInputType.emailAddress,
-            onChanged: (value) => _registerHook.updateForm('email', value),
+            onChanged: _authHook.updateEmail,
           ),
           const SizedBox(height: 20),
-          // Password field
           _buildInputField(
             controller: _passwordController,
             label: 'Password',
             hint: 'Create a password',
             icon: Icons.lock_outlined,
-            obscureText: !_registerHook.showPassword,
-            onChanged: (value) => _registerHook.updateForm('password', value),
+            obscureText: !_authHook.showPassword,
+            onChanged: _authHook.updatePassword,
             suffixIcon: IconButton(
               icon: Icon(
-                _registerHook.showPassword
+                _authHook.showPassword
                     ? Icons.visibility_outlined
                     : Icons.visibility_off_outlined,
                 color: AppColors.greyColor,
               ),
-              onPressed: () => _registerHook.toggleShowPassword(),
+              onPressed: _authHook.toggleShowPassword,
             ),
           ),
           const SizedBox(height: 20),
-          // Confirm password field
           _buildInputField(
             controller: _confirmPasswordController,
             label: 'Confirm Password',
             hint: 'Confirm your password',
             icon: Icons.lock_outlined,
-            obscureText: !_registerHook.showConfirmPassword,
-            onChanged: (value) =>
-                _registerHook.updateForm('confirmPassword', value),
+            obscureText: !_showConfirmPassword,
             suffixIcon: IconButton(
               icon: Icon(
-                _registerHook.showConfirmPassword
+                _showConfirmPassword
                     ? Icons.visibility_outlined
                     : Icons.visibility_off_outlined,
                 color: AppColors.greyColor,
               ),
-              onPressed: () => _registerHook.toggleShowConfirmPassword(),
+              onPressed: () {
+                setState(() {
+                  _showConfirmPassword = !_showConfirmPassword;
+                });
+              },
             ),
           ),
           const SizedBox(height: 16),
-          // Register error
-          if (_registerHook.registerError.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.all(12),
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: AppColors.redColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.error_outline,
-                      color: AppColors.redColor, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _registerHook.registerError,
-                      style: AppTheme.blackTextStyle
-                          .copyWith(color: AppColors.redColor, fontSize: 13),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          // Terms and conditions
+          if (_authHook.loginError.isNotEmpty)
+            _buildErrorBox(_authHook.loginError),
           Row(
             children: [
               GestureDetector(
@@ -205,15 +197,17 @@ class _RegisterPageState extends State<RegisterPage> {
                       TextSpan(
                         text: 'Terms of Service',
                         style: TextStyle(
-                            color: AppColors.purpleColor,
-                            fontWeight: FontWeight.bold),
+                          color: AppColors.purpleColor,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const TextSpan(text: ' and '),
                       TextSpan(
                         text: 'Privacy Policy',
                         style: TextStyle(
-                            color: AppColors.purpleColor,
-                            fontWeight: FontWeight.bold),
+                          color: AppColors.purpleColor,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -222,9 +216,8 @@ class _RegisterPageState extends State<RegisterPage> {
             ],
           ),
           const SizedBox(height: 32),
-          // Sign up button
           GestureDetector(
-            onTap: _registerHook.loading ? null : _handleRegister,
+            onTap: _authHook.loading ? null : _handleRegister,
             child: Container(
               width: double.infinity,
               height: 56,
@@ -232,7 +225,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 gradient: LinearGradient(
                   colors: [
                     AppColors.purpleColor,
-                    AppColors.purpleColor.withOpacity(0.8)
+                    AppColors.purpleColor.withOpacity(0.8),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(28),
@@ -245,35 +238,46 @@ class _RegisterPageState extends State<RegisterPage> {
                 ],
               ),
               child: Center(
-                child: _registerHook.loading
+                child: _authHook.loading
                     ? const SizedBox(
                         width: 24,
                         height: 24,
                         child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2))
-                    : Text('Sign Up',
-                        style: AppTheme.whiteTextStyle
-                            .copyWith(fontWeight: AppTheme.bold, fontSize: 18)),
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(
+                        'Sign Up',
+                        style: AppTheme.whiteTextStyle.copyWith(
+                          fontWeight: AppTheme.bold,
+                          fontSize: 18,
+                        ),
+                      ),
               ),
             ),
           ),
           const SizedBox(height: 24),
-          // Login link
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text("Already have an account? ",
-                  style: AppTheme.greyTextStyle.copyWith(fontSize: 14)),
+              Text(
+                "Already have an account? ",
+                style: AppTheme.greyTextStyle.copyWith(fontSize: 14),
+              ),
               GestureDetector(
                 onTap: () {
                   HapticFeedback.lightImpact();
                   Navigator.pop(context);
                 },
-                child: Text('Sign In',
-                    style: AppTheme.blackTextStyle.copyWith(
-                        color: AppColors.purpleColor,
-                        fontWeight: AppTheme.bold,
-                        fontSize: 14)),
+                child: Text(
+                  'Sign In',
+                  style: AppTheme.blackTextStyle.copyWith(
+                    color: AppColors.purpleColor,
+                    fontWeight: AppTheme.bold,
+                    fontSize: 14,
+                  ),
+                ),
               ),
             ],
           ),
@@ -289,9 +293,8 @@ class _RegisterPageState extends State<RegisterPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 20),
-          // Back button
           GestureDetector(
-            onTap: () => _registerHook.backToRegister(),
+            onTap: _authHook.backToLogin,
             child: Container(
               width: 40,
               height: 40,
@@ -299,8 +302,11 @@ class _RegisterPageState extends State<RegisterPage> {
                 color: AppColors.backgroundColor,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.arrow_back_ios_new,
-                  color: Colors.black, size: 18),
+              child: const Icon(
+                Icons.arrow_back_ios_new,
+                color: Colors.black,
+                size: 18,
+              ),
             ),
           ),
           const SizedBox(height: 40),
@@ -312,17 +318,26 @@ class _RegisterPageState extends State<RegisterPage> {
                 color: AppColors.purpleColor.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.email_outlined,
-                  color: AppColors.purpleColor, size: 40),
+              child: const Icon(
+                Icons.email_outlined,
+                color: AppColors.purpleColor,
+                size: 40,
+              ),
             ),
           ),
           const SizedBox(height: 24),
-          Text('Verify Your Email',
-              style: AppTheme.blackTextStyle
-                  .copyWith(fontWeight: AppTheme.bold, fontSize: 28)),
+          Text(
+            'Verify Your Email',
+            style: AppTheme.blackTextStyle.copyWith(
+              fontWeight: AppTheme.bold,
+              fontSize: 28,
+            ),
+          ),
           const SizedBox(height: 8),
-          Text("We've sent a verification code to your email",
-              style: AppTheme.greyTextStyle.copyWith(fontSize: 14)),
+          Text(
+            "We've sent a verification code to your email",
+            style: AppTheme.greyTextStyle.copyWith(fontSize: 14),
+          ),
           const SizedBox(height: 32),
           _buildInputField(
             controller: _codeController,
@@ -330,67 +345,84 @@ class _RegisterPageState extends State<RegisterPage> {
             hint: 'Enter 6-digit code',
             icon: Icons.pin_outlined,
             keyboardType: TextInputType.number,
-            onChanged: (value) => _registerHook.updateCode(value),
+            onChanged: _authHook.updateCode,
           ),
           const SizedBox(height: 12),
-          if (_registerHook.verificationError.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.all(12),
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: AppColors.redColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.error_outline,
-                      color: AppColors.redColor, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _registerHook.verificationError,
-                      style: AppTheme.blackTextStyle
-                          .copyWith(color: AppColors.redColor, fontSize: 13),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          if (_authHook.verificationError.isNotEmpty)
+            _buildErrorBox(_authHook.verificationError),
           const SizedBox(height: 24),
           GestureDetector(
-            onTap: _registerHook.loading ? null : _handleVerify,
+            onTap: _authHook.loading ? null : _handleVerify,
             child: Container(
               width: double.infinity,
               height: 56,
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [
-                  AppColors.purpleColor,
-                  AppColors.purpleColor.withOpacity(0.8)
-                ]),
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.purpleColor,
+                    AppColors.purpleColor.withOpacity(0.8),
+                  ],
+                ),
                 borderRadius: BorderRadius.circular(28),
               ),
               child: Center(
-                child: _registerHook.loading
+                child: _authHook.loading
                     ? const SizedBox(
                         width: 24,
                         height: 24,
                         child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2))
-                    : Text('Verify',
-                        style: AppTheme.whiteTextStyle
-                            .copyWith(fontWeight: AppTheme.bold, fontSize: 18)),
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(
+                        'Verify',
+                        style: AppTheme.whiteTextStyle.copyWith(
+                          fontWeight: AppTheme.bold,
+                          fontSize: 18,
+                        ),
+                      ),
               ),
             ),
           ),
           const SizedBox(height: 16),
           Center(
             child: GestureDetector(
-              onTap: () => _registerHook.resendCode(),
-              child: Text('Resend Code',
-                  style: AppTheme.blackTextStyle.copyWith(
-                      color: AppColors.purpleColor,
-                      fontWeight: AppTheme.bold,
-                      fontSize: 14)),
+              onTap: _authHook.resendCode,
+              child: Text(
+                'Resend Code',
+                style: AppTheme.blackTextStyle.copyWith(
+                  color: AppColors.purpleColor,
+                  fontWeight: AppTheme.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorBox(String message) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: AppColors.redColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline, color: AppColors.redColor, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: AppTheme.blackTextStyle.copyWith(
+                color: AppColors.redColor,
+                fontSize: 13,
+              ),
             ),
           ),
         ],
@@ -411,16 +443,22 @@ class _RegisterPageState extends State<RegisterPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: AppTheme.blackTextStyle
-                .copyWith(fontWeight: AppTheme.medium, fontSize: 14)),
+        Text(
+          label,
+          style: AppTheme.blackTextStyle.copyWith(
+            fontWeight: AppTheme.medium,
+            fontSize: 14,
+          ),
+        ),
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
             color: AppColors.backgroundColor,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-                color: AppColors.greyColor.withOpacity(0.2), width: 1),
+              color: AppColors.greyColor.withOpacity(0.2),
+              width: 1,
+            ),
           ),
           child: TextField(
             controller: controller,
@@ -434,8 +472,10 @@ class _RegisterPageState extends State<RegisterPage> {
               prefixIcon: Icon(icon, color: AppColors.greyColor, size: 20),
               suffixIcon: suffixIcon,
               border: InputBorder.none,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 16,
+              ),
             ),
           ),
         ),
@@ -450,23 +490,58 @@ class _RegisterPageState extends State<RegisterPage> {
           content: const Text('Please agree to the Terms of Service'),
           backgroundColor: AppColors.redColor,
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
       return;
     }
 
-    final success = await _registerHook.handleRegister();
+    final fullName = _nameController.text.trim();
+    final password = _passwordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim();
+
+    if (fullName.isEmpty) {
+      _showSnack('Please enter your full name');
+      return;
+    }
+
+    if (password != confirmPassword) {
+      _showSnack('Passwords do not match');
+      return;
+    }
+
+    final parts = fullName.split(RegExp(r'\s+'));
+    final firstName = parts.isNotEmpty ? parts.first : '';
+    final lastName = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+
+    final success = await _authHook.handleSignup(
+      firstName: firstName,
+      lastName: lastName,
+    );
+
     if (success && mounted) {
       Navigator.pushReplacementNamed(context, NamedRoutes.homeScreen);
     }
   }
 
   Future<void> _handleVerify() async {
-    final success = await _registerHook.handleVerify();
+    final success = await _authHook.handleVerify();
+
     if (success && mounted) {
       Navigator.pushReplacementNamed(context, NamedRoutes.homeScreen);
     }
+  }
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.redColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 }

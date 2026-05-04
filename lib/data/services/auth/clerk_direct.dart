@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:social_media_app/app/configs/api_config.dart';
 
@@ -7,10 +8,9 @@ class ClerkDirectAuth {
 
   final Dio _dio = Dio(BaseOptions(
     baseUrl: frontendUrl,
-    connectTimeout: const Duration(seconds: 15),
+    connectTimeout: const Duration(seconds: 30),
     headers: {
       'Content-Type': 'application/json',
-      'Clerk-Instance-Type': 'production',
     },
   ));
 
@@ -19,36 +19,47 @@ class ClerkDirectAuth {
     iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
   );
 
-  // Sign In - Direct to Clerk
+  // Sign In - Direct to Clerk (Single request with email and password)
   Future<ClerkDirectResult> signIn(String email, String password) async {
     try {
       final response = await _dio.post('/v1/client/sign_ins', data: {
+        'strategy': 'password',
         'identifier': email.trim().toLowerCase(),
         'password': password,
       });
-      final body = response.data;
 
-      if (body['status'] == 'complete') {
-        final sessionId = body['response']['id'];
+      final body = response.data;
+      debugPrint('SignIn response: $body');
+
+      final res = body['response'];
+      final status = res?['status'];
+
+      if (status == 'complete') {
+        final sessionId = res['created_session_id'] ?? res['id'];
+
         final token = await _getToken(sessionId);
         if (token != null) {
           await _saveToken(token);
           return ClerkDirectResult(success: true, status: 'complete');
         }
+
         return ClerkDirectResult(success: false, error: 'Failed to get token');
       }
 
-      if (body['status'] == 'needs_second_factor') {
+      if (status == 'needs_second_factor') {
         return ClerkDirectResult(
           success: false,
           status: 'needs_verification',
-          signInId: body['response']['id'],
+          signInId: res['id'],
         );
       }
 
       return ClerkDirectResult(
-          success: false, error: 'Status: ${body['status']}');
+        success: false,
+        error: 'Sign in failed: $status',
+      );
     } on DioException catch (e) {
+      debugPrint('SignIn error: ${e.response?.data}');
       return ClerkDirectResult(success: false, error: _handleError(e));
     }
   }
@@ -69,17 +80,11 @@ class ClerkDirectAuth {
       });
       final body = response.data;
 
-      if (body['status'] == 'missing_requirements') {
-        // Trigger verification code to be sent
-        await resendCode(body['response']['id'], isSignUp: true);
-        return ClerkDirectResult(
-          success: false,
-          status: 'needs_verification',
-          signInId: body['response']['id'],
-        );
-      }
+      debugPrint('SignUp response: $body');
 
-      if (body['status'] == 'complete') {
+      final status = body['status'];
+
+      if (status == 'complete') {
         final sessionId = body['response']['id'];
         final token = await _getToken(sessionId);
         if (token != null) {
@@ -89,14 +94,38 @@ class ClerkDirectAuth {
         return ClerkDirectResult(success: false, error: 'Failed to get token');
       }
 
+      if (status == 'missing_requirements') {
+        final signUpId = body['response']['id'];
+        await _prepareVerification(signUpId);
+        return ClerkDirectResult(
+          success: false,
+          status: 'needs_verification',
+          signInId: signUpId,
+        );
+      }
+
       return ClerkDirectResult(
-          success: false, error: 'Status: ${body['status']}');
+          success: false,
+          error: body['error']?['message'] ?? 'Sign up failed: $status');
     } on DioException catch (e) {
+      debugPrint('SignUp error: ${e.response?.data}');
       return ClerkDirectResult(success: false, error: _handleError(e));
     }
   }
 
-  // Verify Email Code - Direct to Clerk
+  // Prepare verification (send email code)
+  Future<void> _prepareVerification(String signUpId) async {
+    try {
+      await _dio
+          .post('/v1/client/sign_ups/$signUpId/prepare_verification', data: {
+        'strategy': 'email_code',
+      });
+    } catch (e) {
+      debugPrint('Prepare verification error: $e');
+    }
+  }
+
+  // Verify Email Code
   Future<ClerkDirectResult> verify(String signInId, String code,
       {required bool isSignUp}) async {
     try {
@@ -113,8 +142,11 @@ class ClerkDirectAuth {
       });
       final body = response.data;
 
+      debugPrint('Verify response: $body');
+
       if (body['status'] == 'complete') {
-        final sessionId = body['response']['id'];
+        final sessionId =
+            body['response']['created_session_id'] ?? body['response']['id'];
         final token = await _getToken(sessionId);
         if (token != null) {
           await _saveToken(token);
@@ -123,29 +155,31 @@ class ClerkDirectAuth {
         return ClerkDirectResult(success: false, error: 'Failed to get token');
       }
 
-      return ClerkDirectResult(success: false, error: 'Verification failed');
+      return ClerkDirectResult(
+          success: false,
+          error: body['error']?['message'] ?? 'Verification failed');
     } on DioException catch (e) {
+      debugPrint('Verify error: ${e.response?.data}');
       return ClerkDirectResult(success: false, error: _handleError(e));
     }
   }
 
-  // Resend Verification Code - Direct to Clerk
+  // Resend Verification Code
   Future<void> resendCode(String signInId, {required bool isSignUp}) async {
     try {
-      String path;
-      Map<String, String> data;
-
       if (isSignUp) {
-        path = '/v1/client/sign_ups/$signInId/prepare_verification';
-        data = {'strategy': 'email_code'};
+        await _dio
+            .post('/v1/client/sign_ups/$signInId/prepare_verification', data: {
+          'strategy': 'email_code',
+        });
       } else {
-        path = '/v1/client/sign_ins/$signInId/prepare_second_factor';
-        data = {'strategy': 'email_code'};
+        await _dio
+            .post('/v1/client/sign_ins/$signInId/prepare_second_factor', data: {
+          'strategy': 'email_code',
+        });
       }
-
-      await _dio.post(path, data: data);
     } on DioException catch (e) {
-      print('Resend failed: ${_handleError(e)}');
+      debugPrint('Resend failed: ${e.response?.data}');
       rethrow;
     }
   }
@@ -156,12 +190,12 @@ class ClerkDirectAuth {
       final response = await _dio.get('/v1/client/sessions/$sessionId/token');
       return response.data['jwt'];
     } catch (e) {
-      print('Failed to get token: $e');
+      debugPrint('Failed to get token: $e');
       return null;
     }
   }
 
-  // Sign Out - Clear local storage
+  // Sign Out
   Future<void> signOut() async {
     await _storage.delete(key: 'auth_token');
   }
@@ -225,12 +259,15 @@ class ClerkDirectAuth {
     }
 
     if (e.response?.statusCode == 401) return 'Invalid credentials';
-    if (e.response?.statusCode == 429)
+    if (e.response?.statusCode == 429) {
       return 'Too many attempts. Please try again later';
-    if (e.type == DioExceptionType.connectionTimeout)
+    }
+    if (e.type == DioExceptionType.connectionTimeout) {
       return 'Connection timeout';
-    if (e.type == DioExceptionType.unknown)
+    }
+    if (e.type == DioExceptionType.unknown) {
       return 'Network error. Check your connection';
+    }
 
     return 'Authentication failed. Please try again';
   }

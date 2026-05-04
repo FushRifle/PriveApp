@@ -14,77 +14,81 @@ class ClerkAuthService {
     iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
   );
 
-  // Sign In
+  // SIGN IN
   Future<ClerkResult> signIn(String email, String password) async {
     try {
-      final res = await _dio.post('/api/auth/signin', data: {
-        'identifier': email.trim().toLowerCase(),
+      final res = await _dio.post('/auth/login', data: {
+        'email': email.trim().toLowerCase(),
         'password': password,
       });
+
       final body = res.data;
 
-      if (body['status'] == 'complete') {
-        final token = await _getToken(body['created_session_id']);
-        if (token != null) await _saveToken(token);
+      if (body['token'] != null) {
+        await _saveToken(body['token']);
         return ClerkResult(success: true, status: 'complete');
       }
 
-      if (body['status'] == 'needs_second_factor') {
-        return ClerkResult(
-            success: false, status: 'needs_verification', signInId: body['id']);
-      }
-
-      return ClerkResult(success: false, error: 'Status: ${body['status']}');
+      return ClerkResult(success: false, error: 'Invalid login response');
     } on DioException catch (e) {
       return ClerkResult(success: false, error: _handleError(e));
     }
   }
 
-  // Sign Up
+  // SIGN UP
   Future<ClerkResult> signUp(
-      String email, String password, String firstName, String lastName) async {
+    String email,
+    String password,
+    String firstName,
+    String lastName,
+  ) async {
     try {
-      final res = await _dio.post('/api/auth/signup', data: {
-        'email_address': email.trim().toLowerCase(),
+      final res = await _dio.post('/auth/signup', data: {
+        'email': email.trim().toLowerCase(),
         'password': password,
         'first_name': firstName,
         'last_name': lastName,
       });
+
       final body = res.data;
 
-      if (body['status'] == 'missing_requirements') {
-        // Trigger verification code to be sent
-        await _resendCode(body['id'], isSignUp: true);
-        return ClerkResult(
-            success: false, status: 'needs_verification', signInId: body['id']);
-      }
-
-      if (body['status'] == 'complete') {
-        final token = await _getToken(body['created_session_id']);
+      if (body['status'] == 'complete' || body['token'] != null) {
+        final token = body['token'];
         if (token != null) await _saveToken(token);
         return ClerkResult(success: true, status: 'complete');
       }
 
-      return ClerkResult(success: false, error: 'Status: ${body['status']}');
+      if (body['status'] == 'needs_verification') {
+        return ClerkResult(
+          success: false,
+          status: 'needs_verification',
+          signInId: body['signInId'] ?? body['id'],
+        );
+      }
+
+      return ClerkResult(success: false, error: 'Signup failed');
     } on DioException catch (e) {
       return ClerkResult(success: false, error: _handleError(e));
     }
   }
 
-  // Verify Email Code
-  Future<ClerkResult> verify(String signInId, String code,
-      {required bool isSignUp}) async {
+  // VERIFY
+  Future<ClerkResult> verify(
+    String signInId,
+    String code, {
+    required bool isSignUp,
+  }) async {
     try {
-      final res = await _dio.post('/api/auth/verify', data: {
+      final res = await _dio.post('/auth/verify', data: {
         'signInId': signInId,
         'code': code.trim(),
         'isSignUp': isSignUp,
       });
+
       final body = res.data;
 
-      if (body['status'] == 'complete') {
-        final token = await _getToken(body['created_session_id']);
-        if (token != null) await _saveToken(token);
+      if (body['token'] != null) {
+        await _saveToken(body['token']);
         return ClerkResult(success: true, status: 'complete');
       }
 
@@ -94,56 +98,33 @@ class ClerkAuthService {
     }
   }
 
-  // Resend Verification Code
+  // RESEND
   Future<void> resendCode(String signInId, {required bool isSignUp}) async {
-    await _resendCode(signInId, isSignUp: isSignUp);
+    await _dio.post('/auth/resend', data: {
+      'signInId': signInId,
+      'isSignUp': isSignUp,
+    });
   }
 
-  Future<void> _resendCode(String signInId, {required bool isSignUp}) async {
-    try {
-      await _dio.post('/api/auth/resend', data: {
-        'signInId': signInId,
-        'isSignUp': isSignUp,
-      });
-    } on DioException catch (e) {
-      print('Resend failed: ${_handleError(e)}');
-      rethrow;
-    }
-  }
-
-  // Get Session Token
-  Future<String?> _getToken(String sessionId) async {
-    try {
-      final res = await _dio.get('/api/auth/token/$sessionId');
-      return res.data['jwt'] ?? res.data['response']?['jwt'];
-    } catch (e) {
-      print('Failed to get token: $e');
-      return null;
-    }
-  }
-
-  // Sign Out
+  // SIGN OUT
   Future<void> signOut() async {
     await _storage.delete(key: 'auth_token');
   }
 
-  // Check Authentication Status
   Future<bool> isAuthenticated() async {
     final token = await _storage.read(key: 'auth_token');
     return token != null && token.isNotEmpty;
   }
 
-  // Get Auth Token for API Calls
   Future<String?> getAuthToken() async {
     return await _storage.read(key: 'auth_token');
   }
 
-  // Save Auth Token
   Future<void> _saveToken(String token) async {
     await _storage.write(key: 'auth_token', value: token);
   }
 
-  // Get Saved Credentials (Remember Me)
+  // Get saved credentials (Remember Me)
   Future<Map<String, dynamic>> getSavedCredentials() async {
     final rememberMe = await _storage.read(key: 'remember_me') == 'true';
     if (rememberMe) {
@@ -156,7 +137,7 @@ class ClerkAuthService {
     return {'rememberMe': false, 'email': '', 'password': ''};
   }
 
-  // Save Credentials (Remember Me)
+  // Save credentials (Remember Me)
   Future<void> saveCredentials(
       String email, String password, bool remember) async {
     if (remember) {
@@ -170,7 +151,6 @@ class ClerkAuthService {
     }
   }
 
-  // Add Token to Dio Headers (Interceptor)
   void addAuthInterceptor() {
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
@@ -183,32 +163,24 @@ class ClerkAuthService {
     ));
   }
 
-  // Error Handler
   String _handleError(DioException e) {
     final data = e.response?.data;
     final body = data is Map ? data : null;
 
-    if (body != null && body['errors'] is List && body['errors'].isNotEmpty) {
-      final msg = body['errors'][0]['message']?.toString() ?? '';
-      if (msg.contains('identifier') || msg.contains('email')) {
-        return 'No account found with this email';
-      }
-      if (msg.contains('password')) return 'Incorrect password';
-      if (msg.contains('verification')) return 'Invalid verification code';
-      return msg.isNotEmpty ? msg : 'Authentication failed';
+    if (body != null && body['error'] != null) {
+      return body['error'].toString();
     }
 
-    // Handle specific status codes
-    if (e.response?.statusCode == 401)
-      return 'Unauthorized. Please sign in again.';
-    if (e.response?.statusCode == 429)
-      return 'Too many attempts. Please try again later.';
-    if (e.type == DioExceptionType.connectionTimeout)
-      return 'Connection timeout. Check your network.';
-    if (e.type == DioExceptionType.unknown)
-      return 'Network error. Check your connection.';
+    if (e.response?.statusCode == 401) return 'Unauthorized';
+    if (e.response?.statusCode == 429) return 'Too many attempts';
+    if (e.type == DioExceptionType.connectionTimeout) {
+      return 'Connection timeout';
+    }
+    if (e.type == DioExceptionType.unknown) {
+      return 'Network error';
+    }
 
-    return 'Authentication failed. Please try again.';
+    return 'Authentication failed';
   }
 }
 

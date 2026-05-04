@@ -24,17 +24,29 @@ import 'package:social_media_app/ui/pages/settings/subscribe_page.dart';
 import 'package:social_media_app/ui/pages/social/friends_list_page.dart';
 import 'package:social_media_app/ui/pages/social/matches_page.dart';
 import 'package:social_media_app/ui/widgets/home/clip_status_bar.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:social_media_app/app/configs/api_config.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   if (kIsWeb) {
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
-    SystemChrome.setPreferredOrientations([
+    await SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.manual,
+      overlays: [],
+    );
+
+    await SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
     ]);
   }
+
+  await Supabase.initialize(
+    url: ApiConfig.supabaseUrl,
+    anonKey: ApiConfig.supabaseAnonKey,
+    debug: true,
+  );
 
   runApp(const MyApp());
 }
@@ -44,7 +56,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ClerkAuth wrapper removed – using plain MaterialApp
     return MaterialApp(
       title: 'Prive',
       theme: AppTheme.lightTheme,
@@ -72,6 +83,7 @@ class MyApp extends StatelessWidget {
       },
       builder: (context, child) {
         final mediaQueryData = MediaQuery.of(context);
+
         if (kIsWeb) {
           return MediaQuery(
             data: mediaQueryData.copyWith(
@@ -84,6 +96,7 @@ class MyApp extends StatelessWidget {
             child: child!,
           );
         }
+
         return child!;
       },
     );
@@ -114,7 +127,10 @@ class _MainWrapperState extends State<MainWrapper> {
       body: Stack(
         alignment: Alignment.bottomCenter,
         children: [
-          IndexedStack(index: _currentIndex, children: _pages),
+          IndexedStack(
+            index: _currentIndex,
+            children: _pages,
+          ),
           if (_currentIndex != 2) _buildBackgroundGradient(),
           if (_currentIndex != 2)
             Positioned(
@@ -124,7 +140,10 @@ class _MainWrapperState extends State<MainWrapper> {
                 child: InkWell(
                   onTap: () {
                     HapticFeedback.lightImpact();
-                    Navigator.pushNamed(context, NamedRoutes.createPostScreen);
+                    Navigator.pushNamed(
+                      context,
+                      NamedRoutes.createPostScreen,
+                    );
                   },
                   child: ClipPath(
                     clipper: ClipStatusBar(),
@@ -132,8 +151,11 @@ class _MainWrapperState extends State<MainWrapper> {
                       height: 110,
                       width: 40,
                       color: AppColors.blackColor,
-                      child: const Icon(Icons.add,
-                          size: 24, color: AppColors.whiteColor),
+                      child: const Icon(
+                        Icons.add,
+                        size: 24,
+                        color: AppColors.whiteColor,
+                      ),
                     ),
                   ),
                 ),
@@ -150,25 +172,58 @@ class _MainWrapperState extends State<MainWrapper> {
       width: double.infinity,
       height: 110,
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      margin: const EdgeInsets.only(right: 24, left: 24, bottom: 16),
+      margin: const EdgeInsets.only(
+        right: 24,
+        left: 24,
+        bottom: 16,
+      ),
       decoration: BoxDecoration(
-          color: AppColors.whiteColor, borderRadius: BorderRadius.circular(30)),
+        color: AppColors.whiteColor,
+        borderRadius: BorderRadius.circular(30),
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(child: _buildItemBottomNavBar(Icons.home, "Home", 0)),
-          Expanded(child: _buildItemBottomNavBar(Icons.explore, "Discover", 1)),
           Expanded(
-              child:
-                  _buildItemBottomNavBar(Icons.play_circle_fill, "Reels", 2)),
-          Expanded(child: _buildItemBottomNavBar(Icons.message, "Inbox", 3)),
+            child: _buildItemBottomNavBar(
+              Icons.home,
+              "Home",
+              0,
+            ),
+          ),
+          Expanded(
+            child: _buildItemBottomNavBar(
+              Icons.explore,
+              "Discover",
+              1,
+            ),
+          ),
+          Expanded(
+            child: _buildItemBottomNavBar(
+              Icons.play_circle_fill,
+              "Reels",
+              2,
+            ),
+          ),
+          Expanded(
+            child: _buildItemBottomNavBar(
+              Icons.message,
+              "Inbox",
+              3,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildItemBottomNavBar(IconData icon, String title, int index) {
+  Widget _buildItemBottomNavBar(
+    IconData icon,
+    String title,
+    int index,
+  ) {
     final isSelected = _currentIndex == index;
+
     return GestureDetector(
       onTap: () {
         HapticFeedback.selectionClick();
@@ -182,9 +237,10 @@ class _MainWrapperState extends State<MainWrapper> {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                      color: AppColors.blackColor.withOpacity(0.1),
-                      blurRadius: 35,
-                      offset: const Offset(0, 10))
+                    color: AppColors.blackColor.withOpacity(0.1),
+                    blurRadius: 35,
+                    offset: const Offset(0, 10),
+                  ),
                 ]
               : [],
         ),
@@ -193,24 +249,27 @@ class _MainWrapperState extends State<MainWrapper> {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon,
-                size: 24,
-                color:
-                    isSelected ? AppColors.purpleColor : AppColors.blackColor),
+            Icon(
+              icon,
+              size: 24,
+              color: isSelected ? AppColors.purpleColor : AppColors.blackColor,
+            ),
             const SizedBox(height: 4),
             Flexible(
               child: FittedBox(
                 fit: BoxFit.scaleDown,
-                child: Text(title,
-                    style: AppTheme.blackTextStyle.copyWith(
-                      fontWeight: isSelected ? AppTheme.bold : AppTheme.medium,
-                      fontSize: 11,
-                      color: isSelected
-                          ? AppColors.purpleColor
-                          : AppColors.blackColor,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTheme.blackTextStyle.copyWith(
+                    fontWeight: isSelected ? AppTheme.bold : AppTheme.medium,
+                    fontSize: 11,
+                    color: isSelected
+                        ? AppColors.purpleColor
+                        : AppColors.blackColor,
+                  ),
+                ),
               ),
             ),
           ],
@@ -219,18 +278,20 @@ class _MainWrapperState extends State<MainWrapper> {
     );
   }
 
-  Container _buildBackgroundGradient() => Container(
-        width: double.infinity,
-        height: 150,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              AppColors.whiteColor.withOpacity(0),
-              AppColors.whiteColor.withOpacity(0.8)
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
+  Container _buildBackgroundGradient() {
+    return Container(
+      width: double.infinity,
+      height: 150,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.whiteColor.withOpacity(0),
+            AppColors.whiteColor.withOpacity(0.8),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
         ),
-      );
+      ),
+    );
+  }
 }

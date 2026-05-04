@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
-import 'package:social_media_app/data/services/auth/clerk_direct.dart';
+import 'package:social_media_app/app/configs/supabase.dart';
 
 class AuthHook extends ChangeNotifier {
-  final ClerkDirectAuth _clerkAuth = ClerkDirectAuth();
+  final SupabaseAuthService _auth = SupabaseAuthService();
 
   // State management
   String _email = '';
@@ -45,32 +45,30 @@ class AuthHook extends ChangeNotifier {
   String get savedEmail => _savedEmail;
   String get savedPassword => _savedPassword;
 
-  // Helper to notify listeners safely
   void _notify() {
     if (hasListeners) notifyListeners();
   }
 
-  // Clear errors helper
   void _clearErrors() {
     _loginError = '';
     _verificationError = '';
   }
 
-  // Reset loading state
   void _setLoading(bool value) {
     _loading = value;
     _notify();
   }
 
-  // Initialize auth state
   Future<void> initialize() async {
     _isLoadingStorage = true;
     _notify();
 
     try {
-      final hasToken = await _clerkAuth.isAuthenticated();
+      final hasToken = _auth.isAuthenticated();
       if (hasToken) {
         _isTokenReady = true;
+        _isLoadingStorage = false;
+        _notify();
         return;
       }
 
@@ -85,7 +83,8 @@ class AuthHook extends ChangeNotifier {
   }
 
   Future<void> _loadSavedCredentials() async {
-    final saved = await _clerkAuth.getSavedCredentials();
+    final saved = await _auth.getSavedCredentials();
+
     if (saved['rememberMe'] == true) {
       _rememberMe = true;
       _email = saved['email'] ?? '';
@@ -124,10 +123,13 @@ class AuthHook extends ChangeNotifier {
 
   void toggleRememberMe(bool value) {
     if (_rememberMe == value) return;
+
     _rememberMe = value;
+
     if (!value) {
-      _clerkAuth.saveCredentials('', '', false);
+      _auth.saveCredentials('', '', false);
     }
+
     _notify();
   }
 
@@ -147,11 +149,7 @@ class AuthHook extends ChangeNotifier {
       _notify();
       return false;
     }
-    if (_currentSignInId.isEmpty) {
-      _verificationError = 'Session expired. Please login again';
-      _notify();
-      return false;
-    }
+
     return true;
   }
 
@@ -164,21 +162,22 @@ class AuthHook extends ChangeNotifier {
 
     try {
       final normalizedEmail = _email.trim().toLowerCase();
-      final result = await _clerkAuth.signIn(normalizedEmail, _password.trim());
 
-      if (result.success) {
+      final result = await _auth.signIn(
+        normalizedEmail,
+        _password.trim(),
+      );
+
+      if (result.user != null) {
         await _saveCredentialsAndComplete(normalizedEmail);
+        _isTokenReady = true;
         return true;
       }
 
-      if (result.status == 'needs_verification') {
-        return _handleVerificationRequired(result, isSignUp: false);
-      }
-
-      _loginError = result.error ?? 'Login failed';
+      _loginError = 'Login failed';
       return false;
     } catch (e) {
-      _loginError = 'Login failed. Please try again';
+      _loginError = e.toString();
       debugPrint('Login error: $e');
       return false;
     } finally {
@@ -198,26 +197,31 @@ class AuthHook extends ChangeNotifier {
 
     try {
       final normalizedEmail = _email.trim().toLowerCase();
-      final result = await _clerkAuth.signUp(
+
+      final result = await _auth.signUp(
         normalizedEmail,
         _password.trim(),
         firstName,
         lastName,
       );
 
-      if (result.success) {
+      if (result.user != null) {
+        // Supabase email confirmation flow
+        if (result.session == null) {
+          _showVerification = true;
+          _isSignUp = true;
+          return false;
+        }
+
         await _saveCredentialsAndComplete(normalizedEmail);
+        _isTokenReady = true;
         return true;
       }
 
-      if (result.status == 'needs_verification') {
-        return _handleVerificationRequired(result, isSignUp: true);
-      }
-
-      _loginError = result.error ?? 'Signup failed';
+      _loginError = 'Signup failed';
       return false;
     } catch (e) {
-      _loginError = 'Signup failed. Please try again';
+      _loginError = e.toString();
       debugPrint('Signup error: $e');
       return false;
     } finally {
@@ -226,15 +230,7 @@ class AuthHook extends ChangeNotifier {
   }
 
   Future<void> _saveCredentialsAndComplete(String email) async {
-    await _clerkAuth.saveCredentials(email, _password, _rememberMe);
-  }
-
-  bool _handleVerificationRequired(ClerkDirectResult result,
-      {required bool isSignUp}) {
-    _currentSignInId = result.signInId ?? '';
-    _isSignUp = isSignUp;
-    _showVerification = true;
-    return false;
+    await _auth.saveCredentials(email, _password, _rememberMe);
   }
 
   // Verification flow
@@ -245,22 +241,22 @@ class AuthHook extends ChangeNotifier {
     _verificationError = '';
 
     try {
-      final result = await _clerkAuth.verify(
-        _currentSignInId,
-        _code.trim(),
-        isSignUp: _isSignUp,
+      final success = await _auth.verifyOtp(
+        email: _email.trim().toLowerCase(),
+        token: _code.trim(),
       );
 
-      if (result.success) {
-        await _clerkAuth.saveCredentials(_email, _password, _rememberMe);
+      if (success) {
+        await _auth.saveCredentials(_email, _password, _rememberMe);
         _resetVerificationState();
+        _isTokenReady = true;
         return true;
       }
 
-      _verificationError = result.error ?? 'Verification failed';
+      _verificationError = 'Verification failed';
       return false;
     } catch (e) {
-      _verificationError = 'Verification failed. Please try again';
+      _verificationError = e.toString();
       debugPrint('Verification error: $e');
       return false;
     } finally {
@@ -278,11 +274,8 @@ class AuthHook extends ChangeNotifier {
 
   // Resend code
   Future<void> resendCode() async {
-    if (_currentSignInId.isEmpty) return;
-
     try {
-      await _clerkAuth.resendCode(_currentSignInId, isSignUp: _isSignUp);
-      // Optional: Show success message
+      await _auth.resendOtp(_email.trim().toLowerCase());
     } catch (e) {
       debugPrint('Resend code error: $e');
     }
@@ -295,7 +288,7 @@ class AuthHook extends ChangeNotifier {
 
   // Session management
   Future<void> signOut() async {
-    await _clerkAuth.signOut();
+    await _auth.signOut();
     _resetToInitialState();
     _notify();
   }
@@ -314,17 +307,10 @@ class AuthHook extends ChangeNotifier {
   }
 
   Future<bool> isAuthenticated() async {
-    return await _clerkAuth.isAuthenticated();
+    return _auth.isAuthenticated();
   }
 
-  // Get auth token for API calls
   Future<String?> getAuthToken() async {
-    return await _clerkAuth.getAuthToken();
-  }
-
-  // Clean up
-  @override
-  void dispose() {
-    super.dispose();
+    return _auth.accessToken;
   }
 }
