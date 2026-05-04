@@ -274,8 +274,8 @@ class _LoginPageState extends State<LoginPage> {
                   height: 56,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(colors: [
-                      AppColors.purpleColor,
-                      AppColors.purpleColor.withOpacity(0.8)
+                      AppColors.primary,
+                      AppColors.secondary.withOpacity(0.8)
                     ]),
                     borderRadius: BorderRadius.circular(28),
                   ),

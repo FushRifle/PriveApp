@@ -152,7 +152,7 @@ class _MainWrapperState extends State<MainWrapper> {
                     child: Container(
                       height: 110,
                       width: 40,
-                      color: AppColors.blackColor,
+                      color: AppColors.primary,
                       child: const Icon(
                         Icons.add,
                         size: 24,
@@ -173,11 +173,11 @@ class _MainWrapperState extends State<MainWrapper> {
     return Container(
       width: double.infinity,
       height: 110,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       margin: const EdgeInsets.only(
-        right: 24,
-        left: 24,
-        bottom: 16,
+        right: 14,
+        left: 14,
+        bottom: 14,
       ),
       decoration: BoxDecoration(
         color: AppColors.whiteColor,

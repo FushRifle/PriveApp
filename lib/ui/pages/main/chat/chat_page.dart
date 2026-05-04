@@ -256,7 +256,7 @@ class _ChatPageState extends State<ChatPage> {
           // Input bar
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             child: SafeArea(
               bottom: true,
               child: Row(

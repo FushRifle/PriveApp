@@ -101,9 +101,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
           child: Text(
             'Skip',
             style: AppTheme.blackTextStyle.copyWith(
-              fontWeight: AppTheme.medium,
+              fontWeight: AppTheme.bold,
               fontSize: 16,
-              color: AppColors.greyColor,
+              color: AppColors.primary,
             ),
           ),
         ),
@@ -127,8 +127,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  AppColors.purpleColor.withOpacity(0.1),
-                  AppColors.purpleColor.withOpacity(0.3),
+                  AppColors.primary.withOpacity(0.1),
+                  AppColors.secondary.withOpacity(0.3),
                 ],
               ),
             ),
@@ -136,7 +136,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
               child: Icon(
                 _getIconForPage(_currentPage),
                 size: 120,
-                color: AppColors.purpleColor,
+                color: AppColors.blackColor,
               ),
             ),
           ),

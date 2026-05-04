@@ -121,10 +121,12 @@ class AuthService {
       return data['message'];
     }
     if (e.response?.statusCode == 401) return 'Invalid email or password';
-    if (e.type == DioExceptionType.connectionTimeout)
+    if (e.type == DioExceptionType.connectionTimeout) {
       return 'Connection timeout';
-    if (e.type == DioExceptionType.unknown)
+    }
+    if (e.type == DioExceptionType.unknown) {
       return 'Network error. Check your connection';
+    }
     return 'Authentication failed. Please try again';
   }
 }

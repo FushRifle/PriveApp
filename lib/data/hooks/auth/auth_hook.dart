@@ -311,9 +311,4 @@ class AuthHook extends ChangeNotifier {
   Future<String?> getAuthToken() async {
     return await _auth.getToken();
   }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
 }

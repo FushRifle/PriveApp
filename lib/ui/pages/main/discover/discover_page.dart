@@ -17,7 +17,7 @@ class DiscoverPage extends StatefulWidget {
 
 class _DiscoverPageState extends State<DiscoverPage>
     with TickerProviderStateMixin {
-  late List<ProfileModel> profiles; // Fixed: Changed to ProfileModel list
+  late List<ProfileModel> profiles;
   int currentIndex = 0;
 
   // Animation controllers
@@ -143,7 +143,7 @@ class _DiscoverPageState extends State<DiscoverPage>
 
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 30),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         child: Column(
           children: [
             const SizedBox(height: 12),

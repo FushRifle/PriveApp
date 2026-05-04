@@ -47,7 +47,7 @@ class _HomePageState extends State<HomePage> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 30),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Column(
             children: [
               const SizedBox(height: 12),
@@ -224,20 +224,20 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
             child:
-                Image.asset('assets/images/prive.png', width: 40, height: 40),
+                Image.asset('assets/images/prive.png', width: 60, height: 60),
           ),
           const SizedBox(width: 12),
           InkWell(
             onTap: () =>
                 Navigator.pushNamed(context, NamedRoutes.notificationScreen),
             child: Image.asset("assets/images/ic_notification.png",
-                width: 24, height: 24),
+                width: 30, height: 30),
           ),
           const SizedBox(width: 12),
           InkWell(
             onTap: () {},
             child: Image.asset("assets/images/ic_search.png",
-                width: 24, height: 24),
+                width: 30, height: 30),
           ),
           const Spacer(),
           InkWell(

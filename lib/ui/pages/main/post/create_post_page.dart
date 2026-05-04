@@ -28,7 +28,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBodyBehindAppBar: true,
-      backgroundColor: const Color(0xFFF8F9FE), // Ultra-light grey-blue
+      backgroundColor: const Color(0xFFF8F9FE),
       appBar: _buildGlassAppBar(),
       body: Stack(
         children: [
@@ -91,7 +91,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
               onPressed: () => Navigator.pop(context),
             ),
             title: Text(
-              'NEW STORY',
+              'NEW POST',
               style: AppTheme.blackTextStyle.copyWith(
                 fontWeight: FontWeight.w900,
                 letterSpacing: 2,
