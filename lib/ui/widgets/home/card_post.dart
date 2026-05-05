@@ -1,19 +1,21 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:social_media_app/app/configs/colors.dart';
 import 'package:social_media_app/app/configs/theme.dart';
+import 'package:social_media_app/data/models/post_model.dart';
+import 'package:video_player/video_player.dart';
+import 'package:social_media_app/ui/widgets/home/clip_status_bar.dart';
+import 'package:social_media_app/ui/widgets/home/custom_bottom_sheet.dart';
 import 'package:social_media_app/app/resources/constant/named_routes.dart';
-import 'package:social_media_app/data/services/home/feed_service.dart';
-
-import 'clip_status_bar.dart';
 
 class CardPost extends StatefulWidget {
   final dynamic post;
+  final bool isDetailView; // Add this flag
 
   const CardPost({
     required this.post,
+    this.isDetailView = false, // Default false for feed
     super.key,
   });
 
@@ -22,23 +24,18 @@ class CardPost extends StatefulWidget {
 }
 
 class _CardPostState extends State<CardPost> {
-  final FeedService _feedService = FeedService();
-
+  double _handleOffset = 0.0;
   bool isLiked = false;
   bool isSaved = false;
   int likeCount = 0;
-
-  Map<String, dynamic> get _post {
-    if (widget.post is Map<String, dynamic>) {
-      return widget.post as Map<String, dynamic>;
-    }
-
-    if (widget.post is Map) {
-      return Map<String, dynamic>.from(widget.post as Map);
-    }
-
-    return {};
-  }
+  int postId = 0;
+  String? mediaUrl;
+  String? mediaType;
+  String userName = '';
+  String userAvatar = '';
+  String content = '';
+  VideoPlayerController? _videoController;
+  bool _isVideoInitialized = false;
 
   @override
   void initState() {
@@ -47,131 +44,87 @@ class _CardPostState extends State<CardPost> {
   }
 
   @override
-  void didUpdateWidget(covariant CardPost oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    if (oldWidget.post != widget.post) {
-      _parsePost();
-    }
+  void dispose() {
+    _videoController?.dispose();
+    super.dispose();
   }
 
   void _parsePost() {
-    final post = _post;
-
-    isLiked = post['isLiked'] == true || post['is_liked'] == true;
-    likeCount =
-        _toInt(post['likes'] ?? post['likesCount'] ?? post['likes_count']);
-  }
-
-  int get _postId {
-    return _toInt(_post['id']);
-  }
-
-  String get _imageUrl {
-    final attachments = _post['attachments'];
-
-    if (attachments is List && attachments.isNotEmpty) {
-      final first = attachments.first;
-
-      if (first is Map) {
-        return (first['url'] ?? first['uri'] ?? first['imageUrl'] ?? '')
-            .toString();
-      }
-
-      if (first is String) {
-        return first;
-      }
+    if (widget.post is PostModel) {
+      final post = widget.post as PostModel;
+      isLiked = post.isLiked;
+      likeCount = post.like;
+      isSaved = false;
+      userName = post.name;
+      userAvatar = post.imgProfile;
+      content = post.caption;
+      postId = post.id;
+      mediaUrl = post.picture;
+      mediaType = post.picture.isNotEmpty ? 'image' : null;
+      return;
     }
 
-    return (_post['image'] ??
-            _post['imageUrl'] ??
-            _post['image_url'] ??
-            _post['mediaUrl'] ??
-            '')
-        .toString();
+    isLiked = widget.post['isLiked'] ?? false;
+    likeCount = widget.post['likes'] ?? 0;
+    isSaved = widget.post['isSaved'] ?? false;
+    userName =
+        widget.post['user']?['name'] ?? widget.post['username'] ?? 'User';
+    userAvatar = widget.post['user']?['avatar'] ?? '';
+    content = widget.post['caption'] ?? widget.post['content'] ?? '';
+
+    final id = widget.post['id'] ?? widget.post['_id'];
+    if (id is int) {
+      postId = id;
+    } else if (id is String) {
+      postId = int.tryParse(id) ?? 0;
+    } else {
+      postId = 0;
+    }
+
+    final attachments = widget.post['attachments'];
+    if (attachments != null && attachments.isNotEmpty) {
+      final firstAttachment = attachments[0];
+      mediaUrl = firstAttachment['url'];
+      mediaType = firstAttachment['type'];
+
+      if (mediaType == 'video' && mediaUrl != null) {
+        _initializeVideoController();
+      }
+    } else {
+      mediaType = null;
+      mediaUrl = null;
+    }
   }
 
-  String get _caption {
-    return (_post['content'] ?? _post['caption'] ?? '').toString();
+  void _initializeVideoController() {
+    _videoController = VideoPlayerController.network(mediaUrl!)
+      ..initialize().then((_) {
+        setState(() {
+          _isVideoInitialized = true;
+        });
+      }).catchError((error) {
+        print('Error initializing video: $error');
+        setState(() {
+          mediaType = null;
+        });
+      });
   }
 
-  Map<String, dynamic> get _user {
-    final user = _post['user'];
-
-    if (user is Map<String, dynamic>) return user;
-    if (user is Map) return Map<String, dynamic>.from(user);
-
-    return {};
-  }
-
-  String get _userName {
-    return (_user['name'] ??
-            _user['username'] ??
-            _post['name'] ??
-            _post['username'] ??
-            'User')
-        .toString();
-  }
-
-  String get _userAvatar {
-    return (_user['avatar'] ??
-            _user['avatarUrl'] ??
-            _user['avatar_url'] ??
-            _post['imgProfile'] ??
-            _post['avatar'] ??
-            '')
-        .toString();
-  }
-
-  Future<void> toggleLike() async {
-    if (_postId == 0) return;
-
-    final oldLiked = isLiked;
-    final oldCount = likeCount;
-
+  void _toggleLike() {
     setState(() {
       isLiked = !isLiked;
-      likeCount = isLiked ? likeCount + 1 : (likeCount - 1).clamp(0, 999999);
+      likeCount += isLiked ? 1 : -1;
     });
-
-    HapticFeedback.lightImpact();
-
-    try {
-      if (isLiked) {
-        await _feedService.likePost(_postId);
-      } else {
-        await _feedService.unlikePost(_postId);
-      }
-    } catch (_) {
-      if (!mounted) return;
-
-      setState(() {
-        isLiked = oldLiked;
-        likeCount = oldCount;
-      });
-    }
   }
 
-  void toggleSave() {
+  void _toggleSave() {
     setState(() {
       isSaved = !isSaved;
     });
-
-    HapticFeedback.lightImpact();
   }
 
-  void onCommentTap(BuildContext context) {
-    HapticFeedback.lightImpact();
-
-    Navigator.pushNamed(
-      context,
-      NamedRoutes.postDetailScreen,
-      arguments: widget.post,
-    );
-  }
-
-  void onShareTap() {
-    HapticFeedback.lightImpact();
+  void _openComments() {
+    customBottomSheetComments(context, postId: postId);
   }
 
   @override
@@ -179,110 +132,149 @@ class _CardPostState extends State<CardPost> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final cardHeight = width * 1.22;
-        final safeHeight = cardHeight.clamp(390.0, 500.0);
+        double safeHeight;
 
-        return SizedBox(
-          width: double.infinity,
+        if (mediaType == null) {
+          safeHeight = 180.0;
+        } else {
+          safeHeight = (width * 0.9).clamp(320.0, 450.0);
+        }
+
+        const double minScroll = -80.0;
+        const double maxScroll = 80.0;
+
+        final cardContent = Container(
+          margin: const EdgeInsets.only(bottom: 16),
           height: safeHeight,
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 22),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(28),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  _buildImageCover(),
-                  _buildImageGradient(),
-                  Positioned(
-                    right: 0,
-                    top: 28,
-                    bottom: 68,
-                    width: 68,
-                    child: IgnorePointer(
-                      child: Transform.rotate(
-                        angle: 3.14,
-                        child: ClipPath(
-                          clipper: ClipStatusBar(),
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                            child: ColoredBox(
-                              color: AppColors.whiteColor.withOpacity(0.22),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    right: 8,
-                    top: 44,
-                    bottom: 88,
-                    width: 52,
-                    child: _buildActions(context),
-                  ),
-                  Positioned(
-                    width: 4,
-                    height: 24,
-                    right: 58,
-                    top: safeHeight / 2 - 12,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.whiteColor,
-                        borderRadius: BorderRadius.circular(50),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    left: 18,
-                    right: 82,
-                    bottom: 20,
-                    child: _buildItemPublisher(context),
-                  ),
-                ],
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
-            ),
+            ],
           ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: mediaType == null
+                ? _buildTextOnlyPost()
+                : Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      _buildMediaContent(),
+                      _buildGradientOverlay(),
+                      _buildSidePanel(safeHeight, minScroll, maxScroll),
+                      _buildBottomInfo(),
+                    ],
+                  ),
+          ),
+        );
+
+        // Don't wrap with GestureDetector if in detail view
+        if (widget.isDetailView) {
+          return cardContent;
+        }
+
+        return GestureDetector(
+          onTap: () {
+            Navigator.pushNamed(
+              context,
+              NamedRoutes.postDetailScreen,
+              arguments: widget.post,
+            );
+          },
+          child: cardContent,
         );
       },
     );
   }
 
-  Widget _buildActions(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 50),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        alignment: Alignment.topCenter,
+  Widget _buildTextOnlyPost() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.purpleColor.withOpacity(0.08),
+            AppColors.purpleColor.withOpacity(0.03),
+          ],
+        ),
+        border: Border.all(
+          color: AppColors.purpleColor.withOpacity(0.15),
+          width: 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildStatusButton(
-              icon: isLiked ? Icons.favorite : Icons.favorite_border,
-              text: _formatCount(likeCount),
-              onTap: toggleLike,
-              isActive: isLiked,
-              activeColor: AppColors.redColor,
+            Row(
+              children: [
+                if (userAvatar.isNotEmpty)
+                  CircleAvatar(
+                    radius: 16,
+                    backgroundImage: NetworkImage(userAvatar),
+                    onBackgroundImageError: (_, __) {},
+                  ),
+                if (userAvatar.isNotEmpty) const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    userName,
+                    style: AppTheme.blackTextStyle.copyWith(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            _buildStatusButton(
-              icon: Icons.mode_comment_outlined,
-              text: 'Reply',
-              onTap: () => onCommentTap(context),
+            const SizedBox(height: 12),
+            Text(
+              content,
+              style: AppTheme.blackTextStyle.copyWith(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                height: 1.3,
+              ),
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 8),
-            _buildStatusButton(
-              icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
-              text: 'Save',
-              onTap: toggleSave,
-              isActive: isSaved,
-              activeColor: AppColors.greenColor,
-            ),
-            const SizedBox(height: 8),
-            _buildStatusButton(
-              icon: Icons.send_outlined,
-              text: 'Send',
-              onTap: onShareTap,
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                _buildTextOnlyActionButton(
+                  icon: isLiked ? Icons.favorite : Icons.favorite_border,
+                  count: likeCount,
+                  onTap: _toggleLike,
+                  isActive: isLiked,
+                  activeColor: Colors.redAccent,
+                ),
+                const SizedBox(width: 16),
+                _buildTextOnlyActionButton(
+                  icon: Icons.chat_bubble_outline,
+                  count: 0,
+                  onTap: _openComments,
+                ),
+                const SizedBox(width: 16),
+                _buildTextOnlyActionButton(
+                  icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
+                  count: 0,
+                  onTap: _toggleSave,
+                  isActive: isSaved,
+                  activeColor: Colors.amber,
+                ),
+                const Spacer(),
+                _buildTextOnlyActionButton(
+                  icon: Icons.share_outlined,
+                  count: 0,
+                  onTap: () {},
+                ),
+              ],
             ),
           ],
         ),
@@ -290,262 +282,335 @@ class _CardPostState extends State<CardPost> {
     );
   }
 
-  Widget _buildStatusButton({
+  Widget _buildTextOnlyActionButton({
     required IconData icon,
-    required String text,
+    required int count,
     required VoidCallback onTap,
     bool isActive = false,
     Color? activeColor,
   }) {
     return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: SizedBox(
-        width: 48,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              height: 34,
-              width: 34,
-              decoration: BoxDecoration(
-                color: isActive && activeColor != null
-                    ? activeColor
-                    : AppColors.whiteColor.withOpacity(0.38),
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: isActive
-                    ? [
-                        BoxShadow(
-                          color:
-                              (activeColor ?? Colors.white).withOpacity(0.25),
-                          blurRadius: 6,
-                          offset: const Offset(0, 3),
-                        ),
-                      ]
-                    : [],
-              ),
-              child: Icon(
-                icon,
-                size: 15,
-                color: AppColors.whiteColor,
-              ),
-            ),
-            const SizedBox(height: 3),
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 18,
+            color: isActive ? activeColor : AppColors.greyColor,
+          ),
+          if (count > 0) ...[
+            const SizedBox(width: 3),
             Text(
-              text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: AppTheme.whiteTextStyle.copyWith(
-                fontSize: 8.5,
-                fontWeight: AppTheme.bold,
-                height: 1,
-              ),
+              count > 999
+                  ? '${(count / 1000).toStringAsFixed(1)}K'
+                  : count.toString(),
+              style: AppTheme.greyTextStyle.copyWith(fontSize: 11),
             ),
           ],
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildImageGradient() {
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: Container(
-        height: 240,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.transparent,
-              Colors.black.withOpacity(0.22),
-              Colors.black.withOpacity(0.72),
-            ],
+  Widget _buildMediaContent() {
+    if (mediaType == 'video' &&
+        _isVideoInitialized &&
+        _videoController != null) {
+      return Stack(
+        alignment: Alignment.center,
+        children: [
+          VideoPlayer(_videoController!),
+          Positioned.fill(
+            child: InkWell(
+              onTap: () {
+                setState(() {
+                  if (_videoController!.value.isPlaying) {
+                    _videoController!.pause();
+                  } else {
+                    _videoController!.play();
+                  }
+                });
+              },
+              child: Container(color: Colors.transparent),
+            ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildImageCover() {
-    final imageUrl = _imageUrl;
-
-    if (imageUrl.isEmpty) {
-      return _buildPlaceholder();
+          if (!_videoController!.value.isPlaying)
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.5),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.play_arrow,
+                color: Colors.white,
+                size: 40,
+              ),
+            ),
+        ],
+      );
+    } else if (mediaType == 'image' && mediaUrl != null) {
+      return Image.network(
+        mediaUrl!,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: AppColors.greyColor.withOpacity(0.2),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.broken_image,
+                      size: 40, color: AppColors.greyColor),
+                  const SizedBox(height: 6),
+                  Text('Failed to load image', style: AppTheme.greyTextStyle),
+                ],
+              ),
+            ),
+          );
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
+            color: AppColors.greyColor.withOpacity(0.1),
+            child: const Center(
+              child: CircularProgressIndicator(color: AppColors.purpleColor),
+            ),
+          );
+        },
+      );
     }
 
-    return Image.network(
-      imageUrl,
-      width: double.infinity,
-      height: double.infinity,
-      fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => _buildPlaceholder(),
-      loadingBuilder: (_, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            _buildPlaceholder(),
-            Center(
-              child: SizedBox(
-                height: 38,
-                width: 38,
-                child: CircularProgressIndicator(
-                  color: Colors.white.withOpacity(0.85),
-                  strokeWidth: 1.4,
-                  value: loadingProgress.expectedTotalBytes != null
-                      ? loadingProgress.cumulativeBytesLoaded /
-                          loadingProgress.expectedTotalBytes!
-                      : null,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildPlaceholder() {
     return Container(
-      width: double.infinity,
-      height: double.infinity,
-      color: AppColors.purpleColor.withOpacity(0.18),
+      color: AppColors.greyColor.withOpacity(0.2),
       child: Center(
-        child: Icon(
-          Icons.image,
-          size: 52,
-          color: AppColors.purpleColor.withOpacity(0.5),
+        child: Text(
+          content.isNotEmpty ? content : 'No media content',
+          style: AppTheme.blackTextStyle.copyWith(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+          maxLines: 4,
+          overflow: TextOverflow.ellipsis,
         ),
       ),
     );
   }
 
-  Widget _buildItemPublisher(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        GestureDetector(
-          onTap: () {
-            Navigator.of(context).pushNamed(NamedRoutes.profileScreen);
-          },
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildAvatar(),
-              const SizedBox(width: 7),
-              Flexible(
-                child: Text(
-                  _userName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTheme.whiteTextStyle.copyWith(
-                    fontSize: 14,
-                    fontWeight: AppTheme.bold,
-                    height: 1,
-                  ),
+  Widget _buildGradientOverlay() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          stops: const [0.0, 0.3, 0.7, 1.0],
+          colors: [
+            Colors.black.withOpacity(0.3),
+            Colors.transparent,
+            Colors.transparent,
+            Colors.black.withOpacity(0.7),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSidePanel(
+      double safeHeight, double minScroll, double maxScroll) {
+    return Positioned(
+      right: 0,
+      top: 8,
+      bottom: 20,
+      width: 80,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Transform.rotate(
+            angle: 3.14,
+            child: ClipPath(
+              clipper: ClipStatusBar(),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                child: Container(
+                  color: Colors.black.withOpacity(0.25),
                 ),
               ),
-            ],
-          ),
-        ),
-        if (_caption.isNotEmpty) ...[
-          const SizedBox(height: 9),
-          Text(
-            _caption,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: AppTheme.whiteTextStyle.copyWith(
-              fontSize: 11,
-              height: 1.2,
-              fontWeight: AppTheme.medium,
             ),
           ),
+          _buildActionButtons(),
+          _buildDraggableHandle(safeHeight, minScroll, maxScroll),
         ],
-        const SizedBox(height: 3),
-        Text(
-          '#trending #prive',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: AppTheme.whiteTextStyle.copyWith(
-            color: AppColors.greenColor,
-            fontSize: 10,
-            fontWeight: AppTheme.medium,
-            height: 1,
-          ),
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _buildActionButton(
+          icon: isLiked ? Icons.favorite : Icons.favorite_border,
+          label: 'Like',
+          onTap: _toggleLike,
+          isActive: isLiked,
+          activeColor: Colors.redAccent,
+          showCount: true,
+          count: likeCount,
+        ),
+        const SizedBox(height: 12),
+        _buildActionButton(
+          icon: Icons.chat_bubble_outline,
+          label: 'Reply',
+          onTap: _openComments,
+        ),
+        const SizedBox(height: 12),
+        _buildActionButton(
+          icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
+          label: 'Save',
+          onTap: _toggleSave,
+          isActive: isSaved,
+          activeColor: Colors.amber,
+        ),
+        const SizedBox(height: 12),
+        _buildActionButton(
+          icon: Icons.share_outlined,
+          label: 'Share',
+          onTap: () {},
         ),
       ],
     );
   }
 
-  Widget _buildAvatar() {
-    final avatar = _userAvatar;
-
-    if (avatar.startsWith('http')) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(50),
-        child: Image.network(
-          avatar,
-          width: 30,
-          height: 30,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _avatarFallback(),
-        ),
-      );
-    }
-
-    if (avatar.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(50),
-        child: Image.asset(
-          avatar,
-          width: 30,
-          height: 30,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _avatarFallback(),
-        ),
-      );
-    }
-
-    return _avatarFallback();
-  }
-
-  Widget _avatarFallback() {
-    return Container(
-      width: 30,
-      height: 30,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: AppColors.whiteColor.withOpacity(0.35),
-      ),
-      child: const Icon(
-        Icons.person,
-        size: 17,
-        color: Colors.white,
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    bool isActive = false,
+    Color? activeColor,
+    bool showCount = false,
+    int count = 0,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        onTap();
+      },
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isActive
+                  ? activeColor?.withOpacity(0.8)
+                  : Colors.white.withOpacity(0.15),
+            ),
+            child: Icon(
+              icon,
+              color: isActive ? Colors.white : Colors.white.withOpacity(0.9),
+              size: 18,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            showCount && count > 0 ? '$count' : label,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.9),
+              fontSize: showCount && count > 0 ? 10 : 9,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  int _toInt(dynamic value) {
-    if (value is int) return value;
-    if (value is num) return value.toInt();
-    if (value is String) return int.tryParse(value) ?? 0;
-    return 0;
+  Widget _buildDraggableHandle(
+      double safeHeight, double minScroll, double maxScroll) {
+    return Positioned(
+      left: 0,
+      top: (safeHeight / 2 - 35) + _handleOffset,
+      child: GestureDetector(
+        onVerticalDragUpdate: (details) {
+          setState(() {
+            _handleOffset += details.delta.dy;
+            _handleOffset = _handleOffset.clamp(minScroll, maxScroll);
+          });
+        },
+        onVerticalDragEnd: (_) {
+          setState(() => _handleOffset = 0);
+        },
+        child: Container(
+          width: 3,
+          height: 35,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 3,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
-  String _formatCount(int value) {
-    if (value >= 1000000) {
-      return '${(value / 1000000).toStringAsFixed(1)}M';
-    }
-
-    if (value >= 1000) {
-      return '${(value / 1000).toStringAsFixed(1)}K';
-    }
-
-    return value.toString();
+  Widget _buildBottomInfo() {
+    return Positioned(
+      left: 14,
+      right: 80,
+      bottom: 16,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              if (userAvatar.isNotEmpty)
+                CircleAvatar(
+                  radius: 14,
+                  backgroundImage: NetworkImage(userAvatar),
+                  onBackgroundImageError: (_, __) {},
+                ),
+              if (userAvatar.isNotEmpty) const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      userName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (content.isNotEmpty && mediaType != null)
+                      Text(
+                        content,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.7),
+                          fontSize: 10,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }

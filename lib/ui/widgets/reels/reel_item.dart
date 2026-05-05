@@ -242,7 +242,7 @@ class _ReelItemState extends State<ReelItem> {
                 },
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
+                    horizontal: 6,
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
@@ -262,7 +262,7 @@ class _ReelItemState extends State<ReelItem> {
                       color: _isFollowing
                           ? Colors.white.withOpacity(0.8)
                           : Colors.white,
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

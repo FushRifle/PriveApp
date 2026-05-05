@@ -75,7 +75,10 @@ class _PostDetailPageState extends State<PostDetailPage> {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  child: CardPost(post: widget.post),
+                  child: CardPost(
+                    post: _post,
+                    isDetailView: true,
+                  ),
                 ),
               ),
               SliverToBoxAdapter(child: _buildEngagementStats()),

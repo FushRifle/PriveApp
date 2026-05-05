@@ -143,7 +143,7 @@ class _DiscoverPageState extends State<DiscoverPage>
 
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 26),
         child: Column(
           children: [
             const SizedBox(height: 12),

@@ -3,13 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:social_media_app/app/configs/colors.dart';
 import 'package:social_media_app/app/configs/theme.dart';
-import 'package:social_media_app/app/resources/constant/named_routes.dart';
 import 'package:social_media_app/ui/bloc/gallery_profile_cubit.dart';
 import 'package:social_media_app/ui/pages/main/profile/edit_profile_page.dart';
 import 'package:social_media_app/ui/pages/settings/settings_page.dart';
 import 'package:social_media_app/ui/pages/social/friends_list_page.dart';
 import 'package:social_media_app/ui/pages/social/insights_page.dart';
 import 'package:social_media_app/ui/pages/social/matches_page.dart';
+import 'package:social_media_app/data/services/user/user_service.dart';
+import 'package:social_media_app/data/hooks/auth/auth_hook.dart';
 
 class ProfilePage extends StatefulWidget {
   final bool isOwnProfile;
@@ -26,21 +27,100 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  bool _isFollowing = false;
-  int _selectedAccount = 0;
+  final AuthHook _authHook = AuthHook();
+  final UserService _userService = UserService();
 
-  final List<Map<String, String>> _accounts = [
-    {
-      'name': 'Fush',
-      'username': '@fush.co',
-      'avatar': 'assets/images/img_profile.jpeg',
-    },
-    {
-      'name': 'Creative Studio',
-      'username': '@creative',
-      'avatar': 'assets/profiles/profile_1.jpeg',
-    },
-  ];
+  bool _isFollowing = false;
+  bool _isLoading = true;
+  Map<String, dynamic> _user = {};
+  String? _error;
+
+  int _followingCount = 0;
+  int _followersCount = 0;
+  int _likesCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  @override
+  void dispose() {
+    _authHook.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadUserData() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      Map<String, dynamic> userData;
+
+      if (widget.isOwnProfile) {
+        userData = await _userService.getCurrentUser();
+      } else if (widget.userId != null) {
+        final userId = int.tryParse(widget.userId!);
+        if (userId != null) {
+          userData = await _userService.getUserById(userId);
+        } else {
+          throw 'Invalid user ID';
+        }
+      } else {
+        throw 'No user ID provided';
+      }
+
+      setState(() {
+        _user = userData;
+        _followingCount =
+            userData['followingCount'] ?? userData['following']?.length ?? 0;
+        _followersCount =
+            userData['followersCount'] ?? userData['followers']?.length ?? 0;
+        _likesCount = userData['likesCount'] ?? userData['totalLikes'] ?? 0;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _getUserName() {
+    return _user['name'] ?? _user['username'] ?? 'User';
+  }
+
+  String _getUserUsername() {
+    final username = _user['username'];
+    if (username != null && username.isNotEmpty) {
+      return '@$username';
+    }
+    return '@user';
+  }
+
+  String _getUserAvatar() {
+    return _user['avatar'] ?? _user['avatar_url'] ?? '';
+  }
+
+  String _getUserBio() {
+    return _user['bio'] ?? '';
+  }
+
+  String _getUserLocation() {
+    return _user['location'] ?? '';
+  }
+
+  String _getUserWork() {
+    return _user['work'] ?? '';
+  }
+
+  String _getUserEducation() {
+    return _user['education'] ?? '';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,62 +133,142 @@ class _ProfilePageState extends State<ProfilePage> {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
-      body: DefaultTabController(
-        length: 3,
-        child: NestedScrollView(
-          physics: const BouncingScrollPhysics(),
-          headerSliverBuilder: (context, innerBoxIsScrolled) {
-            return [
-              _buildSliverAppBar(context),
-              SliverToBoxAdapter(
-                child: Column(
-                  children: [
-                    const SizedBox(height: 20),
-                    _buildHeroProfile(),
-                    const SizedBox(height: 16),
-                    _buildAccountSwitcher(),
-                    const SizedBox(height: 24),
-                    _buildStatsRow(),
-                    const SizedBox(height: 24),
-                    if (widget.isOwnProfile) _buildInsightsButton(),
-                    const SizedBox(height: 12),
-                    _buildActionButtons(),
-                    const SizedBox(height: 32),
-                  ],
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.purpleColor),
+            )
+          : _error != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _error!,
+                        style: AppTheme.greyTextStyle,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _loadUserData,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.purpleColor,
+                        ),
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                )
+              : DefaultTabController(
+                  length: 3,
+                  child: NestedScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    headerSliverBuilder: (context, innerBoxIsScrolled) {
+                      return [
+                        _buildSliverAppBar(context),
+                        SliverToBoxAdapter(
+                          child: Column(
+                            children: [
+                              const SizedBox(height: 20),
+                              _buildHeroProfile(),
+                              const SizedBox(height: 16),
+                              _buildBioSection(),
+                              const SizedBox(height: 16),
+                              _buildStatsRow(),
+                              const SizedBox(height: 24),
+                              if (widget.isOwnProfile) _buildInsightsButton(),
+                              const SizedBox(height: 12),
+                              _buildActionButtons(),
+                              const SizedBox(height: 32),
+                            ],
+                          ),
+                        ),
+                        _buildStickyTabBar(),
+                      ];
+                    },
+                    body: TabBarView(
+                      physics: const BouncingScrollPhysics(),
+                      children: [
+                        _buildGalleryGrid(),
+                        _buildVideosTab(),
+                        _buildTaggedTab(),
+                      ],
+                    ),
+                  ),
                 ),
+    );
+  }
+
+  Widget _buildBioSection() {
+    final bio = _getUserBio();
+    final location = _getUserLocation();
+    final work = _getUserWork();
+    final education = _getUserEducation();
+
+    if (bio.isEmpty && location.isEmpty && work.isEmpty && education.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          if (bio.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                bio,
+                style: AppTheme.blackTextStyle.copyWith(
+                  fontSize: 14,
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
               ),
-              _buildStickyTabBar(),
-            ];
-          },
-          body: TabBarView(
-            physics: const BouncingScrollPhysics(),
+            ),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 16,
             children: [
-              _buildGalleryGrid(context),
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+              if (location.isNotEmpty)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.videocam,
-                        size: 48, color: AppColors.greyColor),
-                    const SizedBox(height: 12),
-                    Text("Video Content", style: AppTheme.greyTextStyle),
+                    Icon(Icons.location_on,
+                        size: 14, color: AppColors.greyColor),
+                    const SizedBox(width: 4),
+                    Text(
+                      location,
+                      style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
+                    ),
                   ],
                 ),
-              ),
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+              if (work.isNotEmpty)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.bookmark,
-                        size: 48, color: AppColors.greyColor),
-                    const SizedBox(height: 12),
-                    Text("Tagged Posts", style: AppTheme.greyTextStyle),
+                    Icon(Icons.work, size: 14, color: AppColors.greyColor),
+                    const SizedBox(width: 4),
+                    Text(
+                      work,
+                      style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
+                    ),
                   ],
                 ),
-              ),
+              if (education.isNotEmpty)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.school, size: 14, color: AppColors.greyColor),
+                    const SizedBox(width: 4),
+                    Text(
+                      education,
+                      style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
+                    ),
+                  ],
+                ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
@@ -154,119 +314,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildAccountSwitcher() {
-    return GestureDetector(
-      onTap: () => _showAccountSwitcher(),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: AppColors.purpleColor.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              _accounts[_selectedAccount]['name']!,
-              style: AppTheme.blackTextStyle.copyWith(
-                color: AppColors.purpleColor,
-                fontWeight: AppTheme.bold,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(width: 4),
-            const Icon(Icons.keyboard_arrow_down,
-                color: AppColors.purpleColor, size: 20),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showAccountSwitcher() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(top: 12, bottom: 20),
-                decoration: BoxDecoration(
-                  color: AppColors.greyColor.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Text(
-                'Switch Account',
-                style: AppTheme.blackTextStyle.copyWith(
-                  fontWeight: AppTheme.bold,
-                  fontSize: 18,
-                ),
-              ),
-              const SizedBox(height: 16),
-              ..._accounts.asMap().entries.map((entry) {
-                final index = entry.key;
-                final account = entry.value;
-                return ListTile(
-                  leading: CircleAvatar(
-                    radius: 24,
-                    backgroundImage: AssetImage(account['avatar']!),
-                  ),
-                  title: Text(
-                    account['name']!,
-                    style: AppTheme.blackTextStyle.copyWith(
-                      fontWeight: AppTheme.bold,
-                    ),
-                  ),
-                  subtitle: Text(
-                    account['username']!,
-                    style: AppTheme.greyTextStyle,
-                  ),
-                  trailing: _selectedAccount == index
-                      ? const Icon(Icons.check_circle,
-                          color: AppColors.purpleColor)
-                      : null,
-                  onTap: () {
-                    setState(() => _selectedAccount = index);
-                    Navigator.pop(context);
-                  },
-                );
-              }),
-              const Divider(),
-              ListTile(
-                leading: Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.purpleColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: const Icon(Icons.add, color: AppColors.purpleColor),
-                ),
-                title: Text(
-                  'Add Account',
-                  style: AppTheme.blackTextStyle
-                      .copyWith(fontWeight: AppTheme.bold),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                },
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   Widget _buildSliverAppBar(BuildContext context) {
     return SliverAppBar(
       pinned: true,
@@ -275,7 +322,7 @@ class _ProfilePageState extends State<ProfilePage> {
       leading: IconButton(
         onPressed: () {
           HapticFeedback.lightImpact();
-          Navigator.pushReplacementNamed(context, NamedRoutes.homeScreen);
+          Navigator.pop(context);
         },
         icon:
             const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 20),
@@ -304,52 +351,37 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildHeroProfile() {
+    final avatar = _getUserAvatar();
+
     return Column(
       children: [
-        Stack(
-          alignment: Alignment.bottomRight,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [AppColors.purpleColor, Colors.blueAccent.shade100],
-                ),
-              ),
-              child: CircleAvatar(
-                radius: 60,
-                backgroundColor: Colors.white,
-                child: CircleAvatar(
-                  radius: 56,
-                  backgroundImage: AssetImage(
-                    _accounts[_selectedAccount]['avatar']!,
-                  ),
-                ),
-              ),
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              colors: [AppColors.purpleColor, Colors.blueAccent.shade100],
             ),
-            Container(
-              height: 32,
-              width: 32,
-              decoration: BoxDecoration(
-                color: AppColors.purpleColor,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 3),
-              ),
-              child: const Icon(Icons.check, color: Colors.white, size: 16),
-            ),
-          ],
+          ),
+          child: CircleAvatar(
+            radius: 60,
+            backgroundColor: Colors.white,
+            backgroundImage: avatar.isNotEmpty
+                ? NetworkImage(avatar)
+                : const AssetImage('assets/images/img_profile.jpeg')
+                    as ImageProvider,
+          ),
         ),
         const SizedBox(height: 16),
         Text(
-          _accounts[_selectedAccount]['name']!,
+          _getUserName(),
           style: AppTheme.blackTextStyle.copyWith(
             fontWeight: AppTheme.bold,
             fontSize: 24,
           ),
         ),
         Text(
-          _accounts[_selectedAccount]['username']!,
+          _getUserUsername(),
           style: AppTheme.greyTextStyle.copyWith(
             fontWeight: FontWeight.w600,
             fontSize: 14,
@@ -373,7 +405,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             );
           },
-          child: _statItem("29", "Following"),
+          child: _statItem(_formatCount(_followingCount), "Following"),
         ),
         GestureDetector(
           onTap: () {
@@ -385,22 +417,33 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             );
           },
-          child: _statItem("121.9k", "Followers"),
+          child: _statItem(_formatCount(_followersCount), "Followers"),
         ),
         GestureDetector(
           onTap: () {
             HapticFeedback.lightImpact();
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const InsightsPage(),
-              ),
-            );
+            if (widget.isOwnProfile) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const InsightsPage(),
+                ),
+              );
+            }
           },
-          child: _statItem("7.5M", "Likes"),
+          child: _statItem(_formatCount(_likesCount), "Likes"),
         ),
       ],
     );
+  }
+
+  String _formatCount(int count) {
+    if (count >= 1000000) {
+      return '${(count / 1000000).toStringAsFixed(1)}M';
+    } else if (count >= 1000) {
+      return '${(count / 1000).toStringAsFixed(1)}K';
+    }
+    return count.toString();
   }
 
   Widget _statItem(String value, String label) {
@@ -511,15 +554,6 @@ class _ProfilePageState extends State<ProfilePage> {
                         ? Border.all(
                             color: AppColors.greyColor.withOpacity(0.3))
                         : null,
-                    boxShadow: _isFollowing
-                        ? []
-                        : [
-                            BoxShadow(
-                              color: AppColors.purpleColor.withOpacity(0.3),
-                              blurRadius: 15,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
                   ),
                   child: Center(
                     child: Text(
@@ -575,7 +609,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildGalleryGrid(BuildContext context) {
+  Widget _buildGalleryGrid() {
     return BlocProvider(
       create: (context) => GalleryProfileCubit()..getGalleryProfile(),
       child: BlocBuilder<GalleryProfileCubit, GalleryProfileState>(
@@ -647,6 +681,32 @@ class _ProfilePageState extends State<ProfilePage> {
           }
           return const Center(child: CircularProgressIndicator());
         },
+      ),
+    );
+  }
+
+  Widget _buildVideosTab() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.videocam, size: 48, color: AppColors.greyColor),
+          const SizedBox(height: 12),
+          Text("Video Content", style: AppTheme.greyTextStyle),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTaggedTab() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.bookmark, size: 48, color: AppColors.greyColor),
+          const SizedBox(height: 12),
+          Text("Tagged Posts", style: AppTheme.greyTextStyle),
+        ],
       ),
     );
   }

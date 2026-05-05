@@ -58,11 +58,7 @@ class FeedHook extends ChangeNotifier {
     try {
       final result = await _userService.getCurrentUser();
 
-      if (result is Map<String, dynamic>) {
-        _user = result;
-      } else {
-        throw Exception('Invalid user response');
-      }
+      _user = result;
     } catch (e) {
       debugPrint('Error fetching user: $e');
       _error = _cleanError(e);

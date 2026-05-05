@@ -1,57 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:social_media_app/app/configs/colors.dart';
 import 'package:social_media_app/app/configs/theme.dart';
 import 'package:social_media_app/app/resources/constant/named_routes.dart';
-import 'package:social_media_app/data/hooks/home/feed_hook.dart';
-import 'package:social_media_app/data/hooks/home/story_hook.dart';
 import 'package:social_media_app/data/models/status_model.dart';
+import 'package:social_media_app/data/providers/feed_provider.dart';
 import 'package:social_media_app/ui/pages/main/status/status_view_page.dart';
 import 'package:social_media_app/ui/widgets/home/card_post.dart';
 import 'package:social_media_app/ui/widgets/status/status_widget.dart';
-
 import '../../../widgets/home/custom_app_bar.dart';
 
-class HomePage extends StatefulWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  ConsumerState<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
-  final FeedHook _feedHook = FeedHook();
-  final StoryHook _storyHook = StoryHook();
-
+class _HomePageState extends ConsumerState<HomePage> {
   @override
   void initState() {
     super.initState();
-
-    _feedHook.addListener(_onHookChanged);
-    _storyHook.addListener(_onHookChanged);
-
-    _feedHook.initialize();
-    _storyHook.fetchStories();
-  }
-
-  void _onHookChanged() {
-    if (mounted) setState(() {});
-  }
-
-  @override
-  void dispose() {
-    _feedHook.removeListener(_onHookChanged);
-    _storyHook.removeListener(_onHookChanged);
-    _feedHook.dispose();
-    _storyHook.dispose();
-    super.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(feedProvider.notifier).fetchData();
+    });
   }
 
   Future<void> _refreshAll() async {
-    await Future.wait([
-      _feedHook.refresh(),
-      _storyHook.refresh(),
-    ]);
+    await ref.read(feedProvider.notifier).refresh();
   }
 
   @override
@@ -63,27 +40,21 @@ class _HomePageState extends State<HomePage> {
       ),
     );
 
+    final feedState = ref.watch(feedProvider);
+
     return SafeArea(
       bottom: false,
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 2, 12, 0),
-            child: _buildCustomAppBar(context),
+            padding: const EdgeInsets.fromLTRB(12, 2, 12, 2),
+            child: _buildCustomAppBar(context, feedState.user),
           ),
           Expanded(
             child: RefreshIndicator(
               color: AppColors.purpleColor,
               onRefresh: _refreshAll,
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 18, 16, 130),
-                children: [
-                  _buildStatusBar(context),
-                  const SizedBox(height: 18),
-                  _buildPostsList(),
-                ],
-              ),
+              child: _buildBody(feedState),
             ),
           ),
         ],
@@ -91,43 +62,50 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildPostsList() {
-    final isInitialLoading =
-        (_feedHook.loading || _storyHook.loading) && _feedHook.posts.isEmpty;
+  Widget _buildBody(CachedFeedData feedState) {
+    if (feedState.isLoading && feedState.posts.isEmpty) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.purpleColor),
+      );
+    }
 
-    if (isInitialLoading) {
-      return const SizedBox(
-        height: 280,
-        child: Center(
-          child: CircularProgressIndicator(color: AppColors.purpleColor),
+    if (feedState.error != null && feedState.posts.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              feedState.error!,
+              textAlign: TextAlign.center,
+              style: AppTheme.greyTextStyle,
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () => ref.read(feedProvider.notifier).fetchData(),
+              child: const Text('Retry'),
+            ),
+          ],
         ),
       );
     }
 
-    if (_feedHook.error != null && _feedHook.posts.isEmpty) {
-      return SizedBox(
-        height: 280,
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _feedHook.error!,
-                textAlign: TextAlign.center,
-                style: AppTheme.greyTextStyle,
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: () => _feedHook.fetchPosts(refresh: true),
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 130),
+      children: [
+        _buildStatusBar(context, feedState.stories, feedState.user),
+        const SizedBox(height: 18),
+        _buildPostsList(feedState),
+      ],
+    );
+  }
 
-    if (_feedHook.posts.isEmpty) {
+  Widget _buildPostsList(CachedFeedData feedState) {
+    final posts = feedState.posts;
+    final isLoadingMore = feedState.isLoadingMore;
+    final hasMore = feedState.hasMore;
+
+    if (posts.isEmpty) {
       return SizedBox(
         height: 300,
         child: Center(
@@ -160,21 +138,22 @@ class _HomePageState extends State<HomePage> {
 
     return Column(
       children: [
-        for (final post in _feedHook.posts)
+        for (final post in posts)
           SizedBox(
             width: double.infinity,
             child: CardPost(post: post),
           ),
-        if (_feedHook.hasMore)
+        if (hasMore)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            padding: const EdgeInsets.symmetric(vertical: 100),
             child: Center(
-              child: _feedHook.loadingMore
+              child: isLoadingMore
                   ? const CircularProgressIndicator(
                       color: AppColors.purpleColor,
                     )
                   : TextButton(
-                      onPressed: _feedHook.loadMorePosts,
+                      onPressed: () =>
+                          ref.read(feedProvider.notifier).loadMore(),
                       child: Text(
                         'Load More',
                         style: AppTheme.blackTextStyle.copyWith(
@@ -188,10 +167,8 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildStatusBar(BuildContext context) {
-    final stories = _storyHook.stories;
-    final currentUser = _feedHook.user ?? {};
-
+  Widget _buildStatusBar(
+      BuildContext context, List<dynamic> stories, Map<String, dynamic> user) {
     return SizedBox(
       height: 104,
       width: double.infinity,
@@ -205,7 +182,7 @@ class _HomePageState extends State<HomePage> {
             return StatusWidget(
               status: StatusModel(
                 name: 'Your Story',
-                imgProfile: _userAvatar(currentUser),
+                imgProfile: _userAvatar(user),
                 statusImage: '',
                 time: '',
               ),
@@ -245,8 +222,8 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  CustomAppBar _buildCustomAppBar(BuildContext context) {
-    final user = _feedHook.user ?? {};
+  CustomAppBar _buildCustomAppBar(
+      BuildContext context, Map<String, dynamic> user) {
     final name = _displayName(user);
     final avatar = _userAvatar(user);
 
@@ -390,7 +367,7 @@ class _HomePageState extends State<HomePage> {
       child: Icon(
         Icons.person,
         size: size * 0.65,
-        color: AppColors.greyColor,
+        color: AppColors.secondary,
       ),
     );
   }

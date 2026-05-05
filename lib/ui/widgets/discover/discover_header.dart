@@ -16,14 +16,14 @@ class DiscoverHeader extends StatelessWidget {
       children: [
         AnimatedContainer(
           duration: const Duration(milliseconds: 300),
-          child: Icon(Icons.explore, color: AppColors.purpleColor, size: 28),
+          child: Icon(Icons.explore, color: AppColors.primary, size: 28),
         ),
         const SizedBox(width: 12),
         Text(
           'Discover People',
           style: AppTheme.blackTextStyle.copyWith(
             fontWeight: AppTheme.bold,
-            fontSize: 24,
+            fontSize: 16,
           ),
         ),
         const Spacer(),
@@ -31,15 +31,15 @@ class DiscoverHeader extends StatelessWidget {
           duration: const Duration(milliseconds: 300),
           child: Container(
             key: ValueKey(remainingCount),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              color: AppColors.purpleColor.withOpacity(0.1),
+              color: AppColors.secondary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               '$remainingCount left',
               style: AppTheme.blackTextStyle.copyWith(
-                color: AppColors.purpleColor,
+                color: AppColors.blackTextColor,
                 fontWeight: AppTheme.bold,
                 fontSize: 14,
               ),

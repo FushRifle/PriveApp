@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:social_media_app/app/configs/colors.dart';
 import 'package:social_media_app/app/configs/theme.dart';
 import 'package:social_media_app/app/resources/constant/named_routes.dart';
@@ -14,13 +15,11 @@ import 'package:social_media_app/ui/pages/main/profile/edit_profile_page.dart';
 import 'package:social_media_app/ui/pages/social/insights_page.dart';
 import 'package:social_media_app/ui/pages/main/profile/profile_page.dart';
 import 'package:social_media_app/ui/pages/main/reels/reels_page.dart';
-import 'package:social_media_app/ui/pages/main/post/create_post_page.dart';
+import 'package:social_media_app/ui/pages/main/home/create_post_page.dart';
 import 'package:social_media_app/ui/pages/main/status/create_status_page.dart';
 import 'package:social_media_app/ui/pages/auth/onboarding_page.dart';
-
 import 'package:social_media_app/ui/pages/auth/login_page.dart';
 import 'package:social_media_app/ui/pages/auth/register_page.dart';
-
 import 'package:social_media_app/ui/pages/settings/settings_page.dart';
 import 'package:social_media_app/ui/pages/settings/subscribe_page.dart';
 import 'package:social_media_app/ui/pages/social/friends_list_page.dart';
@@ -28,6 +27,27 @@ import 'package:social_media_app/ui/pages/social/matches_page.dart';
 import 'package:social_media_app/ui/widgets/home/clip_status_bar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:social_media_app/app/configs/api_config.dart';
+
+// Theme provider for state management
+final themeProvider = StateNotifierProvider<ThemeNotifier, ThemeMode>((ref) {
+  return ThemeNotifier();
+});
+
+class ThemeNotifier extends StateNotifier<ThemeMode> {
+  ThemeNotifier() : super(ThemeMode.light);
+
+  void toggleTheme() {
+    state = state == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
+  }
+
+  void setLightMode() {
+    state = ThemeMode.light;
+  }
+
+  void setDarkMode() {
+    state = ThemeMode.dark;
+  }
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,18 +70,29 @@ Future<void> main() async {
     debug: true,
   );
 
-  runApp(const MyApp());
+  runApp(
+    const ProviderScope(
+      // Wrapped with ProviderScope
+      child: MyApp(),
+    ),
+  );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
+  // Changed to ConsumerWidget
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeProvider);
+
     return MaterialApp(
       title: 'Prive',
       theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeMode,
       debugShowCheckedModeBanner: false,
+      scrollBehavior: const CustomScrollBehavior(), // Hide scroll indicators
       initialRoute: NamedRoutes.onboardingScreen,
       routes: {
         NamedRoutes.onboardingScreen: (context) => const OnboardingPage(),
@@ -74,8 +105,20 @@ class MyApp extends StatelessWidget {
         NamedRoutes.insightsScreen: (context) => const InsightsPage(),
         NamedRoutes.matchScreen: (context) => const MatchesPage(),
         NamedRoutes.postDetailScreen: (context) {
-          final post = ModalRoute.of(context)!.settings.arguments as PostModel;
-          return PostDetailPage(post: post);
+          final args = ModalRoute.of(context)!.settings.arguments;
+          if (args is PostModel) {
+            return PostDetailPage(post: args);
+          } else if (args is Map<String, dynamic>) {
+            return PostDetailPage(post: PostModel.fromJson(args));
+          } else {
+            return PostDetailPage(
+                post: const PostModel(
+              name: 'User',
+              imgProfile: '',
+              picture: '',
+              caption: '',
+            ));
+          }
         },
         NamedRoutes.createPostScreen: (context) => const CreatePostPage(),
         NamedRoutes.createStatusScreen: (context) => const CreateStatusPage(),
@@ -102,6 +145,22 @@ class MyApp extends StatelessWidget {
         return child!;
       },
     );
+  }
+}
+
+// Custom scroll behavior to hide scroll indicators
+class CustomScrollBehavior extends ScrollBehavior {
+  const CustomScrollBehavior();
+
+  @override
+  Widget buildViewportChrome(
+      BuildContext context, Widget child, AxisDirection axisDirection) {
+    return child; // Removes the scroll indicator glow
+  }
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) {
+    return const BouncingScrollPhysics();
   }
 }
 
