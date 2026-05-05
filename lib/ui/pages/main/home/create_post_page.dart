@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:social_media_app/app/configs/colors.dart';
-import 'package:social_media_app/app/configs/theme.dart';
+import 'package:Prive/app/configs/colors.dart';
+import 'package:Prive/app/configs/theme.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
-import 'package:social_media_app/data/hooks/home/feed_hook.dart';
+import 'package:Prive/data/hooks/home/feed_hook.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:path_provider/path_provider.dart';

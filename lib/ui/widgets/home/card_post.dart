@@ -1,13 +1,13 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:social_media_app/app/configs/colors.dart';
-import 'package:social_media_app/app/configs/theme.dart';
-import 'package:social_media_app/data/models/post_model.dart';
+import 'package:Prive/app/configs/colors.dart';
+import 'package:Prive/app/configs/theme.dart';
+import 'package:Prive/data/models/post_model.dart';
 import 'package:video_player/video_player.dart';
-import 'package:social_media_app/ui/widgets/home/clip_status_bar.dart';
-import 'package:social_media_app/ui/widgets/home/custom_bottom_sheet.dart';
-import 'package:social_media_app/app/resources/constant/named_routes.dart';
+import 'package:Prive/ui/widgets/home/clip_status_bar.dart';
+import 'package:Prive/ui/widgets/home/custom_bottom_sheet.dart';
+import 'package:Prive/app/resources/constant/named_routes.dart';
 
 class CardPost extends StatefulWidget {
   final dynamic post;

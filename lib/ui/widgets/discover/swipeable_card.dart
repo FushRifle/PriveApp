@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:social_media_app/app/configs/colors.dart';
-import 'package:social_media_app/data/models/profile_model.dart';
-import 'package:social_media_app/ui/widgets/discover/profile_card.dart';
+import 'package:Prive/app/configs/colors.dart';
+import 'package:Prive/data/models/profile_model.dart';
+import 'package:Prive/ui/widgets/discover/profile_card.dart';
 
 class SwipeableCard extends StatelessWidget {
   final ProfileModel profile; // Changed from Map to ProfileModel

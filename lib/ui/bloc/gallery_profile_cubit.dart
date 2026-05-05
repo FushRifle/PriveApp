@@ -1,6 +1,6 @@
 // gallery_profile_cubit.dart
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:social_media_app/data/models/gallery_model.dart';
+import 'package:Prive/data/models/gallery_model.dart';
 
 part 'gallery_profile_state.dart';
 

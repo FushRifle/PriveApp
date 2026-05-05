@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:social_media_app/app/configs/colors.dart';
-import 'package:social_media_app/app/configs/theme.dart';
+import 'package:Prive/app/configs/colors.dart';
+import 'package:Prive/app/configs/theme.dart';
 
 class MatchesPage extends StatelessWidget {
   const MatchesPage({super.key});

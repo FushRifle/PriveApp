@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:social_media_app/app/configs/colors.dart';
+import 'package:Prive/app/configs/colors.dart';
 
 class AppTheme {
   static TextStyle blackTextStyle = GoogleFonts.poppins(

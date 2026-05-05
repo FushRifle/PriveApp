@@ -2,10 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:social_media_app/app/configs/colors.dart';
-import 'package:social_media_app/data/services/cloudinary_service.dart';
-import 'package:social_media_app/data/services/home/feed_service.dart';
-import 'package:social_media_app/data/services/user/user_service.dart';
+import 'package:Prive/app/configs/colors.dart';
+import 'package:Prive/data/services/cloudinary_service.dart';
+import 'package:Prive/data/services/home/feed_service.dart';
+import 'package:Prive/data/services/user/user_service.dart';
 
 class CreateStatusPage extends StatefulWidget {
   const CreateStatusPage({super.key});

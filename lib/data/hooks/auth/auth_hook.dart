@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:social_media_app/data/services/auth/auth_service.dart';
+import 'package:Prive/data/services/auth/auth_service.dart';
 
 class AuthHook extends ChangeNotifier {
   final AuthService _auth = AuthService();

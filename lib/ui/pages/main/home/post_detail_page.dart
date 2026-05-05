@@ -2,9 +2,9 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:social_media_app/app/configs/colors.dart';
-import 'package:social_media_app/data/models/post_model.dart';
-import 'package:social_media_app/ui/widgets/home/card_post.dart';
+import 'package:Prive/app/configs/colors.dart';
+import 'package:Prive/data/models/post_model.dart';
+import 'package:Prive/ui/widgets/home/card_post.dart';
 
 class PostDetailPage extends StatefulWidget {
   final dynamic post;

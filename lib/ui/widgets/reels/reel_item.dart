@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:social_media_app/app/configs/colors.dart';
-import 'package:social_media_app/data/models/reel_model.dart';
+import 'package:Prive/app/configs/colors.dart';
+import 'package:Prive/data/models/reel_model.dart';
 
 class ReelItem extends StatefulWidget {
   final ReelModel reel;

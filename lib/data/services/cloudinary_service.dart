@@ -1,6 +1,6 @@
 import 'package:cloudinary_public/cloudinary_public.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:social_media_app/app/configs/api_config.dart';
+import 'package:Prive/app/configs/api_config.dart';
 
 class CloudinaryService {
   static final CloudinaryService _instance = CloudinaryService._internal();

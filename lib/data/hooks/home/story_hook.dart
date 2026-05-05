@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:social_media_app/data/services/home/feed_service.dart';
+import 'package:Prive/data/services/home/feed_service.dart';
 
 class StoryGroup {
   final int userId;

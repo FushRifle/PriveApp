@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:social_media_app/data/services/cached_feed_service.dart';
-import 'package:social_media_app/data/hooks/home/feed_hook.dart';
-import 'package:social_media_app/data/hooks/home/story_hook.dart';
+import 'package:Prive/data/services/cached_feed_service.dart';
+import 'package:Prive/data/hooks/home/feed_hook.dart';
+import 'package:Prive/data/hooks/home/story_hook.dart';
 
 class CachedFeedData {
   final List<dynamic> posts;

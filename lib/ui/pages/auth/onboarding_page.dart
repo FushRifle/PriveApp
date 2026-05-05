@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:social_media_app/app/configs/colors.dart';
-import 'package:social_media_app/app/configs/theme.dart';
-import 'package:social_media_app/app/resources/constant/named_routes.dart';
-import 'package:social_media_app/data/models/onboarding_model.dart';
+import 'package:Prive/app/configs/colors.dart';
+import 'package:Prive/app/configs/theme.dart';
+import 'package:Prive/app/resources/constant/named_routes.dart';
+import 'package:Prive/data/models/onboarding_model.dart';
 
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key});

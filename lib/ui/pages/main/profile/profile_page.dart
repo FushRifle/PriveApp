@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:social_media_app/app/configs/colors.dart';
-import 'package:social_media_app/app/configs/theme.dart';
-import 'package:social_media_app/data/models/gallery_model.dart';
-import 'package:social_media_app/ui/bloc/gallery_profile_cubit.dart';
-import 'package:social_media_app/ui/pages/main/profile/edit_profile_page.dart';
-import 'package:social_media_app/ui/pages/settings/settings_page.dart';
-import 'package:social_media_app/ui/pages/social/friends_list_page.dart';
-import 'package:social_media_app/ui/pages/social/insights_page.dart';
-import 'package:social_media_app/ui/pages/social/matches_page.dart';
-import 'package:social_media_app/data/services/user/user_service.dart';
-import 'package:social_media_app/data/hooks/auth/auth_hook.dart';
+import 'package:Prive/app/configs/colors.dart';
+import 'package:Prive/app/configs/theme.dart';
+import 'package:Prive/data/models/gallery_model.dart';
+import 'package:Prive/ui/bloc/gallery_profile_cubit.dart';
+import 'package:Prive/ui/pages/main/profile/edit_profile_page.dart';
+import 'package:Prive/ui/pages/settings/settings_page.dart';
+import 'package:Prive/ui/pages/social/friends_list_page.dart';
+import 'package:Prive/ui/pages/social/insights_page.dart';
+import 'package:Prive/ui/pages/social/matches_page.dart';
+import 'package:Prive/data/services/user/user_service.dart';
+import 'package:Prive/data/hooks/auth/auth_hook.dart';
 
 class ProfilePage extends StatefulWidget {
   final bool isOwnProfile;

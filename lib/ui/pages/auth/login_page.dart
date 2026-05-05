@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:social_media_app/app/configs/colors.dart';
-import 'package:social_media_app/app/configs/theme.dart';
-import 'package:social_media_app/app/resources/constant/named_routes.dart';
-import 'package:social_media_app/data/hooks/auth/auth_hook.dart';
+import 'package:Prive/app/configs/colors.dart';
+import 'package:Prive/app/configs/theme.dart';
+import 'package:Prive/app/resources/constant/named_routes.dart';
+import 'package:Prive/data/hooks/auth/auth_hook.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});

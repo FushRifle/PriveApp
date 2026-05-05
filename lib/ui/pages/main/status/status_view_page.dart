@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:social_media_app/app/configs/colors.dart';
-import 'package:social_media_app/data/models/status_model.dart';
+import 'package:Prive/app/configs/colors.dart';
+import 'package:Prive/data/models/status_model.dart';
 
 class StatusViewPage extends StatefulWidget {
   final List<StatusModel> statuses;

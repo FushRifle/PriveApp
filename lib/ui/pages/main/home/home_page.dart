@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:social_media_app/app/configs/colors.dart';
-import 'package:social_media_app/app/configs/theme.dart';
-import 'package:social_media_app/app/resources/constant/named_routes.dart';
-import 'package:social_media_app/data/models/status_model.dart';
-import 'package:social_media_app/data/providers/feed_provider.dart';
-import 'package:social_media_app/ui/pages/main/status/status_view_page.dart';
-import 'package:social_media_app/ui/pages/settings/settings_page.dart';
-import 'package:social_media_app/ui/widgets/home/card_post.dart';
-import 'package:social_media_app/ui/widgets/status/status_widget.dart';
+import 'package:Prive/app/configs/colors.dart';
+import 'package:Prive/app/configs/theme.dart';
+import 'package:Prive/app/resources/constant/named_routes.dart';
+import 'package:Prive/data/models/status_model.dart';
+import 'package:Prive/data/providers/feed_provider.dart';
+import 'package:Prive/ui/pages/main/status/status_view_page.dart';
+import 'package:Prive/ui/pages/settings/settings_page.dart';
+import 'package:Prive/ui/widgets/home/card_post.dart';
+import 'package:Prive/ui/widgets/status/status_widget.dart';
 import '../../../widgets/home/custom_app_bar.dart';
-import 'package:social_media_app/data/services/user/user_service.dart';
+import 'package:Prive/data/services/user/user_service.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});

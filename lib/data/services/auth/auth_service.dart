@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:social_media_app/app/configs/api_config.dart';
-import 'package:social_media_app/core/supabase_client.dart';
+import 'package:Prive/app/configs/api_config.dart';
+import 'package:Prive/core/supabase_client.dart';
 
 class AuthService {
   final Dio _dio = Dio(

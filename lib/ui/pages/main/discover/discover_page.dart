@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:social_media_app/app/configs/colors.dart';
-import 'package:social_media_app/app/configs/theme.dart';
-import 'package:social_media_app/data/models/profile_model.dart';
-import 'package:social_media_app/ui/widgets/discover/action_buttons.dart';
-import 'package:social_media_app/ui/widgets/discover/discover_header.dart';
-import 'package:social_media_app/ui/widgets/discover/no_more_profiles.dart';
-import 'package:social_media_app/ui/widgets/discover/swipe_cards_stack.dart';
+import 'package:Prive/app/configs/colors.dart';
+import 'package:Prive/app/configs/theme.dart';
+import 'package:Prive/data/models/profile_model.dart';
+import 'package:Prive/ui/widgets/discover/action_buttons.dart';
+import 'package:Prive/ui/widgets/discover/discover_header.dart';
+import 'package:Prive/ui/widgets/discover/no_more_profiles.dart';
+import 'package:Prive/ui/widgets/discover/swipe_cards_stack.dart';
 
 class DiscoverPage extends StatefulWidget {
   const DiscoverPage({super.key});
