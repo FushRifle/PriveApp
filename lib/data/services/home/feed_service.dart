@@ -8,8 +8,23 @@ class FeedService {
   Future<List<dynamic>> getStories() async {
     try {
       final response = await _api.get('/api/feed/stories');
-      return response.data['stories'] ?? response.data ?? [];
+      print('Stories response: ${response.data}');
+
+      if (response.data is List) {
+        return response.data;
+      }
+
+      if (response.data is Map && response.data['stories'] is List) {
+        return response.data['stories'];
+      }
+
+      if (response.data is Map && response.data['data'] is List) {
+        return response.data['data'];
+      }
+
+      return [];
     } on DioException catch (e) {
+      print('Get stories error: ${e.response?.data}');
       throw e.response?.data['message'] ?? 'Failed to get stories';
     }
   }
@@ -20,8 +35,24 @@ class FeedService {
       final response = await _api.get('/api/feed/posts', queryParameters: {
         'page': page,
       });
-      return response.data;
+
+      print('Posts response status: ${response.statusCode}');
+
+      if (response.data is Map) {
+        return response.data;
+      }
+
+      if (response.data is List) {
+        return {
+          'posts': response.data,
+          'hasMore': response.data.length == 10,
+          'page': page,
+        };
+      }
+
+      return {'posts': [], 'hasMore': false, 'page': page};
     } on DioException catch (e) {
+      print('Get posts error: ${e.response?.data}');
       throw e.response?.data['message'] ?? 'Failed to get posts';
     }
   }
@@ -33,11 +64,16 @@ class FeedService {
   }) async {
     try {
       final data = <String, dynamic>{'content': content};
-      if (imageUrl != null) data['imageUrl'] = imageUrl;
+      if (imageUrl != null) {
+        data['attachments'] = [
+          {'type': 'image', 'url': imageUrl}
+        ];
+      }
 
       final response = await _api.post('/api/feed/posts', data: data);
       return response.data;
     } on DioException catch (e) {
+      print('Create post error: ${e.response?.data}');
       throw e.response?.data['message'] ?? 'Failed to create post';
     }
   }
@@ -47,6 +83,7 @@ class FeedService {
     try {
       await _api.post('/api/feed/posts/$postId/like');
     } on DioException catch (e) {
+      print('Like post error: ${e.response?.data}');
       throw e.response?.data['message'] ?? 'Failed to like post';
     }
   }
@@ -56,6 +93,7 @@ class FeedService {
     try {
       await _api.delete('/api/feed/posts/$postId/like');
     } on DioException catch (e) {
+      print('Unlike post error: ${e.response?.data}');
       throw e.response?.data['message'] ?? 'Failed to unlike post';
     }
   }
@@ -67,8 +105,18 @@ class FeedService {
         '/api/feed/posts/$postId/comments',
         queryParameters: {'page': page},
       );
-      return response.data['comments'] ?? response.data ?? [];
+
+      if (response.data is List) {
+        return response.data;
+      }
+
+      if (response.data is Map && response.data['comments'] is List) {
+        return response.data['comments'];
+      }
+
+      return [];
     } on DioException catch (e) {
+      print('Get comments error: ${e.response?.data}');
       throw e.response?.data['message'] ?? 'Failed to get comments';
     }
   }
@@ -85,6 +133,7 @@ class FeedService {
       );
       return response.data;
     } on DioException catch (e) {
+      print('Add comment error: ${e.response?.data}');
       throw e.response?.data['message'] ?? 'Failed to add comment';
     }
   }

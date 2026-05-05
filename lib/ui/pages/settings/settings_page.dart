@@ -4,6 +4,7 @@ import 'package:social_media_app/app/configs/colors.dart';
 import 'package:social_media_app/app/configs/theme.dart';
 import 'package:social_media_app/app/resources/constant/named_routes.dart';
 import 'package:social_media_app/ui/pages/settings/subscribe_page.dart';
+import 'package:social_media_app/data/hooks/auth/auth_hook.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -13,12 +14,20 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  final AuthHook _authHook = AuthHook(); // Add this line
+
   bool _isDarkMode = false;
   bool _isNotificationsEnabled = true;
   bool _isPrivateAccount = false;
   bool _isTwoFactorAuth = false;
   String _selectedLanguage = 'English';
   String _selectedVideoQuality = 'HD 1080p';
+
+  @override
+  void dispose() {
+    _authHook.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -595,8 +604,13 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(context);
+
+                // Call sign out
+                await _authHook.signOut();
+
+                // Navigate to login screen
                 Navigator.pushReplacementNamed(
                   context,
                   NamedRoutes.loginScreen,

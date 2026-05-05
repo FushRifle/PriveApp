@@ -1,41 +1,90 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:social_media_app/app/configs/api_config.dart';
+import 'package:social_media_app/core/supabase_client.dart';
 import '../../services/api_service.dart';
 
 class AuthService {
-  final Dio _dio = Dio(BaseOptions(
-    baseUrl: ApiConfig.baseUrl,
-    connectTimeout: const Duration(seconds: 30),
-    headers: {'Content-Type': 'application/json'},
-  ));
+  final Dio _dio = Dio(
+    BaseOptions(
+      baseUrl: ApiConfig.baseUrl,
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
+      sendTimeout: const Duration(seconds: 30),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      validateStatus: (status) => status != null && status < 600,
+    ),
+  );
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   final ApiService _apiService = ApiService();
 
-  // Sign In
+  // SIGN IN
   Future<AuthResult> signIn(String email, String password) async {
     try {
-      final response = await _dio.post('/api/auth/signin', data: {
-        'email': email.trim().toLowerCase(),
-        'password': password,
-      });
+      final normalizedEmail = email.trim().toLowerCase();
 
-      final data = response.data;
-      final token = data['token'];
+      // Supabase primary authentication
+      final authResponse = await SupabaseConfig.client.auth.signInWithPassword(
+        email: normalizedEmail,
+        password: password,
+      );
 
-      if (token != null && token.isNotEmpty) {
-        await _apiService.setToken(token);
-        return AuthResult(success: true, token: token, user: data['user']);
+      final session = authResponse.session;
+      final user = authResponse.user;
+
+      if (session == null || user == null) {
+        return AuthResult(
+          success: false,
+          error: 'Authentication failed',
+        );
       }
 
-      return AuthResult(success: false, error: 'No token received');
+      final token = session.accessToken;
+
+      // Backend sync / user bootstrap
+      final backendResponse = await _dio.post(
+        '/api/auth/signin',
+        data: {
+          'email': normalizedEmail,
+          'password': password,
+        },
+      );
+
+      final backendData = backendResponse.data;
+
+      return AuthResult(
+        success: true,
+        token: token,
+        user: backendData['user'] ??
+            {
+              'id': user.id,
+              'email': user.email,
+            },
+      );
+    } on AuthApiException catch (e) {
+      return AuthResult(
+        success: false,
+        error: e.message,
+      );
     } on DioException catch (e) {
-      return AuthResult(success: false, error: _handleError(e));
+      return AuthResult(
+        success: false,
+        error: _handleError(e),
+      );
+    } catch (e) {
+      return AuthResult(
+        success: false,
+        error: 'Unexpected authentication error: $e',
+      );
     }
   }
 
-  // Sign Up
+  // SIGN UP
   Future<AuthResult> signUp({
     required String email,
     required String password,
@@ -43,91 +92,191 @@ class AuthService {
     required String lastName,
   }) async {
     try {
-      final response = await _dio.post('/api/auth/signup', data: {
-        'email': email.trim().toLowerCase(),
-        'password': password,
-        'firstName': firstName,
-        'lastName': lastName,
-      });
+      final normalizedEmail = email.trim().toLowerCase();
 
-      final data = response.data;
-      final token = data['token'];
+      final authResponse = await SupabaseConfig.client.auth.signUp(
+        email: normalizedEmail,
+        password: password,
+        data: {
+          'first_name': firstName,
+          'last_name': lastName,
+        },
+      );
 
-      if (token != null && token.isNotEmpty) {
-        await _apiService.setToken(token);
-        return AuthResult(success: true, token: token, user: data['user']);
+      final session = authResponse.session;
+      final user = authResponse.user;
+
+      // Email verification required
+      if (session == null) {
+        return AuthResult(
+          success: false,
+          needsVerification: true,
+          error: 'Please verify your email before logging in',
+        );
       }
 
-      return AuthResult(success: false, error: 'No token received');
+      final token = session.accessToken;
+
+      // Backend sync
+      await _dio.post(
+        '/api/auth/signup',
+        data: {
+          'email': normalizedEmail,
+          'password': password,
+          'firstName': firstName,
+          'lastName': lastName,
+        },
+      );
+
+      return AuthResult(
+        success: true,
+        token: token,
+        user: {
+          'id': user?.id,
+          'email': user?.email,
+        },
+      );
+    } on AuthApiException catch (e) {
+      return AuthResult(
+        success: false,
+        error: e.message,
+      );
     } on DioException catch (e) {
-      return AuthResult(success: false, error: _handleError(e));
+      return AuthResult(
+        success: false,
+        error: _handleError(e),
+      );
+    } catch (e) {
+      return AuthResult(
+        success: false,
+        error: 'Unexpected signup error: $e',
+      );
     }
   }
 
-  // Sign Out
+  // SIGN OUT
   Future<void> signOut() async {
-    await _apiService.clearToken();
+    try {
+      await SupabaseConfig.client.auth.signOut();
+    } catch (_) {}
+
     await _storage.delete(key: 'remember_me');
     await _storage.delete(key: 'email');
     await _storage.delete(key: 'password');
   }
 
-  // Get Token
+  // GET CURRENT TOKEN
   Future<String?> getToken() async {
-    return await _apiService.getToken();
+    return SupabaseConfig.client.auth.currentSession?.accessToken;
   }
 
-  // Check if authenticated
+  // AUTH CHECK
   Future<bool> isAuthenticated() async {
-    return await _apiService.hasToken();
+    final token = await getToken();
+    return token != null && token.isNotEmpty;
   }
 
-  // Get saved credentials (Remember Me)
+  // GET SAVED CREDENTIALS
   Future<Map<String, dynamic>> getSavedCredentials() async {
     final rememberMe = await _storage.read(key: 'remember_me') == 'true';
 
-    if (rememberMe) {
+    if (!rememberMe) {
       return {
-        'rememberMe': true,
-        'email': await _storage.read(key: 'email') ?? '',
-        'password': await _storage.read(key: 'password') ?? '',
+        'rememberMe': false,
+        'email': '',
+        'password': '',
       };
     }
 
     return {
-      'rememberMe': false,
-      'email': '',
-      'password': '',
+      'rememberMe': true,
+      'email': await _storage.read(key: 'email') ?? '',
+      'password': await _storage.read(key: 'password') ?? '',
     };
   }
 
-  // Save credentials (Remember Me)
+  // SAVE REMEMBER ME CREDENTIALS
   Future<void> saveCredentials(
-      String email, String password, bool remember) async {
+    String email,
+    String password,
+    bool remember,
+  ) async {
     if (remember) {
-      await _storage.write(key: 'email', value: email);
-      await _storage.write(key: 'password', value: password);
-      await _storage.write(key: 'remember_me', value: 'true');
-    } else {
-      await _storage.delete(key: 'email');
-      await _storage.delete(key: 'password');
-      await _storage.write(key: 'remember_me', value: 'false');
+      await _storage.write(
+        key: 'email',
+        value: email.trim().toLowerCase(),
+      );
+
+      await _storage.write(
+        key: 'password',
+        value: password,
+      );
+
+      await _storage.write(
+        key: 'remember_me',
+        value: 'true',
+      );
+
+      return;
     }
+
+    await _storage.delete(key: 'email');
+    await _storage.delete(key: 'password');
+
+    await _storage.write(
+      key: 'remember_me',
+      value: 'false',
+    );
   }
 
+  // ERROR HANDLER
   String _handleError(DioException e) {
     final data = e.response?.data;
-    if (data is Map && data['message'] != null) {
-      return data['message'];
+
+    if (data is Map<String, dynamic>) {
+      if (data['message'] != null) {
+        return data['message'].toString();
+      }
+
+      if (data['error'] != null) {
+        return data['error'].toString();
+      }
     }
-    if (e.response?.statusCode == 401) return 'Invalid email or password';
-    if (e.type == DioExceptionType.connectionTimeout) {
-      return 'Connection timeout';
+
+    switch (e.response?.statusCode) {
+      case 400:
+        return 'Invalid request';
+      case 401:
+        return 'Invalid email or password';
+      case 403:
+        return 'Access denied';
+      case 404:
+        return 'Service unavailable';
+      case 409:
+        return 'User already exists';
+      case 422:
+        return 'Invalid form submission';
+      case 500:
+        return 'Server error';
     }
-    if (e.type == DioExceptionType.unknown) {
-      return 'Network error. Check your connection';
+
+    switch (e.type) {
+      case DioExceptionType.connectionTimeout:
+        return 'Connection timeout';
+      case DioExceptionType.sendTimeout:
+        return 'Request timeout';
+      case DioExceptionType.receiveTimeout:
+        return 'Server took too long to respond';
+      case DioExceptionType.badCertificate:
+        return 'Security certificate error';
+      case DioExceptionType.cancel:
+        return 'Request cancelled';
+      case DioExceptionType.connectionError:
+      case DioExceptionType.unknown:
+        return 'Network error. Check your connection';
+      default:
+        return 'Authentication failed. Please try again';
     }
-    return 'Authentication failed. Please try again';
   }
 }
 
@@ -136,11 +285,29 @@ class AuthResult {
   final String? token;
   final Map<String, dynamic>? user;
   final String? error;
+  final bool needsVerification;
 
   AuthResult({
     required this.success,
     this.token,
     this.user,
     this.error,
+    this.needsVerification = false,
   });
+
+  AuthResult copyWith({
+    bool? success,
+    String? token,
+    Map<String, dynamic>? user,
+    String? error,
+    bool? needsVerification,
+  }) {
+    return AuthResult(
+      success: success ?? this.success,
+      token: token ?? this.token,
+      user: user ?? this.user,
+      error: error ?? this.error,
+      needsVerification: needsVerification ?? this.needsVerification,
+    );
+  }
 }

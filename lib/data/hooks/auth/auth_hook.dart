@@ -58,11 +58,14 @@ class AuthHook extends ChangeNotifier {
   }
 
   Future<void> initialize() async {
+    print('[AuthHook] Initializing...');
     _isLoadingStorage = true;
     _notify();
 
     try {
       final hasToken = await _auth.isAuthenticated();
+      print('[AuthHook] Has token: $hasToken');
+
       if (hasToken) {
         _isTokenReady = true;
       } else {
@@ -70,15 +73,20 @@ class AuthHook extends ChangeNotifier {
         _isTokenReady = true;
       }
     } catch (e) {
+      print('[AuthHook] Initialization error: $e');
       debugPrint('Auth initialization error: $e');
     } finally {
       _isLoadingStorage = false;
       _notify();
+      print('[AuthHook] Initialization complete, isTokenReady: $_isTokenReady');
     }
   }
 
   Future<void> _loadSavedCredentials() async {
+    print('[AuthHook] Loading saved credentials...');
     final saved = await _auth.getSavedCredentials();
+    print(
+        '[AuthHook] Saved credentials: rememberMe=${saved['rememberMe']}, email=${saved['email']}');
 
     if (saved['rememberMe'] == true) {
       _rememberMe = true;
@@ -86,6 +94,7 @@ class AuthHook extends ChangeNotifier {
       _password = saved['password'] ?? '';
       _savedEmail = saved['email'] ?? '';
       _savedPassword = saved['password'] ?? '';
+      print('[AuthHook] Loaded credentials for: $_email');
     }
   }
 
@@ -122,6 +131,7 @@ class AuthHook extends ChangeNotifier {
     _rememberMe = value;
 
     if (!value) {
+      print('[AuthHook] Remember me disabled, clearing credentials');
       _auth.saveCredentials('', '', false);
     }
 
@@ -160,20 +170,30 @@ class AuthHook extends ChangeNotifier {
 
   // Login flow
   Future<bool> handleLogin() async {
-    if (!_validateLogin()) return false;
+    print('[AuthHook] handleLogin called for: $_email');
+
+    if (!_validateLogin()) {
+      print('[AuthHook] Login validation failed');
+      return false;
+    }
 
     _setLoading(true);
     _clearErrors();
 
     try {
       final normalizedEmail = _email.trim().toLowerCase();
+      print('[AuthHook] Attempting sign in for: $normalizedEmail');
 
       final result = await _auth.signIn(
         normalizedEmail,
         _password.trim(),
       );
 
+      print(
+          '[AuthHook] Sign in result - success: ${result.success}, error: ${result.error}');
+
       if (result.success) {
+        print('[AuthHook] Sign in successful, saving credentials');
         await _saveCredentialsAndComplete(normalizedEmail);
         _isTokenReady = true;
         return true;
@@ -182,19 +202,23 @@ class AuthHook extends ChangeNotifier {
       // Check if email verification is needed
       if (result.error?.contains('verify') == true ||
           result.error?.contains('confirmation') == true) {
+        print('[AuthHook] Email verification needed');
         _showVerification = true;
         _isSignUp = false;
         return false;
       }
 
       _loginError = result.error ?? 'Login failed';
+      print('[AuthHook] Login failed: $_loginError');
       return false;
     } catch (e) {
       _loginError = e.toString();
+      print('[AuthHook] Login exception: $e');
       debugPrint('Login error: $e');
       return false;
     } finally {
       _setLoading(false);
+      print('[AuthHook] Login completed, loading: $_loading');
     }
   }
 
@@ -203,13 +227,20 @@ class AuthHook extends ChangeNotifier {
     required String firstName,
     required String lastName,
   }) async {
-    if (!_validateLogin()) return false;
+    print(
+        '[AuthHook] handleSignup called for: $_email, firstName: $firstName, lastName: $lastName');
+
+    if (!_validateLogin()) {
+      print('[AuthHook] Signup validation failed');
+      return false;
+    }
 
     _setLoading(true);
     _clearErrors();
 
     try {
       final normalizedEmail = _email.trim().toLowerCase();
+      print('[AuthHook] Attempting sign up for: $normalizedEmail');
 
       final result = await _auth.signUp(
         email: normalizedEmail,
@@ -218,7 +249,11 @@ class AuthHook extends ChangeNotifier {
         lastName: lastName,
       );
 
+      print(
+          '[AuthHook] Sign up result - success: ${result.success}, error: ${result.error}');
+
       if (result.success) {
+        print('[AuthHook] Sign up successful, saving credentials');
         await _saveCredentialsAndComplete(normalizedEmail);
         _isTokenReady = true;
         return true;
@@ -227,25 +262,34 @@ class AuthHook extends ChangeNotifier {
       // Check if email verification is needed
       if (result.error?.contains('verify') == true ||
           result.error?.contains('confirmation') == true) {
+        print('[AuthHook] Email verification needed for signup');
         _showVerification = true;
         _isSignUp = true;
         return false;
       }
 
       _loginError = result.error ?? 'Signup failed';
+      print('[AuthHook] Signup failed: $_loginError');
       return false;
     } catch (e) {
       _loginError = e.toString();
+      print('[AuthHook] Signup exception: $e');
       debugPrint('Signup error: $e');
       return false;
     } finally {
       _setLoading(false);
+      print('[AuthHook] Signup completed, loading: $_loading');
     }
   }
 
   // Verification flow
   Future<bool> handleVerify() async {
-    if (!_validateVerification()) return false;
+    print('[AuthHook] handleVerify called with code: $_code');
+
+    if (!_validateVerification()) {
+      print('[AuthHook] Verification validation failed');
+      return false;
+    }
 
     _setLoading(true);
     _verificationError = '';
@@ -256,43 +300,53 @@ class AuthHook extends ChangeNotifier {
       // final result = await _auth.verify(_code.trim());
 
       // For now, just simulate verification
-      // Replace this with actual verification API call when needed
       await Future.delayed(const Duration(seconds: 1));
+      print('[AuthHook] Verification simulated success');
 
       _resetVerificationState();
       _isTokenReady = true;
       return true;
     } catch (e) {
       _verificationError = e.toString();
+      print('[AuthHook] Verification error: $e');
       debugPrint('Verification error: $e');
       return false;
     } finally {
       _setLoading(false);
+      print('[AuthHook] Verification completed, loading: $_loading');
     }
   }
 
   // Resend code
   Future<void> resendCode() async {
+    print('[AuthHook] resendCode requested');
     try {
       // Placeholder for resend functionality
       debugPrint('Resend code requested');
     } catch (e) {
+      print('[AuthHook] Resend code error: $e');
       debugPrint('Resend code error: $e');
     }
   }
 
   Future<void> _saveCredentialsAndComplete(String email) async {
+    print(
+        '[AuthHook] Saving credentials - email: $email, rememberMe: $_rememberMe');
     await _auth.saveCredentials(email, _password, _rememberMe);
+    print('[AuthHook] Credentials saved');
   }
 
   // Session management
   Future<void> signOut() async {
+    print('[AuthHook] Signing out');
     await _auth.signOut();
     _resetToInitialState();
     _notify();
+    print('[AuthHook] Sign out complete');
   }
 
   void _resetToInitialState() {
+    print('[AuthHook] Resetting to initial state');
     _email = '';
     _password = '';
     _code = '';
@@ -305,10 +359,15 @@ class AuthHook extends ChangeNotifier {
   }
 
   Future<bool> isAuthenticated() async {
-    return await _auth.isAuthenticated();
+    final authenticated = await _auth.isAuthenticated();
+    print('[AuthHook] isAuthenticated: $authenticated');
+    return authenticated;
   }
 
   Future<String?> getAuthToken() async {
-    return await _auth.getToken();
+    final token = await _auth.getToken();
+    print(
+        '[AuthHook] getAuthToken - exists: ${token != null}, length: ${token?.length ?? 0}');
+    return token;
   }
 }

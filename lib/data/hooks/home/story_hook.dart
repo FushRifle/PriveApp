@@ -7,7 +7,7 @@ class StoryGroup {
   final List<Map<String, dynamic>> stories;
   final bool hasUnseen;
   final String latestStoryTime;
-  int totalSegments;
+  final int totalSegments;
 
   StoryGroup({
     required this.userId,
@@ -26,11 +26,13 @@ class StoryHook extends ChangeNotifier {
   List<StoryGroup> _storyGroups = [];
   StoryGroup? _ownStoryGroup;
   List<StoryGroup> _otherStoryGroups = [];
+
   bool _loading = false;
   bool _isCreating = false;
+  bool _disposed = false;
+
   String? _error;
 
-  // Getters
   List<Map<String, dynamic>> get stories => _stories;
   List<StoryGroup> get storyGroups => _storyGroups;
   StoryGroup? get ownStoryGroup => _ownStoryGroup;
@@ -42,114 +44,214 @@ class StoryHook extends ChangeNotifier {
       _otherStoryGroups.where((g) => g.hasUnseen).length;
   String? get error => _error;
 
-  // Fetch stories
-  Future<void> fetchStories() async {
-    _loading = true;
-    notifyListeners();
-
-    try {
-      _stories = await _feedService.getStories() as List<Map<String, dynamic>>;
-      _groupStories();
-      _loading = false;
-      notifyListeners();
-    } catch (e) {
-      _error = e.toString();
-      _loading = false;
+  void _safeNotify() {
+    if (!_disposed) {
       notifyListeners();
     }
   }
 
-  // Group stories by user
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  Future<void> fetchStories() async {
+    if (_disposed) return;
+
+    _loading = true;
+    _error = null;
+    _safeNotify();
+
+    try {
+      final result = await _feedService.getStories();
+
+      if (_disposed) return;
+
+      _stories = _normalizeStories(result);
+      _groupStories();
+
+      _loading = false;
+      _safeNotify();
+    } catch (e) {
+      if (_disposed) return;
+
+      _error = _cleanError(e);
+      _loading = false;
+      _safeNotify();
+    }
+  }
+
   void _groupStories() {
-    final Map<int, StoryGroup> groups = {};
+    final Map<int, List<Map<String, dynamic>>> storiesByUser = {};
 
     for (final story in _stories) {
-      final userId = story['userId'] ?? story['user']?['id'];
-      if (userId == null) continue;
+      final userId =
+          _toInt(story['userId'] ?? story['user_id'] ?? story['user']?['id']);
 
-      if (!groups.containsKey(userId)) {
-        groups[userId] = StoryGroup(
-          userId: userId,
-          user: story['user'] ?? {},
-          stories: [],
-          hasUnseen: false,
-          latestStoryTime: story['time'] ?? '',
-          totalSegments: 0,
-        );
-      }
+      if (userId == 0) continue;
 
-      final group = groups[userId]!;
-      group.stories.add(story);
-      group.totalSegments += (story['attachments'] as List?)?.length ?? 1;
-
-      if (story['isSeen'] != true) {
-        // hasUnseen is final, need to handle differently
-      }
+      storiesByUser.putIfAbsent(userId, () => []);
+      storiesByUser[userId]!.add(story);
     }
 
-    _storyGroups = groups.values.toList();
+    final groups = storiesByUser.entries.map((entry) {
+      final userStories = entry.value;
+
+      userStories.sort((a, b) {
+        final aTime =
+            (a['createdAt'] ?? a['created_at'] ?? a['time'] ?? '').toString();
+        final bTime =
+            (b['createdAt'] ?? b['created_at'] ?? b['time'] ?? '').toString();
+        return bTime.compareTo(aTime);
+      });
+
+      final firstStory = userStories.first;
+      final hasUnseen = userStories
+          .any((story) => story['isSeen'] != true && story['is_seen'] != true);
+
+      final totalSegments = userStories.fold<int>(0, (total, story) {
+        final attachments = story['attachments'];
+        if (attachments is List && attachments.isNotEmpty) {
+          return total + attachments.length;
+        }
+        return total + 1;
+      });
+
+      return StoryGroup(
+        userId: entry.key,
+        user: _asMap(firstStory['user']),
+        stories: userStories,
+        hasUnseen: hasUnseen,
+        latestStoryTime: (firstStory['createdAt'] ??
+                firstStory['created_at'] ??
+                firstStory['time'] ??
+                '')
+            .toString(),
+        totalSegments: totalSegments,
+      );
+    }).toList();
+
+    groups.sort((a, b) => b.latestStoryTime.compareTo(a.latestStoryTime));
+
+    _storyGroups = groups;
     _ownStoryGroup = _storyGroups.isNotEmpty ? _storyGroups.first : null;
     _otherStoryGroups = _storyGroups.length > 1 ? _storyGroups.sublist(1) : [];
   }
 
-  // Create story
   Future<bool> createStory({
     String? content,
     List<Map<String, dynamic>>? attachments,
   }) async {
     if (content == null && (attachments == null || attachments.isEmpty)) {
       _error = 'Please add content or media to your story';
-      notifyListeners();
+      _safeNotify();
       return false;
     }
 
     _isCreating = true;
-    notifyListeners();
+    _error = null;
+    _safeNotify();
 
     try {
       await _feedService.createPost(
         content: content ?? '',
-        imageUrl: attachments?.first['uri'],
+        imageUrl: attachments?.isNotEmpty == true
+            ? attachments!.first['uri']?.toString()
+            : null,
       );
+
+      if (_disposed) return false;
+
       await fetchStories();
+
+      if (_disposed) return false;
+
       _isCreating = false;
-      notifyListeners();
+      _safeNotify();
       return true;
     } catch (e) {
-      _error = e.toString();
+      if (_disposed) return false;
+
+      _error = _cleanError(e);
       _isCreating = false;
-      notifyListeners();
+      _safeNotify();
       return false;
     }
   }
 
-  // Delete story
   Future<bool> deleteStory(String storyId) async {
     try {
       await _feedService.unlikePost(int.tryParse(storyId) ?? 0);
-      _stories.removeWhere((s) => s['id'] == storyId);
+
+      if (_disposed) return false;
+
+      _stories.removeWhere((s) => s['id'].toString() == storyId);
       _groupStories();
-      notifyListeners();
+      _safeNotify();
+
       return true;
     } catch (e) {
+      if (!_disposed) {
+        _error = _cleanError(e);
+        _safeNotify();
+      }
       return false;
     }
   }
 
-  // Mark story as seen
   Future<void> markAsSeen(String storyId) async {
     for (final story in _stories) {
-      if (story['id'] == storyId) {
+      if (story['id'].toString() == storyId) {
         story['isSeen'] = true;
+        story['is_seen'] = true;
         break;
       }
     }
+
     _groupStories();
-    notifyListeners();
+    _safeNotify();
   }
 
-  // Refresh
   Future<void> refresh() async {
     await fetchStories();
+  }
+
+  List<Map<String, dynamic>> _normalizeStories(dynamic value) {
+    if (value is List) {
+      return value
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList();
+    }
+
+    if (value is Map) {
+      final data = value['stories'] ?? value['data'];
+      if (data is List) {
+        return data
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
+      }
+    }
+
+    return [];
+  }
+
+  Map<String, dynamic> _asMap(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return Map<String, dynamic>.from(value);
+    return {};
+  }
+
+  int _toInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  String _cleanError(dynamic error) {
+    return error.toString().replaceFirst('Exception: ', '');
   }
 }
