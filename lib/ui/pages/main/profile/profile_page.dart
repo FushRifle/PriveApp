@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:social_media_app/app/configs/colors.dart';
 import 'package:social_media_app/app/configs/theme.dart';
+import 'package:social_media_app/data/models/gallery_model.dart';
 import 'package:social_media_app/ui/bloc/gallery_profile_cubit.dart';
 import 'package:social_media_app/ui/pages/main/profile/edit_profile_page.dart';
 import 'package:social_media_app/ui/pages/settings/settings_page.dart';
@@ -610,11 +611,41 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildGalleryGrid() {
+    // Get user posts from feed
+    final allPosts = _getUserPostsFromFeed();
+
     return BlocProvider(
-      create: (context) => GalleryProfileCubit()..getGalleryProfile(),
+      create: (context) =>
+          GalleryProfileCubit()..getGalleryProfile(feedPosts: allPosts),
       child: BlocBuilder<GalleryProfileCubit, GalleryProfileState>(
         builder: (context, state) {
+          if (state is GalleryProfileLoading) {
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.purpleColor),
+            );
+          }
+
           if (state is GalleryProfileLoaded) {
+            if (state.galleryProfiles.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.photo_library,
+                      size: 48,
+                      color: AppColors.greyColor.withOpacity(0.5),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No photos yet',
+                      style: AppTheme.greyTextStyle.copyWith(fontSize: 14),
+                    ),
+                  ],
+                ),
+              );
+            }
+
             return GridView.builder(
               padding: const EdgeInsets.all(16),
               physics: const BouncingScrollPhysics(),
@@ -627,73 +658,310 @@ class _ProfilePageState extends State<ProfilePage> {
               itemCount: state.galleryProfiles.length,
               itemBuilder: (context, index) {
                 final gallery = state.galleryProfiles[index];
-                return Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
-                    image: DecorationImage(
-                      image: NetworkImage(gallery.image),
-                      fit: BoxFit.cover,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
+                return GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    // Navigate to post detail
+                    _navigateToPostDetail(context, gallery.id);
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(24),
+                      image: DecorationImage(
+                        image: NetworkImage(gallery.image),
+                        fit: BoxFit.cover,
                       ),
-                    ],
-                  ),
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        bottom: 12,
-                        left: 12,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Stack(
+                      children: [
+                        // Video indicator
+                        if (gallery.type == 'video')
+                          Positioned(
+                            top: 12,
+                            right: 12,
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.play_arrow,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                            ),
                           ),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.5),
-                            borderRadius: BorderRadius.circular(12),
+
+                        // Like count
+                        Positioned(
+                          bottom: 12,
+                          left: 12,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.5),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.favorite,
+                                    color: Colors.white, size: 12),
+                                const SizedBox(width: 4),
+                                Text(
+                                  gallery.like,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.favorite,
-                                  color: Colors.white, size: 12),
-                              const SizedBox(width: 4),
-                              Text(
-                                gallery.like,
+                        ),
+
+                        // Caption preview
+                        if (gallery.caption != null &&
+                            gallery.caption!.isNotEmpty)
+                          Positioned(
+                            top: 12,
+                            left: 12,
+                            right: 50,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                gallery.caption!,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 10,
-                                  fontWeight: FontWeight.bold,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ],
+                            ),
                           ),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               },
             );
           }
-          return const Center(child: CircularProgressIndicator());
+
+          if (state is GalleryProfileError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: AppColors.greyColor,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    state.message,
+                    style: AppTheme.greyTextStyle,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      final cubit = context.read<GalleryProfileCubit>();
+                      cubit.getGalleryProfile(
+                          feedPosts: _getUserPostsFromFeed());
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.purpleColor,
+                    ),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.purpleColor),
+          );
         },
       ),
     );
   }
 
   Widget _buildVideosTab() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.videocam, size: 48, color: AppColors.greyColor),
-          const SizedBox(height: 12),
-          Text("Video Content", style: AppTheme.greyTextStyle),
-        ],
+    final allPosts = _getUserPostsFromFeed();
+
+    return BlocProvider(
+      create: (context) =>
+          GalleryProfileCubit()..getGalleryProfile(feedPosts: allPosts),
+      child: BlocBuilder<GalleryProfileCubit, GalleryProfileState>(
+        builder: (context, state) {
+          if (state is GalleryProfileLoading) {
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.purpleColor),
+            );
+          }
+
+          if (state is GalleryProfileLoaded) {
+            final videos = state.galleryProfiles
+                .where((item) => item.type == 'video')
+                .toList();
+
+            if (videos.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.videocam,
+                      size: 48,
+                      color: AppColors.greyColor.withOpacity(0.5),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No videos yet',
+                      style: AppTheme.greyTextStyle.copyWith(fontSize: 14),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return GridView.builder(
+              padding: const EdgeInsets.all(16),
+              physics: const BouncingScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 16,
+                crossAxisSpacing: 16,
+                childAspectRatio: 0.85,
+              ),
+              itemCount: videos.length,
+              itemBuilder: (context, index) {
+                final video = videos[index];
+                return GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    _navigateToVideoPlayer(context, video);
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(24),
+                      image: DecorationImage(
+                        image: NetworkImage(video.image),
+                        fit: BoxFit.cover,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Stack(
+                      children: [
+                        // Play button overlay
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(24),
+                              color: Colors.black.withOpacity(0.2),
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.play_circle_filled,
+                                color: Colors.white,
+                                size: 40,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // Like count
+                        Positioned(
+                          bottom: 12,
+                          left: 12,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.5),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.favorite,
+                                    color: Colors.white, size: 12),
+                                const SizedBox(width: 4),
+                                Text(
+                                  video.like,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        // Duration indicator (optional)
+                        Positioned(
+                          bottom: 12,
+                          right: 12,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.5),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              '00:00',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          }
+
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.purpleColor),
+          );
+        },
       ),
     );
   }
@@ -703,10 +971,87 @@ class _ProfilePageState extends State<ProfilePage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.bookmark, size: 48, color: AppColors.greyColor),
+          Icon(
+            Icons.bookmark,
+            size: 48,
+            color: AppColors.greyColor.withOpacity(0.5),
+          ),
           const SizedBox(height: 12),
-          Text("Tagged Posts", style: AppTheme.greyTextStyle),
+          Text(
+            'No tagged posts',
+            style: AppTheme.greyTextStyle.copyWith(fontSize: 14),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Posts you\'re tagged in will appear here',
+            style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
+          ),
         ],
+      ),
+    );
+  }
+
+// Helper method to get user posts from feed
+  List<dynamic> _getUserPostsFromFeed() {
+    // You need to implement this based on your state management
+    // Example with Riverpod:
+    // final feedState = ref.read(feedProvider);
+    // final targetUserId = widget.isOwnProfile
+    //     ? _user['id']?.toString()
+    //     : widget.userId;
+    //
+    // return feedState.posts.where((post) {
+    //   final postUserId = post['userId']?.toString() ??
+    //                      post['user_id']?.toString() ??
+    //                      post['user']['id']?.toString();
+    //   return postUserId == targetUserId;
+    // }).toList();
+
+    // Temporary: return empty list
+    return [];
+  }
+
+// Helper method to navigate to post detail
+  void _navigateToPostDetail(BuildContext context, String? postId) {
+    if (postId == null) return;
+
+    // Navigate to post detail page
+    // Navigator.push(
+    //   context,
+    //   MaterialPageRoute(
+    //     builder: (context) => PostDetailPage(postId: postId),
+    //   ),
+    // );
+
+    // For now, just show a snackbar
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Open post: $postId'),
+        duration: const Duration(seconds: 1),
+      ),
+    );
+  }
+
+// Helper method to navigate to video player
+  void _navigateToVideoPlayer(BuildContext context, GalleryModel video) {
+    // Navigate to video player page
+    // Navigator.push(
+    //   context,
+    //   MaterialPageRoute(
+    //     builder: (context) => VideoPlayerPage(
+    //       videoUrl: video.videoUrl!,
+    //       thumbnail: video.image,
+    //       likes: video.like,
+    //       caption: video.caption,
+    //     ),
+    //   ),
+    // );
+
+    // For now, just show a snackbar
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Play video: ${video.videoUrl}'),
+        duration: const Duration(seconds: 1),
       ),
     );
   }

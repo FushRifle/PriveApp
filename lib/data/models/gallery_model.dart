@@ -1,23 +1,44 @@
+// gallery_model.dart
 class GalleryModel {
-  final String id;
+  final String? id;
   final String image;
+  final String? videoUrl;
+  final String type; // 'image' or 'video'
   final String like;
+  final String? caption;
+  final dynamic createdAt;
 
-  const GalleryModel({
-    required this.id,
+  GalleryModel({
+    this.id,
     required this.image,
+    this.videoUrl,
+    required this.type,
     required this.like,
+    this.caption,
+    this.createdAt,
   });
 
-  factory GalleryModel.fromJson(Map<String, dynamic> json) => GalleryModel(
-        id: json['id'],
-        image: json['image'],
-        like: json['like'],
-      );
+  factory GalleryModel.fromJson(Map<String, dynamic> json) {
+    return GalleryModel(
+      id: json['id']?.toString(),
+      image: json['image'] ?? '',
+      videoUrl: json['videoUrl'],
+      type: json['type'] ?? 'image',
+      like: json['like'] ?? '0',
+      caption: json['caption'],
+      createdAt: json['createdAt'],
+    );
+  }
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'image': image,
-        'like': like,
-      };
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'image': image,
+      'videoUrl': videoUrl,
+      'type': type,
+      'like': like,
+      'caption': caption,
+      'createdAt': createdAt,
+    };
+  }
 }

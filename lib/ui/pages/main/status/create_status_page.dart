@@ -158,8 +158,8 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
             child: ElevatedButton(
               onPressed: (_isLoading || _isUploading) ? null : _shareStatus,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.black,
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
                 shape: const StadiumBorder(),
                 elevation: 0,
                 padding:
@@ -464,7 +464,6 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   }
 
   Future<void> _shareStatus() async {
-    // Check if there's content to share
     if (_textController.text.trim().isEmpty && _selectedImageFile == null) {
       _showErrorSnackBar('Please add text or an image to your story');
       return;

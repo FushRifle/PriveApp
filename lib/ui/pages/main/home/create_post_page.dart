@@ -84,7 +84,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
               ),
             ),
           ),
-          _buildBottomBar(hasContent),
         ],
       ),
     );
@@ -109,6 +108,44 @@ class _CreatePostPageState extends State<CreatePostPage> {
         ),
       ),
       centerTitle: true,
+      actions: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: SizedBox(
+            height: 40, // Fixed height
+            child: ElevatedButton(
+              onPressed: (_isLoading || _isUploading) ? null : _submitPost,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: const StadiumBorder(),
+                elevation: 0,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+                minimumSize: const Size(60, 40), // Fixed minimum size
+                maximumSize: const Size(100, 40), // Fixed maximum size
+              ),
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      "Share",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                        color: Colors.white,
+                      ),
+                    ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

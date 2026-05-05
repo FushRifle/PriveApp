@@ -10,6 +10,14 @@ class GalleryProfileLoaded extends GalleryProfileState {
   final List<GalleryModel> galleryProfiles;
 
   GalleryProfileLoaded({required this.galleryProfiles});
+
+  GalleryProfileLoaded copyWith({
+    List<GalleryModel>? galleryProfiles,
+  }) {
+    return GalleryProfileLoaded(
+      galleryProfiles: galleryProfiles ?? this.galleryProfiles,
+    );
+  }
 }
 
 class GalleryProfileError extends GalleryProfileState {
