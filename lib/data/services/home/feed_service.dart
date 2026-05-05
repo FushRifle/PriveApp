@@ -78,6 +78,58 @@ class FeedService {
     }
   }
 
+  // Create status
+  Future<Map<String, dynamic>> createStatus({
+    required String text,
+    String? imageUrl,
+    String? videoUrl,
+    String? backgroundColor,
+    String? textAlign,
+  }) async {
+    try {
+      List<Map<String, dynamic>> attachments = [];
+
+      if (imageUrl != null) {
+        attachments.add({
+          'type': 'image',
+          'url': imageUrl,
+        });
+      }
+
+      if (videoUrl != null) {
+        attachments.add({
+          'type': 'video',
+          'url': videoUrl,
+        });
+      }
+
+      final data = <String, dynamic>{
+        'content': text,
+      };
+
+      if (attachments.isNotEmpty) {
+        data['attachments'] = attachments;
+      }
+
+      // Add metadata for stories
+      data['metadata'] = {
+        'backgroundColor': backgroundColor,
+        'textAlign': textAlign,
+        'type': imageUrl != null
+            ? 'image'
+            : videoUrl != null
+                ? 'video'
+                : 'text',
+      };
+
+      final response = await _api.post('/api/feed/stories', data: data);
+      return response.data;
+    } catch (e) {
+      print('Create status error: $e');
+      throw Exception('Failed to create status: $e');
+    }
+  }
+
   // Like post
   Future<void> likePost(int postId) async {
     try {

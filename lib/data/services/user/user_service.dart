@@ -67,6 +67,44 @@ class UserService {
     }
   }
 
+// Update demographic info
+  Future<void> updateDemographicInfo({
+    required int age,
+    required String gender,
+    required String lookingFor,
+    required String occupation,
+    required String bio,
+    required String location,
+    required String work,
+    required String education,
+    required List<String> interests,
+  }) async {
+    try {
+      await _api.put('/users/me/demographic', data: {
+        'age': age,
+        'gender': gender,
+        'looking_for': lookingFor,
+        'occupation': occupation,
+        'bio': bio,
+        'location': location,
+        'work': work,
+        'education': education,
+        'languages': interests,
+      });
+    } on DioException catch (e) {
+      throw e.response?.data['message'] ?? 'Failed to update profile';
+    }
+  }
+
+// Complete onboarding
+  Future<void> completeOnboarding() async {
+    try {
+      await _api.put('/users/onboard');
+    } on DioException catch (e) {
+      throw e.response?.data['message'] ?? 'Failed to complete onboarding';
+    }
+  }
+
   Map<String, dynamic> _asMap(dynamic data) {
     if (data is Map<String, dynamic>) {
       return data;

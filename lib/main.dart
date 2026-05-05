@@ -27,27 +27,7 @@ import 'package:social_media_app/ui/pages/social/matches_page.dart';
 import 'package:social_media_app/ui/widgets/home/clip_status_bar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:social_media_app/app/configs/api_config.dart';
-
-// Theme provider for state management
-final themeProvider = StateNotifierProvider<ThemeNotifier, ThemeMode>((ref) {
-  return ThemeNotifier();
-});
-
-class ThemeNotifier extends StateNotifier<ThemeMode> {
-  ThemeNotifier() : super(ThemeMode.light);
-
-  void toggleTheme() {
-    state = state == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
-  }
-
-  void setLightMode() {
-    state = ThemeMode.light;
-  }
-
-  void setDarkMode() {
-    state = ThemeMode.dark;
-  }
-}
+import 'package:social_media_app/data/providers/theme_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -72,19 +52,17 @@ Future<void> main() async {
 
   runApp(
     const ProviderScope(
-      // Wrapped with ProviderScope
       child: MyApp(),
     ),
   );
 }
 
 class MyApp extends ConsumerWidget {
-  // Changed to ConsumerWidget
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp(
       title: 'Prive',
@@ -92,41 +70,90 @@ class MyApp extends ConsumerWidget {
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,
       debugShowCheckedModeBanner: false,
-      scrollBehavior: const CustomScrollBehavior(), // Hide scroll indicators
+      scrollBehavior: const CustomScrollBehavior(),
       initialRoute: NamedRoutes.onboardingScreen,
-      routes: {
-        NamedRoutes.onboardingScreen: (context) => const OnboardingPage(),
-        NamedRoutes.loginScreen: (context) => const LoginPage(),
-        NamedRoutes.registerScreen: (context) => const RegisterPage(),
-        NamedRoutes.homeScreen: (context) => const MainWrapper(),
-        NamedRoutes.profileScreen: (context) => const ProfilePage(),
-        NamedRoutes.editProfileScreen: (context) => const EditProfilePage(),
-        NamedRoutes.friendListScreen: (context) => const FriendsListPage(),
-        NamedRoutes.insightsScreen: (context) => const InsightsPage(),
-        NamedRoutes.matchScreen: (context) => const MatchesPage(),
-        NamedRoutes.postDetailScreen: (context) {
-          final args = ModalRoute.of(context)!.settings.arguments;
-          if (args is PostModel) {
-            return PostDetailPage(post: args);
-          } else if (args is Map<String, dynamic>) {
-            return PostDetailPage(post: PostModel.fromJson(args));
-          } else {
-            return PostDetailPage(
-                post: const PostModel(
-              name: 'User',
-              imgProfile: '',
-              picture: '',
-              caption: '',
-            ));
-          }
-        },
-        NamedRoutes.createPostScreen: (context) => const CreatePostPage(),
-        NamedRoutes.createStatusScreen: (context) => const CreateStatusPage(),
-        NamedRoutes.settingsScreen: (context) => const SettingsPage(),
-        NamedRoutes.subscribeScreen: (context) => const SubscribePage(),
-        NamedRoutes.notificationScreen: (context) => const NotificationPage(),
+      onGenerateRoute: (settings) {
+        // Handle routes with arguments safely
+        switch (settings.name) {
+          case NamedRoutes.postDetailScreen:
+            final args = settings.arguments;
+            if (args == null) {
+              return MaterialPageRoute(
+                builder: (context) => const Scaffold(
+                  body: Center(child: Text('Invalid post data')),
+                ),
+              );
+            }
+
+            PostModel post;
+            if (args is PostModel) {
+              post = args;
+            } else if (args is Map<String, dynamic>) {
+              post = PostModel.fromJson(args);
+            } else {
+              post = const PostModel(
+                name: 'User',
+                imgProfile: '',
+                picture: '',
+                caption: '',
+              );
+            }
+
+            return MaterialPageRoute(
+              builder: (context) => PostDetailPage(post: post),
+            );
+
+          case NamedRoutes.onboardingScreen:
+            return MaterialPageRoute(
+                builder: (context) => const OnboardingPage());
+          case NamedRoutes.loginScreen:
+            return MaterialPageRoute(builder: (context) => const LoginPage());
+          case NamedRoutes.registerScreen:
+            return MaterialPageRoute(
+                builder: (context) => const RegisterPage());
+          case NamedRoutes.homeScreen:
+            return MaterialPageRoute(builder: (context) => const MainWrapper());
+          case NamedRoutes.profileScreen:
+            return MaterialPageRoute(builder: (context) => const ProfilePage());
+          case NamedRoutes.editProfileScreen:
+            return MaterialPageRoute(
+                builder: (context) => const EditProfilePage());
+          case NamedRoutes.friendListScreen:
+            return MaterialPageRoute(
+                builder: (context) => const FriendsListPage());
+          case NamedRoutes.insightsScreen:
+            return MaterialPageRoute(
+                builder: (context) => const InsightsPage());
+          case NamedRoutes.matchScreen:
+            return MaterialPageRoute(builder: (context) => const MatchesPage());
+          case NamedRoutes.createPostScreen:
+            return MaterialPageRoute(
+                builder: (context) => const CreatePostPage());
+          case NamedRoutes.createStatusScreen:
+            return MaterialPageRoute(
+                builder: (context) => const CreateStatusPage());
+          case NamedRoutes.settingsScreen:
+            return MaterialPageRoute(
+                builder: (context) => const SettingsPage());
+          case NamedRoutes.subscribeScreen:
+            return MaterialPageRoute(
+                builder: (context) => const SubscribePage());
+          case NamedRoutes.notificationScreen:
+            return MaterialPageRoute(
+                builder: (context) => const NotificationPage());
+          default:
+            return MaterialPageRoute(
+              builder: (context) => const Scaffold(
+                body: Center(child: Text('Page not found')),
+              ),
+            );
+        }
       },
       builder: (context, child) {
+        if (child == null) {
+          return const SizedBox.shrink();
+        }
+
         final mediaQueryData = MediaQuery.of(context);
 
         if (kIsWeb) {
@@ -138,11 +165,11 @@ class MyApp extends ConsumerWidget {
                 bottom: mediaQueryData.padding.bottom,
               ),
             ),
-            child: child!,
+            child: child,
           );
         }
 
-        return child!;
+        return child;
       },
     );
   }
@@ -155,7 +182,7 @@ class CustomScrollBehavior extends ScrollBehavior {
   @override
   Widget buildViewportChrome(
       BuildContext context, Widget child, AxisDirection axisDirection) {
-    return child; // Removes the scroll indicator glow
+    return child;
   }
 
   @override

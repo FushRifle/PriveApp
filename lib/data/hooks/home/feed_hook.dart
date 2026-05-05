@@ -180,6 +180,8 @@ class FeedHook extends ChangeNotifier {
   Future<bool> createPost({
     required String content,
     String? imageUrl,
+    List<String>? mediaUrls,
+    bool isPrivate = false,
   }) async {
     try {
       _error = null;

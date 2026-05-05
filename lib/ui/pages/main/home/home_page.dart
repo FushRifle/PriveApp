@@ -7,9 +7,11 @@ import 'package:social_media_app/app/resources/constant/named_routes.dart';
 import 'package:social_media_app/data/models/status_model.dart';
 import 'package:social_media_app/data/providers/feed_provider.dart';
 import 'package:social_media_app/ui/pages/main/status/status_view_page.dart';
+import 'package:social_media_app/ui/pages/settings/settings_page.dart';
 import 'package:social_media_app/ui/widgets/home/card_post.dart';
 import 'package:social_media_app/ui/widgets/status/status_widget.dart';
 import '../../../widgets/home/custom_app_bar.dart';
+import 'package:social_media_app/data/services/user/user_service.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -19,15 +21,40 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
+  final UserService _userService = UserService();
+  Map<String, dynamic> _currentUser = {};
+  bool _isLoadingUser = true;
+
   @override
   void initState() {
     super.initState();
+    _loadCurrentUser();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(feedProvider.notifier).fetchData();
     });
   }
 
+  Future<void> _loadCurrentUser() async {
+    try {
+      final user = await _userService.getCurrentUser();
+      if (mounted) {
+        setState(() {
+          _currentUser = user;
+          _isLoadingUser = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading user: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingUser = false;
+        });
+      }
+    }
+  }
+
   Future<void> _refreshAll() async {
+    await _loadCurrentUser();
     await ref.read(feedProvider.notifier).refresh();
   }
 
@@ -48,7 +75,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 2, 12, 2),
-            child: _buildCustomAppBar(context, feedState.user),
+            child: _buildCustomAppBar(context),
           ),
           Expanded(
             child: RefreshIndicator(
@@ -222,10 +249,44 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  CustomAppBar _buildCustomAppBar(
-      BuildContext context, Map<String, dynamic> user) {
-    final name = _displayName(user);
-    final avatar = _userAvatar(user);
+  // Get username from UserService
+  String _getUserDisplayName() {
+    if (_isLoadingUser) {
+      return 'Loading...';
+    }
+
+    // Try to get name first
+    final name = _currentUser['name'];
+    if (name != null && name.toString().trim().isNotEmpty) {
+      return name.toString().trim();
+    }
+
+    // Fallback to username if name is not available
+    final username = _currentUser['username'];
+    if (username != null && username.toString().trim().isNotEmpty) {
+      return username.toString().trim();
+    }
+
+    // Final fallback
+    return 'User';
+  }
+
+  String _getUserAvatar() {
+    if (_isLoadingUser) {
+      return '';
+    }
+
+    return (_currentUser['avatar'] ??
+            _currentUser['avatarUrl'] ??
+            _currentUser['avatar_url'] ??
+            _currentUser['image'] ??
+            '')
+        .toString();
+  }
+
+  CustomAppBar _buildCustomAppBar(BuildContext context) {
+    final userName = _getUserDisplayName();
+    final userAvatar = _getUserAvatar();
 
     return CustomAppBar(
       child: Padding(
@@ -260,36 +321,47 @@ class _HomePageState extends ConsumerState<HomePage> {
             const Spacer(),
             InkWell(
               onTap: () {
-                Navigator.pushNamed(context, NamedRoutes.profileScreen);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SettingsPage(),
+                  ),
+                );
               },
               child: Container(
-                constraints: const BoxConstraints(maxWidth: 150),
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                constraints: const BoxConstraints(maxWidth: 180),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(35),
                   color: AppColors.backgroundColor,
+                  border: Border.all(
+                    color: AppColors.greyColor.withOpacity(0.2),
+                    width: 1,
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildAvatar(avatar, size: 28),
-                    const SizedBox(width: 6),
+                    _buildAvatar(userAvatar, size: 32),
+                    const SizedBox(width: 8),
                     Flexible(
                       child: Text(
-                        name,
+                        userName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTheme.blackTextStyle.copyWith(
-                          fontWeight: AppTheme.bold,
-                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
                         ),
                       ),
                     ),
-                    if (user['verified'] == true) ...[
+                    if (_currentUser['verified'] == true) ...[
                       const SizedBox(width: 4),
-                      Image.asset(
-                        'assets/images/ic_checklist.png',
-                        width: 16,
+                      Icon(
+                        Icons.verified,
+                        size: 16,
+                        color: AppColors.secondary,
                       ),
                     ],
                   ],
@@ -329,7 +401,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Widget _buildAvatar(String avatar, {required double size}) {
-    if (avatar.startsWith('http')) {
+    if (avatar.isNotEmpty && avatar.startsWith('http')) {
       return ClipOval(
         child: Image.network(
           avatar,
@@ -367,7 +439,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       child: Icon(
         Icons.person,
         size: size * 0.65,
-        color: AppColors.secondary,
+        color: AppColors.blackTextColor,
       ),
     );
   }

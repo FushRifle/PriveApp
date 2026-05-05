@@ -20,22 +20,16 @@ class ReelItem extends StatefulWidget {
 
 class _ReelItemState extends State<ReelItem> {
   bool _isLiked = false;
-  final bool _isMuted = false;
   bool _isFollowing = false;
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Video placeholder (replace with actual video player)
         _buildVideoPlaceholder(),
-        // Gradient overlays
         _buildGradients(),
-        // Right side actions
         _buildRightActions(),
-        // Bottom info
         _buildBottomInfo(),
-        // Top header
       ],
     );
   }

@@ -22,6 +22,7 @@ class _StatusViewPageState extends State<StatusViewPage>
   late AnimationController _progressController;
   late int currentIndex;
   late PageController _pageController;
+  bool _isPaused = false;
 
   @override
   void initState() {
@@ -33,7 +34,7 @@ class _StatusViewPageState extends State<StatusViewPage>
       vsync: this,
       duration: const Duration(seconds: 5),
     )..addListener(() {
-        setState(() {});
+        if (mounted) setState(() {});
       });
 
     _progressController.forward();
@@ -42,7 +43,7 @@ class _StatusViewPageState extends State<StatusViewPage>
 
   void _setupAutoAdvance() {
     _progressController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
+      if (status == AnimationStatus.completed && mounted) {
         _nextStatus();
       }
     });
@@ -55,7 +56,7 @@ class _StatusViewPageState extends State<StatusViewPage>
         curve: Curves.easeInOut,
       );
     } else {
-      Navigator.pop(context);
+      if (mounted) Navigator.pop(context);
     }
   }
 
@@ -66,6 +67,17 @@ class _StatusViewPageState extends State<StatusViewPage>
         curve: Curves.easeInOut,
       );
     }
+  }
+
+  void _togglePause() {
+    setState(() {
+      if (_isPaused) {
+        _progressController.forward();
+      } else {
+        _progressController.stop();
+      }
+      _isPaused = !_isPaused;
+    });
   }
 
   @override
@@ -79,7 +91,7 @@ class _StatusViewPageState extends State<StatusViewPage>
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
-        statusBarColor: Colors.black,
+        statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.light,
       ),
     );
@@ -95,25 +107,50 @@ class _StatusViewPageState extends State<StatusViewPage>
             _nextStatus();
           }
         },
+        onLongPress: _togglePause,
+        onLongPressUp: _togglePause,
         child: Stack(
           children: [
+            // Status Content
             PageView.builder(
               controller: _pageController,
               itemCount: widget.statuses.length,
+              physics: const NeverScrollableScrollPhysics(),
               onPageChanged: (index) {
                 setState(() {
                   currentIndex = index;
                 });
                 _progressController.reset();
-                _progressController.forward();
+                if (!_isPaused) {
+                  _progressController.forward();
+                }
               },
               itemBuilder: (context, index) {
                 return _buildStatusContent(widget.statuses[index]);
               },
             ),
+
+            // Header
             _buildHeader(),
+
+            // Progress Bars
             _buildProgressBars(),
+
+            // Reply Bar
             _buildReplyBar(),
+
+            // Pause Indicator
+            if (_isPaused)
+              Container(
+                color: Colors.black.withOpacity(0.6),
+                child: const Center(
+                  child: Icon(
+                    Icons.pause_circle_filled,
+                    color: Colors.white,
+                    size: 60,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -122,11 +159,10 @@ class _StatusViewPageState extends State<StatusViewPage>
 
   Widget _buildStatusContent(StatusModel status) {
     return Container(
+      width: double.infinity,
+      height: double.infinity,
       decoration: BoxDecoration(
-        image: DecorationImage(
-          fit: BoxFit.cover,
-          image: AssetImage(status.statusImage),
-        ),
+        image: _getBackgroundImage(status),
       ),
       child: Container(
         decoration: BoxDecoration(
@@ -136,11 +172,48 @@ class _StatusViewPageState extends State<StatusViewPage>
             colors: [
               Colors.black.withOpacity(0.3),
               Colors.transparent,
-              Colors.black.withOpacity(0.3),
+              Colors.black.withOpacity(0.5),
             ],
           ),
         ),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(40),
+            child: Text(
+              status.statusText ?? '',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
       ),
+    );
+  }
+
+  DecorationImage? _getBackgroundImage(StatusModel status) {
+    final imageUrl = status.statusImage;
+
+    if (imageUrl.isEmpty) return null;
+
+    // Check if it's a network image
+    if (imageUrl.startsWith('http')) {
+      return DecorationImage(
+        image: NetworkImage(imageUrl),
+        fit: BoxFit.cover,
+        onError: (exception, stackTrace) {
+          print('Error loading image: $exception');
+        },
+      );
+    }
+
+    // Asset image
+    return DecorationImage(
+      image: AssetImage(imageUrl),
+      fit: BoxFit.cover,
     );
   }
 
@@ -152,11 +225,21 @@ class _StatusViewPageState extends State<StatusViewPage>
       right: 16,
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundImage: AssetImage(status.imgProfile),
+          // Avatar
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+            ),
+            child: ClipOval(
+              child: _buildAvatar(status.imgProfile),
+            ),
           ),
           const SizedBox(width: 12),
+
+          // Name and Time
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -168,6 +251,8 @@ class _StatusViewPageState extends State<StatusViewPage>
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   status.time,
@@ -179,11 +264,42 @@ class _StatusViewPageState extends State<StatusViewPage>
               ],
             ),
           ),
+
+          // Close button
           IconButton(
-            icon: const Icon(Icons.close, color: Colors.white),
+            icon: const Icon(Icons.close, color: Colors.white, size: 28),
             onPressed: () => Navigator.pop(context),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAvatar(String avatarUrl) {
+    if (avatarUrl.isEmpty) {
+      return Container(
+        color: Colors.grey,
+        child: const Icon(Icons.person, color: Colors.white, size: 20),
+      );
+    }
+
+    if (avatarUrl.startsWith('http')) {
+      return Image.network(
+        avatarUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          color: Colors.grey,
+          child: const Icon(Icons.person, color: Colors.white, size: 20),
+        ),
+      );
+    }
+
+    return Image.asset(
+      avatarUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => Container(
+        color: Colors.grey,
+        child: const Icon(Icons.person, color: Colors.white, size: 20),
       ),
     );
   }
@@ -212,12 +328,16 @@ class _StatusViewPageState extends State<StatusViewPage>
                       ),
                     )
                   : index == currentIndex
-                      ? FractionallySizedBox(
-                          widthFactor: _progressController.value,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(2),
+                      ? Align(
+                          alignment: Alignment.centerLeft,
+                          child: FractionallySizedBox(
+                            widthFactor: _progressController.value,
+                            child: Container(
+                              height: 3,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(2),
+                              ),
                             ),
                           ),
                         )
@@ -230,17 +350,20 @@ class _StatusViewPageState extends State<StatusViewPage>
   }
 
   Widget _buildReplyBar() {
+    final TextEditingController _replyController = TextEditingController();
+
     return Positioned(
       bottom: 30,
       left: 16,
       right: 16,
       child: Row(
         children: [
+          // Message Input
           Expanded(
             child: Container(
               height: 44,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(30),
                 border: Border.all(
                   color: Colors.white.withOpacity(0.3),
@@ -248,6 +371,7 @@ class _StatusViewPageState extends State<StatusViewPage>
                 ),
               ),
               child: TextField(
+                controller: _replyController,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   hintText: 'Send message',
@@ -255,13 +379,30 @@ class _StatusViewPageState extends State<StatusViewPage>
                     color: Colors.white.withOpacity(0.6),
                   ),
                   border: InputBorder.none,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
                 ),
+                onSubmitted: (value) {
+                  if (value.isNotEmpty) {
+                    // Handle sending message
+                    _replyController.clear();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Message sent!'),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                  }
+                },
               ),
             ),
           ),
+
           const SizedBox(width: 12),
+
+          // Like Button
           Container(
             width: 44,
             height: 44,
@@ -275,11 +416,19 @@ class _StatusViewPageState extends State<StatusViewPage>
             child: IconButton(
               icon: const Icon(Icons.favorite_border, color: Colors.white),
               onPressed: () {
-                // Handle like
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Liked!'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
               },
             ),
           ),
+
           const SizedBox(width: 8),
+
+          // Send Button
           Container(
             width: 44,
             height: 44,
@@ -290,7 +439,16 @@ class _StatusViewPageState extends State<StatusViewPage>
             child: IconButton(
               icon: const Icon(Icons.send, color: Colors.white, size: 20),
               onPressed: () {
-                // Handle send
+                if (_replyController.text.isNotEmpty) {
+                  // Handle sending
+                  _replyController.clear();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Message sent!'),
+                      duration: Duration(seconds: 1),
+                    ),
+                  );
+                }
               },
             ),
           ),

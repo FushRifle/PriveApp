@@ -8,6 +8,7 @@ class StatusModel {
   final String time;
   final bool isViewed;
   final int viewCount;
+  final String? statusText;
 
   const StatusModel({
     this.id = 0,
@@ -19,6 +20,7 @@ class StatusModel {
     required this.time,
     this.isViewed = false,
     this.viewCount = 0,
+    this.statusText,
   });
 
   factory StatusModel.fromJson(Map<String, dynamic> json) {
@@ -98,16 +100,4 @@ int _toInt(dynamic value) {
   if (value is num) return value.toInt();
   if (value is String) return int.tryParse(value) ?? 0;
   return 0;
-}
-
-List<String> _toStringList(dynamic value) {
-  if (value is List) {
-    return value.map((e) => e.toString()).toList();
-  }
-
-  if (value is String && value.isNotEmpty) {
-    return [value];
-  }
-
-  return [];
 }

@@ -16,7 +16,7 @@ class DiscoverHeader extends StatelessWidget {
       children: [
         AnimatedContainer(
           duration: const Duration(milliseconds: 300),
-          child: Icon(Icons.explore, color: AppColors.primary, size: 28),
+          child: Icon(Icons.explore, color: AppColors.secondary, size: 28),
         ),
         const SizedBox(width: 12),
         Text(

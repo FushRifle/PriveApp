@@ -5,6 +5,10 @@ import 'package:social_media_app/app/configs/theme.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import 'package:social_media_app/data/hooks/home/feed_hook.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:path_provider/path_provider.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 
 class CreatePostPage extends StatefulWidget {
   const CreatePostPage({super.key});
@@ -26,8 +30,13 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
   bool _isPrivate = false;
   bool _isLoading = false;
+  bool _isUploading = false;
 
   late final FeedHook _feedHook;
+
+  // Cloudinary configuration
+  static const String _cloudName = 'dug6225go';
+  static const String _uploadPreset = 'prive_feeds';
 
   @override
   void initState() {
@@ -544,7 +553,9 @@ class _CreatePostPageState extends State<CreatePostPage> {
           width: double.infinity,
           height: 48,
           child: ElevatedButton(
-            onPressed: (hasContent && !_isLoading) ? _submitPost : null,
+            onPressed: (hasContent && !_isLoading && !_isUploading)
+                ? _submitPost
+                : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.purpleColor,
               disabledBackgroundColor: AppColors.greyColor.withOpacity(0.3),
@@ -552,7 +563,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: _isLoading
+            child: (_isLoading || _isUploading)
                 ? const SizedBox(
                     width: 20,
                     height: 20,
@@ -599,6 +610,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
       }
     } catch (e) {
       debugPrint('Error picking media: $e');
+      _showErrorSnackBar('Failed to pick media: $e');
     }
   }
 
@@ -625,59 +637,158 @@ class _CreatePostPageState extends State<CreatePostPage> {
     }
   }
 
-  void _submitPost() async {
-    setState(() => _isLoading = true);
+  // Generate video thumbnail
+  Future<String?> _generateThumbnail(String videoPath) async {
+    try {
+      final thumbnail = await VideoThumbnail.thumbnailFile(
+        video: videoPath,
+        thumbnailPath: (await getTemporaryDirectory()).path,
+        imageFormat: ImageFormat.JPEG,
+        quality: 70,
+      );
+      return thumbnail;
+    } catch (e) {
+      debugPrint('Error generating thumbnail: $e');
+      return null;
+    }
+  }
+
+  // Upload file to Cloudinary using unsigned upload with preset
+  Future<Map<String, String>> _uploadToCloudinary(
+    String filePath,
+    String fileType,
+  ) async {
+    try {
+      print('Starting upload to Cloudinary...');
+      final uri = Uri.parse(
+        'https://api.cloudinary.com/v1_1/$_cloudName/${fileType == 'image' ? 'image' : 'video'}/upload',
+      );
+
+      final request = http.MultipartRequest('POST', uri);
+
+      // Add the file
+      final file = await http.MultipartFile.fromPath('file', filePath);
+      request.files.add(file);
+
+      // Add upload preset (required for unsigned uploads)
+      request.fields['upload_preset'] = _uploadPreset;
+
+      // Optional: Add folder
+      request.fields['folder'] = 'prive_feeds';
+
+      print('Sending request to Cloudinary...');
+      final response = await request.send();
+      final responseData = await response.stream.bytesToString();
+      final data = jsonDecode(responseData);
+
+      print('Cloudinary response status: ${response.statusCode}');
+      print('Cloudinary response data: $responseData');
+
+      if (response.statusCode != 200) {
+        throw Exception(data['error']?['message'] ?? 'Upload failed');
+      }
+
+      return {
+        'url': data['secure_url'],
+        'public_id': data['public_id'],
+        if (fileType == 'video' && data['thumbnail_url'] != null)
+          'thumbnail': data['thumbnail_url'],
+      };
+    } catch (e) {
+      print('Cloudinary upload error: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> _submitPost() async {
+    if (_mediaItems.isEmpty) {
+      _showErrorSnackBar('Please add at least one photo or video');
+      return;
+    }
+
+    setState(() => _isUploading = true);
 
     try {
-      // Get the first media item (if any)
-      String? imageUrl;
-      if (_mediaItems.isNotEmpty) {
-        // For now, just use the file path - you'll need to upload to server first
-        imageUrl = _mediaItems.first.file?.path;
+      // Upload all media to Cloudinary
+      List<Map<String, String>> uploadedMedia = [];
+
+      for (var media in _mediaItems) {
+        String filePath = media.file!.path;
+        String fileType = media.type == MediaType.image ? 'image' : 'video';
+
+        // Generate thumbnail for video (optional)
+        if (media.type == MediaType.video) {
+          await _generateThumbnail(filePath);
+        }
+
+        // Upload to Cloudinary
+        print('Uploading ${media.type}: $filePath');
+        final uploadResult = await _uploadToCloudinary(filePath, fileType);
+        uploadedMedia.add(uploadResult);
+        print('Upload successful: ${uploadResult['url']}');
       }
 
-      // Combine caption and hashtags
+      setState(() {
+        _isUploading = false;
+        _isLoading = true;
+      });
+
+      // Prepare post content with hashtags
       String content = _captionController.text;
       if (_hashtags.isNotEmpty) {
-        content += '\n\n' + _hashtags.map((h) => '#$h').join(' ');
+        content += '\n\n${_hashtags.map((h) => '#$h').join(' ')}';
       }
+
+      // Get the first media URL
+      final imageUrl =
+          uploadedMedia.isNotEmpty ? uploadedMedia.first['url'] : null;
 
       // Create post using FeedHook
       final success = await _feedHook.createPost(
         content: content,
         imageUrl: imageUrl,
+        isPrivate: _isPrivate,
       );
 
       if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Post created successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context);
+        _showSuccessSnackBar('Post created successfully!');
+        Navigator.pop(context, true);
       } else if (!success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to create post'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        throw Exception('Failed to create post');
       }
     } catch (e) {
+      print('Error in _submitPost: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error creating post: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showErrorSnackBar('Error creating post: ${e.toString()}');
       }
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _isUploading = false;
+        });
       }
     }
+  }
+
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 }
 
@@ -692,5 +803,7 @@ class MediaItem {
     required this.type,
   });
 
-  void dispose() {}
+  void dispose() {
+    // Clean up if needed
+  }
 }

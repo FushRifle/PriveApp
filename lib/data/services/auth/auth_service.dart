@@ -3,7 +3,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:social_media_app/app/configs/api_config.dart';
 import 'package:social_media_app/core/supabase_client.dart';
-import '../../services/api_service.dart';
 
 class AuthService {
   final Dio _dio = Dio(
@@ -21,7 +20,6 @@ class AuthService {
   );
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
-  final ApiService _apiService = ApiService();
 
   // SIGN IN
   Future<AuthResult> signIn(String email, String password) async {

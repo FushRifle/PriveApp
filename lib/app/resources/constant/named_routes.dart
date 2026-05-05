@@ -24,6 +24,7 @@ class NamedRoutes {
   static const onboardingScreen = '/onboarding-screen';
   static const loginScreen = '/login-screen';
   static const registerScreen = '/register-screen';
+  static const demograpicScreen = '/demograpics-screen';
 
   // Settings routes
   static const settingsScreen = '/settings-screen';
