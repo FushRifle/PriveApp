@@ -29,7 +29,7 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage> {
   // Selected values
   String _selectedGender = '';
   String _selectedLookingFor = '';
-  List<String> _selectedInterests = [];
+  final List<String> _selectedInterests = [];
 
   bool _isLoading = false;
   int _currentStep = 0;

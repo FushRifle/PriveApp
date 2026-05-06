@@ -11,11 +11,11 @@ import 'package:Prive/app/resources/constant/named_routes.dart';
 
 class CardPost extends StatefulWidget {
   final dynamic post;
-  final bool isDetailView; // Add this flag
+  final bool isDetailView;
 
   const CardPost({
     required this.post,
-    this.isDetailView = false, // Default false for feed
+    this.isDetailView = false,
     super.key,
   });
 
@@ -36,6 +36,8 @@ class _CardPostState extends State<CardPost> {
   String content = '';
   VideoPlayerController? _videoController;
   bool _isVideoInitialized = false;
+  DateTime createdAt = DateTime.now();
+  int commentCount = 0;
 
   @override
   void initState() {
@@ -53,24 +55,38 @@ class _CardPostState extends State<CardPost> {
     if (widget.post is PostModel) {
       final post = widget.post as PostModel;
       isLiked = post.isLiked;
-      likeCount = post.like;
-      isSaved = false;
+      likeCount = post.likeCount;
+      commentCount = post.commentCount;
+      isSaved = post.isSaved;
       userName = post.name;
       userAvatar = post.imgProfile;
-      content = post.caption;
+      content = post.displayText;
       postId = post.id;
       mediaUrl = post.picture;
       mediaType = post.picture.isNotEmpty ? 'image' : null;
+      createdAt = post.createdAt;
       return;
     }
 
     isLiked = widget.post['isLiked'] ?? false;
     likeCount = widget.post['likes'] ?? 0;
+    commentCount = widget.post['commentCount'] ?? widget.post['comments'] ?? 0;
     isSaved = widget.post['isSaved'] ?? false;
     userName =
         widget.post['user']?['name'] ?? widget.post['username'] ?? 'User';
     userAvatar = widget.post['user']?['avatar'] ?? '';
     content = widget.post['caption'] ?? widget.post['content'] ?? '';
+
+    final createdAtStr = widget.post['createdAt'] ??
+        widget.post['created_at'] ??
+        widget.post['time'];
+    if (createdAtStr != null) {
+      try {
+        createdAt = DateTime.parse(createdAtStr.toString());
+      } catch (e) {
+        createdAt = DateTime.now();
+      }
+    }
 
     final id = widget.post['id'] ?? widget.post['_id'];
     if (id is int) {
@@ -123,6 +139,15 @@ class _CardPostState extends State<CardPost> {
     });
   }
 
+  void _onShare() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Share feature coming soon'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+  }
+
   void _openComments() {
     customBottomSheetComments(context, postId: postId);
   }
@@ -132,20 +157,9 @@ class _CardPostState extends State<CardPost> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        double safeHeight;
-
-        if (mediaType == null) {
-          safeHeight = 180.0;
-        } else {
-          safeHeight = (width * 0.9).clamp(320.0, 450.0);
-        }
-
-        const double minScroll = -80.0;
-        const double maxScroll = 80.0;
 
         final cardContent = Container(
           margin: const EdgeInsets.only(bottom: 16),
-          height: safeHeight,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
@@ -160,19 +174,22 @@ class _CardPostState extends State<CardPost> {
             borderRadius: BorderRadius.circular(20),
             child: mediaType == null
                 ? _buildTextOnlyPost()
-                : Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      _buildMediaContent(),
-                      _buildGradientOverlay(),
-                      _buildSidePanel(safeHeight, minScroll, maxScroll),
-                      _buildBottomInfo(),
-                    ],
+                : SizedBox(
+                    width: width,
+                    height: width * 1.2,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        _buildMediaContent(),
+                        _buildGradientOverlay(),
+                        _buildSidePanel(width, width * 1.2, -80, 80),
+                        _buildBottomInfo(),
+                      ],
+                    ),
                   ),
           ),
         );
 
-        // Don't wrap with GestureDetector if in detail view
         if (widget.isDetailView) {
           return cardContent;
         }
@@ -193,86 +210,107 @@ class _CardPostState extends State<CardPost> {
 
   Widget _buildTextOnlyPost() {
     return Container(
+      width: double.infinity,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.purpleColor.withOpacity(0.08),
-            AppColors.purpleColor.withOpacity(0.03),
+            AppColors.primary.withOpacity(0.08),
+            AppColors.secondary.withOpacity(0.03),
           ],
         ),
         border: Border.all(
-          color: AppColors.purpleColor.withOpacity(0.15),
+          color: AppColors.greyTextColor.withOpacity(0.15),
           width: 1,
         ),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               children: [
                 if (userAvatar.isNotEmpty)
                   CircleAvatar(
-                    radius: 16,
+                    radius: 20,
                     backgroundImage: NetworkImage(userAvatar),
                     onBackgroundImageError: (_, __) {},
                   ),
-                if (userAvatar.isNotEmpty) const SizedBox(width: 10),
+                if (userAvatar.isNotEmpty) const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    userName,
-                    style: AppTheme.blackTextStyle.copyWith(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        userName,
+                        style: AppTheme.blackTextStyle.copyWith(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _formatTimeAgo(createdAt),
+                        style: AppTheme.greyTextStyle.copyWith(
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Text(
               content,
               style: AppTheme.blackTextStyle.copyWith(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                height: 1.3,
+                height: 1.4,
               ),
-              maxLines: 4,
+              maxLines: 6,
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 20),
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildTextOnlyActionButton(
-                  icon: isLiked ? Icons.favorite : Icons.favorite_border,
-                  count: likeCount,
-                  onTap: _toggleLike,
-                  isActive: isLiked,
-                  activeColor: Colors.redAccent,
+                Expanded(
+                  child: _buildTextOnlyActionButton(
+                    icon: isLiked ? Icons.favorite : Icons.favorite_border,
+                    count: likeCount,
+                    onTap: _toggleLike,
+                    isActive: isLiked,
+                    activeColor: Colors.redAccent,
+                  ),
                 ),
-                const SizedBox(width: 16),
-                _buildTextOnlyActionButton(
-                  icon: Icons.chat_bubble_outline,
-                  count: 0,
-                  onTap: _openComments,
+                Expanded(
+                  child: _buildTextOnlyActionButton(
+                    icon: Icons.chat_bubble_outline,
+                    count: commentCount,
+                    onTap: _openComments,
+                  ),
                 ),
-                const SizedBox(width: 16),
-                _buildTextOnlyActionButton(
-                  icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
-                  count: 0,
-                  onTap: _toggleSave,
-                  isActive: isSaved,
-                  activeColor: Colors.amber,
+                Expanded(
+                  child: _buildTextOnlyActionButton(
+                    icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
+                    count: 0,
+                    onTap: _toggleSave,
+                    isActive: isSaved,
+                    activeColor: AppColors.secondary,
+                  ),
                 ),
-                const Spacer(),
-                _buildTextOnlyActionButton(
-                  icon: Icons.share_outlined,
-                  count: 0,
-                  onTap: () {},
+                Expanded(
+                  child: _buildTextOnlyActionButton(
+                    icon: Icons.share_outlined,
+                    count: 0,
+                    onTap: _onShare,
+                  ),
                 ),
               ],
             ),
@@ -294,26 +332,54 @@ class _CardPostState extends State<CardPost> {
         HapticFeedback.lightImpact();
         onTap();
       },
-      child: Row(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 18,
-            color: isActive ? activeColor : AppColors.greyColor,
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isActive
+                  ? (activeColor ?? Colors.redAccent).withOpacity(0.1)
+                  : Colors.transparent,
+            ),
+            child: Icon(
+              icon,
+              size: 22,
+              color: isActive ? activeColor : AppColors.greyColor,
+            ),
           ),
-          if (count > 0) ...[
-            const SizedBox(width: 3),
+          const SizedBox(height: 2),
+          if (count > 0)
             Text(
               count > 999
                   ? '${(count / 1000).toStringAsFixed(1)}K'
                   : count.toString(),
-              style: AppTheme.greyTextStyle.copyWith(fontSize: 11),
+              style: AppTheme.greyTextStyle.copyWith(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ],
         ],
       ),
     );
+  }
+
+  String _formatTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inDays > 7) {
+      return '${difference.inDays ~/ 7}w ago';
+    } else if (difference.inDays > 0) {
+      return '${difference.inDays}d ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}m ago';
+    } else {
+      return 'Just now';
+    }
   }
 
   Widget _buildMediaContent() {
@@ -356,6 +422,8 @@ class _CardPostState extends State<CardPost> {
       return Image.network(
         mediaUrl!,
         fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
         errorBuilder: (context, error, stackTrace) {
           return Container(
             color: AppColors.greyColor.withOpacity(0.2),
@@ -420,12 +488,12 @@ class _CardPostState extends State<CardPost> {
   }
 
   Widget _buildSidePanel(
-      double safeHeight, double minScroll, double maxScroll) {
+      double width, double height, double minScroll, double maxScroll) {
     return Positioned(
       right: 0,
       top: 8,
       bottom: 20,
-      width: 80,
+      width: 85,
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -442,7 +510,7 @@ class _CardPostState extends State<CardPost> {
             ),
           ),
           _buildActionButtons(),
-          _buildDraggableHandle(safeHeight, minScroll, maxScroll),
+          _buildDraggableHandle(height, minScroll, maxScroll),
         ],
       ),
     );
@@ -451,6 +519,7 @@ class _CardPostState extends State<CardPost> {
   Widget _buildActionButtons() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
       children: [
         _buildActionButton(
           icon: isLiked ? Icons.favorite : Icons.favorite_border,
@@ -461,13 +530,13 @@ class _CardPostState extends State<CardPost> {
           showCount: true,
           count: likeCount,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 20),
         _buildActionButton(
           icon: Icons.chat_bubble_outline,
           label: 'Reply',
           onTap: _openComments,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 20),
         _buildActionButton(
           icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
           label: 'Save',
@@ -475,11 +544,11 @@ class _CardPostState extends State<CardPost> {
           isActive: isSaved,
           activeColor: Colors.amber,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 20),
         _buildActionButton(
           icon: Icons.share_outlined,
           label: 'Share',
-          onTap: () {},
+          onTap: _onShare,
         ),
       ],
     );
@@ -500,27 +569,28 @@ class _CardPostState extends State<CardPost> {
         onTap();
       },
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: isActive
                   ? activeColor?.withOpacity(0.8)
-                  : Colors.white.withOpacity(0.15),
+                  : Colors.white.withOpacity(0.2),
             ),
             child: Icon(
               icon,
-              color: isActive ? Colors.white : Colors.white.withOpacity(0.9),
-              size: 18,
+              color: isActive ? Colors.white : Colors.white.withOpacity(0.95),
+              size: 24,
             ),
           ),
-          const SizedBox(height: 3),
+          const SizedBox(height: 6),
           Text(
-            showCount && count > 0 ? '$count' : label,
+            showCount && count > 0 ? _formatCount(count) : label,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
-              fontSize: showCount && count > 0 ? 10 : 9,
+              color: Colors.white.withOpacity(0.95),
+              fontSize: showCount && count > 0 ? 12 : 11,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -529,11 +599,17 @@ class _CardPostState extends State<CardPost> {
     );
   }
 
+  String _formatCount(int count) {
+    if (count >= 1000000) return '${(count / 1000000).toStringAsFixed(1)}M';
+    if (count >= 1000) return '${(count / 1000).toStringAsFixed(1)}K';
+    return count.toString();
+  }
+
   Widget _buildDraggableHandle(
-      double safeHeight, double minScroll, double maxScroll) {
+      double height, double minScroll, double maxScroll) {
     return Positioned(
       left: 0,
-      top: (safeHeight / 2 - 35) + _handleOffset,
+      top: (height / 2 - 35) + _handleOffset,
       child: GestureDetector(
         onVerticalDragUpdate: (details) {
           setState(() {
@@ -566,7 +642,7 @@ class _CardPostState extends State<CardPost> {
   Widget _buildBottomInfo() {
     return Positioned(
       left: 14,
-      right: 80,
+      right: 85,
       bottom: 16,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -584,12 +660,13 @@ class _CardPostState extends State<CardPost> {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       userName,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 12,
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -599,7 +676,7 @@ class _CardPostState extends State<CardPost> {
                         content,
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.7),
-                          fontSize: 10,
+                          fontSize: 11,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,

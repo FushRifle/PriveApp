@@ -1,12 +1,12 @@
 import 'dart:io';
+import 'package:Prive/data/services/upload_service.dart';
 import 'package:flutter/material.dart';
 import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import 'package:Prive/data/hooks/home/feed_hook.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:Prive/data/services/cloudinary_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 
@@ -33,10 +33,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
   bool _isUploading = false;
 
   late final FeedHook _feedHook;
-
-  // Cloudinary configuration
-  static const String _cloudName = 'dug6225go';
-  static const String _uploadPreset = 'prive_feeds';
+  final CloudinaryService _cloudinaryService = CloudinaryService();
 
   @override
   void initState() {
@@ -112,7 +109,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: SizedBox(
-            height: 40, // Fixed height
+            height: 40,
             child: ElevatedButton(
               onPressed: (_isLoading || _isUploading) ? null : _submitPost,
               style: ElevatedButton.styleFrom(
@@ -122,8 +119,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 elevation: 0,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
-                minimumSize: const Size(60, 40), // Fixed minimum size
-                maximumSize: const Size(100, 40), // Fixed maximum size
+                minimumSize: const Size(60, 40),
+                maximumSize: const Size(100, 40),
               ),
               child: _isLoading
                   ? const SizedBox(
@@ -248,6 +245,12 @@ class _CreatePostPageState extends State<CreatePostPage> {
           ),
         ),
         const SizedBox(height: 12),
+        if (_isUploading && _mediaItems.isNotEmpty)
+          LinearProgressIndicator(
+            value: null,
+            backgroundColor: Colors.grey[200],
+            color: AppColors.purpleColor,
+          ),
       ],
     );
   }
@@ -569,56 +572,9 @@ class _CreatePostPageState extends State<CreatePostPage> {
             onChanged: (value) {
               setState(() => _isPrivate = value);
             },
-            activeColor: AppColors.purpleColor,
+            activeThumbColor: AppColors.purpleColor,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildBottomBar(bool hasContent) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          top: BorderSide(color: AppColors.greyColor.withOpacity(0.1)),
-        ),
-      ),
-      child: SafeArea(
-        child: SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: ElevatedButton(
-            onPressed: (hasContent && !_isLoading && !_isUploading)
-                ? _submitPost
-                : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.purpleColor,
-              disabledBackgroundColor: AppColors.greyColor.withOpacity(0.3),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: (_isLoading || _isUploading)
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : Text(
-                    'Share Post',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                    ),
-                  ),
-          ),
-        ),
       ),
     );
   }
@@ -690,49 +646,58 @@ class _CreatePostPageState extends State<CreatePostPage> {
     }
   }
 
-  // Upload file to Cloudinary using unsigned upload with preset
-  Future<Map<String, String>> _uploadToCloudinary(
-    String filePath,
-    String fileType,
-  ) async {
+  // Upload a single media item using CloudinaryService
+  Future<Map<String, String>> _uploadMediaItem(
+      MediaItem media, int index, int total) async {
     try {
-      print('Starting upload to Cloudinary...');
-      final uri = Uri.parse(
-        'https://api.cloudinary.com/v1_1/$_cloudName/${fileType == 'image' ? 'image' : 'video'}/upload',
-      );
+      print(
+          'Uploading ${media.type} (${index + 1}/$total): ${media.file!.path}');
 
-      final request = http.MultipartRequest('POST', uri);
+      CloudinaryResponseModel? response;
 
-      // Add the file
-      final file = await http.MultipartFile.fromPath('file', filePath);
-      request.files.add(file);
+      if (media.type == MediaType.image) {
+        response = await _cloudinaryService.uploadImage(
+          file: XFile(media.file!.path),
+          folder: 'feeds',
+          tags: ['prive', 'feed', ..._hashtags],
+          onProgress: (progress) {
+            // Update UI with individual progress if needed
+            if (mounted) {
+              setState(() {
+                // You could add progress indicators per item
+              });
+            }
+          },
+        );
+      } else {
+        final thumbnailPath = await _generateThumbnail(media.file!.path);
 
-      // Add upload preset (required for unsigned uploads)
-      request.fields['upload_preset'] = _uploadPreset;
-
-      // Optional: Add folder
-      request.fields['folder'] = 'prive_feeds';
-
-      print('Sending request to Cloudinary...');
-      final response = await request.send();
-      final responseData = await response.stream.bytesToString();
-      final data = jsonDecode(responseData);
-
-      print('Cloudinary response status: ${response.statusCode}');
-      print('Cloudinary response data: $responseData');
-
-      if (response.statusCode != 200) {
-        throw Exception(data['error']?['message'] ?? 'Upload failed');
+        response = await _cloudinaryService.uploadVideo(
+          file: XFile(media.file!.path),
+          folder: 'feeds',
+          tags: ['prive', 'feed', 'video', ..._hashtags],
+          onProgress: (progress) {
+            if (mounted) {
+              setState(() {});
+            }
+          },
+        );
       }
 
+      if (response == null) {
+        throw Exception('Failed to upload ${media.type}');
+      }
+
+      print('Upload successful: ${response.url}');
+
       return {
-        'url': data['secure_url'],
-        'public_id': data['public_id'],
-        if (fileType == 'video' && data['thumbnail_url'] != null)
-          'thumbnail': data['thumbnail_url'],
+        'url': response.url,
+        'public_id': response.publicId,
+        if (response.thumbnailUrl != null) 'thumbnail': response.thumbnailUrl!,
+        'type': media.type == MediaType.image ? 'image' : 'video',
       };
     } catch (e) {
-      print('Cloudinary upload error: $e');
+      print('Error uploading media: $e');
       rethrow;
     }
   }
@@ -746,23 +711,12 @@ class _CreatePostPageState extends State<CreatePostPage> {
     setState(() => _isUploading = true);
 
     try {
-      // Upload all media to Cloudinary
       List<Map<String, String>> uploadedMedia = [];
 
-      for (var media in _mediaItems) {
-        String filePath = media.file!.path;
-        String fileType = media.type == MediaType.image ? 'image' : 'video';
-
-        // Generate thumbnail for video (optional)
-        if (media.type == MediaType.video) {
-          await _generateThumbnail(filePath);
-        }
-
-        // Upload to Cloudinary
-        print('Uploading ${media.type}: $filePath');
-        final uploadResult = await _uploadToCloudinary(filePath, fileType);
-        uploadedMedia.add(uploadResult);
-        print('Upload successful: ${uploadResult['url']}');
+      for (int i = 0; i < _mediaItems.length; i++) {
+        final media = _mediaItems[i];
+        final result = await _uploadMediaItem(media, i, _mediaItems.length);
+        uploadedMedia.add(result);
       }
 
       setState(() {
@@ -776,15 +730,23 @@ class _CreatePostPageState extends State<CreatePostPage> {
         content += '\n\n${_hashtags.map((h) => '#$h').join(' ')}';
       }
 
-      // Get the first media URL
-      final imageUrl =
-          uploadedMedia.isNotEmpty ? uploadedMedia.first['url'] : null;
+      // Get media URLs for the post
+      final mediaUrls = uploadedMedia.map((media) => media['url']!).toList();
+      final imageUrl = uploadedMedia.first['url']; // First media as cover
+
+      // Check if it's a video post
+      final isVideo = uploadedMedia.any((media) => media['type'] == 'video');
 
       // Create post using FeedHook
+      // You may need to update your FeedHook to support multiple media or video
       final success = await _feedHook.createPost(
         content: content,
         imageUrl: imageUrl,
         isPrivate: _isPrivate,
+        // You can add additional parameters like:
+        // mediaUrls: mediaUrls,
+        // isVideo: isVideo,
+        // videoUrl: isVideo ? uploadedMedia.firstWhere((m) => m['type'] == 'video')['url'] : null,
       );
 
       if (success && mounted) {

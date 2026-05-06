@@ -141,8 +141,9 @@ class GalleryProfileCubit extends Cubit<GalleryProfileState> {
     try {
       if (dateValue is DateTime) return dateValue;
       if (dateValue is String) return DateTime.tryParse(dateValue);
-      if (dateValue is int)
+      if (dateValue is int) {
         return DateTime.fromMillisecondsSinceEpoch(dateValue);
+      }
     } catch (e) {
       return null;
     }

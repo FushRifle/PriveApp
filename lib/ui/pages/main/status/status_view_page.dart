@@ -1,6 +1,8 @@
+import 'package:Prive/app/resources/constant/named_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:Prive/app/configs/colors.dart';
+import 'package:Prive/app/configs/theme.dart';
 import 'package:Prive/data/models/status_model.dart';
 
 class StatusViewPage extends StatefulWidget {
@@ -136,8 +138,8 @@ class _StatusViewPageState extends State<StatusViewPage>
             // Progress Bars
             _buildProgressBars(),
 
-            // Reply Bar
-            _buildReplyBar(),
+            // Bottom Actions
+            _buildBottomActions(),
 
             // Pause Indicator
             if (_isPaused)
@@ -158,69 +160,126 @@ class _StatusViewPageState extends State<StatusViewPage>
   }
 
   Widget _buildStatusContent(StatusModel status) {
+    final hasImage = status.statusImage.isNotEmpty;
+    final hasText = status.statusText != null && status.statusText!.isNotEmpty;
+
     return Container(
       width: double.infinity,
       height: double.infinity,
-      decoration: BoxDecoration(
-        image: _getBackgroundImage(status),
-      ),
+      decoration: hasImage
+          ? BoxDecoration(
+              image: DecorationImage(
+                image: _getImageProvider(status.statusImage),
+                fit: BoxFit.cover,
+              ),
+            )
+          : BoxDecoration(
+              color: _getBackgroundColor(status.backgroundColor),
+            ),
       child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.black.withOpacity(0.3),
-              Colors.transparent,
-              Colors.black.withOpacity(0.5),
-            ],
-          ),
-        ),
+        decoration: hasImage
+            ? BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.3),
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.5),
+                  ],
+                ),
+              )
+            : null,
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.all(40),
-            child: Text(
-              status.statusText ?? '',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            padding: const EdgeInsets.all(32),
+            child: hasText
+                ? SingleChildScrollView(
+                    child: Text(
+                      status.statusText!,
+                      textAlign: _getTextAlign(status.textAlign),
+                      style: _getTextStyle(status),
+                    ),
+                  )
+                : hasImage
+                    ? const SizedBox.shrink()
+                    : const SizedBox.shrink(),
           ),
         ),
       ),
     );
   }
 
-  DecorationImage? _getBackgroundImage(StatusModel status) {
-    final imageUrl = status.statusImage;
-
-    if (imageUrl.isEmpty) return null;
-
-    // Check if it's a network image
+  ImageProvider _getImageProvider(String imageUrl) {
     if (imageUrl.startsWith('http')) {
-      return DecorationImage(
-        image: NetworkImage(imageUrl),
-        fit: BoxFit.cover,
-        onError: (exception, stackTrace) {
-          print('Error loading image: $exception');
-        },
-      );
+      return NetworkImage(imageUrl);
+    }
+    return AssetImage(imageUrl);
+  }
+
+  TextAlign _getTextAlign(String? textAlign) {
+    switch (textAlign) {
+      case 'center':
+        return TextAlign.center;
+      case 'left':
+        return TextAlign.left;
+      case 'right':
+        return TextAlign.right;
+      default:
+        return TextAlign.center;
+    }
+  }
+
+  TextStyle _getTextStyle(StatusModel status) {
+    final hasImage = status.statusImage.isNotEmpty;
+    return TextStyle(
+      color: Colors.white,
+      fontSize: status.effectiveFontSize,
+      fontWeight: FontWeight.w600,
+      height: 1.5,
+      letterSpacing: 0.5,
+      shadows: hasImage
+          ? [
+              const Shadow(
+                blurRadius: 10,
+                color: Colors.black45,
+                offset: Offset(2, 2),
+              ),
+            ]
+          : null,
+    );
+  }
+
+  Color _getBackgroundColor(String? hexColor) {
+    if (hexColor == null || hexColor.isEmpty) {
+      return const Color(0xFF1D1B20);
     }
 
-    // Asset image
-    return DecorationImage(
-      image: AssetImage(imageUrl),
-      fit: BoxFit.cover,
-    );
+    try {
+      String colorStr = hexColor;
+      if (colorStr.startsWith('#')) {
+        colorStr = colorStr.substring(1);
+      }
+      if (colorStr.startsWith('0x')) {
+        colorStr = colorStr.substring(2);
+      }
+
+      if (colorStr.length == 6) {
+        return Color(int.parse('FF$colorStr', radix: 16));
+      } else if (colorStr.length == 8) {
+        return Color(int.parse(colorStr, radix: 16));
+      }
+    } catch (e) {
+      print('Error parsing color: $e');
+    }
+
+    return const Color(0xFF1D1B20);
   }
 
   Widget _buildHeader() {
     final status = widget.statuses[currentIndex];
     return Positioned(
-      top: MediaQuery.of(context).padding.top + 10,
+      top: MediaQuery.of(context).padding.top + 30,
       left: 16,
       right: 16,
       child: Row(
@@ -265,10 +324,16 @@ class _StatusViewPageState extends State<StatusViewPage>
             ),
           ),
 
-          // Close button
+          // Close button - Navigates back to home screen
           IconButton(
             icon: const Icon(Icons.close, color: Colors.white, size: 28),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              Navigator.pushReplacementNamed(
+                context,
+                NamedRoutes.homeScreen,
+              );
+            },
           ),
         ],
       ),
@@ -306,7 +371,7 @@ class _StatusViewPageState extends State<StatusViewPage>
 
   Widget _buildProgressBars() {
     return Positioned(
-      top: MediaQuery.of(context).padding.top + 5,
+      top: MediaQuery.of(context).padding.top + 10,
       left: 8,
       right: 8,
       child: Row(
@@ -317,7 +382,7 @@ class _StatusViewPageState extends State<StatusViewPage>
               height: 3,
               margin: const EdgeInsets.symmetric(horizontal: 2),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.3),
+                color: AppColors.secondary.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
               child: index < currentIndex
@@ -349,8 +414,9 @@ class _StatusViewPageState extends State<StatusViewPage>
     );
   }
 
-  Widget _buildReplyBar() {
-    final TextEditingController _replyController = TextEditingController();
+  Widget _buildBottomActions() {
+    final status = widget.statuses[currentIndex];
+    final TextEditingController replyController = TextEditingController();
 
     return Positioned(
       bottom: 30,
@@ -366,17 +432,17 @@ class _StatusViewPageState extends State<StatusViewPage>
                 color: Colors.white.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(30),
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.3),
+                  color: AppColors.secondary.withOpacity(0.3),
                   width: 1,
                 ),
               ),
               child: TextField(
-                controller: _replyController,
+                controller: replyController,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   hintText: 'Send message',
                   hintStyle: TextStyle(
-                    color: Colors.white.withOpacity(0.6),
+                    color: AppColors.blackTextColor.withOpacity(0.6),
                   ),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(
@@ -386,14 +452,8 @@ class _StatusViewPageState extends State<StatusViewPage>
                 ),
                 onSubmitted: (value) {
                   if (value.isNotEmpty) {
-                    // Handle sending message
-                    _replyController.clear();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Message sent!'),
-                        duration: Duration(seconds: 1),
-                      ),
-                    );
+                    _sendReply(value, status);
+                    replyController.clear();
                   }
                 },
               ),
@@ -403,56 +463,70 @@ class _StatusViewPageState extends State<StatusViewPage>
           const SizedBox(width: 12),
 
           // Like Button
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
+          IconButton(
+            onPressed: () => _likeStatus(status),
+            icon: const Icon(
+              Icons.favorite_border,
+              color: Colors.white,
+              size: 22,
+            ),
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              foregroundColor: Colors.white,
+              shape: const CircleBorder(),
+              side: BorderSide(
                 color: Colors.white.withOpacity(0.3),
                 width: 1,
               ),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.favorite_border, color: Colors.white),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Liked!'),
-                    duration: Duration(seconds: 1),
-                  ),
-                );
-              },
+              padding: const EdgeInsets.all(10),
             ),
           ),
 
           const SizedBox(width: 8),
 
           // Send Button
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.purpleColor,
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.send, color: Colors.white, size: 20),
-              onPressed: () {
-                if (_replyController.text.isNotEmpty) {
-                  // Handle sending
-                  _replyController.clear();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Message sent!'),
-                      duration: Duration(seconds: 1),
-                    ),
-                  );
-                }
-              },
+          GestureDetector(
+            onTap: () {
+              if (replyController.text.isNotEmpty) {
+                _sendReply(replyController.text, status);
+                replyController.clear();
+              }
+            },
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primary,
+              ),
+              child: const Icon(
+                Icons.send,
+                color: Colors.white,
+                size: 20,
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _sendReply(String message, StatusModel status) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Reply sent to ${status.name}'),
+        duration: const Duration(seconds: 1),
+        backgroundColor: AppColors.purpleColor,
+      ),
+    );
+  }
+
+  void _likeStatus(StatusModel status) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Liked ${status.name}\'s story'),
+        duration: const Duration(seconds: 1),
+        backgroundColor: AppColors.purpleColor,
       ),
     );
   }

@@ -19,9 +19,6 @@ class ApiService {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-
-        // Important:
-        // Let Dio treat 401/403/500 as errors so onError runs.
         validateStatus: (status) {
           return status != null && status >= 200 && status < 300;
         },

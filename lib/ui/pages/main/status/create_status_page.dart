@@ -24,11 +24,13 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   String? _selectedImageUrl;
   File? _selectedImageFile;
   Color _selectedColor = const Color(0xFF1D1B20);
-  final double _fontSize = 32;
+  double _fontSize = 28;
   TextAlign _textAlign = TextAlign.center;
   bool _isEditingText = false;
   bool _isLoading = false;
   bool _isUploading = false;
+  double _uploadProgress = 0.0;
+  bool _showFontControls = false;
 
   final List<Color> _backgroundColors = [
     const Color(0xFF1D1B20),
@@ -72,7 +74,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
       body: Stack(
         alignment: Alignment.center,
         children: [
-          // Background - FIXED: No BackdropFilter
+          // Background
           Container(
             width: double.infinity,
             height: double.infinity,
@@ -87,7 +89,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                 : null,
           ),
 
-          // Loading overlay
+          // Loading overlay with progress
           if (_isUploading) _buildLoadingOverlay(),
 
           // Main Content
@@ -121,17 +123,25 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   Widget _buildLoadingOverlay() {
     return Container(
       color: Colors.black.withOpacity(0.8),
-      child: const Center(
+      child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            SizedBox(
+              width: 60,
+              height: 60,
+              child: CircularProgressIndicator(
+                value: _uploadProgress > 0 ? _uploadProgress : null,
+                valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                strokeWidth: 3,
+              ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Text(
-              'Uploading your story...',
-              style: TextStyle(color: Colors.white, fontSize: 16),
+              _uploadProgress > 0
+                  ? 'Uploading story... ${(_uploadProgress * 100).toStringAsFixed(0)}%'
+                  : 'Uploading your story...',
+              style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
           ],
         ),
@@ -146,15 +156,13 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
       systemOverlayStyle: SystemUiOverlayStyle.light,
       leading: IconButton(
         icon: const Icon(Icons.close, color: Colors.white, size: 28),
-        onPressed: () {
-          Navigator.pop(context);
-        },
+        onPressed: () => Navigator.pop(context),
       ),
       actions: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: SizedBox(
-            height: 40, // Fixed height
+            height: 40,
             child: ElevatedButton(
               onPressed: (_isLoading || _isUploading) ? null : _shareStatus,
               style: ElevatedButton.styleFrom(
@@ -164,8 +172,8 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                 elevation: 0,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
-                minimumSize: const Size(60, 40), // Fixed minimum size
-                maximumSize: const Size(100, 40), // Fixed maximum size
+                minimumSize: const Size(60, 40),
+                maximumSize: const Size(100, 40),
               ),
               child: _isLoading
                   ? const SizedBox(
@@ -173,7 +181,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                       height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.black,
+                        color: Colors.white,
                       ),
                     )
                   : const Text(
@@ -189,6 +197,8 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   }
 
   Widget _buildContentDisplay() {
+    final hasText = _textController.text.isNotEmpty;
+
     return GestureDetector(
       onTap: () => setState(() => _isEditingText = true),
       child: Padding(
@@ -196,19 +206,19 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
         child: Center(
           child: SingleChildScrollView(
             child: Text(
-              _textController.text.isEmpty
-                  ? "What's happening?"
-                  : _textController.text,
+              hasText ? _textController.text : "What's happening?",
               textAlign: _textAlign,
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 20,
+                fontSize: hasText ? _fontSize : 20,
                 fontWeight: FontWeight.w800,
+                height: 1.4,
                 shadows: const [
                   Shadow(
-                      blurRadius: 10,
-                      color: Colors.black45,
-                      offset: Offset(2, 2)),
+                    blurRadius: 10,
+                    color: Colors.black45,
+                    offset: Offset(2, 2),
+                  ),
                 ],
               ),
             ),
@@ -220,43 +230,182 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
 
   Widget _buildTextInput() {
     return Container(
-      color: Colors.black87,
+      color: Colors.black.withOpacity(0.95),
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          TextField(
-            controller: _textController,
-            autofocus: true,
-            textAlign: _textAlign,
-            maxLines: null,
-            cursorColor: Colors.white,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: _fontSize,
-              fontWeight: FontWeight.bold,
-            ),
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              hintText: 'Write your story...',
-              hintStyle: TextStyle(color: Colors.white54),
+          // Text Input
+          Expanded(
+            child: Center(
+              child: TextField(
+                controller: _textController,
+                autofocus: true,
+                textAlign: _textAlign,
+                maxLines: null,
+                cursorColor: AppColors.secondary,
+                style: TextStyle(
+                  fontSize: _fontSize,
+                  fontWeight: FontWeight.bold,
+                  height: 1.4,
+                ),
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  hintText: 'Write your story...',
+                  hintStyle: TextStyle(color: Colors.white54),
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 40),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.close, color: Colors.white, size: 54),
-                onPressed: () => setState(() => _isEditingText = false),
-              ),
-              const SizedBox(width: 20),
-              IconButton(
-                icon: const Icon(Icons.check_circle,
-                    color: Colors.white, size: 54),
-                onPressed: () => setState(() => _isEditingText = false),
-              ),
-            ],
+
+          // Bottom Controls
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Column(
+              children: [
+                // Expandable Font Controls
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  height: _showFontControls ? 80 : 0,
+                  child: _showFontControls
+                      ? Column(
+                          children: [
+                            // Font Size Slider
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 20),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Icon(Icons.format_size,
+                                          color: Colors.white70, size: 20),
+                                      Text(
+                                        'Font Size: ${_fontSize.round()}',
+                                        style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 14),
+                                      ),
+                                    ],
+                                  ),
+                                  Slider(
+                                    value: _fontSize,
+                                    min: 20,
+                                    max: 48,
+                                    activeColor: AppColors.purpleColor,
+                                    inactiveColor: Colors.white30,
+                                    onChanged: (value) {
+                                      setState(() => _fontSize = value);
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+                        )
+                      : const SizedBox.shrink(),
+                ),
+
+                // Control Buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Font Settings Button
+                    Container(
+                      width: 44,
+                      height: 44,
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _showFontControls
+                            ? AppColors.purpleColor
+                            : Colors.white.withOpacity(0.1),
+                      ),
+                      child: IconButton(
+                        icon: Icon(
+                          Icons.format_size,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _showFontControls = !_showFontControls;
+                          });
+                        },
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+
+                    // Text Align Button
+                    Container(
+                      width: 44,
+                      height: 44,
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withOpacity(0.1),
+                      ),
+                      child: IconButton(
+                        icon: Icon(
+                          _textAlign == TextAlign.center
+                              ? Icons.format_align_center
+                              : Icons.format_align_left,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _textAlign = _textAlign == TextAlign.center
+                                ? TextAlign.left
+                                : TextAlign.center;
+                          });
+                        },
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+
+                    const SizedBox(width: 20),
+
+                    // Cancel Button
+                    Container(
+                      width: 44,
+                      height: 44,
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withOpacity(0.1),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.close,
+                            color: Colors.white, size: 24),
+                        onPressed: () => setState(() => _isEditingText = false),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+
+                    // Done Button
+                    Container(
+                      width: 44,
+                      height: 44,
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.purpleColor,
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.check,
+                            color: Colors.white, size: 24),
+                        onPressed: () => setState(() => _isEditingText = false),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -291,9 +440,11 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
             _textAlign == TextAlign.center
                 ? Icons.format_align_center
                 : Icons.format_align_left,
-            () => setState(() => _textAlign = _textAlign == TextAlign.center
-                ? TextAlign.left
-                : TextAlign.center),
+            () => setState(() {
+              _textAlign = _textAlign == TextAlign.center
+                  ? TextAlign.left
+                  : TextAlign.center;
+            }),
             'Align',
           ),
           const SizedBox(height: 20),
@@ -348,30 +499,28 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
-                  children: _backgroundColors
-                      .map((c) => GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _selectedColor = c;
-                                _selectedImageUrl = null;
-                                _selectedImageFile = null;
-                              });
-                              Navigator.pop(context);
-                            },
-                            child: Container(
-                              margin:
-                                  const EdgeInsets.symmetric(horizontal: 10),
-                              width: 50,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: c,
-                                shape: BoxShape.circle,
-                                border:
-                                    Border.all(color: Colors.white, width: 2),
-                              ),
-                            ),
-                          ))
-                      .toList(),
+                  children: _backgroundColors.map((color) {
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedColor = color;
+                          _selectedImageUrl = null;
+                          _selectedImageFile = null;
+                        });
+                        Navigator.pop(context);
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 10),
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                      ),
+                    );
+                  }).toList(),
                 ),
               ),
             ),
@@ -437,7 +586,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
       if (pickedFile != null) {
         setState(() {
           _selectedImageFile = File(pickedFile.path);
-          _selectedImageUrl = pickedFile.path; // For preview
+          _selectedImageUrl = pickedFile.path;
           _selectedColor = Colors.transparent;
         });
       }
@@ -454,6 +603,10 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
       final response = await _cloudinaryService.uploadImage(
         file: xFile,
         folder: 'stories',
+        tags: ['story', 'status'],
+        onProgress: (progress) {
+          setState(() => _uploadProgress = progress);
+        },
       );
 
       return response?.url;
@@ -464,18 +617,23 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   }
 
   Future<void> _shareStatus() async {
-    if (_textController.text.trim().isEmpty && _selectedImageFile == null) {
+    final hasText = _textController.text.trim().isNotEmpty;
+    final hasImage = _selectedImageFile != null;
+
+    if (!hasText && !hasImage) {
       _showErrorSnackBar('Please add text or an image to your story');
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _uploadProgress = 0.0;
+    });
 
     try {
       String? imageUrl;
-
-      // Upload image to Cloudinary if exists
-      if (_selectedImageFile != null) {
+      bool isTextOnly = hasText && !hasImage;
+      if (hasImage) {
         setState(() => _isUploading = true);
         imageUrl = await _uploadToCloudinary();
         setState(() => _isUploading = false);
@@ -485,20 +643,18 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
         }
       }
 
-      // Call the FeedService to create the story
       await _feedService.createStatus(
-        text: _textController.text.trim().isEmpty
-            ? ''
-            : _textController.text.trim(),
+        text: hasText ? _textController.text.trim() : '',
         imageUrl: imageUrl,
-        backgroundColor: _selectedColor.value.toRadixString(16),
+        backgroundColor: !hasImage && _selectedColor != Colors.transparent
+            ? '#${_selectedColor.value.toRadixString(16).substring(2)}'
+            : null,
         textAlign: _textAlign == TextAlign.center ? 'center' : 'left',
       );
 
       if (mounted) {
         _showSuccessSnackBar('Story shared successfully!');
-        // Navigate back to home screen
-        Navigator.pop(context);
+        Navigator.pop(context, true);
       }
     } catch (e) {
       print('Error sharing story: $e');
@@ -510,6 +666,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
         setState(() {
           _isLoading = false;
           _isUploading = false;
+          _uploadProgress = 0.0;
         });
       }
     }
@@ -522,6 +679,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
       _selectedImageFile = null;
       _selectedColor = const Color(0xFF1D1B20);
       _textAlign = TextAlign.center;
+      _fontSize = 28;
     });
     _showSuccessSnackBar('All cleared');
   }

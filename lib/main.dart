@@ -17,7 +17,6 @@ import 'package:Prive/ui/pages/main/profile/profile_page.dart';
 import 'package:Prive/ui/pages/main/reels/reels_page.dart';
 import 'package:Prive/ui/pages/main/home/create_post_page.dart';
 import 'package:Prive/ui/pages/main/status/create_status_page.dart';
-import 'package:Prive/ui/pages/auth/onboarding_page.dart';
 import 'package:Prive/ui/pages/auth/login_page.dart';
 import 'package:Prive/ui/pages/auth/register_page.dart';
 import 'package:Prive/ui/pages/settings/settings_page.dart';
@@ -57,12 +56,53 @@ Future<void> main() async {
   );
 }
 
-class MyApp extends ConsumerWidget {
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends ConsumerState<MyApp> {
+  bool _isLoading = true;
+  String? _initialRoute;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuthState();
+  }
+
+  Future<void> _checkAuthState() async {
+    // Check if user is logged in
+    final session = Supabase.instance.client.auth.currentSession;
+
+    setState(() {
+      if (session != null) {
+        // User is logged in, go to home screen
+        _initialRoute = NamedRoutes.homeScreen;
+      } else {
+        // No user, go to login screen
+        _initialRoute = NamedRoutes.loginScreen;
+      }
+      _isLoading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
+
+    if (_isLoading) {
+      return const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      );
+    }
 
     return MaterialApp(
       title: 'Prive',
@@ -71,7 +111,7 @@ class MyApp extends ConsumerWidget {
       themeMode: themeMode,
       debugShowCheckedModeBanner: false,
       scrollBehavior: const CustomScrollBehavior(),
-      initialRoute: NamedRoutes.onboardingScreen,
+      initialRoute: _initialRoute,
       onGenerateRoute: (settings) {
         // Handle routes with arguments safely
         switch (settings.name) {
@@ -91,11 +131,12 @@ class MyApp extends ConsumerWidget {
             } else if (args is Map<String, dynamic>) {
               post = PostModel.fromJson(args);
             } else {
-              post = const PostModel(
+              post = PostModel(
                 name: 'User',
                 imgProfile: '',
                 picture: '',
                 caption: '',
+                createdAt: DateTime.now(),
               );
             }
 
@@ -103,49 +144,60 @@ class MyApp extends ConsumerWidget {
               builder: (context) => PostDetailPage(post: post),
             );
 
-          case NamedRoutes.onboardingScreen:
-            return MaterialPageRoute(
-                builder: (context) => const OnboardingPage());
           case NamedRoutes.loginScreen:
             return MaterialPageRoute(builder: (context) => const LoginPage());
+
           case NamedRoutes.registerScreen:
             return MaterialPageRoute(
                 builder: (context) => const RegisterPage());
+
           case NamedRoutes.homeScreen:
             return MaterialPageRoute(builder: (context) => const MainWrapper());
+
           case NamedRoutes.profileScreen:
             return MaterialPageRoute(builder: (context) => const ProfilePage());
+
           case NamedRoutes.editProfileScreen:
             return MaterialPageRoute(
                 builder: (context) => const EditProfilePage());
+
           case NamedRoutes.friendListScreen:
             return MaterialPageRoute(
                 builder: (context) => const FriendsListPage());
+
           case NamedRoutes.insightsScreen:
             return MaterialPageRoute(
                 builder: (context) => const InsightsPage());
+
           case NamedRoutes.matchScreen:
             return MaterialPageRoute(builder: (context) => const MatchesPage());
+
           case NamedRoutes.createPostScreen:
             return MaterialPageRoute(
                 builder: (context) => const CreatePostPage());
+
           case NamedRoutes.createStatusScreen:
             return MaterialPageRoute(
                 builder: (context) => const CreateStatusPage());
+
           case NamedRoutes.settingsScreen:
             return MaterialPageRoute(
                 builder: (context) => const SettingsPage());
+
           case NamedRoutes.subscribeScreen:
             return MaterialPageRoute(
                 builder: (context) => const SubscribePage());
+
           case NamedRoutes.notificationScreen:
             return MaterialPageRoute(
                 builder: (context) => const NotificationPage());
+
           default:
+            // If user tries to access unknown route, redirect based on auth state
+            final session = Supabase.instance.client.auth.currentSession;
             return MaterialPageRoute(
-              builder: (context) => const Scaffold(
-                body: Center(child: Text('Page not found')),
-              ),
+              builder: (context) =>
+                  session != null ? const MainWrapper() : const LoginPage(),
             );
         }
       },
@@ -178,12 +230,6 @@ class MyApp extends ConsumerWidget {
 // Custom scroll behavior to hide scroll indicators
 class CustomScrollBehavior extends ScrollBehavior {
   const CustomScrollBehavior();
-
-  @override
-  Widget buildViewportChrome(
-      BuildContext context, Widget child, AxisDirection axisDirection) {
-    return child;
-  }
 
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) {
