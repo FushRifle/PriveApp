@@ -58,7 +58,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
             children: [
               // Chat customization
               _buildSectionTitle('Chat Customization'),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -111,7 +111,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
                     SwitchListTile(
                       secondary: const Icon(
                         Icons.notifications_off,
-                        color: AppColors.purpleColor,
+                        color: AppColors.primary,
                         size: 24,
                       ),
                       title: Text(
@@ -129,7 +129,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
                       onChanged: (value) {
                         setState(() => _isMuted = value);
                       },
-                      activeThumbColor: AppColors.purpleColor,
+                      activeThumbColor: AppColors.primary,
                     ),
                     if (_isMuted) ...[
                       const Divider(height: 1, indent: 56),
@@ -158,7 +158,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
                     SwitchListTile(
                       secondary: const Icon(
                         Icons.push_pin,
-                        color: AppColors.purpleColor,
+                        color: AppColors.primary,
                         size: 24,
                       ),
                       title: Text(
@@ -176,7 +176,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
                       onChanged: (value) {
                         setState(() => _isPinned = value);
                       },
-                      activeThumbColor: AppColors.purpleColor,
+                      activeThumbColor: AppColors.primary,
                     ),
                     const Divider(height: 1, indent: 56),
                     _buildNavigationTile(
@@ -249,7 +249,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
         style: AppTheme.blackTextStyle.copyWith(
           fontWeight: AppTheme.bold,
           fontSize: 16,
-          color: AppColors.purpleColor,
+          color: AppColors.blackTextColor,
         ),
       ),
     );
@@ -263,7 +263,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
     required VoidCallback onTap,
   }) {
     return ListTile(
-      leading: Icon(icon, color: titleColor ?? AppColors.blackColor, size: 24),
+      leading: Icon(icon, color: titleColor ?? AppColors.primary, size: 24),
       title: Text(
         title,
         style: AppTheme.blackTextStyle.copyWith(
@@ -277,7 +277,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
         style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
       ),
       trailing:
-          const Icon(Icons.chevron_right, color: AppColors.greyColor, size: 20),
+          const Icon(Icons.chevron_right, color: AppColors.primary, size: 20),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
     );

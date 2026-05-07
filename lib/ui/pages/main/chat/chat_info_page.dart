@@ -28,7 +28,6 @@ class ChatInfoPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 1,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
@@ -72,7 +71,7 @@ class ChatInfoPage extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: AppColors.purpleColor,
+                          color: AppColors.primary,
                           width: 3,
                         ),
                         image: DecorationImage(
@@ -123,21 +122,21 @@ class ChatInfoPage extends StatelessWidget {
                         _buildActionChip(
                           icon: Icons.call,
                           label: 'Audio',
-                          color: AppColors.greenColor,
+                          color: AppColors.primary,
                           onTap: () {},
                         ),
                         const SizedBox(width: 16),
                         _buildActionChip(
                           icon: Icons.videocam,
                           label: 'Video',
-                          color: AppColors.purpleColor,
+                          color: AppColors.primary,
                           onTap: () {},
                         ),
                         const SizedBox(width: 16),
                         _buildActionChip(
                           icon: Icons.person_add,
                           label: 'Profile',
-                          color: Colors.blue,
+                          color: AppColors.primary,
                           onTap: () {},
                         ),
                       ],
@@ -187,12 +186,12 @@ class ChatInfoPage extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(12),
-                              color: AppColors.purpleColor.withOpacity(0.1),
+                              color: AppColors.primary.withOpacity(0.1),
                             ),
                             child: Center(
                               child: Icon(
                                 Icons.image,
-                                color: AppColors.purpleColor.withOpacity(0.5),
+                                color: AppColors.primary.withOpacity(0.5),
                                 size: 30,
                               ),
                             ),
@@ -359,7 +358,7 @@ class ChatInfoPage extends StatelessWidget {
             ],
           ),
         ),
-        const Icon(Icons.download, color: AppColors.purpleColor, size: 22),
+        const Icon(Icons.download, color: AppColors.primary, size: 22),
       ],
     );
   }
@@ -376,7 +375,7 @@ class ChatInfoPage extends StatelessWidget {
       title: Text(
         title,
         style: AppTheme.blackTextStyle.copyWith(
-          fontWeight: AppTheme.medium,
+          fontWeight: AppTheme.bold,
           fontSize: 15,
           color: titleColor,
         ),

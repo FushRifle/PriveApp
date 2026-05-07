@@ -194,7 +194,7 @@ class _ChatPageState extends State<ChatPage> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: AppColors.purpleColor.withOpacity(0.3),
+                    color: AppColors.primary.withOpacity(0.3),
                     width: 2,
                   ),
                   image: DecorationImage(
@@ -264,14 +264,13 @@ class _ChatPageState extends State<ChatPage> {
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: AppColors.backgroundColor,
                         borderRadius: BorderRadius.circular(25),
                       ),
                       child: Row(
                         children: [
                           IconButton(
                             icon: Icon(Icons.mood_outlined,
-                                color: AppColors.greyColor, size: 24),
+                                color: AppColors.primary, size: 24),
                             onPressed: () {},
                           ),
                           Expanded(
@@ -296,12 +295,12 @@ class _ChatPageState extends State<ChatPage> {
                           ),
                           IconButton(
                             icon: Icon(Icons.attach_file,
-                                color: AppColors.greyColor, size: 24),
+                                color: AppColors.primary, size: 24),
                             onPressed: () {},
                           ),
                           IconButton(
                             icon: Icon(Icons.camera_alt_outlined,
-                                color: AppColors.greyColor, size: 24),
+                                color: AppColors.primary, size: 24),
                             onPressed: () async {
                               final ImagePicker picker = ImagePicker();
                               await picker.pickImage(
@@ -324,7 +323,7 @@ class _ChatPageState extends State<ChatPage> {
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: AppColors.purpleColor,
+                        color: AppColors.primary,
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child:
@@ -343,7 +342,7 @@ class _ChatPageState extends State<ChatPage> {
   Widget _buildMessageBubble(types.Message message, bool isMe) {
     if (message is types.TextMessage) {
       return Padding(
-        padding: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.only(bottom: 12),
         child: Row(
           mainAxisAlignment:
               isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
@@ -361,7 +360,7 @@ class _ChatPageState extends State<ChatPage> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                  color: isMe ? AppColors.purpleColor : Colors.white,
+                  color: isMe ? AppColors.primary : Colors.white,
                   borderRadius: BorderRadius.only(
                     topLeft: const Radius.circular(18),
                     topRight: const Radius.circular(18),

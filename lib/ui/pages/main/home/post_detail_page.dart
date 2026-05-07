@@ -63,8 +63,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
       imgProfile: '',
       picture: '',
       caption: '',
-      createdAt:
-          DateTime.now(), // Fixed: Provide a DateTime value instead of null
+      createdAt: DateTime.now(),
     );
   }
 
@@ -332,8 +331,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
         children: [
           Row(
             children: [
-              Icon(Icons.comment_outlined,
-                  size: 20, color: AppColors.purpleColor),
               const SizedBox(width: 8),
               Text(
                 'COMMENTS',
@@ -341,7 +338,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1,
                   fontSize: 13,
-                  color: AppColors.purpleColor,
+                  color: AppColors.blackTextColor,
                 ),
               ),
             ],
@@ -349,13 +346,13 @@ class _PostDetailPageState extends State<PostDetailPage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: AppColors.purpleColor.withOpacity(0.1),
+              color: AppColors.secondary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               'Recent First',
               style: TextStyle(
-                color: AppColors.purpleColor,
+                color: AppColors.blackTextColor,
                 fontWeight: FontWeight.w600,
                 fontSize: 11,
               ),
@@ -541,13 +538,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(32),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
-              ),
-            ],
           ),
           child: Row(
             children: [

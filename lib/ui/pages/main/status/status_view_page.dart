@@ -2,7 +2,6 @@ import 'package:Prive/app/resources/constant/named_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:Prive/app/configs/colors.dart';
-import 'package:Prive/app/configs/theme.dart';
 import 'package:Prive/data/models/status_model.dart';
 
 class StatusViewPage extends StatefulWidget {

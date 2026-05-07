@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:Prive/app/configs/colors.dart';
-import 'package:Prive/data/services/cloudinary_service.dart';
+import 'package:Prive/data/services/upload/cloudinary_service.dart';
 import 'package:Prive/data/services/home/feed_service.dart';
 import 'package:Prive/data/services/user/user_service.dart';
 
@@ -595,15 +595,14 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
     }
   }
 
+  // In CreateStatusPage
   Future<String?> _uploadToCloudinary() async {
     if (_selectedImageFile == null) return null;
 
     try {
-      final xFile = XFile(_selectedImageFile!.path);
       final response = await _cloudinaryService.uploadImage(
-        file: xFile,
+        file: XFile(_selectedImageFile!.path),
         folder: 'stories',
-        tags: ['story', 'status'],
         onProgress: (progress) {
           setState(() => _uploadProgress = progress);
         },

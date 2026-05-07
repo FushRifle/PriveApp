@@ -665,8 +665,8 @@ class _CardPostState extends State<CardPost> {
                     Text(
                       userName,
                       style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
+                        color: AppColors.whiteColor,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -675,8 +675,8 @@ class _CardPostState extends State<CardPost> {
                       Text(
                         content,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
-                          fontSize: 11,
+                          color: AppColors.whiteColor.withOpacity(0.9),
+                          fontSize: 15,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,

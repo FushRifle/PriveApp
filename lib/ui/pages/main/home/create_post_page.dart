@@ -1,12 +1,15 @@
 import 'dart:io';
-import 'package:Prive/data/services/upload_service.dart';
+import 'dart:html' as html;
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:typed_data';
+import 'package:Prive/data/services/upload/upload_service.dart';
 import 'package:flutter/material.dart';
 import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import 'package:Prive/data/hooks/home/feed_hook.dart';
-import 'package:Prive/data/services/cloudinary_service.dart';
+import 'package:Prive/data/services/upload/cloudinary_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 
@@ -409,16 +412,32 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
   void _initializeVideoForIndex(int index) {
     final media = _mediaItems[index];
-    if (media.type == MediaType.video && media.file != null) {
+    if (media.type == MediaType.video) {
       _videoController?.dispose();
-      _videoController = VideoPlayerController.file(media.file!)
-        ..initialize().then((_) {
-          setState(() {
-            _isVideoInitialized = true;
+
+      if (kIsWeb && media.fileBytes != null) {
+        // For web - create video from bytes
+        final blob = html.Blob([media.fileBytes!], 'video/mp4');
+        final url = html.Url.createObjectUrl(blob);
+        _videoController = VideoPlayerController.network(url)
+          ..initialize().then((_) {
+            setState(() {
+              _isVideoInitialized = true;
+            });
+          }).catchError((error) {
+            debugPrint('Error initializing video: $error');
           });
-        }).catchError((error) {
-          debugPrint('Error initializing video: $error');
-        });
+      } else if (media.file != null) {
+        // For mobile
+        _videoController = VideoPlayerController.file(media.file!)
+          ..initialize().then((_) {
+            setState(() {
+              _isVideoInitialized = true;
+            });
+          }).catchError((error) {
+            debugPrint('Error initializing video: $error');
+          });
+      }
     } else {
       _videoController?.pause();
       _isVideoInitialized = false;
@@ -591,15 +610,34 @@ class _CreatePostPageState extends State<CreatePostPage> {
       }
 
       if (pickedFile != null) {
-        setState(() {
-          _mediaItems.add(MediaItem(
-            file: File(pickedFile!.path),
-            type: type,
-          ));
-          if (type == MediaType.video && _mediaItems.length == 1) {
-            _initializeVideoForIndex(0);
-          }
-        });
+        // For web, we need to handle the file differently
+        if (kIsWeb) {
+          // Read file bytes for web
+          final fileBytes = await pickedFile.readAsBytes();
+          final fileName = pickedFile.name;
+
+          setState(() {
+            _mediaItems.add(MediaItem(
+              fileBytes: fileBytes,
+              fileName: fileName,
+              type: type,
+            ));
+            if (type == MediaType.video && _mediaItems.length == 1) {
+              _initializeVideoForIndex(0);
+            }
+          });
+        } else {
+          // Mobile - use file path
+          setState(() {
+            _mediaItems.add(MediaItem(
+              file: File(pickedFile!.path),
+              type: type,
+            ));
+            if (type == MediaType.video && _mediaItems.length == 1) {
+              _initializeVideoForIndex(0);
+            }
+          });
+        }
       }
     } catch (e) {
       debugPrint('Error picking media: $e');
@@ -659,26 +697,29 @@ class _CreatePostPageState extends State<CreatePostPage> {
         response = await _cloudinaryService.uploadImage(
           file: XFile(media.file!.path),
           folder: 'feeds',
-          tags: ['prive', 'feed', ..._hashtags],
           onProgress: (progress) {
-            // Update UI with individual progress if needed
             if (mounted) {
               setState(() {
-                // You could add progress indicators per item
+                // Update progress if needed
+                print(
+                    'Upload progress: ${(progress * 100).toStringAsFixed(0)}%');
               });
             }
           },
         );
       } else {
-        final thumbnailPath = await _generateThumbnail(media.file!.path);
+        // Generate thumbnail for video
+        await _generateThumbnail(media.file!.path);
 
         response = await _cloudinaryService.uploadVideo(
           file: XFile(media.file!.path),
           folder: 'feeds',
-          tags: ['prive', 'feed', 'video', ..._hashtags],
           onProgress: (progress) {
             if (mounted) {
-              setState(() {});
+              setState(() {
+                print(
+                    'Video upload progress: ${(progress * 100).toStringAsFixed(0)}%');
+              });
             }
           },
         );
@@ -711,11 +752,12 @@ class _CreatePostPageState extends State<CreatePostPage> {
     setState(() => _isUploading = true);
 
     try {
+      // Upload all media to Cloudinary
       List<Map<String, String>> uploadedMedia = [];
 
       for (int i = 0; i < _mediaItems.length; i++) {
-        final media = _mediaItems[i];
-        final result = await _uploadMediaItem(media, i, _mediaItems.length);
+        final result =
+            await _uploadMediaItem(_mediaItems[i], i, _mediaItems.length);
         uploadedMedia.add(result);
       }
 
@@ -738,15 +780,10 @@ class _CreatePostPageState extends State<CreatePostPage> {
       final isVideo = uploadedMedia.any((media) => media['type'] == 'video');
 
       // Create post using FeedHook
-      // You may need to update your FeedHook to support multiple media or video
       final success = await _feedHook.createPost(
         content: content,
         imageUrl: imageUrl,
         isPrivate: _isPrivate,
-        // You can add additional parameters like:
-        // mediaUrls: mediaUrls,
-        // isVideo: isVideo,
-        // videoUrl: isVideo ? uploadedMedia.firstWhere((m) => m['type'] == 'video')['url'] : null,
       );
 
       if (success && mounted) {
@@ -794,11 +831,15 @@ class _CreatePostPageState extends State<CreatePostPage> {
 enum MediaType { image, video }
 
 class MediaItem {
-  final File? file;
+  final File? file; // For mobile
+  final Uint8List? fileBytes; // For web
+  final String? fileName; // For web
   final MediaType type;
 
   MediaItem({
     this.file,
+    this.fileBytes,
+    this.fileName,
     required this.type,
   });
 

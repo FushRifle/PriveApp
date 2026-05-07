@@ -103,14 +103,6 @@ class InboxPage extends StatelessWidget {
         'unread': false,
         'online': false,
       },
-      {
-        'name': 'David Brown',
-        'message': 'Check out my latest post!',
-        'time': '2d ago',
-        'avatar': 'assets/images/profile_1.jpeg',
-        'unread': false,
-        'online': true,
-      },
     ];
 
     return ListView.builder(

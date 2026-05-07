@@ -1,4 +1,5 @@
 class ProfileModel {
+  final int id;
   final String name;
   final int age;
   final String location;
@@ -13,6 +14,7 @@ class ProfileModel {
   final int postCount;
 
   const ProfileModel({
+    required this.id,
     required this.name,
     required this.age,
     required this.location,
@@ -28,6 +30,7 @@ class ProfileModel {
   });
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) => ProfileModel(
+        id: json['id'] ?? 0,
         name: json['name'] ?? '',
         age: json['age'] ?? 0,
         location: json['location'] ?? '',
@@ -45,6 +48,7 @@ class ProfileModel {
       );
 
   Map<String, dynamic> toJson() => {
+        'id': id,
         'name': name,
         'age': age,
         'location': location,
@@ -60,6 +64,7 @@ class ProfileModel {
       };
 
   ProfileModel copyWith({
+    int? id,
     String? name,
     int? age,
     String? location,
@@ -74,6 +79,7 @@ class ProfileModel {
     int? postCount,
   }) {
     return ProfileModel(
+      id: id ?? this.id,
       name: name ?? this.name,
       age: age ?? this.age,
       location: location ?? this.location,
@@ -91,6 +97,6 @@ class ProfileModel {
 
   @override
   String toString() {
-    return 'ProfileModel(name: $name, age: $age, location: $location)';
+    return 'ProfileModel(id: $id, name: $name, age: $age, location: $location)';
   }
 }

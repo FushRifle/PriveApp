@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:Prive/data/models/profile_model.dart';
-import 'package:Prive/ui/widgets/discover/profile_card.dart';
-import 'package:Prive/ui/widgets/discover/swipeable_card.dart';
+import 'package:Prive/ui/widgets/explore/profile_card.dart';
+import 'package:Prive/ui/widgets/explore/swipeable_card.dart';
 
 class SwipeCardsStack extends StatelessWidget {
   final List<ProfileModel> profiles; // Changed from Map to ProfileModel

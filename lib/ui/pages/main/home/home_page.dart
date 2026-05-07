@@ -201,7 +201,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
         if (hasMore)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 100),
+            padding: const EdgeInsets.symmetric(vertical: 120),
             child: Center(
               child: isLoadingMore
                   ? const CircularProgressIndicator(
@@ -225,7 +225,6 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   Widget _buildStatusBar(BuildContext context,
       Map<int, List<Map<String, dynamic>>> groupedStatuses) {
-    // Create list of unique users with their statuses
     final List<_UserStatusGroup> userGroups = [];
 
     groupedStatuses.forEach((userId, stories) {
@@ -244,7 +243,6 @@ class _HomePageState extends ConsumerState<HomePage> {
       }
     });
 
-    // Sort by latest status first, then unviewed first
     userGroups.sort((a, b) {
       if (a.hasUnviewed && !b.hasUnviewed) return -1;
       if (!a.hasUnviewed && b.hasUnviewed) return 1;
@@ -257,10 +255,9 @@ class _HomePageState extends ConsumerState<HomePage> {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
-        itemCount: userGroups.length + 1, // +1 for "Your Story"
+        itemCount: userGroups.length + 1,
         separatorBuilder: (_, __) => const SizedBox(width: 10),
         itemBuilder: (context, index) {
-          // Your Story (first item)
           if (index == 0) {
             return StatusWidget(
               status: StatusModel(
@@ -279,7 +276,6 @@ class _HomePageState extends ConsumerState<HomePage> {
             );
           }
 
-          // Other users' statuses
           final group = userGroups[index - 1];
           final firstStatus = group.statuses.first;
           final status = _storyToStatus(firstStatus, group.statuses.length);
@@ -290,8 +286,6 @@ class _HomePageState extends ConsumerState<HomePage> {
             hasUnviewed: group.hasUnviewed,
             onTap: () {
               HapticFeedback.lightImpact();
-
-              // Convert all statuses for this user to StatusModel
               final statuses = group.statuses
                   .map<StatusModel>((item) => _storyToStatus(item, 0))
                   .toList();
