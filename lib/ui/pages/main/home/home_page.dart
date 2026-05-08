@@ -431,7 +431,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                       Icon(
                         Icons.verified,
                         size: 16,
-                        color: AppColors.secondary,
+                        color: AppColors.white,
                       ),
                     ],
                   ],

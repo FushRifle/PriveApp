@@ -33,8 +33,9 @@ class ProfileCard extends StatelessWidget {
           children: [
             _buildProfileImage(),
             _buildGradientOverlay(),
-            if (profile.distance.isNotEmpty) _buildDistanceBadge(),
+            _buildDistanceBadge(),
             if (profile.isOnline) _buildOnlineIndicator(),
+            _buildMatchScoreBadge(),
             _buildProfileInfo(),
           ],
         ),
@@ -44,6 +45,16 @@ class ProfileCard extends StatelessWidget {
 
   Widget _buildProfileImage() {
     if (profile.image.isNotEmpty) {
+      // Check if it's a network image or asset
+      if (profile.image.startsWith('http')) {
+        return Image.network(
+          profile.image,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return _buildPlaceholderImage();
+          },
+        );
+      }
       return Image.asset(
         profile.image,
         fit: BoxFit.cover,
@@ -68,10 +79,24 @@ class ProfileCard extends StatelessWidget {
         ),
       ),
       child: Center(
-        child: Icon(
-          Icons.person,
-          size: 100,
-          color: Colors.white.withOpacity(0.5),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.person,
+              size: 100,
+              color: Colors.white.withOpacity(0.5),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              profile.name[0].toUpperCase(),
+              style: TextStyle(
+                fontSize: 40,
+                color: Colors.white.withOpacity(0.5),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -121,7 +146,7 @@ class ProfileCard extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             Text(
-              profile.distance,
+              profile.distanceText,
               style: AppTheme.whiteTextStyle.copyWith(
                 fontSize: 12,
                 fontWeight: AppTheme.medium,
@@ -171,6 +196,55 @@ class ProfileCard extends StatelessWidget {
     );
   }
 
+  Widget _buildMatchScoreBadge() {
+    if (profile.matchScore <= 0) return const SizedBox.shrink();
+
+    return Positioned(
+      bottom: 100,
+      left: 16,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 6,
+        ),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.primary,
+              AppColors.secondary,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.purpleColor.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.favorite,
+              color: Colors.white,
+              size: 14,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '${profile.matchScore}% Match',
+              style: AppTheme.whiteTextStyle.copyWith(
+                fontSize: 12,
+                fontWeight: AppTheme.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildProfileInfo() {
     return Positioned(
       bottom: 0,
@@ -182,15 +256,21 @@ class ProfileCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildNameAndLocation(),
-            const SizedBox(height: 12),
-            Text(
-              profile.bio,
-              style: AppTheme.whiteTextStyle.copyWith(
-                fontSize: 14,
-                height: 1.4,
+            const SizedBox(height: 8),
+            _buildOccupation(),
+            if (profile.bio.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                profile.bio,
+                style: AppTheme.whiteTextStyle.copyWith(
+                  fontSize: 14,
+                  height: 1.4,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-            if (profile.interests.isNotEmpty) ...[
+            ],
+            if (profile.interests != null && profile.interests!.isNotEmpty) ...[
               const SizedBox(height: 12),
               _buildInterestTags(),
             ],
@@ -235,7 +315,7 @@ class ProfileCard extends StatelessWidget {
         const SizedBox(width: 4),
         Flexible(
           child: Text(
-            profile.location,
+            profile.distanceText,
             style: AppTheme.whiteTextStyle.copyWith(
               fontSize: 12,
               fontWeight: AppTheme.medium,
@@ -247,11 +327,35 @@ class ProfileCard extends StatelessWidget {
     );
   }
 
+  Widget _buildOccupation() {
+    if (profile.occupation.isEmpty) return const SizedBox.shrink();
+
+    return Row(
+      children: [
+        Icon(
+          Icons.work_outline,
+          color: Colors.white.withOpacity(0.8),
+          size: 14,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          profile.occupation,
+          style: AppTheme.whiteTextStyle.copyWith(
+            fontSize: 12,
+            fontWeight: AppTheme.medium,
+            color: Colors.white.withOpacity(0.8),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildInterestTags() {
     return Wrap(
       spacing: 8,
       runSpacing: 6,
-      children: profile.interests
+      children: profile.interests!
+          .where((interest) => interest.isNotEmpty)
           .map((interest) => Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,

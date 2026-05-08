@@ -136,7 +136,7 @@ class _ProfilePageState extends State<ProfilePage> {
       backgroundColor: AppColors.backgroundColor,
       body: _isLoading
           ? const Center(
-              child: CircularProgressIndicator(color: AppColors.purpleColor),
+              child: CircularProgressIndicator(color: AppColors.primary),
             )
           : _error != null
               ? Center(
@@ -152,7 +152,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ElevatedButton(
                         onPressed: _loadUserData,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.purpleColor,
+                          backgroundColor: AppColors.primary,
                         ),
                         child: const Text('Retry'),
                       ),
@@ -297,15 +297,14 @@ class _ProfilePageState extends State<ProfilePage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.insights,
-                  color: AppColors.purpleColor, size: 20),
+              const Icon(Icons.insights, color: AppColors.primary, size: 20),
               const SizedBox(width: 8),
               Text(
                 'View Insights',
                 style: AppTheme.blackTextStyle.copyWith(
                   fontWeight: AppTheme.bold,
                   fontSize: 14,
-                  color: AppColors.purpleColor,
+                  color: AppColors.primary,
                 ),
               ),
             ],
@@ -361,7 +360,7 @@ class _ProfilePageState extends State<ProfilePage> {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: LinearGradient(
-              colors: [AppColors.purpleColor, Colors.blueAccent.shade100],
+              colors: [AppColors.primary, Colors.blueAccent.shade100],
             ),
           ),
           child: CircleAvatar(
@@ -489,7 +488,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: Container(
                   height: 50,
                   decoration: BoxDecoration(
-                    color: AppColors.purpleColor,
+                    color: AppColors.primary,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Center(
@@ -549,7 +548,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     gradient: _isFollowing
                         ? null
                         : const LinearGradient(
-                            colors: [AppColors.purpleColor, Colors.blue],
+                            colors: [AppColors.primary, Colors.blue],
                           ),
                     border: _isFollowing
                         ? Border.all(
@@ -591,7 +590,7 @@ class _ProfilePageState extends State<ProfilePage> {
       pinned: true,
       delegate: _SliverAppBarDelegate(
         TabBar(
-          indicatorColor: AppColors.purpleColor,
+          indicatorColor: AppColors.primary,
           indicatorWeight: 3,
           labelColor: Colors.black,
           unselectedLabelColor: AppColors.greyColor,
@@ -621,7 +620,7 @@ class _ProfilePageState extends State<ProfilePage> {
         builder: (context, state) {
           if (state is GalleryProfileLoading) {
             return const Center(
-              child: CircularProgressIndicator(color: AppColors.purpleColor),
+              child: CircularProgressIndicator(color: AppColors.primary),
             );
           }
 
@@ -790,7 +789,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           feedPosts: _getUserPostsFromFeed());
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.purpleColor,
+                      backgroundColor: AppColors.primary,
                     ),
                     child: const Text('Retry'),
                   ),
@@ -800,7 +799,7 @@ class _ProfilePageState extends State<ProfilePage> {
           }
 
           return const Center(
-            child: CircularProgressIndicator(color: AppColors.purpleColor),
+            child: CircularProgressIndicator(color: AppColors.primary),
           );
         },
       ),
@@ -817,7 +816,7 @@ class _ProfilePageState extends State<ProfilePage> {
         builder: (context, state) {
           if (state is GalleryProfileLoading) {
             return const Center(
-              child: CircularProgressIndicator(color: AppColors.purpleColor),
+              child: CircularProgressIndicator(color: AppColors.primary),
             );
           }
 
@@ -959,7 +958,7 @@ class _ProfilePageState extends State<ProfilePage> {
           }
 
           return const Center(
-            child: CircularProgressIndicator(color: AppColors.purpleColor),
+            child: CircularProgressIndicator(color: AppColors.primary),
           );
         },
       ),

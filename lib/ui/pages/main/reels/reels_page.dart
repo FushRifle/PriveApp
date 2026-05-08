@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:Prive/app/resources/constant/named_routes.dart';
 import 'package:Prive/data/models/reel_model.dart';
+import 'package:Prive/data/services/reel/reel_service.dart';
+import 'package:Prive/data/services/user/user_service.dart';
 import 'package:Prive/ui/widgets/reels/reel_item.dart';
 
 class ReelsPage extends StatefulWidget {
@@ -12,68 +14,150 @@ class ReelsPage extends StatefulWidget {
 }
 
 class _ReelsPageState extends State<ReelsPage> {
+  final ReelService _reelService = ReelService();
+  final UserService _userService = UserService();
+
   late PageController _pageController;
   int _currentIndex = 0;
 
-  final List<ReelModel> _reels = [
-    ReelModel(
-      username: 'sophie.anderson',
-      userProfile: 'assets/profiles/profile_1.jpeg',
-      videoUrl: '',
-      caption: 'Beautiful sunset at the beach 🌅',
-      hashtags: ['sunset', 'beach', 'nature'],
-      audio: 'Original Sound',
-      audioArtist: 'sophie.anderson',
-      like: '12.4K',
-      comment: '234',
-      share: '567',
-      isVerified: true,
-    ),
-    ReelModel(
-      username: 'marcus.fitness',
-      userProfile: 'assets/profiles/profile_2.jpeg',
-      videoUrl: '',
-      caption: 'Morning workout routine 💪',
-      hashtags: ['fitness', 'workout', 'motivation'],
-      audio: 'Eye of the Tiger',
-      audioArtist: 'Survivor',
-      like: '45.2K',
-      comment: '1.2K',
-      share: '3.4K',
-      isVerified: false,
-    ),
-    ReelModel(
-      username: 'elena.travels',
-      userProfile: 'assets/profiles/profile_3.jpeg',
-      videoUrl: '',
-      caption: 'Exploring hidden gems in Bali 🏝️',
-      hashtags: ['travel', 'bali', 'adventure'],
-      audio: 'Paradise',
-      audioArtist: 'Coldplay',
-      like: '89.1K',
-      comment: '2.5K',
-      share: '8.9K',
-      isVerified: true,
-    ),
-    ReelModel(
-      username: 'alex.tech',
-      userProfile: 'assets/profiles/profile_4.jpeg',
-      videoUrl: '',
-      caption: 'New gadget unboxing! 📱',
-      hashtags: ['tech', 'unboxing', 'gadgets'],
-      audio: 'Tech Vibes',
-      audioArtist: 'alex.tech',
-      like: '23.7K',
-      comment: '567',
-      share: '1.2K',
-      isVerified: false,
-    ),
-  ];
+  List<ReelModel> _reels = [];
+  bool _isLoading = true;
+  int _currentPage = 1;
+  bool _hasMore = true;
+  String _errorMessage = '';
+  int _currentUserId = 0;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
+    _loadCurrentUserAndReels();
+  }
+
+  Future<void> _loadCurrentUserAndReels() async {
+    await _getCurrentUserId();
+    await _loadReels();
+  }
+
+  Future<void> _getCurrentUserId() async {
+    try {
+      final userData = await _userService.getCurrentUser();
+      final userId = userData['id'];
+      setState(() {
+        _currentUserId = userId != null ? int.parse(userId.toString()) : 0;
+      });
+      debugPrint('Current user ID: $_currentUserId');
+    } catch (e) {
+      debugPrint('Error getting current user: $e');
+      setState(() {
+        _currentUserId = 0;
+      });
+    }
+  }
+
+  Future<void> _loadReels({bool refresh = false}) async {
+    if (refresh) {
+      _currentPage = 1;
+      _hasMore = true;
+      setState(() {
+        _isLoading = true;
+        _errorMessage = '';
+      });
+    }
+
+    try {
+      final newReelsData = await _reelService.getReels(page: _currentPage);
+
+      final List<ReelModel> newReels =
+          newReelsData.map((data) => ReelModel.fromJson(data)).toList();
+
+      setState(() {
+        if (refresh || _currentPage == 1) {
+          _reels = newReels;
+          _currentIndex = 0;
+        } else {
+          _reels.addAll(newReels);
+        }
+        _hasMore = newReels.isNotEmpty;
+        _isLoading = false;
+      });
+
+      if (newReels.isNotEmpty) {
+        _currentPage++;
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading reels: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _likeReel(String reelId, int index) async {
+    try {
+      final response = await _reelService.likeReel(reelId);
+      setState(() {
+        final currentLikes = _reels[index].likeCount;
+        _reels[index] = _reels[index].copyWith(
+          likeCount: currentLikes + 1,
+          isLiked: true,
+        );
+      });
+    } catch (e) {
+      debugPrint('Error liking reel: $e');
+    }
+  }
+
+  Future<void> _unlikeReel(String reelId, int index) async {
+    try {
+      final response = await _reelService.unlikeReel(reelId);
+      setState(() {
+        final currentLikes = _reels[index].likeCount;
+        _reels[index] = _reels[index].copyWith(
+          likeCount: currentLikes - 1,
+          isLiked: false,
+        );
+      });
+    } catch (e) {
+      debugPrint('Error unliking reel: $e');
+    }
+  }
+
+  Future<void> _shareReel(String reelId) async {
+    try {
+      await _reelService.shareReel(reelId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Reel shared successfully!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error sharing reel: $e');
+    }
+  }
+
+  Future<void> _refreshReels() async {
+    await _loadReels(refresh: true);
+  }
+
+  void _loadMoreReels() {
+    if (_hasMore && !_isLoading) {
+      _loadReels();
+    }
   }
 
   @override
@@ -95,31 +179,102 @@ class _ReelsPageState extends State<ReelsPage> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          PageView.builder(
-            controller: _pageController,
-            scrollDirection: Axis.vertical,
-            itemCount: _reels.length,
-            onPageChanged: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
-            },
-            itemBuilder: (context, index) {
-              return ReelItem(
-                reel: _reels[index],
-                isActive: _currentIndex == index,
-                onNextReel: () {
-                  if (index < _reels.length - 1) {
-                    _pageController.nextPage(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
+          if (_isLoading && _reels.isEmpty)
+            const Center(
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2,
+              ),
+            )
+          else if (_errorMessage.isNotEmpty && _reels.isEmpty)
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    color: Colors.white54,
+                    size: 64,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    _errorMessage,
+                    style: const TextStyle(color: Colors.white54),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _refreshReels,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black,
+                    ),
+                    child: const Text('Try Again'),
+                  ),
+                ],
+              ),
+            )
+          else
+            PageView.builder(
+              controller: _pageController,
+              scrollDirection: Axis.vertical,
+              itemCount: _reels.length + 1,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentIndex = index;
+                });
+
+                if (index >= _reels.length - 2) {
+                  _loadMoreReels();
+                }
+              },
+              itemBuilder: (context, index) {
+                if (index == _reels.length) {
+                  if (_hasMore) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    );
+                  } else {
+                    return const Center(
+                      child: Text(
+                        'No more reels',
+                        style: TextStyle(color: Colors.white54),
+                      ),
                     );
                   }
-                },
-              );
-            },
-          ),
-          // Header - Back button and Camera on same line
+                }
+
+                return RefreshIndicator(
+                  onRefresh: _refreshReels,
+                  color: Colors.white,
+                  child: ReelItem(
+                    reel: _reels[index],
+                    isActive: _currentIndex == index,
+                    onNextReel: () {
+                      if (index < _reels.length - 1) {
+                        _pageController.nextPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      }
+                    },
+                    onLike: () {
+                      if (_reels[index].isLiked) {
+                        _unlikeReel(_reels[index].id, index);
+                      } else {
+                        _likeReel(_reels[index].id, index);
+                      }
+                    },
+                    onShare: () => _shareReel(_reels[index].id),
+                    currentUserId: _currentUserId,
+                  ),
+                );
+              },
+            ),
+          // Header - Back button and Camera
           Positioned(
             top: MediaQuery.of(context).padding.top + 10,
             left: 16,
@@ -127,7 +282,6 @@ class _ReelsPageState extends State<ReelsPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Back button
                 GestureDetector(
                   onTap: () {
                     HapticFeedback.lightImpact();
@@ -150,11 +304,16 @@ class _ReelsPageState extends State<ReelsPage> {
                     ),
                   ),
                 ),
-                // Camera button
                 GestureDetector(
                   onTap: () {
                     HapticFeedback.lightImpact();
                     // TODO: Open camera for reel
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Camera feature coming soon'),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
                   },
                   child: Container(
                     width: 40,

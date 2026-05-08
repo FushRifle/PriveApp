@@ -10,6 +10,7 @@ import 'package:Prive/ui/widgets/explore/swipe_cards_stack.dart';
 import 'package:Prive/ui/widgets/explore/filter_bottom_sheet.dart';
 import 'package:Prive/ui/widgets/explore/loading_shimmer.dart';
 import 'package:Prive/ui/widgets/explore/match_dialog.dart';
+import 'package:Prive/ui/widgets/explore/action_buttons.dart';
 
 enum LoadingState { initial, loading, loaded, empty, error }
 
@@ -42,8 +43,7 @@ class _DiscoverPageState extends State<DiscoverPage>
 
   // Match stats
   int _totalLikes = 0;
-  int _totalMatches = 0;
-  bool _isLoadingStats = true;
+  bool _hasMoreProfiles = true;
 
   // Animation controllers
   late AnimationController _swipeController;
@@ -108,7 +108,7 @@ class _DiscoverPageState extends State<DiscoverPage>
     });
 
     try {
-      final response = await _exploreService.getExploreProfiles(
+      final result = await _exploreService.getExploreProfiles(
         page: _currentFilters['page'],
         filter: _currentFilters['filter'],
         minAge: _currentFilters['minAge'],
@@ -118,9 +118,8 @@ class _DiscoverPageState extends State<DiscoverPage>
         sortBy: _currentFilters['sortBy'],
       );
 
-      final profilesData = response['profiles'] as List? ?? [];
-      final newProfiles =
-          profilesData.map((json) => ProfileModel.fromJson(json)).toList();
+      final newProfiles = result['profiles'] as List<ProfileModel>;
+      final hasMore = result['hasMore'] as bool;
 
       setState(() {
         if (_currentFilters['page'] == 1) {
@@ -131,6 +130,7 @@ class _DiscoverPageState extends State<DiscoverPage>
         }
         _loadingState =
             newProfiles.isEmpty ? LoadingState.empty : LoadingState.loaded;
+        _hasMoreProfiles = hasMore;
       });
     } catch (e) {
       setState(() {
@@ -155,14 +155,10 @@ class _DiscoverPageState extends State<DiscoverPage>
       final stats = await _exploreService.getStats();
       setState(() {
         _totalLikes = stats['totalLikes'] ?? 0;
-        _totalMatches = stats['totalMatches'] ?? 0;
-        _isLoadingStats = false;
       });
     } catch (e) {
       debugPrint('Error loading stats: $e');
-      setState(() {
-        _isLoadingStats = false;
-      });
+      setState(() {});
     }
   }
 
@@ -229,8 +225,8 @@ class _DiscoverPageState extends State<DiscoverPage>
     });
     _swipeController.reset();
 
-    // Load more profiles if needed
     if (_currentIndex >= _profiles.length - 2 &&
+        _hasMoreProfiles &&
         _loadingState != LoadingState.loading) {
       _currentFilters['page'] = (_currentFilters['page'] as int) + 1;
       _loadProfiles();
@@ -286,7 +282,6 @@ class _DiscoverPageState extends State<DiscoverPage>
   }
 
   void _navigateToChat(ProfileModel profile) {
-    // Navigate to chat page with this profile
     debugPrint('Navigate to chat with: ${profile.name}');
     // TODO: Implement navigation
   }
@@ -331,31 +326,127 @@ class _DiscoverPageState extends State<DiscoverPage>
     );
 
     return Scaffold(
-      body: Stack(
-        children: [
-          // Main content
-          RefreshIndicator(
-            onRefresh: () async => _refreshProfiles(),
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 26),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            // Main content
+            RefreshIndicator(
+              onRefresh: () async => _refreshProfiles(),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.zero,
                 child: Column(
                   children: [
                     const SizedBox(height: 12),
                     DiscoverHeader(
                       remainingCount: _profiles.length - _currentIndex,
-                      totalLikes: _totalLikes,
-                      totalMatches: _totalMatches,
-                      isLoadingStats: _isLoadingStats,
                       onFilterTap: _showFilters,
                     ),
                     const SizedBox(height: 24),
                     _buildSwipeContent(),
+                    const SizedBox(height: 24),
+                    if (_loadingState == LoadingState.loaded &&
+                        _currentIndex < _profiles.length)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: ActionButtons(
+                          onSkip: () => _triggerSwipe(SwipeDirection.left),
+                          onSuperLike: () => _triggerSwipe(SwipeDirection.up),
+                          onLike: () => _triggerSwipe(SwipeDirection.right),
+                          onMessage: () =>
+                              _navigateToChat(_profiles[_currentIndex]),
+                        ),
+                      ),
+                    const SizedBox(height: 40),
                   ],
                 ),
               ),
+            ),
+            // Swipe feedback overlay
+            if (_lastSwipeAction != SwipeActionType.none)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Center(
+                    child: AnimatedBuilder(
+                      animation: _feedbackAnimationController,
+                      builder: (context, child) {
+                        final opacity =
+                            1.0 - _feedbackAnimationController.value;
+                        final scale =
+                            0.5 + (_feedbackAnimationController.value * 0.5);
+
+                        return Opacity(
+                          opacity: opacity * 0.8,
+                          child: Transform.scale(
+                            scale: scale,
+                            child: _buildFeedbackContent(),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeedbackContent() {
+    late IconData icon;
+    late Color color;
+    late String text;
+
+    switch (_lastSwipeAction) {
+      case SwipeActionType.like:
+        icon = Icons.favorite;
+        color = Colors.green;
+        text = 'LIKED!';
+        break;
+      case SwipeActionType.pass:
+        icon = Icons.close;
+        color = Colors.red;
+        text = 'PASSED';
+        break;
+      case SwipeActionType.superLike:
+        icon = Icons.star;
+        color = Colors.blue;
+        text = 'SUPER LIKE!';
+        break;
+      case SwipeActionType.none:
+        return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(40),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.5),
+            blurRadius: 20,
+            spreadRadius: 5,
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            color: Colors.white,
+            size: 32,
+          ),
+          const SizedBox(width: 12),
+          Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1,
             ),
           ),
         ],
@@ -367,7 +458,10 @@ class _DiscoverPageState extends State<DiscoverPage>
     switch (_loadingState) {
       case LoadingState.initial:
       case LoadingState.loading:
-        return const LoadingShimmer();
+        return const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: LoadingShimmer(),
+        );
 
       case LoadingState.empty:
         return NoMoreProfiles(
@@ -409,16 +503,19 @@ class _DiscoverPageState extends State<DiscoverPage>
           );
         }
 
-        return GestureDetector(
-          onPanStart: _onPanStart,
-          onPanUpdate: _onPanUpdate,
-          onPanEnd: _onPanEnd,
-          child: SwipeCardsStack(
-            profiles: _profiles,
-            currentIndex: _currentIndex,
-            swipeProgress: _swipeProgress,
-            verticalSwipeProgress: _verticalSwipeProgress,
-            swipeDirection: _swipeDirection,
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: GestureDetector(
+            onPanStart: _onPanStart,
+            onPanUpdate: _onPanUpdate,
+            onPanEnd: _onPanEnd,
+            child: SwipeCardsStack(
+              profiles: _profiles,
+              currentIndex: _currentIndex,
+              swipeProgress: _swipeProgress,
+              verticalSwipeProgress: _verticalSwipeProgress,
+              swipeDirection: _swipeDirection,
+            ),
           ),
         );
     }
@@ -526,5 +623,4 @@ class _DiscoverPageState extends State<DiscoverPage>
   }
 }
 
-// New enum for tracking swipe actions
 enum SwipeActionType { like, pass, superLike, none }

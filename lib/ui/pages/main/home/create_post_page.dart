@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:html' as html;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:typed_data';
 import 'package:Prive/data/services/upload/upload_service.dart';
@@ -415,19 +414,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
     if (media.type == MediaType.video) {
       _videoController?.dispose();
 
-      if (kIsWeb && media.fileBytes != null) {
-        // For web - create video from bytes
-        final blob = html.Blob([media.fileBytes!], 'video/mp4');
-        final url = html.Url.createObjectUrl(blob);
-        _videoController = VideoPlayerController.network(url)
-          ..initialize().then((_) {
-            setState(() {
-              _isVideoInitialized = true;
-            });
-          }).catchError((error) {
-            debugPrint('Error initializing video: $error');
-          });
-      } else if (media.file != null) {
+      if (media.file != null) {
         // For mobile
         _videoController = VideoPlayerController.file(media.file!)
           ..initialize().then((_) {
@@ -475,7 +462,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.purpleColor),
+              borderSide: BorderSide(color: AppColors.primary),
             ),
             contentPadding: const EdgeInsets.all(16),
           ),
@@ -773,13 +760,9 @@ class _CreatePostPageState extends State<CreatePostPage> {
       }
 
       // Get media URLs for the post
-      final mediaUrls = uploadedMedia.map((media) => media['url']!).toList();
+      uploadedMedia.map((media) => media['url']!).toList();
       final imageUrl = uploadedMedia.first['url']; // First media as cover
 
-      // Check if it's a video post
-      final isVideo = uploadedMedia.any((media) => media['type'] == 'video');
-
-      // Create post using FeedHook
       final success = await _feedHook.createPost(
         content: content,
         imageUrl: imageUrl,

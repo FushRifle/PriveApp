@@ -7,7 +7,7 @@ class ReelService {
   // Get reels with pagination
   Future<List<dynamic>> getReels({int page = 1}) async {
     try {
-      final response = await _api.get('/reels', queryParameters: {
+      final response = await _api.get('/api/reels', queryParameters: {
         'page': page,
       });
       return response.data is List ? response.data : [];
@@ -19,7 +19,7 @@ class ReelService {
   // Create reel
   Future<Map<String, dynamic>> createReel(Map<String, dynamic> data) async {
     try {
-      final response = await _api.post('/reels', data: data);
+      final response = await _api.post('/api/reels', data: data);
       return response.data;
     } on DioException catch (e) {
       throw e.response?.data['message'] ?? 'Failed to create reel';
@@ -29,7 +29,7 @@ class ReelService {
   // Like reel
   Future<Map<String, dynamic>> likeReel(String reelId) async {
     try {
-      final response = await _api.post('/reels/$reelId/like');
+      final response = await _api.post('/api/reels/$reelId/like');
       return response.data;
     } on DioException catch (e) {
       throw e.response?.data['message'] ?? 'Failed to like reel';
@@ -39,7 +39,7 @@ class ReelService {
   // Unlike reel
   Future<Map<String, dynamic>> unlikeReel(String reelId) async {
     try {
-      final response = await _api.delete('/reels/$reelId/like');
+      final response = await _api.delete('/api/reels/$reelId/like');
       return response.data;
     } on DioException catch (e) {
       throw e.response?.data['message'] ?? 'Failed to unlike reel';
@@ -49,7 +49,7 @@ class ReelService {
   // Share reel
   Future<Map<String, dynamic>> shareReel(String reelId) async {
     try {
-      final response = await _api.post('/reels/$reelId/share');
+      final response = await _api.post('/api/reels/$reelId/share');
       return response.data;
     } on DioException catch (e) {
       throw e.response?.data['message'] ?? 'Failed to share reel';
@@ -60,7 +60,7 @@ class ReelService {
   Future<List<dynamic>> getReelComments(String reelId, {int page = 1}) async {
     try {
       final response = await _api.get(
-        '/reels/$reelId/comments',
+        '/api/reels/$reelId/comments',
         queryParameters: {'page': page},
       );
       return response.data is List ? response.data : [];
@@ -76,7 +76,7 @@ class ReelService {
   }) async {
     try {
       final response = await _api.post(
-        '/reels/$reelId/comments',
+        '/api/reels/$reelId/comments',
         data: data,
       );
       return response.data;

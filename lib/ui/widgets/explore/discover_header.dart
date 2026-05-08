@@ -1,56 +1,90 @@
 import 'package:flutter/material.dart';
 import 'package:Prive/app/configs/colors.dart';
-import 'package:Prive/app/configs/theme.dart';
 
 class DiscoverHeader extends StatelessWidget {
   final int remainingCount;
+  final VoidCallback onFilterTap;
 
   const DiscoverHeader({
     super.key,
     required this.remainingCount,
-    required int totalLikes,
-    required int totalMatches,
-    required bool isLoadingStats,
-    required void Function() onFilterTap,
+    required this.onFilterTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          child: Icon(Icons.explore, color: AppColors.secondary, size: 28),
-        ),
-        const SizedBox(width: 12),
-        Text(
-          'Discover People',
-          style: AppTheme.blackTextStyle.copyWith(
-            fontWeight: AppTheme.bold,
-            fontSize: 16,
-          ),
-        ),
-        const Spacer(),
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          child: Container(
-            key: ValueKey(remainingCount),
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          // Brand section
+          Container(
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.secondary.withOpacity(0.1),
+              gradient: const LinearGradient(
+                colors: [AppColors.purpleColor, AppColors.primary],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.explore,
+              color: Colors.white,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Text(
+            'Discover',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1A1A2E),
+            ),
+          ),
+          const Spacer(),
+          // Remaining count
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.purpleColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               '$remainingCount left',
-              style: AppTheme.blackTextStyle.copyWith(
-                color: AppColors.blackTextColor,
-                fontWeight: AppTheme.bold,
-                fontSize: 14,
+              style: TextStyle(
+                color: AppColors.purpleColor,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
               ),
             ),
           ),
-        ),
-      ],
+          const SizedBox(width: 12),
+          // Filter button
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: IconButton(
+              onPressed: onFilterTap,
+              icon: const Icon(Icons.filter_list),
+              color: AppColors.purpleColor,
+              iconSize: 20,
+              padding: const EdgeInsets.all(8),
+              constraints: const BoxConstraints(),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

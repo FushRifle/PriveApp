@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../api_service.dart';
+import 'package:Prive/data/models/profile_model.dart';
 
 class ExploreService {
   final ApiService _api = ApiService();
@@ -25,8 +26,17 @@ class ExploreService {
       if (verifiedOnly == true) queryParams['verifiedOnly'] = true;
       if (sortBy != null) queryParams['sortBy'] = sortBy;
 
-      final response = await _api.get('/explore', queryParameters: queryParams);
-      return response.data;
+      final response =
+          await _api.get('/api/explore', queryParameters: queryParams);
+      return {
+        'profiles': (response.data['profiles'] as List?)
+                ?.map((json) => ProfileModel.fromJson(json))
+                .toList() ??
+            [],
+        'hasMore': response.data['hasMore'] ?? false,
+        'page': response.data['page'] ?? 1,
+        'total': response.data['total'] ?? 0,
+      };
     } on DioException catch (e) {
       throw e.response?.data['message'] ?? 'Failed to get profiles';
     }
@@ -35,7 +45,7 @@ class ExploreService {
   // Get filters
   Future<List<dynamic>> getFilters() async {
     try {
-      final response = await _api.get('/explore/filters');
+      final response = await _api.get('/api/explore/filters');
       return response.data ?? [];
     } on DioException catch (e) {
       throw e.response?.data['message'] ?? 'Failed to get filters';
@@ -45,7 +55,7 @@ class ExploreService {
   // Swipe
   Future<Map<String, dynamic>> swipe(int profileId, String action) async {
     try {
-      final response = await _api.post('/explore/swipe', data: {
+      final response = await _api.post('/api/explore/swipe', data: {
         'profileId': profileId,
         'action': action,
       });
@@ -58,7 +68,7 @@ class ExploreService {
   // Get matches
   Future<Map<String, dynamic>> getMatches({int page = 1}) async {
     try {
-      final response = await _api.get('/explore/matches', queryParameters: {
+      final response = await _api.get('/api/explore/matches', queryParameters: {
         'page': page,
       });
       return response.data;
@@ -70,7 +80,7 @@ class ExploreService {
   // Get liked profiles
   Future<Map<String, dynamic>> getLikedProfiles({int page = 1}) async {
     try {
-      final response = await _api.get('/explore/likes', queryParameters: {
+      final response = await _api.get('/api/explore/likes', queryParameters: {
         'page': page,
       });
       return response.data;
@@ -82,7 +92,8 @@ class ExploreService {
   // Get liked by profiles
   Future<Map<String, dynamic>> getLikedByProfiles({int page = 1}) async {
     try {
-      final response = await _api.get('/explore/liked-by', queryParameters: {
+      final response =
+          await _api.get('/api/explore/liked-by', queryParameters: {
         'page': page,
       });
       return response.data;
@@ -94,7 +105,7 @@ class ExploreService {
   // Get swipe stats
   Future<Map<String, dynamic>> getStats() async {
     try {
-      final response = await _api.get('/explore/stats');
+      final response = await _api.get('/api/explore/stats');
       return response.data;
     } on DioException catch (e) {
       throw e.response?.data['message'] ?? 'Failed to get stats';
