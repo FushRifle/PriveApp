@@ -8,6 +8,7 @@ class NoMoreProfiles extends StatelessWidget {
   const NoMoreProfiles({
     super.key,
     required this.onRefresh,
+    required String message,
   });
 
   @override

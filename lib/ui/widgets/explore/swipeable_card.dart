@@ -4,7 +4,7 @@ import 'package:Prive/data/models/profile_model.dart';
 import 'package:Prive/ui/widgets/explore/profile_card.dart';
 
 class SwipeableCard extends StatelessWidget {
-  final ProfileModel profile; // Changed from Map to ProfileModel
+  final ProfileModel profile;
   final double likeOpacity;
   final double dislikeOpacity;
   final double superLikeOpacity;

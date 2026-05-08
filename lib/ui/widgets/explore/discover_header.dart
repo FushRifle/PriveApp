@@ -8,6 +8,10 @@ class DiscoverHeader extends StatelessWidget {
   const DiscoverHeader({
     super.key,
     required this.remainingCount,
+    required int totalLikes,
+    required int totalMatches,
+    required bool isLoadingStats,
+    required void Function() onFilterTap,
   });
 
   @override

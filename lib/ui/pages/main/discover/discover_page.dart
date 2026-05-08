@@ -1,19 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart';
 import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
 import 'package:Prive/data/models/profile_model.dart';
 import 'package:Prive/data/services/discover/explore_service.dart';
-
-import 'package:Prive/ui/widgets/explore/action_buttons.dart';
 import 'package:Prive/ui/widgets/explore/discover_header.dart';
 import 'package:Prive/ui/widgets/explore/no_more_profiles.dart';
 import 'package:Prive/ui/widgets/explore/swipe_cards_stack.dart';
-import 'package:Prive/ui/widgets/discover/filter_bottom_sheet.dart';
-import 'package:Prive/ui/widgets/discover/loading_shimmer.dart';
-import 'package:Prive/ui/widgets/discover/match_dialog.dart';
-import 'package:Prive/ui/widgets/discover/swipe_feedback_overlay.dart';
+import 'package:Prive/ui/widgets/explore/filter_bottom_sheet.dart';
+import 'package:Prive/ui/widgets/explore/loading_shimmer.dart';
+import 'package:Prive/ui/widgets/explore/match_dialog.dart';
 
 enum LoadingState { initial, loading, loaded, empty, error }
 
@@ -362,13 +358,6 @@ class _DiscoverPageState extends State<DiscoverPage>
               ),
             ),
           ),
-
-          // Swipe feedback overlay
-          if (_lastSwipeAction != SwipeActionType.none)
-            SwipeFeedbackOverlay(
-              action: _lastSwipeAction,
-              animation: _feedbackAnimationController,
-            ),
         ],
       ),
     );
