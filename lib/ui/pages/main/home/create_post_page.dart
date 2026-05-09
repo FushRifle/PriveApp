@@ -7,7 +7,7 @@ import 'package:Prive/app/configs/theme.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import 'package:Prive/data/hooks/home/feed_hook.dart';
-import 'package:Prive/data/services/upload/cloudinary_service.dart';
+import 'package:Prive/core/cloudinary_service.dart';
 
 class CreatePostPage extends StatefulWidget {
   const CreatePostPage({super.key});
@@ -53,9 +53,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
       media.dispose();
     }
   }
-
-  bool get _hasContent =>
-      _captionController.text.isNotEmpty || _mediaItems.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -484,7 +481,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
           Switch(
             value: _isPrivate,
             onChanged: (value) => setState(() => _isPrivate = value),
-            activeColor: AppColors.primary,
+            activeThumbColor: AppColors.primary,
           ),
         ],
       ),
@@ -622,13 +619,15 @@ class _CreatePostPageState extends State<CreatePostPage> {
       _videoController = VideoPlayerController.file(file)
         ..initialize().then((_) {
           if (mounted) setState(() {});
+          // ignore: invalid_return_type_for_catch_error
         }).catchError((e) => debugPrint('Video init error: $e'));
     }
   }
 
   void _toggleVideoPlayback() {
-    if (_videoController == null || !_videoController!.value.isInitialized)
+    if (_videoController == null || !_videoController!.value.isInitialized) {
       return;
+    }
     setState(() {
       if (_videoController!.value.isPlaying) {
         _videoController!.pause();
@@ -686,9 +685,9 @@ class _CreatePostPageState extends State<CreatePostPage> {
       String? url;
 
       if (media.type == MediaType.image) {
-        url = await _cloudinaryService.uploadImage(file, 'feeds');
+        url = await _cloudinaryService.uploadImage(file);
       } else if (media.type == MediaType.video) {
-        url = await _cloudinaryService.uploadVideo(file, 'feeds');
+        url = await _cloudinaryService.uploadVideo(file);
       }
 
       if (url != null && url.isNotEmpty) {

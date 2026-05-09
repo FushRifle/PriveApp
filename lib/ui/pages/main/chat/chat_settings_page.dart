@@ -116,7 +116,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
                   onChanged: (value) {
                     setState(() => _isMuted = value);
                   },
-                  activeColor: AppColors.primary,
+                  activeThumbColor: AppColors.primary,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                 ),
                 if (_isMuted) ...[
@@ -156,7 +156,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
                   onChanged: (value) {
                     setState(() => _isPinned = value);
                   },
-                  activeColor: AppColors.primary,
+                  activeThumbColor: AppColors.primary,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                 ),
                 _buildDivider(),
@@ -426,8 +426,8 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
               ...sizes.map((s) => ListTile(
                     title: Text(s,
                         style: AppTheme.blackTextStyle.copyWith(fontSize: 16)),
-                    trailing: const Icon(Icons.chevron_right,
-                        color: AppColors.greyColor),
+                    trailing:
+                        Icon(Icons.chevron_right, color: AppColors.greyColor),
                     onTap: () {
                       Navigator.pop(context);
                       // TODO: Change text size

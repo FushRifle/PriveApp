@@ -161,8 +161,7 @@ class _FriendsListPageState extends State<FriendsListPage>
                 decoration: InputDecoration(
                   hintText: 'Search friends...',
                   hintStyle: AppTheme.greyTextStyle.copyWith(fontSize: 14),
-                  prefixIcon:
-                      const Icon(Icons.search, color: AppColors.greyColor),
+                  prefixIcon: Icon(Icons.search, color: AppColors.greyColor),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,

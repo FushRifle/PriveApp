@@ -13,7 +13,7 @@ class StatusModel {
   final String? textAlign;
   final double? fontSize;
   final int statusCount;
-  final String content; // Add content field from API
+  final String content;
 
   const StatusModel({
     this.id = 0,

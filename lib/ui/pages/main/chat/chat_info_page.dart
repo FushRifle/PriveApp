@@ -126,7 +126,7 @@ class ChatInfoPage extends StatelessWidget {
               Container(
                 width: 8,
                 height: 8,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: AppColors.greenColor,
                 ),
@@ -484,8 +484,7 @@ class ChatInfoPage extends StatelessWidget {
         subtitle,
         style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
       ),
-      trailing:
-          const Icon(Icons.chevron_right, color: AppColors.greyColor, size: 20),
+      trailing: Icon(Icons.chevron_right, color: AppColors.greyColor, size: 20),
       onTap: onTap,
       contentPadding: EdgeInsets.zero,
     );

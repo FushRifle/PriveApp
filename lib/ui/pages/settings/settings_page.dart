@@ -6,6 +6,7 @@ import 'package:Prive/app/configs/theme.dart';
 import 'package:Prive/app/resources/constant/named_routes.dart';
 import 'package:Prive/ui/pages/settings/subscribe_page.dart';
 import 'package:Prive/data/services/user/user_service.dart';
+import 'package:Prive/data/services/settings/settings_service.dart';
 import 'package:Prive/data/hooks/auth/auth_hook.dart';
 import 'package:Prive/data/providers/theme_provider.dart';
 
@@ -19,6 +20,7 @@ class SettingsPage extends ConsumerStatefulWidget {
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   final AuthHook _authHook = AuthHook();
   final UserService _userService = UserService();
+  final SettingsService _settingsService = SettingsService();
 
   bool _isLoading = true;
   Map<String, dynamic> _user = {};
@@ -29,11 +31,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _isTwoFactorAuth = false;
   String _selectedLanguage = 'English';
   String _selectedVideoQuality = 'HD 1080p';
+  String _selectedTheme = 'light';
 
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    _loadUserDataAndSettings();
   }
 
   @override
@@ -42,16 +45,30 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     super.dispose();
   }
 
-  Future<void> _loadUserData() async {
+  Future<void> _loadUserDataAndSettings() async {
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
-      final userData = await _userService.getCurrentUser();
+      // Load user data and settings in parallel
+      final results = await Future.wait([
+        _userService.getCurrentUser(),
+        _settingsService.getSettings(),
+      ]);
+
+      final userData = results[0];
+      final settings = results[1];
+
       setState(() {
         _user = userData;
+        _isNotificationsEnabled = settings['notificationsEnabled'] ?? true;
+        _isPrivateAccount = settings['privateAccount'] ?? false;
+        _isTwoFactorAuth = settings['twoFactorAuth'] ?? false;
+        _selectedLanguage = settings['language'] ?? 'English';
+        _selectedVideoQuality = settings['videoQuality'] ?? 'HD 1080p';
+        _selectedTheme = settings['theme'] ?? 'light';
         _isLoading = false;
       });
     } catch (e) {
@@ -59,6 +76,35 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         _error = e.toString();
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _updateSetting({
+    bool? notificationsEnabled,
+    bool? privateAccount,
+    bool? twoFactorAuth,
+    String? language,
+    String? videoQuality,
+    String? theme,
+  }) async {
+    try {
+      await _settingsService.updateSettings(
+        notificationsEnabled: notificationsEnabled,
+        privateAccount: privateAccount,
+        twoFactorAuth: twoFactorAuth,
+        language: language,
+        videoQuality: videoQuality,
+        theme: theme,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update settings: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -72,7 +118,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
 
     final userName = _user['name'] ?? _user['username'] ?? 'User';
-    final userAvatar = _user['avatar'] ?? _user['avatar_url'] ?? '';
+    final userAvatar = _user['avatar'] ?? '';
     final themeMode = ref.watch(themeModeProvider);
     final isDarkMode = themeMode == ThemeMode.dark;
 
@@ -102,7 +148,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
-                        onPressed: _loadUserData,
+                        onPressed: _loadUserDataAndSettings,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                         ),
@@ -117,7 +163,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Profile section with real user data
+                        // Profile section
                         _buildProfileSection(userName, userAvatar),
                         const SizedBox(height: 24),
 
@@ -134,6 +180,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               await ref
                                   .read(themeModeProvider.notifier)
                                   .toggleTheme();
+                              await _updateSetting(
+                                  theme: value ? 'dark' : 'light');
                             },
                           ),
                           _buildDivider(),
@@ -156,10 +204,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             subtitle:
                                 'Only approved followers can see your content',
                             value: _isPrivateAccount,
-                            onChanged: (value) {
+                            onChanged: (value) async {
                               setState(() {
                                 _isPrivateAccount = value;
                               });
+                              await _updateSetting(privateAccount: value);
                             },
                           ),
                           _buildDivider(),
@@ -168,10 +217,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             title: 'Push Notifications',
                             subtitle: 'Receive push notifications',
                             value: _isNotificationsEnabled,
-                            onChanged: (value) {
+                            onChanged: (value) async {
                               setState(() {
                                 _isNotificationsEnabled = value;
                               });
+                              await _updateSetting(notificationsEnabled: value);
                             },
                           ),
                           _buildDivider(),
@@ -235,10 +285,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             title: 'Two-Factor Authentication',
                             subtitle: 'Add an extra layer of security',
                             value: _isTwoFactorAuth,
-                            onChanged: (value) {
+                            onChanged: (value) async {
                               setState(() {
                                 _isTwoFactorAuth = value;
                               });
+                              await _updateSetting(twoFactorAuth: value);
                             },
                           ),
                           _buildDivider(),
@@ -404,11 +455,20 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         fit: BoxFit.cover,
                         image: NetworkImage(userAvatar),
                       )
-                    : const DecorationImage(
-                        fit: BoxFit.cover,
-                        image: AssetImage('assets/images/img_profile.jpeg'),
-                      ),
+                    : null,
               ),
+              child: userAvatar.isEmpty
+                  ? Center(
+                      child: Text(
+                        userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    )
+                  : null,
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -430,10 +490,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ],
               ),
             ),
-            Icon(
-              Icons.chevron_right,
-              color: AppColors.greyColor,
-            ),
+            Icon(Icons.chevron_right, color: AppColors.greyColor),
           ],
         ),
       ),
@@ -531,7 +588,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
-            top: Radius.circular(20), bottom: Radius.circular(20)),
+          top: Radius.circular(20),
+          bottom: Radius.circular(20),
+        ),
       ),
       builder: (context) {
         final languages = [
@@ -565,22 +624,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              ...languages.map((language) => ListTile(
-                    title: Text(
-                      language,
-                      style: AppTheme.blackTextStyle.copyWith(fontSize: 16),
-                    ),
-                    trailing: _selectedLanguage == language
-                        ? const Icon(Icons.check_circle,
-                            color: AppColors.primary)
-                        : null,
-                    onTap: () {
-                      setState(() {
-                        _selectedLanguage = language;
-                      });
-                      Navigator.pop(context);
-                    },
-                  )),
+              ...languages.map(
+                (language) => ListTile(
+                  title: Text(
+                    language,
+                    style: AppTheme.blackTextStyle.copyWith(fontSize: 16),
+                  ),
+                  trailing: _selectedLanguage == language
+                      ? const Icon(Icons.check_circle, color: AppColors.primary)
+                      : null,
+                  onTap: () async {
+                    setState(() {
+                      _selectedLanguage = language;
+                    });
+                    await _updateSetting(language: language);
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
               const SizedBox(height: 16),
             ],
           ),
@@ -618,22 +679,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              ...qualities.map((quality) => ListTile(
-                    title: Text(
-                      quality,
-                      style: AppTheme.blackTextStyle.copyWith(fontSize: 16),
-                    ),
-                    trailing: _selectedVideoQuality == quality
-                        ? const Icon(Icons.check_circle,
-                            color: AppColors.primary)
-                        : null,
-                    onTap: () {
-                      setState(() {
-                        _selectedVideoQuality = quality;
-                      });
-                      Navigator.pop(context);
-                    },
-                  )),
+              ...qualities.map(
+                (quality) => ListTile(
+                  title: Text(
+                    quality,
+                    style: AppTheme.blackTextStyle.copyWith(fontSize: 16),
+                  ),
+                  trailing: _selectedVideoQuality == quality
+                      ? const Icon(Icons.check_circle, color: AppColors.primary)
+                      : null,
+                  onTap: () async {
+                    setState(() {
+                      _selectedVideoQuality = quality;
+                    });
+                    await _updateSetting(videoQuality: quality);
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
               const SizedBox(height: 16),
             ],
           ),
@@ -652,9 +715,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
           title: Text(
             'Logout',
-            style: AppTheme.blackTextStyle.copyWith(
-              fontWeight: AppTheme.bold,
-            ),
+            style: AppTheme.blackTextStyle.copyWith(fontWeight: AppTheme.bold),
           ),
           content: Text(
             'Are you sure you want to log out?',

@@ -1,9 +1,9 @@
 import 'dart:io';
+import 'package:Prive/core/cloudinary_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:Prive/app/configs/colors.dart';
-import 'package:Prive/data/services/upload/cloudinary_service.dart';
 import 'package:Prive/data/services/home/feed_service.dart';
 import 'package:Prive/data/services/user/user_service.dart';
 
@@ -153,12 +153,12 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                   fontSize: _fontSize,
                   fontWeight: FontWeight.bold,
                   height: 1.4,
-                  color: Colors.white,
+                  color: AppColors.blackTextColor,
                 ),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   border: InputBorder.none,
                   hintText: 'Write your story...',
-                  hintStyle: TextStyle(color: Colors.white54),
+                  hintStyle: TextStyle(color: AppColors.greyTextColor),
                 ),
               ),
             ),
@@ -518,10 +518,8 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
     if (_selectedImageFile == null) return null;
 
     try {
-      final response = await _cloudinaryService.uploadImage(
-        _selectedImageFile!.path as File,
-        'stories',
-      );
+      final response =
+          await _cloudinaryService.uploadImage(_selectedImageFile!);
       return response;
     } catch (e) {
       debugPrint('Upload error: $e');
@@ -544,13 +542,19 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
         if (imageUrl == null) throw Exception('Failed to upload image');
       }
 
+      // Get background color for text-only stories
+      String? backgroundColor;
+      if (!_hasImage && _selectedColor != Colors.transparent) {
+        backgroundColor =
+            '#${_selectedColor.value.toRadixString(16).substring(2)}';
+      }
+
       await _feedService.createStatus(
         text: _hasText ? _textController.text.trim() : '',
         imageUrl: imageUrl,
-        backgroundColor: _hasImage || _selectedColor == Colors.transparent
-            ? null
-            : '#${_selectedColor.value.toRadixString(16).substring(2)}',
+        backgroundColor: backgroundColor,
         textAlign: _textAlign == TextAlign.center ? 'center' : 'left',
+        fontSize: _fontSize,
       );
 
       if (mounted) {

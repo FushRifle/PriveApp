@@ -72,9 +72,9 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
           Expanded(
             child: Container(
               padding: const EdgeInsets.only(top: 30),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: AppColors.backgroundColor,
-                borderRadius: BorderRadius.vertical(
+                borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(30),
                 ),
               ),

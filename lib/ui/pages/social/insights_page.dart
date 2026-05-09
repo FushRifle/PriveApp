@@ -240,7 +240,7 @@ class _InsightsPageState extends State<InsightsPage> {
           Container(
             width: 8,
             height: 8,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.greenColor,
             ),
@@ -899,7 +899,7 @@ class _InsightsPageState extends State<InsightsPage> {
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         children: [
-          const Icon(Icons.location_on, size: 16, color: AppColors.redColor),
+          Icon(Icons.location_on, size: 16, color: AppColors.redColor),
           const SizedBox(width: 8),
           Expanded(
             child: Text(

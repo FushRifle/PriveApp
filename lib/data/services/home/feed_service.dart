@@ -32,9 +32,10 @@ class FeedService {
   // Get feed posts
   Future<Map<String, dynamic>> getPosts({int page = 1}) async {
     try {
-      final response = await _api.get('/api/feed/posts', queryParameters: {
-        'page': page,
-      });
+      final response = await _api.get(
+        '/api/feed/posts',
+        queryParameters: {'page': page},
+      );
 
       print('Posts response status: ${response.statusCode}');
 
@@ -64,9 +65,9 @@ class FeedService {
   }) async {
     try {
       final data = <String, dynamic>{'content': content};
-      if (imageUrl != null) {
+      if (imageUrl != null && imageUrl.isNotEmpty) {
         data['attachments'] = [
-          {'type': 'image', 'url': imageUrl}
+          {'type': 'image', 'url': imageUrl},
         ];
       }
 
@@ -78,49 +79,45 @@ class FeedService {
     }
   }
 
-  // Create status
+  // Create story/status - Updated to match backend
   Future<Map<String, dynamic>> createStatus({
     required String text,
     String? imageUrl,
     String? videoUrl,
     String? backgroundColor,
     String? textAlign,
+    double? fontSize,
   }) async {
     try {
+      final data = <String, dynamic>{};
+
+      // Add content if there's text
+      if (text.isNotEmpty) {
+        data['content'] = text;
+      }
+
+      // Add attachments if any
       List<Map<String, dynamic>> attachments = [];
-
-      if (imageUrl != null) {
-        attachments.add({
-          'type': 'image',
-          'url': imageUrl,
-        });
+      if (imageUrl != null && imageUrl.isNotEmpty) {
+        attachments.add({'type': 'image', 'url': imageUrl});
       }
-
-      if (videoUrl != null) {
-        attachments.add({
-          'type': 'video',
-          'url': videoUrl,
-        });
+      if (videoUrl != null && videoUrl.isNotEmpty) {
+        attachments.add({'type': 'video', 'url': videoUrl});
       }
-
-      final data = <String, dynamic>{
-        'content': text,
-      };
-
       if (attachments.isNotEmpty) {
         data['attachments'] = attachments;
       }
 
-      // Add metadata for stories
-      data['metadata'] = {
-        'backgroundColor': backgroundColor,
-        'textAlign': textAlign,
-        'type': imageUrl != null
-            ? 'image'
-            : videoUrl != null
-                ? 'video'
-                : 'text',
-      };
+      // Add story formatting options
+      if (backgroundColor != null && backgroundColor.isNotEmpty) {
+        data['backgroundColor'] = backgroundColor;
+      }
+      if (textAlign != null && textAlign.isNotEmpty) {
+        data['textAlign'] = textAlign;
+      }
+      if (fontSize != null) {
+        data['fontSize'] = fontSize;
+      }
 
       final response = await _api.post('/api/feed/stories', data: data);
       return response.data;

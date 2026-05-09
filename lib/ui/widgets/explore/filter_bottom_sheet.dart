@@ -71,7 +71,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                     ),
                   ),
                 ),
-                const Text(
+                Text(
                   'FILTERS',
                   style: TextStyle(
                     fontSize: 18,

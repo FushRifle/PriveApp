@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
 import 'package:Prive/data/models/post_model.dart';
+import 'package:Prive/data/services/home/feed_service.dart';
 import 'package:video_player/video_player.dart';
 import 'package:Prive/ui/widgets/home/clip_status_bar.dart';
 import 'package:Prive/ui/widgets/home/custom_bottom_sheet.dart';
@@ -24,10 +25,13 @@ class CardPost extends StatefulWidget {
 }
 
 class _CardPostState extends State<CardPost> {
+  final FeedService _feedService = FeedService();
+
   double _handleOffset = 0.0;
   bool isLiked = false;
   bool isSaved = false;
   int likeCount = 0;
+  int commentCount = 0;
   int postId = 0;
   String? mediaUrl;
   String? mediaType;
@@ -37,7 +41,8 @@ class _CardPostState extends State<CardPost> {
   VideoPlayerController? _videoController;
   bool _isVideoInitialized = false;
   DateTime createdAt = DateTime.now();
-  int commentCount = 0;
+  bool _isLiking = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -115,31 +120,94 @@ class _CardPostState extends State<CardPost> {
   void _initializeVideoController() {
     _videoController = VideoPlayerController.network(mediaUrl!)
       ..initialize().then((_) {
-        setState(() {
-          _isVideoInitialized = true;
-        });
+        if (mounted) {
+          setState(() {
+            _isVideoInitialized = true;
+          });
+        }
       }).catchError((error) {
-        print('Error initializing video: $error');
-        setState(() {
-          mediaType = null;
-        });
+        debugPrint('Error initializing video: $error');
+        if (mounted) {
+          setState(() {
+            mediaType = null;
+          });
+        }
       });
   }
 
-  void _toggleLike() {
+  Future<void> _toggleLike() async {
+    if (_isLiking) return;
+
     setState(() {
-      isLiked = !isLiked;
-      likeCount += isLiked ? 1 : -1;
+      _isLiking = true;
     });
+
+    try {
+      if (isLiked) {
+        await _feedService.unlikePost(postId);
+        setState(() {
+          isLiked = false;
+          likeCount--;
+        });
+      } else {
+        await _feedService.likePost(postId);
+        setState(() {
+          isLiked = true;
+          likeCount++;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error toggling like: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to ${isLiked ? "unlike" : "like"} post'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLiking = false;
+        });
+      }
+    }
   }
 
-  void _toggleSave() {
+  Future<void> _toggleSave() async {
+    if (_isSaving) return;
+
     setState(() {
-      isSaved = !isSaved;
+      _isSaving = true;
     });
+
+    try {
+      // TODO: Implement save/unsave API when available
+      setState(() {
+        isSaved = !isSaved;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              Text(isSaved ? 'Saved to collection' : 'Removed from collection'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error toggling save: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
   }
 
   void _onShare() {
+    // TODO: Implement share functionality
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Share feature coming soon'),
@@ -535,6 +603,8 @@ class _CardPostState extends State<CardPost> {
           icon: Icons.chat_bubble_outline,
           label: 'Reply',
           onTap: _openComments,
+          showCount: true,
+          count: commentCount,
         ),
         const SizedBox(height: 20),
         _buildActionButton(
@@ -664,7 +734,7 @@ class _CardPostState extends State<CardPost> {
                   children: [
                     Text(
                       userName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.whiteColor,
                         fontSize: 12,
                         fontWeight: FontWeight.bold,

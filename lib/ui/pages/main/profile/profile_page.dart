@@ -528,8 +528,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   border:
                       Border.all(color: AppColors.greyColor.withOpacity(0.3)),
                 ),
-                child: const Icon(Icons.favorite_outline,
-                    color: AppColors.redColor),
+                child: Icon(Icons.favorite_outline, color: AppColors.redColor),
               ),
             ),
           ],

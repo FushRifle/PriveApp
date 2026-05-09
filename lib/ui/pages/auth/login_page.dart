@@ -99,7 +99,7 @@ class _LoginPageState extends State<LoginPage> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.purpleColor.withOpacity(0.3),
+                    color: AppColors.primary.withOpacity(0.3),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -120,7 +120,7 @@ class _LoginPageState extends State<LoginPage> {
               width: 28,
               height: 28,
               child: CircularProgressIndicator(
-                color: AppColors.purpleColor,
+                color: AppColors.primary,
                 strokeWidth: 2.5,
               ),
             ),
@@ -145,7 +145,7 @@ class _LoginPageState extends State<LoginPage> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.purpleColor.withOpacity(0.3),
+                    color: AppColors.primary.withOpacity(0.3),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -207,7 +207,7 @@ class _LoginPageState extends State<LoginPage> {
                 child: Row(
                   children: [
                     const Icon(Icons.error_outline,
-                        color: AppColors.redColor, size: 20),
+                        color: AppColors.red2, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                         child: Text(_authHook.loginError,
@@ -233,11 +233,11 @@ class _LoginPageState extends State<LoginPage> {
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
                             color: _authHook.rememberMe
-                                ? AppColors.purpleColor
+                                ? AppColors.primary
                                 : AppColors.greyColor,
                             width: 2),
                         color: _authHook.rememberMe
-                            ? AppColors.purpleColor
+                            ? AppColors.primary
                             : Colors.transparent,
                       ),
                       child: _authHook.rememberMe
@@ -256,7 +256,7 @@ class _LoginPageState extends State<LoginPage> {
                 onTap: () {},
                 child: Text('Forgot Password?',
                     style: AppTheme.blackTextStyle.copyWith(
-                        color: AppColors.purpleColor,
+                        color: AppColors.primary,
                         fontWeight: AppTheme.bold,
                         fontSize: 14)),
               ),
@@ -333,7 +333,7 @@ class _LoginPageState extends State<LoginPage> {
               },
               child: Text('Sign Up',
                   style: AppTheme.blackTextStyle.copyWith(
-                      color: AppColors.purpleColor,
+                      color: AppColors.primary,
                       fontWeight: AppTheme.bold,
                       fontSize: 14)),
             ),
@@ -368,10 +368,10 @@ class _LoginPageState extends State<LoginPage> {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                  color: AppColors.purpleColor.withOpacity(0.1),
+                  color: AppColors.primary.withOpacity(0.1),
                   shape: BoxShape.circle),
               child: const Icon(Icons.email_outlined,
-                  color: AppColors.purpleColor, size: 40),
+                  color: AppColors.primary, size: 40),
             ),
           ),
           const SizedBox(height: 24),
@@ -406,7 +406,7 @@ class _LoginPageState extends State<LoginPage> {
                 child: Row(
                   children: [
                     const Icon(Icons.error_outline,
-                        color: AppColors.redColor, size: 20),
+                        color: AppColors.red2, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                         child: Text(_authHook.verificationError,
@@ -428,8 +428,8 @@ class _LoginPageState extends State<LoginPage> {
                   height: 56,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(colors: [
-                      AppColors.purpleColor,
-                      AppColors.purpleColor.withOpacity(0.8)
+                      AppColors.primary,
+                      AppColors.primary.withOpacity(0.8)
                     ]),
                     borderRadius: BorderRadius.circular(28),
                   ),
@@ -454,7 +454,7 @@ class _LoginPageState extends State<LoginPage> {
               onTap: () => _authHook.resendCode(),
               child: Text('Resend Code',
                   style: AppTheme.blackTextStyle.copyWith(
-                      color: AppColors.purpleColor,
+                      color: AppColors.primary,
                       fontWeight: AppTheme.bold,
                       fontSize: 14)),
             ),

@@ -394,7 +394,7 @@ class _SubscribePageState extends State<SubscribePage> {
                     shape: BoxShape.circle,
                     color: AppColors.greenColor.withOpacity(0.1),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.check_circle,
                     color: AppColors.greenColor,
                     size: 40,

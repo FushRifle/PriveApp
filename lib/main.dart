@@ -28,6 +28,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:Prive/app/configs/api_config.dart';
 import 'package:Prive/data/providers/theme_provider.dart';
 
+// Cloudinary imports
+import 'package:cloudinary_url_gen/cloudinary.dart';
+import 'package:cloudinary_flutter/cloudinary_context.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -48,6 +52,9 @@ Future<void> main() async {
     anonKey: ApiConfig.supabaseAnonKey,
     debug: true,
   );
+
+  CloudinaryContext.cloudinary =
+      Cloudinary.fromCloudName(cloudName: 'dug6225go');
 
   runApp(
     const ProviderScope(
@@ -254,7 +261,7 @@ class _MainWrapperState extends State<MainWrapper> {
           if (_currentIndex != 2) _buildBackgroundGradient(),
           if (_currentIndex != 2)
             Positioned(
-              bottom: 91,
+              bottom: 80,
               child: Transform.rotate(
                 angle: 11,
                 child: InkWell(
@@ -274,7 +281,7 @@ class _MainWrapperState extends State<MainWrapper> {
                       child: const Icon(
                         Icons.add,
                         size: 24,
-                        color: AppColors.whiteColor,
+                        color: AppColors.white,
                       ),
                     ),
                   ),

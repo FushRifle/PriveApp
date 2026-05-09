@@ -86,7 +86,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.purpleColor.withOpacity(0.3),
+                    color: AppColors.primary.withOpacity(0.3),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -107,7 +107,7 @@ class _RegisterPageState extends State<RegisterPage> {
               width: 28,
               height: 28,
               child: CircularProgressIndicator(
-                color: AppColors.purpleColor,
+                color: AppColors.primary,
                 strokeWidth: 2.5,
               ),
             ),
@@ -138,7 +138,7 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
               child: const Icon(
                 Icons.arrow_back_ios_new,
-                color: AppColors.blackColor,
+                color: AppColors.black,
                 size: 18,
               ),
             ),
@@ -230,13 +230,12 @@ class _RegisterPageState extends State<RegisterPage> {
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
                       color: _agreeToTerms
-                          ? AppColors.purpleColor
+                          ? AppColors.primary
                           : AppColors.greyColor,
                       width: 2,
                     ),
-                    color: _agreeToTerms
-                        ? AppColors.purpleColor
-                        : Colors.transparent,
+                    color:
+                        _agreeToTerms ? AppColors.primary : Colors.transparent,
                   ),
                   child: _agreeToTerms
                       ? const Icon(Icons.check, size: 14, color: Colors.white)
@@ -253,7 +252,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       TextSpan(
                         text: 'Terms of Service',
                         style: TextStyle(
-                          color: AppColors.purpleColor,
+                          color: AppColors.primary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -261,7 +260,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       TextSpan(
                         text: 'Privacy Policy',
                         style: TextStyle(
-                          color: AppColors.purpleColor,
+                          color: AppColors.primary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -283,14 +282,14 @@ class _RegisterPageState extends State<RegisterPage> {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        AppColors.purpleColor,
-                        AppColors.purpleColor.withOpacity(0.8),
+                        AppColors.primary,
+                        AppColors.primary.withOpacity(0.8),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(28),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.purpleColor.withOpacity(0.3),
+                        color: AppColors.primary.withOpacity(0.3),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
@@ -335,7 +334,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 child: Text(
                   'Sign In',
                   style: AppTheme.blackTextStyle.copyWith(
-                    color: AppColors.purpleColor,
+                    color: AppColors.primary,
                     fontWeight: AppTheme.bold,
                     fontSize: 14,
                   ),
@@ -358,7 +357,7 @@ class _RegisterPageState extends State<RegisterPage> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline, color: AppColors.redColor, size: 20),
+          const Icon(Icons.error_outline, color: AppColors.red2, size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: Text(

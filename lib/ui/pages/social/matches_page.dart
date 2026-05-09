@@ -108,10 +108,10 @@ class _MatchesPageState extends State<MatchesPage> {
       await _matchService.rejectMatch(matchId);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Match rejected'),
+          SnackBar(
+            content: const Text('Match rejected'),
             backgroundColor: AppColors.greyColor,
-            duration: Duration(seconds: 1),
+            duration: const Duration(seconds: 1),
           ),
         );
         _loadMatches(); // Refresh matches
@@ -141,8 +141,7 @@ class _MatchesPageState extends State<MatchesPage> {
         backgroundColor: AppColors.whiteColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new,
-              color: AppColors.blackTextColor),
+          icon: Icon(Icons.arrow_back_ios_new, color: AppColors.blackTextColor),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
