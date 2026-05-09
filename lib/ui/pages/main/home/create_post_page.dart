@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:typed_data';
-import 'package:Prive/data/services/upload/upload_service.dart';
 import 'package:flutter/material.dart';
 import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
@@ -9,8 +8,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import 'package:Prive/data/hooks/home/feed_hook.dart';
 import 'package:Prive/data/services/upload/cloudinary_service.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:video_thumbnail/video_thumbnail.dart';
 
 class CreatePostPage extends StatefulWidget {
   const CreatePostPage({super.key});
@@ -27,12 +24,10 @@ class _CreatePostPageState extends State<CreatePostPage> {
   final List<String> _hashtags = [];
 
   VideoPlayerController? _videoController;
-  bool _isVideoInitialized = false;
   int _currentMediaIndex = 0;
 
   bool _isPrivate = false;
-  bool _isLoading = false;
-  bool _isUploading = false;
+  bool _isSubmitting = false;
 
   late final FeedHook _feedHook;
   final CloudinaryService _cloudinaryService = CloudinaryService();
@@ -47,21 +42,29 @@ class _CreatePostPageState extends State<CreatePostPage> {
   void dispose() {
     _captionController.dispose();
     _hashtagController.dispose();
-    for (var media in _mediaItems) {
-      media.dispose();
-    }
+    _disposeAllMedia();
     _videoController?.dispose();
     _feedHook.dispose();
     super.dispose();
   }
 
+  void _disposeAllMedia() {
+    for (var media in _mediaItems) {
+      media.dispose();
+    }
+  }
+
+  bool get _hasContent =>
+      _captionController.text.isNotEmpty || _mediaItems.isNotEmpty;
+
   @override
   Widget build(BuildContext context) {
-    final hasContent =
-        _captionController.text.isNotEmpty || _mediaItems.isNotEmpty;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final bgColor =
+        isDarkMode ? AppColors.darkBackground : AppColors.backgroundColor;
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundColor,
+      backgroundColor: bgColor,
       appBar: _buildAppBar(),
       body: Column(
         children: [
@@ -90,18 +93,23 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: AppColors.backgroundColor,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? AppColors.darkBackground
+          : AppColors.backgroundColor,
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.close, color: Colors.black, size: 24),
-        onPressed: () {
-          _videoController?.pause();
-          Navigator.pop(context);
-        },
+        icon: Icon(Icons.close,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Colors.black),
+        onPressed: () => Navigator.pop(context),
       ),
       title: Text(
         'New Post',
-        style: AppTheme.blackTextStyle.copyWith(
+        style: TextStyle(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white
+              : Colors.black,
           fontWeight: FontWeight.w600,
           fontSize: 18,
         ),
@@ -110,38 +118,33 @@ class _CreatePostPageState extends State<CreatePostPage> {
       actions: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: SizedBox(
-            height: 40,
-            child: ElevatedButton(
-              onPressed: (_isLoading || _isUploading) ? null : _submitPost,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: const StadiumBorder(),
-                elevation: 0,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
-                minimumSize: const Size(60, 40),
-                maximumSize: const Size(100, 40),
-              ),
-              child: _isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text(
-                      "Share",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 14,
-                        color: Colors.white,
-                      ),
-                    ),
+          child: ElevatedButton(
+            onPressed:
+                (_isSubmitting || _mediaItems.isEmpty) ? null : _submitPost,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: const StadiumBorder(),
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              minimumSize: const Size(60, 40),
             ),
+            child: _isSubmitting
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text(
+                    "Share",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
           ),
         ),
       ],
@@ -173,87 +176,126 @@ class _CreatePostPageState extends State<CreatePostPage> {
                   return ClipRRect(
                     borderRadius: BorderRadius.circular(16),
                     child: media.type == MediaType.image
-                        ? Image.file(
-                            media.file!,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                          )
-                        : _buildVideoPlayer(media),
+                        ? _buildImagePreview(media)
+                        : _buildVideoPreview(media),
                   );
                 },
               ),
-              if (_mediaItems.length > 1)
-                Positioned(
-                  bottom: 16,
-                  left: 0,
-                  right: 0,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      _mediaItems.length,
-                      (index) => Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _currentMediaIndex == index
-                              ? AppColors.primary
-                              : Colors.white.withOpacity(0.5),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              Positioned(
-                top: 16,
-                right: 16,
-                child: GestureDetector(
-                  onTap: _deleteCurrentMedia,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.close,
-                      color: Colors.white,
-                      size: 18,
-                    ),
-                  ),
-                ),
+              if (_mediaItems.length > 1) _buildPageIndicator(),
+              _buildMediaActionButton(
+                top: true,
+                icon: Icons.close,
+                onTap: _deleteCurrentMedia,
               ),
-              Positioned(
-                bottom: 16,
-                right: 16,
-                child: GestureDetector(
-                  onTap: _showAddMediaOptions,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.add,
-                      color: Colors.white,
-                      size: 18,
-                    ),
-                  ),
-                ),
+              _buildMediaActionButton(
+                bottom: true,
+                icon: Icons.add,
+                onTap: _showAddMediaOptions,
               ),
             ],
           ),
         ),
-        const SizedBox(height: 12),
-        if (_isUploading && _mediaItems.isNotEmpty)
-          LinearProgressIndicator(
-            value: null,
-            backgroundColor: Colors.grey[200],
-            color: AppColors.primary,
+      ],
+    );
+  }
+
+  Widget _buildImagePreview(MediaItem media) {
+    if (kIsWeb && media.fileBytes != null) {
+      return Image.memory(
+        media.fileBytes!,
+        fit: BoxFit.cover,
+        width: double.infinity,
+      );
+    }
+    return Image.file(
+      media.file!,
+      fit: BoxFit.cover,
+      width: double.infinity,
+    );
+  }
+
+  Widget _buildVideoPreview(MediaItem media) {
+    if (_videoController == null || !_videoController!.value.isInitialized) {
+      return Container(
+        color: Colors.black,
+        child: const Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        VideoPlayer(_videoController!),
+        Positioned.fill(
+          child: InkWell(
+            onTap: _toggleVideoPlayback,
+          ),
+        ),
+        if (!_videoController!.value.isPlaying)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.5),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.play_arrow,
+              color: Colors.white,
+              size: 32,
+            ),
           ),
       ],
+    );
+  }
+
+  Widget _buildPageIndicator() {
+    return Positioned(
+      bottom: 16,
+      left: 0,
+      right: 0,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(
+          _mediaItems.length,
+          (index) => Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _currentMediaIndex == index
+                  ? AppColors.primary
+                  : Colors.white.withOpacity(0.5),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMediaActionButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    bool top = false,
+    bool bottom = false,
+  }) {
+    return Positioned(
+      top: top ? 16 : null,
+      bottom: bottom ? 16 : null,
+      right: 16,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.6),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: Colors.white, size: 18),
+        ),
+      ),
     );
   }
 
@@ -264,11 +306,12 @@ class _CreatePostPageState extends State<CreatePostPage> {
         height: 200,
         width: double.infinity,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? AppColors.darkCard
+              : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: AppColors.greyColor.withOpacity(0.2),
-            width: 1,
           ),
         ),
         child: Column(
@@ -298,10 +341,162 @@ class _CreatePostPageState extends State<CreatePostPage> {
     );
   }
 
+  Widget _buildCaptionInput() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Caption',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Colors.black,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _captionController,
+          maxLines: 4,
+          style: const TextStyle(fontSize: 15, height: 1.4),
+          decoration: InputDecoration(
+            hintText: 'Write a caption...',
+            hintStyle: AppTheme.greyTextStyle,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide:
+                  BorderSide(color: AppColors.greyColor.withOpacity(0.2)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.primary),
+            ),
+            contentPadding: const EdgeInsets.all(16),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHashtagSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Hashtags',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Colors.black,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _hashtagController,
+          onSubmitted: _addHashtag,
+          decoration: InputDecoration(
+            hintText: 'Add hashtags (press Enter to add)',
+            hintStyle: AppTheme.greyTextStyle,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide:
+                  BorderSide(color: AppColors.greyColor.withOpacity(0.2)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.primary),
+            ),
+            contentPadding: const EdgeInsets.all(16),
+          ),
+        ),
+        if (_hashtags.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _hashtags.map((tag) => _buildHashtagChip(tag)).toList(),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildHashtagChip(String tag) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            "#$tag",
+            style: const TextStyle(
+              color: AppColors.primary,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(width: 4),
+          GestureDetector(
+            onTap: () => setState(() => _hashtags.remove(tag)),
+            child: Icon(Icons.close, size: 14, color: AppColors.primary),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOptionsSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? AppColors.darkCard
+            : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.greyColor.withOpacity(0.1)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.lock_outline, size: 20, color: AppColors.greyColor),
+              const SizedBox(width: 12),
+              Text(
+                'Private post',
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 14,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : Colors.black,
+                ),
+              ),
+            ],
+          ),
+          Switch(
+            value: _isPrivate,
+            onChanged: (value) => setState(() => _isPrivate = value),
+            activeColor: AppColors.primary,
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showAddMediaOptions() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? AppColors.darkCard
+          : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -319,29 +514,20 @@ class _CreatePostPageState extends State<CreatePostPage> {
               ),
             ),
             const SizedBox(height: 16),
-            _buildSheetOption(
+            _buildBottomSheetOption(
               icon: Icons.photo_library,
               title: 'Choose from gallery',
-              onTap: () {
-                Navigator.pop(context);
-                _pickMedia(ImageSource.gallery, MediaType.image);
-              },
+              onTap: () => _pickMedia(ImageSource.gallery, MediaType.image),
             ),
-            _buildSheetOption(
+            _buildBottomSheetOption(
               icon: Icons.camera_alt,
               title: 'Take photo',
-              onTap: () {
-                Navigator.pop(context);
-                _pickMedia(ImageSource.camera, MediaType.image);
-              },
+              onTap: () => _pickMedia(ImageSource.camera, MediaType.image),
             ),
-            _buildSheetOption(
+            _buildBottomSheetOption(
               icon: Icons.videocam,
               title: 'Record video',
-              onTap: () {
-                Navigator.pop(context);
-                _pickMedia(ImageSource.camera, MediaType.video);
-              },
+              onTap: () => _pickMedia(ImageSource.camera, MediaType.video),
             ),
             const SizedBox(height: 8),
           ],
@@ -350,238 +536,15 @@ class _CreatePostPageState extends State<CreatePostPage> {
     );
   }
 
-  Widget _buildSheetOption({
+  Widget _buildBottomSheetOption({
     required IconData icon,
     required String title,
     required VoidCallback onTap,
   }) {
     return ListTile(
       leading: Icon(icon, size: 24, color: Colors.black),
-      title: Text(
-        title,
-        style: const TextStyle(fontSize: 16),
-      ),
+      title: Text(title, style: const TextStyle(fontSize: 16)),
       onTap: onTap,
-    );
-  }
-
-  Widget _buildVideoPlayer(MediaItem media) {
-    if (_videoController == null || !_isVideoInitialized) {
-      return Container(
-        color: Colors.black,
-        child: const Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
-        ),
-      );
-    }
-
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        VideoPlayer(_videoController!),
-        Positioned.fill(
-          child: InkWell(
-            onTap: () {
-              setState(() {
-                if (_videoController!.value.isPlaying) {
-                  _videoController!.pause();
-                } else {
-                  _videoController!.play();
-                }
-              });
-            },
-          ),
-        ),
-        if (!_videoController!.value.isPlaying)
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.5),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.play_arrow,
-              color: Colors.white,
-              size: 32,
-            ),
-          ),
-      ],
-    );
-  }
-
-  void _initializeVideoForIndex(int index) {
-    final media = _mediaItems[index];
-    if (media.type == MediaType.video) {
-      _videoController?.dispose();
-
-      if (media.file != null) {
-        // For mobile
-        _videoController = VideoPlayerController.file(media.file!)
-          ..initialize().then((_) {
-            setState(() {
-              _isVideoInitialized = true;
-            });
-          }).catchError((error) {
-            debugPrint('Error initializing video: $error');
-          });
-      }
-    } else {
-      _videoController?.pause();
-      _isVideoInitialized = false;
-    }
-  }
-
-  Widget _buildCaptionInput() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Caption',
-          style: AppTheme.blackTextStyle.copyWith(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _captionController,
-          maxLines: 4,
-          style: const TextStyle(fontSize: 15, height: 1.4),
-          decoration: InputDecoration(
-            hintText: 'Write a caption...',
-            hintStyle: AppTheme.greyTextStyle,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  BorderSide(color: AppColors.greyColor.withOpacity(0.2)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  BorderSide(color: AppColors.greyColor.withOpacity(0.2)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.primary),
-            ),
-            contentPadding: const EdgeInsets.all(16),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHashtagSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Hashtags',
-          style: AppTheme.blackTextStyle.copyWith(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _hashtagController,
-          onSubmitted: _addHashtag,
-          decoration: InputDecoration(
-            hintText: 'Add hashtags (press Enter to add)',
-            hintStyle: AppTheme.greyTextStyle,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  BorderSide(color: AppColors.greyColor.withOpacity(0.2)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  BorderSide(color: AppColors.greyColor.withOpacity(0.2)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.primary),
-            ),
-            contentPadding: const EdgeInsets.all(16),
-          ),
-        ),
-        if (_hashtags.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _hashtags
-                .map((tag) => Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            "#$tag",
-                            style: TextStyle(
-                              color: AppColors.primary,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          GestureDetector(
-                            onTap: () => setState(() => _hashtags.remove(tag)),
-                            child: Icon(
-                              Icons.close,
-                              size: 14,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ))
-                .toList(),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildOptionsSection() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.greyColor.withOpacity(0.1)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.lock_outline, size: 20, color: AppColors.greyColor),
-              const SizedBox(width: 12),
-              Text(
-                'Private post',
-                style: AppTheme.blackTextStyle.copyWith(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-          Switch(
-            value: _isPrivate,
-            onChanged: (value) {
-              setState(() => _isPrivate = value);
-            },
-            activeThumbColor: AppColors.primary,
-          ),
-        ],
-      ),
     );
   }
 
@@ -596,39 +559,31 @@ class _CreatePostPageState extends State<CreatePostPage> {
         pickedFile = await picker.pickVideo(source: source);
       }
 
-      if (pickedFile != null) {
-        // For web, we need to handle the file differently
-        if (kIsWeb) {
-          // Read file bytes for web
-          final fileBytes = await pickedFile.readAsBytes();
-          final fileName = pickedFile.name;
+      if (pickedFile == null) return;
 
-          setState(() {
-            _mediaItems.add(MediaItem(
-              fileBytes: fileBytes,
-              fileName: fileName,
-              type: type,
-            ));
-            if (type == MediaType.video && _mediaItems.length == 1) {
-              _initializeVideoForIndex(0);
-            }
-          });
-        } else {
-          // Mobile - use file path
-          setState(() {
-            _mediaItems.add(MediaItem(
-              file: File(pickedFile!.path),
-              type: type,
-            ));
-            if (type == MediaType.video && _mediaItems.length == 1) {
-              _initializeVideoForIndex(0);
-            }
-          });
-        }
+      if (kIsWeb) {
+        final fileBytes = await pickedFile.readAsBytes();
+        setState(() {
+          _mediaItems.add(MediaItem(
+            fileBytes: fileBytes,
+            fileName: pickedFile?.name,
+            type: type,
+          ));
+        });
+      } else {
+        setState(() {
+          _mediaItems.add(MediaItem(
+            file: File(pickedFile!.path),
+            type: type,
+          ));
+        });
+      }
+
+      if (type == MediaType.video && _mediaItems.length == 1) {
+        _initializeVideoForIndex(0);
       }
     } catch (e) {
-      debugPrint('Error picking media: $e');
-      _showErrorSnackBar('Failed to pick media: $e');
+      _showSnackBar('Failed to pick media: $e', isError: true);
     }
   }
 
@@ -637,7 +592,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
       _mediaItems.removeAt(_currentMediaIndex);
       if (_mediaItems.isEmpty) {
         _videoController?.dispose();
-        _isVideoInitialized = false;
       } else {
         _currentMediaIndex =
             _currentMediaIndex.clamp(0, _mediaItems.length - 1);
@@ -655,157 +609,105 @@ class _CreatePostPageState extends State<CreatePostPage> {
     }
   }
 
-  // Generate video thumbnail
-  Future<String?> _generateThumbnail(String videoPath) async {
-    try {
-      final thumbnail = await VideoThumbnail.thumbnailFile(
-        video: videoPath,
-        thumbnailPath: (await getTemporaryDirectory()).path,
-        imageFormat: ImageFormat.JPEG,
-        quality: 70,
-      );
-      return thumbnail;
-    } catch (e) {
-      debugPrint('Error generating thumbnail: $e');
-      return null;
+  void _initializeVideoForIndex(int index) {
+    final media = _mediaItems[index];
+    if (media.type != MediaType.video) {
+      _videoController?.pause();
+      return;
+    }
+
+    _videoController?.dispose();
+    final file = media.file;
+    if (file != null) {
+      _videoController = VideoPlayerController.file(file)
+        ..initialize().then((_) {
+          if (mounted) setState(() {});
+        }).catchError((e) => debugPrint('Video init error: $e'));
     }
   }
 
-  // Upload a single media item using CloudinaryService
-  Future<Map<String, String>> _uploadMediaItem(
-      MediaItem media, int index, int total) async {
-    try {
-      print(
-          'Uploading ${media.type} (${index + 1}/$total): ${media.file!.path}');
-
-      CloudinaryResponseModel? response;
-
-      if (media.type == MediaType.image) {
-        response = await _cloudinaryService.uploadImage(
-          file: XFile(media.file!.path),
-          folder: 'feeds',
-          onProgress: (progress) {
-            if (mounted) {
-              setState(() {
-                // Update progress if needed
-                print(
-                    'Upload progress: ${(progress * 100).toStringAsFixed(0)}%');
-              });
-            }
-          },
-        );
+  void _toggleVideoPlayback() {
+    if (_videoController == null || !_videoController!.value.isInitialized)
+      return;
+    setState(() {
+      if (_videoController!.value.isPlaying) {
+        _videoController!.pause();
       } else {
-        // Generate thumbnail for video
-        await _generateThumbnail(media.file!.path);
-
-        response = await _cloudinaryService.uploadVideo(
-          file: XFile(media.file!.path),
-          folder: 'feeds',
-          onProgress: (progress) {
-            if (mounted) {
-              setState(() {
-                print(
-                    'Video upload progress: ${(progress * 100).toStringAsFixed(0)}%');
-              });
-            }
-          },
-        );
+        _videoController!.play();
       }
-
-      if (response == null) {
-        throw Exception('Failed to upload ${media.type}');
-      }
-
-      print('Upload successful: ${response.url}');
-
-      return {
-        'url': response.url,
-        'public_id': response.publicId,
-        if (response.thumbnailUrl != null) 'thumbnail': response.thumbnailUrl!,
-        'type': media.type == MediaType.image ? 'image' : 'video',
-      };
-    } catch (e) {
-      print('Error uploading media: $e');
-      rethrow;
-    }
+    });
   }
 
   Future<void> _submitPost() async {
     if (_mediaItems.isEmpty) {
-      _showErrorSnackBar('Please add at least one photo or video');
+      _showSnackBar('Please add at least one photo or video', isError: true);
       return;
     }
 
-    setState(() => _isUploading = true);
+    setState(() => _isSubmitting = true);
 
     try {
-      // Upload all media to Cloudinary
-      List<Map<String, String>> uploadedMedia = [];
-
-      for (int i = 0; i < _mediaItems.length; i++) {
-        final result =
-            await _uploadMediaItem(_mediaItems[i], i, _mediaItems.length);
-        uploadedMedia.add(result);
-      }
-
-      setState(() {
-        _isUploading = false;
-        _isLoading = true;
-      });
-
-      // Prepare post content with hashtags
+      final uploadedUrls = await _uploadAllMedia();
       String content = _captionController.text;
       if (_hashtags.isNotEmpty) {
         content += '\n\n${_hashtags.map((h) => '#$h').join(' ')}';
       }
 
-      // Get media URLs for the post
-      uploadedMedia.map((media) => media['url']!).toList();
-      final imageUrl = uploadedMedia.first['url']; // First media as cover
-
       final success = await _feedHook.createPost(
         content: content,
-        imageUrl: imageUrl,
+        imageUrl: uploadedUrls.first,
         isPrivate: _isPrivate,
       );
 
       if (success && mounted) {
-        _showSuccessSnackBar('Post created successfully!');
+        _showSnackBar('Post created successfully!');
         Navigator.pop(context, true);
-      } else if (!success && mounted) {
+      } else if (mounted) {
         throw Exception('Failed to create post');
       }
     } catch (e) {
-      print('Error in _submitPost: $e');
-      if (mounted) {
-        _showErrorSnackBar('Error creating post: ${e.toString()}');
-      }
+      _showSnackBar('Error creating post: ${e.toString()}', isError: true);
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _isUploading = false;
-        });
-      }
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
-  void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+  Future<List<String>> _uploadAllMedia() async {
+    final List<String> uploadedUrls = [];
+
+    for (int i = 0; i < _mediaItems.length; i++) {
+      final media = _mediaItems[i];
+      final file = media.file;
+
+      if (file == null) {
+        throw Exception('File not found for ${media.type}');
+      }
+
+      String? url;
+
+      if (media.type == MediaType.image) {
+        url = await _cloudinaryService.uploadImage(file, 'feeds');
+      } else if (media.type == MediaType.video) {
+        url = await _cloudinaryService.uploadVideo(file, 'feeds');
+      }
+
+      if (url != null && url.isNotEmpty) {
+        uploadedUrls.add(url);
+      } else {
+        throw Exception('Failed to upload ${media.type}');
+      }
+    }
+
+    return uploadedUrls;
   }
 
-  void _showErrorSnackBar(String message) {
+  void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: isError ? Colors.red : Colors.green,
         behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -814,9 +716,9 @@ class _CreatePostPageState extends State<CreatePostPage> {
 enum MediaType { image, video }
 
 class MediaItem {
-  final File? file; // For mobile
-  final Uint8List? fileBytes; // For web
-  final String? fileName; // For web
+  final File? file;
+  final Uint8List? fileBytes;
+  final String? fileName;
   final MediaType type;
 
   MediaItem({
@@ -826,7 +728,5 @@ class MediaItem {
     required this.type,
   });
 
-  void dispose() {
-    // Clean up if needed
-  }
+  void dispose() {}
 }

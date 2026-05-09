@@ -77,7 +77,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final isDarkMode = themeMode == ThemeMode.dark;
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
