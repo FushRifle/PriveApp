@@ -515,7 +515,7 @@ class _StatusViewPageState extends State<StatusViewPage>
       SnackBar(
         content: Text('Reply sent to ${status.name}'),
         duration: const Duration(seconds: 1),
-        backgroundColor: AppColors.purpleColor,
+        backgroundColor: AppColors.primary,
       ),
     );
   }
@@ -525,7 +525,7 @@ class _StatusViewPageState extends State<StatusViewPage>
       SnackBar(
         content: Text('Liked ${status.name}\'s story'),
         duration: const Duration(seconds: 1),
-        backgroundColor: AppColors.purpleColor,
+        backgroundColor: AppColors.primary,
       ),
     );
   }

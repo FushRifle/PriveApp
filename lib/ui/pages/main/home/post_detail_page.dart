@@ -103,7 +103,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
       SnackBar(
         content: Text(_isSaved ? 'Saved to collection' : 'Removed from saved'),
         duration: const Duration(seconds: 1),
-        backgroundColor: AppColors.purpleColor,
+        backgroundColor: AppColors.primary,
       ),
     );
   }
@@ -249,7 +249,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
             icon: Icons.chat_bubble_outline,
             count: _comments.length,
             label: 'Comments',
-            color: AppColors.purpleColor,
+            color: AppColors.primary,
             isActive: false,
           ),
           _buildModernStatItem(
@@ -563,7 +563,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: _commentController.text.trim().isNotEmpty
-                      ? AppColors.purpleColor
+                      ? AppColors.primary
                       : AppColors.greyColor.withOpacity(0.2),
                 ),
                 child: IconButton(
@@ -622,12 +622,12 @@ class _PostDetailPageState extends State<PostDetailPage> {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: AppColors.purpleColor.withOpacity(0.12),
+        color: AppColors.primary.withOpacity(0.12),
       ),
       child: Icon(
         Icons.person,
         size: size * 0.6,
-        color: AppColors.purpleColor,
+        color: AppColors.primary,
       ),
     );
   }
@@ -655,7 +655,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
       const SnackBar(
         content: Text('Comment added!'),
         duration: Duration(seconds: 1),
-        backgroundColor: AppColors.purpleColor,
+        backgroundColor: AppColors.primary,
       ),
     );
   }

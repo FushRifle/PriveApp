@@ -15,11 +15,12 @@ class NoMoreProfiles extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 400,
+      width: 400,
       decoration: BoxDecoration(
         color: AppColors.backgroundColor,
         borderRadius: BorderRadius.circular(30),
         border: Border.all(
-          color: AppColors.purpleColor.withOpacity(0.3),
+          color: AppColors.primary.withOpacity(0.3),
           width: 2,
         ),
       ),
@@ -30,10 +31,10 @@ class NoMoreProfiles extends StatelessWidget {
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 500),
               child: Icon(
-                Icons.celebration,
+                Icons.info_outline_rounded,
                 key: const ValueKey('celebration'),
                 size: 64,
-                color: AppColors.purpleColor,
+                color: AppColors.primary,
               ),
             ),
             const SizedBox(height: 16),
@@ -55,13 +56,14 @@ class NoMoreProfiles extends StatelessWidget {
             ElevatedButton(
               onPressed: onRefresh,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.purpleColor,
+                backgroundColor: AppColors.primary,
+                minimumSize: const Size(120, 48), // Reduced width
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
+                  horizontal: 24, // Reduced from 32
+                  vertical: 12, // Reduced from 16
                 ),
               ),
               child: Text(

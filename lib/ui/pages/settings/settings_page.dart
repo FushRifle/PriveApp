@@ -531,7 +531,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(
+            top: Radius.circular(20), bottom: Radius.circular(20)),
       ),
       builder: (context) {
         final languages = [
@@ -551,7 +552,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               Container(
                 width: 40,
                 height: 4,
-                margin: const EdgeInsets.only(top: 12, bottom: 20),
+                margin: const EdgeInsets.only(top: 12, bottom: 30),
                 decoration: BoxDecoration(
                   color: AppColors.greyColor.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(2),

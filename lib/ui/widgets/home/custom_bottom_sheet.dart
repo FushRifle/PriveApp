@@ -118,7 +118,7 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
   Widget _buildCommentsList() {
     if (_commentsHook.loading && _commentsHook.comments.isEmpty) {
       return const Center(
-        child: CircularProgressIndicator(color: AppColors.purpleColor),
+        child: CircularProgressIndicator(color: AppColors.primary),
       );
     }
 
@@ -136,7 +136,7 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
             ElevatedButton(
               onPressed: () => _commentsHook.fetchComments(refresh: true),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.purpleColor,
+                backgroundColor: AppColors.primary,
               ),
               child: const Text('Retry'),
             ),
@@ -191,7 +191,7 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
             return const Padding(
               padding: EdgeInsets.symmetric(vertical: 16),
               child: Center(
-                child: CircularProgressIndicator(color: AppColors.purpleColor),
+                child: CircularProgressIndicator(color: AppColors.primary),
               ),
             );
           }
@@ -261,7 +261,7 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
             child: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: AppColors.purpleColor,
+                color: AppColors.primary,
                 shape: BoxShape.circle,
               ),
               child: _commentsHook.posting
@@ -335,7 +335,7 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
                         height: 12,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: AppColors.purpleColor,
+                          color: AppColors.primary,
                         ),
                       ),
                     ],

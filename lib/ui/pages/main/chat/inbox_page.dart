@@ -16,123 +16,115 @@ class InboxPage extends StatelessWidget {
         statusBarIconBrightness: Brightness.dark,
       ),
     );
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+
+    return Scaffold(
+      backgroundColor: AppColors.backgroundColor,
+      body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 12),
             _buildCustomAppBar(context),
-            const SizedBox(height: 18),
-            _buildMessageList(context),
-            const SizedBox(height: 130),
+            const SizedBox(height: 8),
+            Expanded(
+              child: _buildMessageList(context),
+            ),
           ],
         ),
       ),
     );
   }
 
-  CustomAppBar _buildCustomAppBar(BuildContext context) {
+  Widget _buildCustomAppBar(BuildContext context) {
     return CustomAppBar(
-      child: Row(
-        children: [
-          const SizedBox(width: 8),
-          const Text(
-            "Chat",
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-            ),
-          ),
-          const Spacer(),
-          InkWell(
-            onTap: () {
-              print('Search tapped');
-            },
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.backgroundColor,
-                borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            const Text(
+              "Chats",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
               ),
-              child: const Icon(
+            ),
+            const Spacer(),
+            IconButton(
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                // TODO: Navigate to search
+                debugPrint('Search tapped');
+              },
+              icon: const Icon(
                 Icons.search,
-                color: AppColors.purpleColor,
-                size: 20,
+                color: AppColors.primary,
+                size: 28,
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildMessageList(BuildContext context) {
     final messages = [
-      {
-        'name': 'Sarah Johnson',
-        'message': 'Hey! How are you doing?',
-        'time': '2m ago',
-        'avatar': 'profiles/profile_1.jpeg',
-        'unread': true,
-        'online': true,
-      },
-      {
-        'name': 'Michael Chen',
-        'message': 'Did you see the new post?',
-        'time': '1h ago',
-        'avatar': 'profiles/profile_2.jpeg',
-        'unread': true,
-        'online': false,
-      },
-      {
-        'name': 'Emma Wilson',
-        'message': 'Thanks for the follow back! 🙌',
-        'time': '3h ago',
-        'avatar': 'profiles/profile_3.jpeg',
-        'unread': false,
-        'online': true,
-      },
-      {
-        'name': 'James Rodriguez',
-        'message': 'Great content! Keep it up 🔥',
-        'time': 'Yesterday',
-        'avatar': 'profiles/profile_4.jpeg',
-        'unread': false,
-        'online': false,
-      },
+      _ChatMessage(
+        id: '1',
+        name: 'Sarah Johnson',
+        message: 'Hey! How are you doing?',
+        time: '2m ago',
+        avatar: '',
+        isUnread: true,
+        isOnline: true,
+        unreadCount: 2,
+      ),
+      _ChatMessage(
+        id: '2',
+        name: 'Michael Chen',
+        message: 'Did you see the new post?',
+        time: '1h ago',
+        avatar: '',
+        isUnread: true,
+        isOnline: false,
+        unreadCount: 1,
+      ),
+      _ChatMessage(
+        id: '3',
+        name: 'Emma Wilson',
+        message: 'Thanks for the follow back! 🙌',
+        time: '3h ago',
+        avatar: '',
+        isUnread: false,
+        isOnline: true,
+        unreadCount: 0,
+      ),
+      _ChatMessage(
+        id: '4',
+        name: 'James Rodriguez',
+        message: 'Great content! Keep it up 🔥',
+        time: 'Yesterday',
+        avatar: '',
+        isUnread: false,
+        isOnline: false,
+        unreadCount: 0,
+      ),
     ];
 
     return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      physics: const BouncingScrollPhysics(),
       itemCount: messages.length,
       itemBuilder: (context, index) {
         final message = messages[index];
-        return _buildMessageItem(
-          context: context,
-          name: message['name']! as String,
-          message: message['message']! as String,
-          time: message['time']! as String,
-          avatar: message['avatar']! as String,
-          isUnread: message['unread'] as bool,
-          isOnline: message['online'] as bool,
-        );
+        return _buildMessageItem(context, message);
       },
     );
   }
 
-  Widget _buildMessageItem({
-    required BuildContext context,
-    required String name,
-    required String message,
-    required String time,
-    required String avatar,
-    required bool isUnread,
-    required bool isOnline,
-  }) {
+  Widget _buildMessageItem(BuildContext context, _ChatMessage message) {
+    final firstLetter =
+        message.name.isNotEmpty ? message.name[0].toUpperCase() : 'U';
+
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
@@ -140,24 +132,24 @@ class InboxPage extends StatelessWidget {
           context,
           MaterialPageRoute(
             builder: (context) => ChatPage(
-              userName: name,
-              userAvatar: avatar,
-              userId: name.toLowerCase().replaceAll(' ', '_'),
+              userName: message.name,
+              userAvatar: message.avatar,
+              userId: message.id,
             ),
           ),
         );
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
+        margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isUnread
-              ? AppColors.purpleColor.withOpacity(0.05)
+          color: message.isUnread
+              ? AppColors.primary.withOpacity(0.05)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-          border: isUnread
+          borderRadius: BorderRadius.circular(16),
+          border: message.isUnread
               ? Border.all(
-                  color: AppColors.purpleColor.withOpacity(0.1),
+                  color: AppColors.primary.withOpacity(0.15),
                   width: 1,
                 )
               : null,
@@ -173,25 +165,38 @@ class InboxPage extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isUnread
-                          ? AppColors.purpleColor
+                      color: message.isUnread
+                          ? AppColors.primary
                           : AppColors.greyColor.withOpacity(0.3),
                       width: 2,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.blackColor.withOpacity(0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
+                        color: AppColors.blackColor.withOpacity(0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
                     ],
-                    image: DecorationImage(
-                      fit: BoxFit.cover,
-                      image: AssetImage(avatar),
-                    ),
+                  ),
+                  child: ClipOval(
+                    child: message.avatar.isNotEmpty
+                        ? (message.avatar.startsWith('http')
+                            ? Image.network(
+                                message.avatar,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    _avatarFallback(firstLetter),
+                              )
+                            : Image.asset(
+                                message.avatar,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    _avatarFallback(firstLetter),
+                              ))
+                        : _avatarFallback(firstLetter),
                   ),
                 ),
-                if (isOnline)
+                if (message.isOnline)
                   Positioned(
                     bottom: 2,
                     right: 2,
@@ -202,7 +207,7 @@ class InboxPage extends StatelessWidget {
                         shape: BoxShape.circle,
                         color: AppColors.greenColor,
                         border: Border.all(
-                          color: AppColors.whiteColor,
+                          color: Colors.white,
                           width: 2,
                         ),
                       ),
@@ -220,23 +225,25 @@ class InboxPage extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          name,
+                          message.name,
                           style: AppTheme.blackTextStyle.copyWith(
-                            fontWeight:
-                                isUnread ? AppTheme.bold : AppTheme.medium,
+                            fontWeight: message.isUnread
+                                ? FontWeight.w700
+                                : FontWeight.w600,
                             fontSize: 16,
                           ),
                         ),
                       ),
                       Text(
-                        time,
+                        message.time,
                         style: AppTheme.blackTextStyle.copyWith(
                           fontSize: 11,
-                          color: isUnread
-                              ? AppColors.purpleColor
+                          color: message.isUnread
+                              ? AppColors.primary
                               : AppColors.greyColor,
-                          fontWeight:
-                              isUnread ? AppTheme.medium : AppTheme.regular,
+                          fontWeight: message.isUnread
+                              ? FontWeight.w500
+                              : FontWeight.w400,
                         ),
                       ),
                     ],
@@ -246,12 +253,13 @@ class InboxPage extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          message,
+                          message.message,
                           style: AppTheme.blackTextStyle.copyWith(
-                            fontWeight:
-                                isUnread ? AppTheme.medium : AppTheme.regular,
+                            fontWeight: message.isUnread
+                                ? FontWeight.w500
+                                : FontWeight.w400,
                             fontSize: 14,
-                            color: isUnread
+                            color: message.isUnread
                                 ? AppColors.blackColor
                                 : AppColors.greyColor,
                           ),
@@ -259,21 +267,21 @@ class InboxPage extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (isUnread)
+                      if (message.unreadCount > 0)
                         Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.purpleColor,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
                           ),
-                          child: Center(
-                            child: Text(
-                              '1',
-                              style: AppTheme.whiteTextStyle.copyWith(
-                                fontSize: 12,
-                                fontWeight: AppTheme.bold,
-                              ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: AppColors.primary,
+                          ),
+                          child: Text(
+                            '${message.unreadCount}',
+                            style: AppTheme.whiteTextStyle.copyWith(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
@@ -287,4 +295,47 @@ class InboxPage extends StatelessWidget {
       ),
     );
   }
+
+  Widget _avatarFallback(String text) {
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.primary.withOpacity(0.1),
+      ),
+      child: Center(
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ChatMessage {
+  final String id;
+  final String name;
+  final String message;
+  final String time;
+  final String avatar;
+  final bool isUnread;
+  final bool isOnline;
+  final int unreadCount;
+
+  _ChatMessage({
+    required this.id,
+    required this.name,
+    required this.message,
+    required this.time,
+    required this.avatar,
+    required this.isUnread,
+    required this.isOnline,
+    this.unreadCount = 0,
+  });
 }

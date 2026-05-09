@@ -28,7 +28,7 @@ class _ChatPageState extends State<ChatPage> {
   final _user = types.User(
     id: 'current-user',
     firstName: 'Sajon.co',
-    imageUrl: 'profiles/profile_1.jpeg',
+    imageUrl: '',
   );
 
   late types.User _otherUser;
@@ -107,7 +107,7 @@ class _ChatPageState extends State<ChatPage> {
     );
 
     setState(() {
-      _messages.insert(0, textMessage);
+      _messages.add(textMessage);
     });
 
     _textController.clear();
@@ -119,7 +119,7 @@ class _ChatPageState extends State<ChatPage> {
     Future.delayed(const Duration(milliseconds: 100), () {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
-          0,
+          _scrollController.position.maxScrollExtent,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
@@ -148,10 +148,15 @@ class _ChatPageState extends State<ChatPage> {
         );
 
         setState(() {
-          _messages.insert(0, reply);
+          _messages.add(reply);
         });
+        _scrollToBottom();
       }
     });
+  }
+
+  String _getAvatarFallback() {
+    return widget.userName.isNotEmpty ? widget.userName[0].toUpperCase() : 'U';
   }
 
   @override
@@ -167,7 +172,7 @@ class _ChatPageState extends State<ChatPage> {
       backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        elevation: 1,
+        elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
           onPressed: () => Navigator.pop(context),
@@ -188,21 +193,7 @@ class _ChatPageState extends State<ChatPage> {
           },
           child: Row(
             children: [
-              Container(
-                width: 40,
-                height: 50,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppColors.primary.withOpacity(0.3),
-                    width: 2,
-                  ),
-                  image: DecorationImage(
-                    fit: BoxFit.cover,
-                    image: AssetImage(widget.userAvatar),
-                  ),
-                ),
-              ),
+              _buildAvatar(),
               const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -210,16 +201,29 @@ class _ChatPageState extends State<ChatPage> {
                   Text(
                     widget.userName,
                     style: AppTheme.blackTextStyle.copyWith(
-                      fontWeight: AppTheme.bold,
+                      fontWeight: FontWeight.w600,
                       fontSize: 16,
                     ),
                   ),
-                  Text(
-                    'Online',
-                    style: AppTheme.greyTextStyle.copyWith(
-                        fontSize: 12,
-                        color: AppColors.greenColor,
-                        fontWeight: FontWeight.bold),
+                  Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.greenColor,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Online',
+                        style: AppTheme.greyTextStyle.copyWith(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -229,11 +233,17 @@ class _ChatPageState extends State<ChatPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.call_outlined, color: Colors.black),
-            onPressed: () {},
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              // TODO: Implement call
+            },
           ),
           IconButton(
             icon: const Icon(Icons.videocam_outlined, color: Colors.black),
-            onPressed: () {},
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              // TODO: Implement video call
+            },
           ),
         ],
       ),
@@ -241,93 +251,133 @@ class _ChatPageState extends State<ChatPage> {
         children: [
           // Messages list
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              reverse: true,
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                final isMe = message.author.id == _user.id;
-                return _buildMessageBubble(message, isMe);
-              },
-            ),
+            child: _messages.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.chat_bubble_outline,
+                          size: 64,
+                          color: AppColors.greyColor.withOpacity(0.5),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No messages yet',
+                          style: AppTheme.greyTextStyle.copyWith(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Start the conversation',
+                          style: AppTheme.greyTextStyle.copyWith(
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    controller: _scrollController,
+                    reverse: false,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 20,
+                    ),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, index) {
+                      final message = _messages[index];
+                      final isMe = message.author.id == _user.id;
+                      return _buildMessageBubble(message, isMe, index);
+                    },
+                  ),
           ),
           // Input bar
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             child: SafeArea(
+              top: false,
               bottom: true,
               child: Row(
                 children: [
+                  // Attachment button
+                  Material(
+                    color: Colors.transparent,
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.add_circle_outline,
+                        color: AppColors.primary,
+                        size: 28,
+                      ),
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        _showAttachmentOptions();
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  // Text field
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
+                        color: AppColors.backgroundColor,
                         borderRadius: BorderRadius.circular(25),
+                        border: Border.all(
+                          color: AppColors.greyColor.withOpacity(0.2),
+                          width: 1,
+                        ),
                       ),
-                      child: Row(
-                        children: [
-                          IconButton(
-                            icon: Icon(Icons.mood_outlined,
-                                color: AppColors.primary, size: 24),
-                            onPressed: () {},
+                      child: TextField(
+                        controller: _textController,
+                        style: AppTheme.blackTextStyle.copyWith(fontSize: 15),
+                        decoration: InputDecoration(
+                          hintText: 'Type a message...',
+                          hintStyle: AppTheme.greyTextStyle.copyWith(
+                            fontSize: 14,
                           ),
-                          Expanded(
-                            child: TextField(
-                              controller: _textController,
-                              style: AppTheme.blackTextStyle
-                                  .copyWith(fontSize: 16),
-                              decoration: InputDecoration(
-                                hintText: 'Message...',
-                                hintStyle: AppTheme.greyTextStyle,
-                                border: InputBorder.none,
-                                contentPadding:
-                                    const EdgeInsets.symmetric(vertical: 12),
-                              ),
-                              onSubmitted: (text) {
-                                if (text.isNotEmpty) {
-                                  _handleSendPressed(
-                                      types.PartialText(text: text));
-                                }
-                              },
-                            ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
                           ),
-                          IconButton(
-                            icon: Icon(Icons.attach_file,
-                                color: AppColors.primary, size: 24),
-                            onPressed: () {},
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.camera_alt_outlined,
-                                color: AppColors.primary, size: 24),
-                            onPressed: () async {
-                              final ImagePicker picker = ImagePicker();
-                              await picker.pickImage(
-                                  source: ImageSource.camera);
-                            },
-                          ),
-                        ],
+                        ),
+                        onSubmitted: (text) {
+                          if (text.trim().isNotEmpty) {
+                            _handleSendPressed(types.PartialText(text: text));
+                          }
+                        },
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () {
-                      if (_textController.text.isNotEmpty) {
-                        _handleSendPressed(
-                            types.PartialText(text: _textController.text));
-                      }
-                    },
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(24),
+                  // Send button
+                  Material(
+                    color: Colors.transparent,
+                    child: GestureDetector(
+                      onTap: () {
+                        if (_textController.text.trim().isNotEmpty) {
+                          HapticFeedback.lightImpact();
+                          _handleSendPressed(
+                            types.PartialText(text: _textController.text),
+                          );
+                        }
+                      },
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.send,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ),
-                      child:
-                          const Icon(Icons.send, color: Colors.white, size: 22),
                     ),
                   ),
                 ],
@@ -339,39 +389,101 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Widget _buildMessageBubble(types.Message message, bool isMe) {
+  Widget _buildAvatar() {
+    final avatar = widget.userAvatar;
+    final fallbackText = _getAvatarFallback();
+
+    if (avatar.isNotEmpty && avatar.startsWith('http')) {
+      return CircleAvatar(
+        radius: 18,
+        backgroundImage: NetworkImage(avatar),
+        child: Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: AppColors.primary.withOpacity(0.3),
+              width: 2,
+            ),
+          ),
+        ),
+      );
+    } else if (avatar.isNotEmpty) {
+      return CircleAvatar(
+        radius: 18,
+        backgroundImage: AssetImage(avatar),
+        child: Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: AppColors.primary.withOpacity(0.3),
+              width: 2,
+            ),
+          ),
+        ),
+      );
+    } else {
+      return CircleAvatar(
+        radius: 18,
+        backgroundColor: AppColors.primary.withOpacity(0.1),
+        child: Text(
+          fallbackText,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary,
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _buildMessageBubble(types.Message message, bool isMe, int index) {
     if (message is types.TextMessage) {
+      final showAvatar = !isMe &&
+          (index == 0 ||
+              (index > 0 &&
+                  _messages[index - 1].author.id != message.author.id));
+
       return Padding(
-        padding: const EdgeInsets.only(bottom: 12),
+        padding: EdgeInsets.only(
+          bottom: 16,
+          left: isMe ? 0 : 8,
+          right: isMe ? 8 : 0,
+        ),
         child: Row(
           mainAxisAlignment:
               isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            if (!isMe) ...[
-              CircleAvatar(
-                radius: 14,
-                backgroundImage: AssetImage(widget.userAvatar),
-              ),
-              const SizedBox(width: 8),
-            ],
+            if (!isMe && showAvatar)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: _buildAvatar(),
+              )
+            else if (!isMe)
+              const SizedBox(width: 44),
             Flexible(
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.75,
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: isMe ? AppColors.primary : Colors.white,
                   borderRadius: BorderRadius.only(
-                    topLeft: const Radius.circular(18),
-                    topRight: const Radius.circular(18),
-                    bottomLeft: Radius.circular(isMe ? 18 : 4),
-                    bottomRight: Radius.circular(isMe ? 4 : 18),
+                    topLeft: const Radius.circular(20),
+                    topRight: const Radius.circular(20),
+                    bottomLeft: Radius.circular(isMe ? 20 : 4),
+                    bottomRight: Radius.circular(isMe ? 4 : 20),
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 5,
-                      offset: const Offset(0, 2),
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
                     ),
                   ],
                 ),
@@ -380,6 +492,7 @@ class _ChatPageState extends State<ChatPage> {
                   style: TextStyle(
                     color: isMe ? Colors.white : AppColors.blackColor,
                     fontSize: 15,
+                    height: 1.4,
                   ),
                 ),
               ),
@@ -390,5 +503,118 @@ class _ChatPageState extends State<ChatPage> {
       );
     }
     return const SizedBox.shrink();
+  }
+
+  void _showAttachmentOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.greyColor.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _attachmentOption(
+                      icon: Icons.photo_library,
+                      label: 'Gallery',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickImage(ImageSource.gallery);
+                      },
+                    ),
+                    _attachmentOption(
+                      icon: Icons.camera_alt,
+                      label: 'Camera',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickImage(ImageSource.camera);
+                      },
+                    ),
+                    _attachmentOption(
+                      icon: Icons.document_scanner,
+                      label: 'File',
+                      onTap: () {
+                        Navigator.pop(context);
+                        // TODO: Pick file
+                      },
+                    ),
+                    _attachmentOption(
+                      icon: Icons.location_on,
+                      label: 'Location',
+                      onTap: () {
+                        Navigator.pop(context);
+                        // TODO: Share location
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _attachmentOption({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: AppColors.primary,
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: AppTheme.blackTextStyle.copyWith(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: source);
+    if (image != null) {
+      // TODO: Handle image sending
+      debugPrint('Image picked: ${image.path}');
+    }
   }
 }

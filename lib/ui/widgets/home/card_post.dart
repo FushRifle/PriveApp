@@ -445,7 +445,7 @@ class _CardPostState extends State<CardPost> {
           return Container(
             color: AppColors.greyColor.withOpacity(0.1),
             child: const Center(
-              child: CircularProgressIndicator(color: AppColors.purpleColor),
+              child: CircularProgressIndicator(color: AppColors.primary),
             ),
           );
         },

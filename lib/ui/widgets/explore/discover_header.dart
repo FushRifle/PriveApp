@@ -22,7 +22,7 @@ class DiscoverHeader extends StatelessWidget {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [AppColors.purpleColor, AppColors.primary],
+                colors: [AppColors.primary, AppColors.primary],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -48,13 +48,13 @@ class DiscoverHeader extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: AppColors.purpleColor.withOpacity(0.1),
+              color: AppColors.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               '$remainingCount left',
               style: TextStyle(
-                color: AppColors.purpleColor,
+                color: AppColors.primary,
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
               ),
@@ -77,7 +77,7 @@ class DiscoverHeader extends StatelessWidget {
             child: IconButton(
               onPressed: onFilterTap,
               icon: const Icon(Icons.filter_list),
-              color: AppColors.purpleColor,
+              color: AppColors.primary,
               iconSize: 20,
               padding: const EdgeInsets.all(8),
               constraints: const BoxConstraints(),

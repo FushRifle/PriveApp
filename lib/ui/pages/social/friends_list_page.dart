@@ -131,7 +131,7 @@ class _FriendsListPageState extends State<FriendsListPage>
         ],
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: AppColors.purpleColor,
+          indicatorColor: AppColors.primary,
           indicatorWeight: 3,
           labelColor: Colors.black,
           unselectedLabelColor: AppColors.greyColor,
@@ -221,7 +221,7 @@ class _FriendsListPageState extends State<FriendsListPage>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: AppColors.purpleColor.withOpacity(0.3),
+                    color: AppColors.primary.withOpacity(0.3),
                     width: 2,
                   ),
                   image: DecorationImage(
@@ -269,7 +269,7 @@ class _FriendsListPageState extends State<FriendsListPage>
                   friend['mutualFriends'],
                   style: AppTheme.greyTextStyle.copyWith(
                     fontSize: 11,
-                    color: AppColors.purpleColor,
+                    color: AppColors.primary,
                   ),
                 ),
               ],
@@ -288,12 +288,12 @@ class _FriendsListPageState extends State<FriendsListPage>
               decoration: BoxDecoration(
                 color: friend['isFollowing']
                     ? Colors.transparent
-                    : AppColors.purpleColor,
+                    : AppColors.primary,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: friend['isFollowing']
                       ? AppColors.greyColor.withOpacity(0.3)
-                      : AppColors.purpleColor,
+                      : AppColors.primary,
                 ),
               ),
               child: Text(

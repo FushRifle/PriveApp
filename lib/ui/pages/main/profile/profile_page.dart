@@ -104,7 +104,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   String _getUserAvatar() {
-    return _user['avatar'] ?? _user['avatar_url'] ?? '';
+    return _user['avatar'] ?? '';
   }
 
   String _getUserBio() {
@@ -341,10 +341,6 @@ class _ProfilePageState extends State<ProfilePage> {
             },
             icon: const Icon(Icons.settings_outlined, color: Colors.black),
           ),
-        IconButton(
-          onPressed: () {},
-          icon: const Icon(Icons.more_horiz, color: Colors.black),
-        ),
         const SizedBox(width: 8),
       ],
     );
@@ -352,6 +348,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildHeroProfile() {
     final avatar = _getUserAvatar();
+    final name = _getUserName();
+    final firstLetter = name.isNotEmpty ? name[0].toUpperCase() : 'U';
 
     return Column(
       children: [
@@ -366,15 +364,22 @@ class _ProfilePageState extends State<ProfilePage> {
           child: CircleAvatar(
             radius: 60,
             backgroundColor: Colors.white,
-            backgroundImage: avatar.isNotEmpty
-                ? NetworkImage(avatar)
-                : const AssetImage('assets/images/img_profile.jpeg')
-                    as ImageProvider,
+            backgroundImage: avatar.isNotEmpty ? NetworkImage(avatar) : null,
+            child: avatar.isEmpty
+                ? Text(
+                    firstLetter,
+                    style: TextStyle(
+                      fontSize: 48,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  )
+                : null,
           ),
         ),
         const SizedBox(height: 16),
         Text(
-          _getUserName(),
+          name,
           style: AppTheme.blackTextStyle.copyWith(
             fontWeight: AppTheme.bold,
             fontSize: 24,
@@ -610,9 +615,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildGalleryGrid() {
-    // Get user posts from feed
     final allPosts = _getUserPostsFromFeed();
-
     return BlocProvider(
       create: (context) =>
           GalleryProfileCubit()..getGalleryProfile(feedPosts: allPosts),

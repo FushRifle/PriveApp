@@ -198,7 +198,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: _currentMediaIndex == index
-                              ? AppColors.purpleColor
+                              ? AppColors.primary
                               : Colors.white.withOpacity(0.5),
                         ),
                       ),
@@ -251,7 +251,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
           LinearProgressIndicator(
             value: null,
             backgroundColor: Colors.grey[200],
-            color: AppColors.purpleColor,
+            color: AppColors.primary,
           ),
       ],
     );
@@ -370,7 +370,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
       return Container(
         color: Colors.black,
         child: const Center(
-          child: CircularProgressIndicator(color: AppColors.purpleColor),
+          child: CircularProgressIndicator(color: AppColors.primary),
         ),
       );
     }
@@ -501,7 +501,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.purpleColor),
+              borderSide: BorderSide(color: AppColors.primary),
             ),
             contentPadding: const EdgeInsets.all(16),
           ),
@@ -516,7 +516,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: AppColors.purpleColor.withOpacity(0.1),
+                        color: AppColors.primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
@@ -525,7 +525,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                           Text(
                             "#$tag",
                             style: TextStyle(
-                              color: AppColors.purpleColor,
+                              color: AppColors.primary,
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
                             ),
@@ -536,7 +536,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                             child: Icon(
                               Icons.close,
                               size: 14,
-                              color: AppColors.purpleColor,
+                              color: AppColors.primary,
                             ),
                           ),
                         ],
@@ -578,7 +578,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
             onChanged: (value) {
               setState(() => _isPrivate = value);
             },
-            activeThumbColor: AppColors.purpleColor,
+            activeThumbColor: AppColors.primary,
           ),
         ],
       ),

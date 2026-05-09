@@ -44,7 +44,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         });
       }
     } catch (e) {
-      print('Error loading user: $e');
+      debugPrint('Error loading user: $e');
       if (mounted) {
         setState(() {
           _isLoadingUser = false;
@@ -73,13 +73,10 @@ class _HomePageState extends ConsumerState<HomePage> {
       bottom: false,
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 2, 12, 2),
-            child: _buildCustomAppBar(context),
-          ),
+          _buildCustomAppBar(),
           Expanded(
             child: RefreshIndicator(
-              color: AppColors.purpleColor,
+              color: AppColors.primary,
               onRefresh: _refreshAll,
               child: _buildBody(feedState),
             ),
@@ -92,7 +89,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget _buildBody(CachedFeedData feedState) {
     if (feedState.isLoading && feedState.posts.isEmpty) {
       return const Center(
-        child: CircularProgressIndicator(color: AppColors.purpleColor),
+        child: CircularProgressIndicator(color: AppColors.primary),
       );
     }
 
@@ -109,6 +106,9 @@ class _HomePageState extends ConsumerState<HomePage> {
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: () => ref.read(feedProvider.notifier).fetchData(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+              ),
               child: const Text('Retry'),
             ),
           ],
@@ -116,21 +116,19 @@ class _HomePageState extends ConsumerState<HomePage> {
       );
     }
 
-    // Group statuses by user
     final groupedStatuses = _groupStatusesByUser(feedState.stories);
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 130),
       children: [
-        _buildStatusBar(context, groupedStatuses),
+        _buildStatusBar(groupedStatuses),
         const SizedBox(height: 18),
         _buildPostsList(feedState),
       ],
     );
   }
 
-  // Group statuses by user ID to show one container per user
   Map<int, List<Map<String, dynamic>>> _groupStatusesByUser(
       List<dynamic> stories) {
     final Map<int, List<Map<String, dynamic>>> grouped = {};
@@ -201,30 +199,36 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
         if (hasMore)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 120),
+            padding: const EdgeInsets.symmetric(vertical: 20),
             child: Center(
               child: isLoadingMore
-                  ? const CircularProgressIndicator(
-                      color: AppColors.purpleColor,
+                  ? const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                      ),
                     )
                   : TextButton(
                       onPressed: () =>
                           ref.read(feedProvider.notifier).loadMore(),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                      ),
                       child: Text(
                         'Load More',
                         style: AppTheme.blackTextStyle.copyWith(
-                          color: AppColors.purpleColor,
+                          color: AppColors.primary,
                         ),
                       ),
                     ),
             ),
           ),
+        const SizedBox(height: 20),
       ],
     );
   }
 
-  Widget _buildStatusBar(BuildContext context,
-      Map<int, List<Map<String, dynamic>>> groupedStatuses) {
+  Widget _buildStatusBar(Map<int, List<Map<String, dynamic>>> groupedStatuses) {
     final List<_UserStatusGroup> userGroups = [];
 
     groupedStatuses.forEach((userId, stories) {
@@ -262,7 +266,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             return StatusWidget(
               status: StatusModel(
                 name: 'My Status',
-                imgProfile: _userAvatar(_currentUser),
+                imgProfile: _getUserAvatar(),
                 statusImage: '',
                 time: '',
               ),
@@ -355,43 +359,60 @@ class _HomePageState extends ConsumerState<HomePage> {
         .toString();
   }
 
-  CustomAppBar _buildCustomAppBar(BuildContext context) {
+  Widget _buildCustomAppBar() {
     final userName = _getUserDisplayName();
     final userAvatar = _getUserAvatar();
+    final firstLetter = userName.isNotEmpty ? userName[0].toUpperCase() : 'U';
 
     return CustomAppBar(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
         child: Row(
           children: [
-            Image.asset(
-              'assets/images/prive.png',
+            // App logo
+            Container(
               width: 40,
               height: 40,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Image.asset(
+                'assets/images/prive.png',
+                width: 40,
+                height: 40,
+              ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 10),
+            // Notification button
             InkWell(
               onTap: () {
+                HapticFeedback.lightImpact();
                 Navigator.pushNamed(context, NamedRoutes.notificationScreen);
               },
-              child: Image.asset(
-                'assets/images/ic_notification.png',
-                width: 28,
-                height: 28,
+              child: Icon(
+                Icons.notification_important_outlined,
+                color: AppColors.primary,
+                size: 30,
               ),
             ),
             const SizedBox(width: 14),
+            // Search button
             InkWell(
-              onTap: () {},
-              child: Image.asset(
-                'assets/images/ic_search.png',
-                width: 28,
-                height: 28,
+              onTap: () {
+                HapticFeedback.lightImpact();
+                // TODO: Navigate to search
+              },
+              child: Icon(
+                Icons.search_outlined,
+                color: AppColors.primary,
+                size: 30,
               ),
             ),
             const Spacer(),
+            // Profile button
             InkWell(
               onTap: () {
+                HapticFeedback.lightImpact();
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -401,19 +422,21 @@ class _HomePageState extends ConsumerState<HomePage> {
               },
               child: Container(
                 constraints: const BoxConstraints(maxWidth: 180),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(35),
                   color: AppColors.primary,
                   border: Border.all(
-                    color: AppColors.secondary.withOpacity(0.2),
+                    color: Colors.white.withOpacity(0.2),
                     width: 1,
                   ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildAvatar(userAvatar, size: 32),
+                    _buildAvatar(userAvatar,
+                        size: 32, fallbackText: firstLetter),
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
@@ -428,10 +451,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ),
                     if (_currentUser['verified'] == true) ...[
                       const SizedBox(width: 4),
-                      Icon(
+                      const Icon(
                         Icons.verified,
-                        size: 16,
-                        color: AppColors.white,
+                        size: 14,
+                        color: Colors.white,
                       ),
                     ],
                   ],
@@ -452,8 +475,8 @@ class _HomePageState extends ConsumerState<HomePage> {
       userId: _toInt(story['userId'] ?? user['id']),
       name: _displayName(user),
       imgProfile: _userAvatar(user),
-      statusImage: '', // Stories from API are text-based
-      statusText: story['content']?.toString() ?? '', // Use 'content' field
+      statusImage: '',
+      statusText: story['content']?.toString() ?? '',
       time: story['time']?.toString() ?? '',
       isViewed: story['isSeen'] == true || story['is_seen'] == true,
       statusCount: statusCount,
@@ -467,7 +490,8 @@ class _HomePageState extends ConsumerState<HomePage> {
     return 0;
   }
 
-  Widget _buildAvatar(String avatar, {required double size}) {
+  Widget _buildAvatar(String avatar,
+      {required double size, required String fallbackText}) {
     if (avatar.isNotEmpty && avatar.startsWith('http')) {
       return ClipOval(
         child: Image.network(
@@ -475,7 +499,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           width: size,
           height: size,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _avatarFallback(size),
+          errorBuilder: (_, __, ___) => _avatarFallback(size, fallbackText),
         ),
       );
     }
@@ -487,26 +511,31 @@ class _HomePageState extends ConsumerState<HomePage> {
           width: size,
           height: size,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _avatarFallback(size),
+          errorBuilder: (_, __, ___) => _avatarFallback(size, fallbackText),
         ),
       );
     }
 
-    return _avatarFallback(size);
+    return _avatarFallback(size, fallbackText);
   }
 
-  Widget _avatarFallback(double size) {
+  Widget _avatarFallback(double size, String fallbackText) {
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: AppColors.whiteColor.withOpacity(0.25),
+        color: Colors.white.withOpacity(0.25),
       ),
-      child: Icon(
-        Icons.person,
-        size: size * 0.65,
-        color: AppColors.whiteColor,
+      child: Center(
+        child: Text(
+          fallbackText,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }
@@ -544,7 +573,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 }
 
-// Helper class for user status groups
 class _UserStatusGroup {
   final int userId;
   final String name;

@@ -16,6 +16,7 @@ class AppColors {
   static const Color lightCard = Color(0xFFFFFFFF);
   static const Color lightGray10 = Color(0xFF1C1C1E);
   static const Color lightGray3 = Color(0xFF333333);
+  static const Color lightText = Color(0xFF333333);
 
   // Dark Theme Colors
   static const Color darkBackground = Color(0xFF0A0A0A);
@@ -32,6 +33,7 @@ class AppColors {
   static const Color darkCard = Color(0xFF2E2E2E);
   static const Color darkGray10 = Color(0xFFF2F2F7);
   static const Color darkGray3 = Color(0xFF333333);
+  static const Color darkText = Color(0xFFFFFFFF);
 
   // Shared Colors
   static const Color primary = Color(0xFFFF6B6B);

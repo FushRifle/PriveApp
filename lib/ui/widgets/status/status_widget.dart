@@ -31,7 +31,6 @@ class StatusWidget extends StatelessWidget {
             Stack(
               alignment: Alignment.center,
               children: [
-                // Story ring (gradient border)
                 Container(
                   width: 68,
                   height: 68,
@@ -42,9 +41,9 @@ class StatusWidget extends StatelessWidget {
                         : (hasUnviewed && !status.isViewed)
                             ? const LinearGradient(
                                 colors: [
-                                  Color(0xFF833AB4), // Purple
-                                  Color(0xFFFD1D1D), // Red
-                                  Color(0xFFFCAF45), // Orange
+                                  Color(0xFF833AB4),
+                                  Color(0xFFFD1D1D),
+                                  Color(0xFFFCAF45),
                                 ],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
@@ -80,7 +79,7 @@ class StatusWidget extends StatelessWidget {
                       height: 20,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: AppColors.purpleColor,
+                        color: AppColors.primary,
                         border: Border.all(
                           color: Colors.white,
                           width: 2,
@@ -109,7 +108,7 @@ class StatusWidget extends StatelessWidget {
                       height: 22,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: AppColors.purpleColor,
+                        color: AppColors.primary,
                         border: Border.all(
                           color: Colors.white,
                           width: 2,
@@ -169,7 +168,7 @@ class StatusWidget extends StatelessWidget {
                 height: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: AppColors.purpleColor,
+                  color: AppColors.primary,
                 ),
               ),
             ),

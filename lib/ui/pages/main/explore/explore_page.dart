@@ -459,7 +459,7 @@ class _DiscoverPageState extends State<DiscoverPage>
       case LoadingState.initial:
       case LoadingState.loading:
         return const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
+          padding: EdgeInsets.symmetric(horizontal: 40),
           child: LoadingShimmer(),
         );
 
@@ -476,7 +476,7 @@ class _DiscoverPageState extends State<DiscoverPage>
               const Icon(Icons.error_outline, size: 64, color: Colors.grey),
               const SizedBox(height: 16),
               Text(
-                _errorMessage,
+                'Something went wrong, refresh page.',
                 style: AppTheme.greyTextStyle.copyWith(fontSize: 14),
                 textAlign: TextAlign.center,
               ),
@@ -484,7 +484,8 @@ class _DiscoverPageState extends State<DiscoverPage>
               ElevatedButton(
                 onPressed: _loadProfiles,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.purpleColor,
+                  minimumSize: const Size(120, 48),
+                  backgroundColor: AppColors.primary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(25),
                   ),
@@ -504,7 +505,7 @@ class _DiscoverPageState extends State<DiscoverPage>
         }
 
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 40),
           child: GestureDetector(
             onPanStart: _onPanStart,
             onPanUpdate: _onPanUpdate,

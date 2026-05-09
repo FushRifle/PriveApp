@@ -106,7 +106,7 @@ class MatchDialog extends StatelessWidget {
                         onPressed: onStartChat,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
-                          foregroundColor: AppColors.purpleColor,
+                          foregroundColor: AppColors.primary,
                           minimumSize: const Size(double.infinity, 50),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(25),

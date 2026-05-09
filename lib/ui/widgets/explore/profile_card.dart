@@ -73,8 +73,8 @@ class ProfileCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.purpleColor.withOpacity(0.3),
-            AppColors.purpleColor.withOpacity(0.8),
+            AppColors.primary.withOpacity(0.3),
+            AppColors.primary.withOpacity(0.8),
           ],
         ),
       ),
@@ -217,7 +217,7 @@ class ProfileCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: AppColors.purpleColor.withOpacity(0.3),
+              color: AppColors.primary.withOpacity(0.3),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),

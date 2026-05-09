@@ -6,7 +6,7 @@ import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
 import 'package:Prive/app/resources/constant/named_routes.dart';
 import 'package:Prive/data/models/post_model.dart';
-import 'package:Prive/ui/pages/main/discover/discover_page.dart';
+import 'package:Prive/ui/pages/main/explore/explore_page.dart';
 import 'package:Prive/ui/pages/main/chat/inbox_page.dart';
 import 'package:Prive/ui/pages/main/home/home_page.dart';
 import 'package:Prive/ui/pages/main/home/post_detail_page.dart';
@@ -74,17 +74,10 @@ class _MyAppState extends ConsumerState<MyApp> {
   }
 
   Future<void> _checkAuthState() async {
-    // Check if user is logged in
     final session = Supabase.instance.client.auth.currentSession;
-
     setState(() {
-      if (session != null) {
-        // User is logged in, go to home screen
-        _initialRoute = NamedRoutes.homeScreen;
-      } else {
-        // No user, go to login screen
-        _initialRoute = NamedRoutes.loginScreen;
-      }
+      _initialRoute =
+          session != null ? NamedRoutes.homeScreen : NamedRoutes.loginScreen;
       _isLoading = false;
     });
   }
@@ -97,9 +90,7 @@ class _MyAppState extends ConsumerState<MyApp> {
       return const MaterialApp(
         debugShowCheckedModeBanner: false,
         home: Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(),
-          ),
+          body: Center(child: CircularProgressIndicator()),
         ),
       );
     }
@@ -112,100 +103,9 @@ class _MyAppState extends ConsumerState<MyApp> {
       debugShowCheckedModeBanner: false,
       scrollBehavior: const CustomScrollBehavior(),
       initialRoute: _initialRoute,
-      onGenerateRoute: (settings) {
-        // Handle routes with arguments safely
-        switch (settings.name) {
-          case NamedRoutes.postDetailScreen:
-            final args = settings.arguments;
-            if (args == null) {
-              return MaterialPageRoute(
-                builder: (context) => const Scaffold(
-                  body: Center(child: Text('Invalid post data')),
-                ),
-              );
-            }
-
-            PostModel post;
-            if (args is PostModel) {
-              post = args;
-            } else if (args is Map<String, dynamic>) {
-              post = PostModel.fromJson(args);
-            } else {
-              post = PostModel(
-                name: 'User',
-                imgProfile: '',
-                picture: '',
-                caption: '',
-                createdAt: DateTime.now(),
-              );
-            }
-
-            return MaterialPageRoute(
-              builder: (context) => PostDetailPage(post: post),
-            );
-
-          case NamedRoutes.loginScreen:
-            return MaterialPageRoute(builder: (context) => const LoginPage());
-
-          case NamedRoutes.registerScreen:
-            return MaterialPageRoute(
-                builder: (context) => const RegisterPage());
-
-          case NamedRoutes.homeScreen:
-            return MaterialPageRoute(builder: (context) => const MainWrapper());
-
-          case NamedRoutes.profileScreen:
-            return MaterialPageRoute(builder: (context) => const ProfilePage());
-
-          case NamedRoutes.editProfileScreen:
-            return MaterialPageRoute(
-                builder: (context) => const EditProfilePage());
-
-          case NamedRoutes.friendListScreen:
-            return MaterialPageRoute(
-                builder: (context) => const FriendsListPage());
-
-          case NamedRoutes.insightsScreen:
-            return MaterialPageRoute(
-                builder: (context) => const InsightsPage());
-
-          case NamedRoutes.matchScreen:
-            return MaterialPageRoute(builder: (context) => const MatchesPage());
-
-          case NamedRoutes.createPostScreen:
-            return MaterialPageRoute(
-                builder: (context) => const CreatePostPage());
-
-          case NamedRoutes.createStatusScreen:
-            return MaterialPageRoute(
-                builder: (context) => const CreateStatusPage());
-
-          case NamedRoutes.settingsScreen:
-            return MaterialPageRoute(
-                builder: (context) => const SettingsPage());
-
-          case NamedRoutes.subscribeScreen:
-            return MaterialPageRoute(
-                builder: (context) => const SubscribePage());
-
-          case NamedRoutes.notificationScreen:
-            return MaterialPageRoute(
-                builder: (context) => const NotificationPage());
-
-          default:
-            // If user tries to access unknown route, redirect based on auth state
-            final session = Supabase.instance.client.auth.currentSession;
-            return MaterialPageRoute(
-              builder: (context) =>
-                  session != null ? const MainWrapper() : const LoginPage(),
-            );
-        }
-      },
+      onGenerateRoute: _generateRoute,
       builder: (context, child) {
-        if (child == null) {
-          return const SizedBox.shrink();
-        }
-
+        if (child == null) return const SizedBox.shrink();
         final mediaQueryData = MediaQuery.of(context);
 
         if (kIsWeb) {
@@ -220,14 +120,90 @@ class _MyAppState extends ConsumerState<MyApp> {
             child: child,
           );
         }
-
         return child;
       },
     );
   }
+
+  Route<dynamic>? _generateRoute(RouteSettings settings) {
+    switch (settings.name) {
+      case NamedRoutes.postDetailScreen:
+        final args = settings.arguments;
+        if (args == null) {
+          return MaterialPageRoute(
+            builder: (context) => const Scaffold(
+              body: Center(child: Text('Invalid post data')),
+            ),
+          );
+        }
+
+        final post = args is PostModel
+            ? args
+            : args is Map<String, dynamic>
+                ? PostModel.fromJson(args)
+                : PostModel(
+                    name: 'User',
+                    imgProfile: '',
+                    picture: '',
+                    caption: '',
+                    createdAt: DateTime.now(),
+                  );
+
+        return MaterialPageRoute(
+          builder: (context) => PostDetailPage(post: post),
+        );
+
+      case NamedRoutes.loginScreen:
+        return MaterialPageRoute(builder: (context) => const LoginPage());
+
+      case NamedRoutes.registerScreen:
+        return MaterialPageRoute(builder: (context) => const RegisterPage());
+
+      case NamedRoutes.homeScreen:
+        return MaterialPageRoute(builder: (context) => const MainWrapper());
+
+      case NamedRoutes.profileScreen:
+        return MaterialPageRoute(builder: (context) => const ProfilePage());
+
+      case NamedRoutes.editProfileScreen:
+        return MaterialPageRoute(builder: (context) => const EditProfilePage());
+
+      case NamedRoutes.friendListScreen:
+        return MaterialPageRoute(builder: (context) => const FriendsListPage());
+
+      case NamedRoutes.insightsScreen:
+        return MaterialPageRoute(builder: (context) => const InsightsPage());
+
+      case NamedRoutes.matchScreen:
+        return MaterialPageRoute(builder: (context) => const MatchesPage());
+
+      case NamedRoutes.createPostScreen:
+        return MaterialPageRoute(builder: (context) => const CreatePostPage());
+
+      case NamedRoutes.createStatusScreen:
+        return MaterialPageRoute(
+            builder: (context) => const CreateStatusPage());
+
+      case NamedRoutes.settingsScreen:
+        return MaterialPageRoute(builder: (context) => const SettingsPage());
+
+      case NamedRoutes.subscribeScreen:
+        return MaterialPageRoute(builder: (context) => const SubscribePage());
+
+      case NamedRoutes.notificationScreen:
+        return MaterialPageRoute(
+            builder: (context) => const NotificationPage());
+
+      default:
+        final session = Supabase.instance.client.auth.currentSession;
+        return MaterialPageRoute(
+          builder: (context) =>
+              session != null ? const MainWrapper() : const LoginPage(),
+        );
+    }
+  }
 }
 
-// Custom scroll behavior to hide scroll indicators
 class CustomScrollBehavior extends ScrollBehavior {
   const CustomScrollBehavior();
 
@@ -237,7 +213,6 @@ class CustomScrollBehavior extends ScrollBehavior {
   }
 }
 
-// MainWrapper stays exactly the same...
 class MainWrapper extends StatefulWidget {
   const MainWrapper({super.key});
 
@@ -255,8 +230,19 @@ class _MainWrapperState extends State<MainWrapper> {
     const InboxPage(),
   ];
 
+  final List<BottomNavItem> _navItems = [
+    BottomNavItem(icon: Icons.home, label: 'Home'),
+    BottomNavItem(icon: Icons.explore, label: 'Discover'),
+    BottomNavItem(icon: Icons.play_circle_fill, label: 'Reels'),
+    BottomNavItem(icon: Icons.message, label: 'Inbox'),
+  ];
+
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor =
+        isDarkMode ? AppColors.darkBackground : Colors.white;
+
     return Scaffold(
       body: Stack(
         alignment: Alignment.bottomCenter,
@@ -295,132 +281,24 @@ class _MainWrapperState extends State<MainWrapper> {
                 ),
               ),
             ),
-          if (_currentIndex != 2) _buildBottomNavBar(),
+          if (_currentIndex != 2) _buildBottomNavBar(backgroundColor),
         ],
       ),
     );
   }
 
-  Container _buildBottomNavBar() {
-    return Container(
-      width: double.infinity,
-      height: 110,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      margin: const EdgeInsets.only(
-        right: 14,
-        left: 14,
-        bottom: 14,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.whiteColor,
-        borderRadius: BorderRadius.circular(30),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: _buildItemBottomNavBar(
-              Icons.home,
-              "Home",
-              0,
-            ),
-          ),
-          Expanded(
-            child: _buildItemBottomNavBar(
-              Icons.explore,
-              "Discover",
-              1,
-            ),
-          ),
-          Expanded(
-            child: _buildItemBottomNavBar(
-              Icons.play_circle_fill,
-              "Reels",
-              2,
-            ),
-          ),
-          Expanded(
-            child: _buildItemBottomNavBar(
-              Icons.message,
-              "Inbox",
-              3,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildBackgroundGradient() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final gradientColor = isDarkMode ? AppColors.darkBackground : Colors.white;
 
-  Widget _buildItemBottomNavBar(
-    IconData icon,
-    String title,
-    int index,
-  ) {
-    final isSelected = _currentIndex == index;
-
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        setState(() => _currentIndex = index);
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          color: isSelected ? AppColors.whiteColor : Colors.transparent,
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: AppColors.blackColor.withOpacity(0.1),
-                    blurRadius: 35,
-                    offset: const Offset(0, 10),
-                  ),
-                ]
-              : [],
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 24,
-              color: isSelected ? AppColors.purpleColor : AppColors.blackColor,
-            ),
-            const SizedBox(height: 4),
-            Flexible(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTheme.blackTextStyle.copyWith(
-                    fontWeight: isSelected ? AppTheme.bold : AppTheme.medium,
-                    fontSize: 11,
-                    color: isSelected
-                        ? AppColors.purpleColor
-                        : AppColors.blackColor,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Container _buildBackgroundGradient() {
     return Container(
       width: double.infinity,
       height: 150,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.whiteColor.withOpacity(0),
-            AppColors.whiteColor.withOpacity(0.8),
+            gradientColor.withOpacity(0),
+            gradientColor.withOpacity(0.9),
           ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -428,4 +306,102 @@ class _MainWrapperState extends State<MainWrapper> {
       ),
     );
   }
+
+  Widget _buildBottomNavBar(Color backgroundColor) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final unselectedColor =
+        isDarkMode ? Colors.grey.shade500 : Colors.grey.shade600;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        bottom: true,
+        child: SizedBox(
+          height: 70,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              for (int i = 0; i < _navItems.length; i++)
+                _buildNavItem(_navItems[i], i, unselectedColor),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(BottomNavItem item, int index, Color unselectedColor) {
+    final isSelected = _currentIndex == index;
+
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            setState(() => _currentIndex = index);
+          },
+          borderRadius: BorderRadius.circular(30),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (isSelected)
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    Icon(
+                      item.icon,
+                      size: 24,
+                      color: isSelected ? AppColors.primary : unselectedColor,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  item.label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    color: isSelected ? AppColors.primary : unselectedColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class BottomNavItem {
+  final IconData icon;
+  final String label;
+
+  const BottomNavItem({
+    required this.icon,
+    required this.label,
+  });
 }

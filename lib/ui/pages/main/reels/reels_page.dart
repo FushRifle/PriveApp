@@ -1,3 +1,5 @@
+import 'package:Prive/app/configs/colors.dart';
+import 'package:Prive/app/configs/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:Prive/app/resources/constant/named_routes.dart';
@@ -193,23 +195,29 @@ class _ReelsPageState extends State<ReelsPage> {
                 children: [
                   const Icon(
                     Icons.error_outline,
-                    color: Colors.white54,
+                    color: AppColors.primary,
                     size: 64,
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    _errorMessage,
-                    style: const TextStyle(color: Colors.white54),
+                    'Something went wrong, refresh page.',
+                    style: const TextStyle(color: Colors.white),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: _refreshReels,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
+                      backgroundColor: AppColors.primary,
+                      minimumSize: const Size(120, 48),
                       foregroundColor: Colors.black,
                     ),
-                    child: const Text('Try Again'),
+                    child: Text(
+                      'Refresh',
+                      style: AppTheme.whiteTextStyle.copyWith(
+                        fontWeight: AppTheme.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),

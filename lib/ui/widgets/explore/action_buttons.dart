@@ -29,7 +29,7 @@ class ActionButtons extends StatelessWidget {
         ),
         _ActionButton(
           icon: Icons.star,
-          color: AppColors.purpleColor,
+          color: AppColors.primary,
           size: 48,
           onTap: onSuperLike,
           label: 'Super',

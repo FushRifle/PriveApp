@@ -294,7 +294,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                                     value: _fontSize,
                                     min: 20,
                                     max: 48,
-                                    activeColor: AppColors.purpleColor,
+                                    activeColor: AppColors.primary,
                                     inactiveColor: Colors.white30,
                                     onChanged: (value) {
                                       setState(() => _fontSize = value);
@@ -321,7 +321,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: _showFontControls
-                            ? AppColors.purpleColor
+                            ? AppColors.primary
                             : Colors.white.withOpacity(0.1),
                       ),
                       child: IconButton(
@@ -393,7 +393,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                       margin: const EdgeInsets.symmetric(horizontal: 8),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: AppColors.purpleColor,
+                        color: AppColors.primary,
                       ),
                       child: IconButton(
                         icon: const Icon(Icons.check,

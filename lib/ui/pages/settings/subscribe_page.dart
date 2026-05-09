@@ -107,7 +107,7 @@ class _SubscribePageState extends State<SubscribePage> {
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
                             color: _selectedPlan == 0
-                                ? AppColors.purpleColor
+                                ? AppColors.primary
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -149,7 +149,7 @@ class _SubscribePageState extends State<SubscribePage> {
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
                             color: _selectedPlan == 1
-                                ? AppColors.purpleColor
+                                ? AppColors.primary
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -306,7 +306,7 @@ class _SubscribePageState extends State<SubscribePage> {
                 child: Text(
                   'Restore Purchases',
                   style: AppTheme.blackTextStyle.copyWith(
-                    color: AppColors.purpleColor,
+                    color: AppColors.primary,
                     fontWeight: AppTheme.bold,
                     fontSize: 16,
                   ),
