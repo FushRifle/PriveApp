@@ -313,7 +313,7 @@ class _MainWrapperState extends State<MainWrapper> {
         isDarkMode ? Colors.grey.shade500 : Colors.grey.shade600;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 45),
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(30),

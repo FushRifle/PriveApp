@@ -175,7 +175,7 @@ class _NotificationPageState extends State<NotificationPage> {
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: isUnread
-                          ? AppColors.primary.withOpacity(0.3)
+                          ? AppColors.purpleColor.withOpacity(0.3)
                           : Colors.transparent,
                       width: 2,
                     ),
@@ -193,7 +193,7 @@ class _NotificationPageState extends State<NotificationPage> {
                       width: 14,
                       height: 14,
                       decoration: BoxDecoration(
-                        color: AppColors.primary,
+                        color: AppColors.purpleColor,
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 2),
                       ),
@@ -257,12 +257,12 @@ class _NotificationPageState extends State<NotificationPage> {
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
+                        color: AppColors.purpleColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
                         Icons.image,
-                        color: AppColors.primary.withOpacity(0.5),
+                        color: AppColors.purpleColor.withOpacity(0.5),
                         size: 20,
                       ),
                     );
@@ -292,14 +292,14 @@ class _NotificationPageState extends State<NotificationPage> {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              AppColors.primary,
-              AppColors.primary.withOpacity(0.8),
+              AppColors.purpleColor,
+              AppColors.purpleColor.withOpacity(0.8),
             ],
           ),
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withOpacity(0.2),
+              color: AppColors.purpleColor.withOpacity(0.2),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),

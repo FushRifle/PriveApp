@@ -249,7 +249,6 @@ class _ChatPageState extends State<ChatPage> {
       ),
       body: Column(
         children: [
-          // Messages list
           Expanded(
             child: _messages.isEmpty
                 ? Center(
@@ -294,16 +293,14 @@ class _ChatPageState extends State<ChatPage> {
                     },
                   ),
           ),
-          // Input bar
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
             child: SafeArea(
               top: false,
               bottom: true,
               child: Row(
                 children: [
-                  // Attachment button
                   Material(
                     color: Colors.transparent,
                     child: IconButton(
@@ -319,11 +316,10 @@ class _ChatPageState extends State<ChatPage> {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  // Text field
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: AppColors.backgroundColor,
+                        color: const Color.fromRGBO(233, 233, 233, 1),
                         borderRadius: BorderRadius.circular(25),
                         border: Border.all(
                           color: AppColors.greyColor.withOpacity(0.2),

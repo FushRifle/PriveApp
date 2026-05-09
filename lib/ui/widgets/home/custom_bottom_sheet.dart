@@ -65,7 +65,7 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
             height: 6,
             margin: const EdgeInsets.only(top: 16, bottom: 6),
             decoration: BoxDecoration(
-              color: AppColors.whiteColor,
+              color: AppColors.backgroundColor,
               borderRadius: BorderRadius.circular(50),
             ),
           ),
@@ -73,7 +73,7 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
             child: Container(
               padding: const EdgeInsets.only(top: 30),
               decoration: const BoxDecoration(
-                color: AppColors.whiteColor,
+                color: AppColors.backgroundColor,
                 borderRadius: BorderRadius.vertical(
                   top: Radius.circular(30),
                 ),
