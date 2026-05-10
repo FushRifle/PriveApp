@@ -542,16 +542,13 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
         if (imageUrl == null) throw Exception('Failed to upload image');
       }
 
-      // Get background color for text-only stories
       String? backgroundColor;
       if (!_hasImage && _selectedColor != Colors.transparent) {
         backgroundColor =
             '#${_selectedColor.value.toRadixString(16).substring(2)}';
       }
 
-      await _feedService.createStatus(
-        text: _hasText ? _textController.text.trim() : '',
-        imageUrl: imageUrl,
+      await _feedService.createStory(
         backgroundColor: backgroundColor,
         textAlign: _textAlign == TextAlign.center ? 'center' : 'left',
         fontSize: _fontSize,

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
-import 'package:Prive/data/models/status_model.dart';
+import 'package:Prive/data/models/feeds_models.dart';
 
 class StatusWidget extends StatelessWidget {
-  final StatusModel status;
+  final String name;
+  final String avatar;
   final VoidCallback onTap;
   final bool isAddStatus;
   final int statusCount;
@@ -12,12 +13,42 @@ class StatusWidget extends StatelessWidget {
 
   const StatusWidget({
     super.key,
-    required this.status,
+    required this.name,
+    required this.avatar,
     required this.onTap,
     this.isAddStatus = false,
     this.statusCount = 0,
     this.hasUnviewed = false,
   });
+
+  // Convenience factory to create from StoryUser
+  factory StatusWidget.fromStoryUser({
+    required StoryUser user,
+    required VoidCallback onTap,
+    int statusCount = 0,
+    bool hasUnviewed = false,
+  }) {
+    return StatusWidget(
+      name: user.name,
+      avatar: user.avatar,
+      onTap: onTap,
+      statusCount: statusCount,
+      hasUnviewed: hasUnviewed,
+      isAddStatus: false,
+    );
+  }
+
+  // Convenience factory for add status button
+  factory StatusWidget.addStatus({required VoidCallback onTap}) {
+    return StatusWidget(
+      name: 'My Status',
+      avatar: '',
+      onTap: onTap,
+      isAddStatus: true,
+      statusCount: 0,
+      hasUnviewed: false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +69,7 @@ class StatusWidget extends StatelessWidget {
                     shape: BoxShape.circle,
                     gradient: isAddStatus
                         ? null
-                        : (hasUnviewed && !status.isViewed)
+                        : (hasUnviewed)
                             ? const LinearGradient(
                                 colors: [
                                   Color(0xFF833AB4),
@@ -125,7 +156,7 @@ class StatusWidget extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              isAddStatus ? 'My Status' : status.name,
+              isAddStatus ? 'My Status' : name,
               style: AppTheme.blackTextStyle.copyWith(
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
@@ -141,9 +172,21 @@ class StatusWidget extends StatelessWidget {
   }
 
   Widget _buildAvatar() {
-    final avatarUrl = status.imgProfile;
+    if (isAddStatus) {
+      // For "My Status", show a placeholder or the user's avatar if available
+      if (avatar.isEmpty) {
+        return Container(
+          color: Colors.grey[300],
+          child: const Icon(
+            Icons.person,
+            color: Colors.grey,
+            size: 32,
+          ),
+        );
+      }
+    }
 
-    if (avatarUrl.isEmpty) {
+    if (avatar.isEmpty) {
       return Container(
         color: Colors.grey[300],
         child: const Icon(
@@ -154,9 +197,9 @@ class StatusWidget extends StatelessWidget {
       );
     }
 
-    if (avatarUrl.startsWith('http')) {
+    if (avatar.startsWith('http')) {
       return Image.network(
-        avatarUrl,
+        avatar,
         fit: BoxFit.cover,
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) return child;
@@ -186,7 +229,7 @@ class StatusWidget extends StatelessWidget {
     }
 
     return Image.asset(
-      avatarUrl,
+      avatar,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) => Container(
         color: Colors.grey[300],

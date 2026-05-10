@@ -11,7 +11,7 @@ class NotificationService {
     bool unreadOnly = false,
   }) async {
     try {
-      final response = await _api.get('/notifications', queryParameters: {
+      final response = await _api.get('/api/notifications', queryParameters: {
         'page': page,
         'pageSize': pageSize,
         'unread': unreadOnly,
@@ -25,7 +25,8 @@ class NotificationService {
   // Mark as read
   Future<Map<String, dynamic>> markAsRead(int notificationId) async {
     try {
-      final response = await _api.put('/notifications/$notificationId/read');
+      final response =
+          await _api.put('/api/notifications/$notificationId/read');
       return response.data;
     } on DioException catch (e) {
       throw e.response?.data['message'] ?? 'Failed to mark as read';
@@ -35,7 +36,7 @@ class NotificationService {
   // Mark all as read
   Future<Map<String, dynamic>> markAllAsRead() async {
     try {
-      final response = await _api.put('/notifications/read-all');
+      final response = await _api.put('/api/notifications/read-all');
       return response.data;
     } on DioException catch (e) {
       throw e.response?.data['message'] ?? 'Failed to mark all as read';
@@ -45,7 +46,7 @@ class NotificationService {
   // Delete notification
   Future<Map<String, dynamic>> deleteNotification(int notificationId) async {
     try {
-      final response = await _api.delete('/notifications/$notificationId');
+      final response = await _api.delete('/api/notifications/$notificationId');
       return response.data;
     } on DioException catch (e) {
       throw e.response?.data['message'] ?? 'Failed to delete notification';
@@ -55,7 +56,7 @@ class NotificationService {
   // Delete all notifications
   Future<Map<String, dynamic>> deleteAllNotifications() async {
     try {
-      final response = await _api.delete('/notifications');
+      final response = await _api.delete('/api/notifications');
       return response.data;
     } on DioException catch (e) {
       throw e.response?.data['message'] ?? 'Failed to delete all notifications';
@@ -65,7 +66,7 @@ class NotificationService {
   // Get preferences
   Future<Map<String, dynamic>> getPreferences() async {
     try {
-      final response = await _api.get('/notifications/preferences');
+      final response = await _api.get('/api/notifications/preferences');
       return response.data;
     } on DioException catch (e) {
       throw e.response?.data['message'] ?? 'Failed to get preferences';
@@ -76,7 +77,8 @@ class NotificationService {
   Future<Map<String, dynamic>> updatePreferences(
       Map<String, dynamic> data) async {
     try {
-      final response = await _api.put('/notifications/preferences', data: data);
+      final response =
+          await _api.put('/api/notifications/preferences', data: data);
       return response.data;
     } on DioException catch (e) {
       throw e.response?.data['message'] ?? 'Failed to update preferences';

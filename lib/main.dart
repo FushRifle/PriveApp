@@ -17,6 +17,7 @@ import 'package:Prive/ui/pages/main/profile/profile_page.dart';
 import 'package:Prive/ui/pages/main/reels/reels_page.dart';
 import 'package:Prive/ui/pages/main/home/create_post_page.dart';
 import 'package:Prive/ui/pages/main/status/create_status_page.dart';
+import 'package:Prive/ui/pages/main/status/status_page.dart';
 import 'package:Prive/ui/pages/auth/login_page.dart';
 import 'package:Prive/ui/pages/auth/register_page.dart';
 import 'package:Prive/ui/pages/settings/settings_page.dart';
@@ -191,6 +192,13 @@ class _MyAppState extends ConsumerState<MyApp> {
         return MaterialPageRoute(
             builder: (context) => const CreateStatusPage());
 
+      case NamedRoutes.statusScreen:
+        return MaterialPageRoute(
+          builder: (context) => const StatusPage(
+            stories: [],
+          ),
+        );
+
       case NamedRoutes.settingsScreen:
         return MaterialPageRoute(builder: (context) => const SettingsPage());
 
@@ -261,7 +269,7 @@ class _MainWrapperState extends State<MainWrapper> {
           if (_currentIndex != 2) _buildBackgroundGradient(),
           if (_currentIndex != 2)
             Positioned(
-              bottom: 80,
+              bottom: 70,
               child: Transform.rotate(
                 angle: 11,
                 child: InkWell(

@@ -1,36 +1,34 @@
 import 'package:dio/dio.dart';
 import '../api_service.dart';
+import '../../models/feeds_models.dart';
 
 class FeedService {
   final ApiService _api = ApiService();
 
-  // Get stories
-  Future<List<dynamic>> getStories() async {
+  Future<List<Story>> getStories() async {
     try {
       final response = await _api.get('/api/feed/stories');
       print('Stories response: ${response.data}');
 
+      List<dynamic> storiesData = [];
+
       if (response.data is List) {
-        return response.data;
+        storiesData = response.data;
+      } else if (response.data is Map && response.data['stories'] is List) {
+        storiesData = response.data['stories'];
+      } else if (response.data is Map && response.data['data'] is List) {
+        storiesData = response.data['data'];
       }
 
-      if (response.data is Map && response.data['stories'] is List) {
-        return response.data['stories'];
-      }
-
-      if (response.data is Map && response.data['data'] is List) {
-        return response.data['data'];
-      }
-
-      return [];
+      return storiesData.map((json) => Story.fromJson(json)).toList();
     } on DioException catch (e) {
       print('Get stories error: ${e.response?.data}');
       throw e.response?.data['message'] ?? 'Failed to get stories';
     }
   }
 
-  // Get feed posts
-  Future<Map<String, dynamic>> getPosts({int page = 1}) async {
+  // Get feed posts - returns typed PostsResponse
+  Future<PostsResponse> getPosts({int page = 1}) async {
     try {
       final response = await _api.get(
         '/api/feed/posts',
@@ -40,18 +38,21 @@ class FeedService {
       print('Posts response status: ${response.statusCode}');
 
       if (response.data is Map) {
-        return response.data;
+        return PostsResponse.fromJson(response.data);
       }
 
       if (response.data is List) {
-        return {
-          'posts': response.data,
-          'hasMore': response.data.length == 10,
-          'page': page,
-        };
+        final posts = (response.data as List)
+            .map((json) => FeedPost.fromJson(json))
+            .toList();
+        return PostsResponse(
+          posts: posts,
+          hasMore: posts.length == 10,
+          page: page,
+        );
       }
 
-      return {'posts': [], 'hasMore': false, 'page': page};
+      return PostsResponse(posts: [], hasMore: false, page: page);
     } on DioException catch (e) {
       print('Get posts error: ${e.response?.data}');
       throw e.response?.data['message'] ?? 'Failed to get posts';
@@ -61,14 +62,12 @@ class FeedService {
   // Create post
   Future<Map<String, dynamic>> createPost({
     required String content,
-    String? imageUrl,
+    List<Map<String, dynamic>>? attachments,
   }) async {
     try {
       final data = <String, dynamic>{'content': content};
-      if (imageUrl != null && imageUrl.isNotEmpty) {
-        data['attachments'] = [
-          {'type': 'image', 'url': imageUrl},
-        ];
+      if (attachments != null && attachments.isNotEmpty) {
+        data['attachments'] = attachments;
       }
 
       final response = await _api.post('/api/feed/posts', data: data);
@@ -79,11 +78,10 @@ class FeedService {
     }
   }
 
-  // Create story/status - Updated to match backend
-  Future<Map<String, dynamic>> createStatus({
-    required String text,
-    String? imageUrl,
-    String? videoUrl,
+  // Create story
+  Future<Map<String, dynamic>> createStory({
+    String? content,
+    List<Map<String, dynamic>>? attachments,
     String? backgroundColor,
     String? textAlign,
     double? fontSize,
@@ -91,39 +89,54 @@ class FeedService {
     try {
       final data = <String, dynamic>{};
 
-      // Add content if there's text
-      if (text.isNotEmpty) {
-        data['content'] = text;
+      if (content != null && content.isNotEmpty) {
+        data['content'] = content;
       }
 
-      // Add attachments if any
-      List<Map<String, dynamic>> attachments = [];
-      if (imageUrl != null && imageUrl.isNotEmpty) {
-        attachments.add({'type': 'image', 'url': imageUrl});
-      }
-      if (videoUrl != null && videoUrl.isNotEmpty) {
-        attachments.add({'type': 'video', 'url': videoUrl});
-      }
-      if (attachments.isNotEmpty) {
+      if (attachments != null && attachments.isNotEmpty) {
         data['attachments'] = attachments;
       }
 
-      // Add story formatting options
       if (backgroundColor != null && backgroundColor.isNotEmpty) {
         data['backgroundColor'] = backgroundColor;
       }
+
       if (textAlign != null && textAlign.isNotEmpty) {
         data['textAlign'] = textAlign;
       }
+
       if (fontSize != null) {
         data['fontSize'] = fontSize;
       }
 
       final response = await _api.post('/api/feed/stories', data: data);
       return response.data;
+    } on DioException catch (e) {
+      print('Create story error: ${e.response?.data}');
+      throw e.response?.data['message'] ?? 'Failed to create story';
     } catch (e) {
-      print('Create status error: $e');
-      throw Exception('Failed to create status: $e');
+      print('Create story error: $e');
+      throw Exception('Failed to create story: $e');
+    }
+  }
+
+  // Delete story
+  Future<void> deleteStory(String storyId) async {
+    try {
+      await _api.delete('/api/feed/stories/$storyId');
+    } on DioException catch (e) {
+      print('Delete story error: ${e.response?.data}');
+      throw e.response?.data['message'] ?? 'Failed to delete story';
+    }
+  }
+
+  // Mark story as seen
+  Future<void> markStoryAsSeen(String storyId) async {
+    try {
+      await _api.post('/api/feed/stories/$storyId/seen');
+    } on DioException catch (e) {
+      print('Mark story as seen error: ${e.response?.data}');
+      throw e.response?.data['message'] ?? 'Failed to mark story as seen';
     }
   }
 
@@ -147,8 +160,8 @@ class FeedService {
     }
   }
 
-  // Get post comments
-  Future<List<dynamic>> getComments(int postId, {int page = 1}) async {
+  // Get post comments - returns typed List<Comment>
+  Future<CommentsResponse> getComments(int postId, {int page = 1}) async {
     try {
       final response = await _api.get(
         '/api/feed/posts/$postId/comments',
@@ -156,22 +169,29 @@ class FeedService {
       );
 
       if (response.data is List) {
-        return response.data;
+        final comments = (response.data as List)
+            .map((json) => Comment.fromJson(json))
+            .toList();
+        return CommentsResponse(
+          comments: comments,
+          hasMore: comments.length == 20,
+          page: page,
+        );
       }
 
-      if (response.data is Map && response.data['comments'] is List) {
-        return response.data['comments'];
+      if (response.data is Map) {
+        return CommentsResponse.fromJson(response.data);
       }
 
-      return [];
+      return CommentsResponse(comments: [], hasMore: false, page: page);
     } on DioException catch (e) {
       print('Get comments error: ${e.response?.data}');
       throw e.response?.data['message'] ?? 'Failed to get comments';
     }
   }
 
-  // Add comment
-  Future<Map<String, dynamic>> addComment({
+  // Add comment - returns typed Comment
+  Future<Comment> addComment({
     required int postId,
     required String content,
   }) async {
@@ -180,7 +200,7 @@ class FeedService {
         '/api/feed/posts/$postId/comments',
         data: {'content': content},
       );
-      return response.data;
+      return Comment.fromJson(response.data);
     } on DioException catch (e) {
       print('Add comment error: ${e.response?.data}');
       throw e.response?.data['message'] ?? 'Failed to add comment';

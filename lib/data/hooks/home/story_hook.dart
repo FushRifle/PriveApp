@@ -1,28 +1,29 @@
 import 'package:flutter/foundation.dart';
+import 'package:Prive/data/models/feeds_models.dart';
 import 'package:Prive/data/services/home/feed_service.dart';
 
 class StoryGroup {
   final int userId;
-  final Map<String, dynamic> user;
-  final List<Map<String, dynamic>> stories;
+  final StoryUser user;
+  final List<Story> stories;
   final bool hasUnseen;
-  final String latestStoryTime;
+  final DateTime latestStoryTime;
   final int totalSegments;
 
   StoryGroup({
     required this.userId,
     required this.user,
     required this.stories,
-    this.hasUnseen = false,
-    this.latestStoryTime = '',
-    this.totalSegments = 0,
+    required this.hasUnseen,
+    required this.latestStoryTime,
+    required this.totalSegments,
   });
 }
 
 class StoryHook extends ChangeNotifier {
   final FeedService _feedService = FeedService();
 
-  List<Map<String, dynamic>> _stories = [];
+  List<Story> _stories = [];
   List<StoryGroup> _storyGroups = [];
   StoryGroup? _ownStoryGroup;
   List<StoryGroup> _otherStoryGroups = [];
@@ -33,7 +34,7 @@ class StoryHook extends ChangeNotifier {
 
   String? _error;
 
-  List<Map<String, dynamic>> get stories => _stories;
+  List<Story> get stories => _stories;
   List<StoryGroup> get storyGroups => _storyGroups;
   StoryGroup? get ownStoryGroup => _ownStoryGroup;
   List<StoryGroup> get otherStoryGroups => _otherStoryGroups;
@@ -68,7 +69,7 @@ class StoryHook extends ChangeNotifier {
 
       if (_disposed) return;
 
-      _stories = _normalizeStories(result);
+      _stories = result;
       _groupStories();
 
       _loading = false;
@@ -83,67 +84,71 @@ class StoryHook extends ChangeNotifier {
   }
 
   void _groupStories() {
-    final Map<int, List<Map<String, dynamic>>> storiesByUser = {};
+    final Map<int, List<Story>> storiesByUser = {};
 
     for (final story in _stories) {
-      final userId =
-          _toInt(story['userId'] ?? story['user_id'] ?? story['user']?['id']);
-
-      if (userId == 0) continue;
-
-      storiesByUser.putIfAbsent(userId, () => []);
-      storiesByUser[userId]!.add(story);
+      if (!storiesByUser.containsKey(story.userId)) {
+        storiesByUser[story.userId] = [];
+      }
+      storiesByUser[story.userId]!.add(story);
     }
 
     final groups = storiesByUser.entries.map((entry) {
       final userStories = entry.value;
 
-      userStories.sort((a, b) {
-        final aTime =
-            (a['createdAt'] ?? a['created_at'] ?? a['time'] ?? '').toString();
-        final bTime =
-            (b['createdAt'] ?? b['created_at'] ?? b['time'] ?? '').toString();
-        return bTime.compareTo(aTime);
-      });
+      // Sort by createdAt, newest first
+      userStories.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       final firstStory = userStories.first;
-      final hasUnseen = userStories
-          .any((story) => story['isSeen'] != true && story['is_seen'] != true);
+      final hasUnseen = userStories.any((story) => !story.isSeen);
 
       final totalSegments = userStories.fold<int>(0, (total, story) {
-        final attachments = story['attachments'];
-        if (attachments is List && attachments.isNotEmpty) {
-          return total + attachments.length;
+        if (story.attachments.isNotEmpty) {
+          return total + story.attachments.length;
         }
         return total + 1;
       });
 
       return StoryGroup(
         userId: entry.key,
-        user: _asMap(firstStory['user']),
+        user: firstStory.user,
         stories: userStories,
         hasUnseen: hasUnseen,
-        latestStoryTime: (firstStory['createdAt'] ??
-                firstStory['created_at'] ??
-                firstStory['time'] ??
-                '')
-            .toString(),
+        latestStoryTime: firstStory.createdAt,
         totalSegments: totalSegments,
       );
     }).toList();
 
-    groups.sort((a, b) => b.latestStoryTime.compareTo(a.latestStoryTime));
+    // Sort groups: unviewed first, then by latest story time
+    groups.sort((a, b) {
+      if (a.hasUnseen && !b.hasUnseen) return -1;
+      if (!a.hasUnseen && b.hasUnseen) return 1;
+      return b.latestStoryTime.compareTo(a.latestStoryTime);
+    });
 
     _storyGroups = groups;
-    _ownStoryGroup = _storyGroups.isNotEmpty ? _storyGroups.first : null;
-    _otherStoryGroups = _storyGroups.length > 1 ? _storyGroups.sublist(1) : [];
+
+    // Separate own story (current user) from others
+    // You'll need to pass the current user ID or get it from somewhere
+    // For now, we'll assume the first group is the user's own if isMe is true
+    if (groups.isNotEmpty && groups.first.stories.any((s) => s.isMe)) {
+      _ownStoryGroup = groups.first;
+      _otherStoryGroups = groups.skip(1).toList();
+    } else {
+      _ownStoryGroup = null;
+      _otherStoryGroups = groups;
+    }
   }
 
   Future<bool> createStory({
     String? content,
     List<Map<String, dynamic>>? attachments,
+    String? backgroundColor,
+    String? textAlign,
+    double? fontSize,
   }) async {
-    if (content == null && (attachments == null || attachments.isEmpty)) {
+    if ((content == null || content.isEmpty) &&
+        (attachments == null || attachments.isEmpty)) {
       _error = 'Please add content or media to your story';
       _safeNotify();
       return false;
@@ -154,11 +159,12 @@ class StoryHook extends ChangeNotifier {
     _safeNotify();
 
     try {
-      await _feedService.createPost(
-        content: content ?? '',
-        imageUrl: attachments?.isNotEmpty == true
-            ? attachments!.first['uri']?.toString()
-            : null,
+      await _feedService.createStory(
+        content: content,
+        attachments: attachments,
+        backgroundColor: backgroundColor,
+        textAlign: textAlign,
+        fontSize: fontSize,
       );
 
       if (_disposed) return false;
@@ -182,11 +188,11 @@ class StoryHook extends ChangeNotifier {
 
   Future<bool> deleteStory(String storyId) async {
     try {
-      await _feedService.unlikePost(int.tryParse(storyId) ?? 0);
+      await _feedService.deleteStory(storyId);
 
       if (_disposed) return false;
 
-      _stories.removeWhere((s) => s['id'].toString() == storyId);
+      _stories.removeWhere((s) => s.id == storyId);
       _groupStories();
       _safeNotify();
 
@@ -201,54 +207,51 @@ class StoryHook extends ChangeNotifier {
   }
 
   Future<void> markAsSeen(String storyId) async {
-    for (final story in _stories) {
-      if (story['id'].toString() == storyId) {
-        story['isSeen'] = true;
-        story['is_seen'] = true;
+    // Optimistic update
+    bool updated = false;
+    for (int i = 0; i < _stories.length; i++) {
+      if (_stories[i].id == storyId && !_stories[i].isSeen) {
+        final oldStory = _stories[i];
+        _stories[i] = Story(
+          id: oldStory.id,
+          userId: oldStory.userId,
+          user: oldStory.user,
+          content: oldStory.content,
+          attachments: oldStory.attachments,
+          time: oldStory.time,
+          isMe: oldStory.isMe,
+          isSeen: true,
+          viewCount: oldStory.viewCount,
+          backgroundColor: oldStory.backgroundColor,
+          textAlign: oldStory.textAlign,
+          fontSize: oldStory.fontSize,
+          createdAt: oldStory.createdAt,
+          expiresAt: oldStory.expiresAt,
+        );
+        updated = true;
         break;
       }
     }
 
-    _groupStories();
-    _safeNotify();
+    if (updated) {
+      _groupStories();
+      _safeNotify();
+    }
+
+    // Actually mark as seen on backend
+    try {
+      await _feedService.markStoryAsSeen(storyId);
+    } catch (e) {
+      // Revert on error
+      await fetchStories();
+      _error = _cleanError(e);
+      _safeNotify();
+      rethrow;
+    }
   }
 
   Future<void> refresh() async {
     await fetchStories();
-  }
-
-  List<Map<String, dynamic>> _normalizeStories(dynamic value) {
-    if (value is List) {
-      return value
-          .whereType<Map>()
-          .map((item) => Map<String, dynamic>.from(item))
-          .toList();
-    }
-
-    if (value is Map) {
-      final data = value['stories'] ?? value['data'];
-      if (data is List) {
-        return data
-            .whereType<Map>()
-            .map((item) => Map<String, dynamic>.from(item))
-            .toList();
-      }
-    }
-
-    return [];
-  }
-
-  Map<String, dynamic> _asMap(dynamic value) {
-    if (value is Map<String, dynamic>) return value;
-    if (value is Map) return Map<String, dynamic>.from(value);
-    return {};
-  }
-
-  int _toInt(dynamic value) {
-    if (value is int) return value;
-    if (value is num) return value.toInt();
-    if (value is String) return int.tryParse(value) ?? 0;
-    return 0;
   }
 
   String _cleanError(dynamic error) {

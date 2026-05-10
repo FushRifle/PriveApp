@@ -140,35 +140,33 @@ class _EditProfilePageState extends State<EditProfilePage> {
       final folder = isAvatar ? 'avatars' : 'covers';
       final imageUrl = await _cloudinaryService.uploadImage(imageFile, folder);
 
-      if (imageUrl != null) {
-        setState(() {
-          if (isAvatar) {
-            _avatar = imageUrl;
-            _selectedAvatarFile = null;
-          } else {
-            _coverImage = imageUrl;
-            _selectedCoverFile = null;
-          }
-        });
-
-        // Save to backend
+      setState(() {
         if (isAvatar) {
-          await _userService.updateUser(avatar: imageUrl);
+          _avatar = imageUrl;
+          _selectedAvatarFile = null;
         } else {
-          await _userService.updateUser(coverImage: imageUrl);
+          _coverImage = imageUrl;
+          _selectedCoverFile = null;
         }
+      });
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                '${isAvatar ? 'Profile picture' : 'Cover image'} updated successfully',
-              ),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 2),
+      // Save to backend
+      if (isAvatar) {
+        await _userService.updateUser(avatar: imageUrl);
+      } else {
+        await _userService.updateUser(coverImage: imageUrl);
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${isAvatar ? 'Profile picture' : 'Cover image'} updated successfully',
             ),
-          );
-        }
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {

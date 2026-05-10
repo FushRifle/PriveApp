@@ -39,7 +39,7 @@ class CommentsHook extends ChangeNotifier {
           await _feedService.getComments(postId, page: _currentPage);
 
       if (refresh || _currentPage == 1) {
-        _comments = List.from(newComments);
+        _comments = List.from(newComments as Iterable<dynamic>);
       } else {
         _comments.addAll(newComments as Iterable<Map<String, dynamic>>);
       }

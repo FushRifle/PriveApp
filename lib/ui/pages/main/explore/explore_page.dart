@@ -28,7 +28,6 @@ class _DiscoverPageState extends State<DiscoverPage>
   List<ProfileModel> _profiles = [];
   int _currentIndex = 0;
   LoadingState _loadingState = LoadingState.initial;
-  String _errorMessage = '';
 
   // Filter parameters
   Map<String, dynamic> _currentFilters = {
@@ -104,7 +103,6 @@ class _DiscoverPageState extends State<DiscoverPage>
 
     setState(() {
       _loadingState = LoadingState.loading;
-      _errorMessage = '';
     });
 
     try {
@@ -135,7 +133,6 @@ class _DiscoverPageState extends State<DiscoverPage>
     } catch (e) {
       setState(() {
         _loadingState = LoadingState.error;
-        _errorMessage = e.toString();
       });
 
       if (mounted) {

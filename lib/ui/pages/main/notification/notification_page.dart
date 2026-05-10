@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
+import 'package:Prive/data/services/notification/notification_service.dart';
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
@@ -11,59 +12,190 @@ class NotificationPage extends StatefulWidget {
 }
 
 class _NotificationPageState extends State<NotificationPage> {
-  final List<Map<String, dynamic>> _notifications = [
-    {
-      'type': 1,
-      'name': 'Sarah Johnson',
-      'avatar': 'profiles/profile_1.jpeg',
-      'content': 'commented: "This is absolutely stunning! 😍"',
-      'time': '2m ago',
-      'isUnread': true,
-      'postImage': 'profiles/profile_1.jpeg',
-    },
-    {
-      'type': 2,
-      'name': 'Michael Chen',
-      'avatar': 'profiles/profile_2.jpeg',
-      'content': 'started following you.',
-      'time': '15m ago',
-      'isUnread': true,
-    },
-    {
-      'type': 0,
-      'name': 'Emma Wilson',
-      'avatar': 'profiles/profile_3.jpeg',
-      'content': 'liked your recent photo.',
-      'time': '1h ago',
-      'isUnread': false,
-      'postImage': 'profiles/profile_3.jpeg',
-    },
-    {
-      'type': 3,
-      'name': 'James Rodriguez',
-      'avatar': 'profiles/profile_4.jpeg',
-      'content': 'mentioned you in a comment.',
-      'time': '3h ago',
-      'isUnread': false,
-    },
-    {
-      'type': 0,
-      'name': 'Lisa Kim',
-      'avatar': 'profiles/profile_1.jpeg',
-      'content': 'liked your story.',
-      'time': '5h ago',
-      'isUnread': false,
-    },
-    {
-      'type': 1,
-      'name': 'David Brown',
-      'avatar': 'assets/profiles/profile_2.jpeg',
-      'content': 'commented: "This is goals! 🙌"',
-      'time': '8h ago',
-      'isUnread': false,
-      'postImage': 'assets/profiles/profile_2.jpeg',
-    },
-  ];
+  final NotificationService _notificationService = NotificationService();
+
+  List<Map<String, dynamic>> _notifications = [];
+  bool _isLoading = true;
+  bool _isLoadingMore = false;
+  int _currentPage = 1;
+  bool _hasMore = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotifications();
+  }
+
+  Future<void> _loadNotifications({bool refresh = false}) async {
+    if (refresh) {
+      _currentPage = 1;
+      _hasMore = true;
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
+
+    try {
+      final response = await _notificationService.getNotifications(
+        page: _currentPage,
+        pageSize: 20,
+      );
+
+      final newNotifications = response['notifications'] as List? ?? [];
+      final pagination = response['pagination'] ?? {};
+      final totalPages = pagination['totalPages'] ?? 1;
+
+      setState(() {
+        if (refresh || _currentPage == 1) {
+          _notifications = newNotifications.cast<Map<String, dynamic>>();
+        } else {
+          _notifications.addAll(newNotifications.cast<Map<String, dynamic>>());
+        }
+        _hasMore = _currentPage < totalPages;
+        _isLoading = false;
+      });
+
+      if (newNotifications.isNotEmpty) {
+        _currentPage++;
+      }
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _refreshNotifications() async {
+    await _loadNotifications(refresh: true);
+  }
+
+  Future<void> _loadMoreNotifications() async {
+    if (_isLoadingMore || !_hasMore) return;
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      final response = await _notificationService.getNotifications(
+        page: _currentPage,
+        pageSize: 20,
+      );
+
+      final newNotifications = response['notifications'] as List? ?? [];
+      final pagination = response['pagination'] ?? {};
+      final totalPages = pagination['totalPages'] ?? 1;
+
+      setState(() {
+        _notifications.addAll(newNotifications.cast<Map<String, dynamic>>());
+        _hasMore = _currentPage < totalPages;
+        _isLoadingMore = false;
+      });
+
+      if (newNotifications.isNotEmpty) {
+        _currentPage++;
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingMore = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  Future<void> _markAsRead(int notificationId, int index) async {
+    try {
+      await _notificationService.markAsRead(notificationId);
+      setState(() {
+        _notifications[index]['isUnread'] = false;
+      });
+    } catch (e) {
+      debugPrint('Error marking as read: $e');
+    }
+  }
+
+  Future<void> _markAllAsRead() async {
+    try {
+      await _notificationService.markAllAsRead();
+      setState(() {
+        for (var notification in _notifications) {
+          notification['isUnread'] = false;
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('All notifications marked as read'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to mark all as read: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _deleteNotification(int notificationId, int index) async {
+    try {
+      await _notificationService.deleteNotification(notificationId);
+      setState(() {
+        _notifications.removeAt(index);
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to delete notification: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _navigateByType(Map<String, dynamic> notification) {
+    final type = notification['type'];
+    final targetId = notification['targetId'];
+
+    switch (type) {
+      case 'like':
+      case 'comment':
+        debugPrint('Navigate to post: $targetId');
+        break;
+      case 'follow':
+        debugPrint('Navigate to profile: ${notification['actorId']}');
+        break;
+      case 'mention':
+        debugPrint('Navigate to mention: $targetId');
+        break;
+      default:
+        break;
+    }
+  }
+
+  String _getNotificationContent(Map<String, dynamic> notification) {
+    final type = notification['type'];
+    final actorName = notification['actorName'] ?? 'Someone';
+
+    switch (type) {
+      case 'like':
+        return 'liked your post.';
+      case 'comment':
+        final snippet = notification['snippet'] ?? '';
+        return 'commented: "$snippet"';
+      case 'follow':
+        return 'started following you.';
+      case 'mention':
+        return 'mentioned you in a comment.';
+      default:
+        return notification['content'] ?? '';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,33 +220,136 @@ class _NotificationPageState extends State<NotificationPage> {
         ),
         centerTitle: false,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.done_all_rounded, color: Colors.black87),
-            onPressed: () {
-              HapticFeedback.lightImpact();
-              setState(() {
-                for (var notification in _notifications) {
-                  notification['isUnread'] = false;
-                }
-              });
-            },
-          ),
+          if (_notifications.any((n) => n['isUnread'] == true))
+            IconButton(
+              icon: const Icon(Icons.done_all_rounded, color: Colors.black87),
+              onPressed: _markAllAsRead,
+            ),
           const SizedBox(width: 8),
         ],
       ),
-      body: Stack(
+      body: RefreshIndicator(
+        onRefresh: _refreshNotifications,
+        color: AppColors.primary,
+        child: _isLoading && _notifications.isEmpty
+            ? const Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              )
+            : _error != null && _notifications.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _error!,
+                          style: AppTheme.greyTextStyle,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _refreshNotifications,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                          ),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  )
+                : _notifications.isEmpty
+                    ? _buildEmptyState()
+                    : Stack(
+                        children: [
+                          ListView.builder(
+                            controller: ScrollController(),
+                            padding: const EdgeInsets.only(top: 8, bottom: 100),
+                            itemCount: _notifications.length + 1,
+                            itemBuilder: (context, index) {
+                              if (index == 0) {
+                                return _buildNewestHeader();
+                              }
+                              final notificationIndex = index - 1;
+                              return _buildNotificationItem(
+                                _notifications[notificationIndex],
+                                notificationIndex,
+                              );
+                            },
+                          ),
+                          if (_isLoadingMore)
+                            const Positioned(
+                              bottom: 20,
+                              left: 0,
+                              right: 0,
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                          _buildBlurBottomGradient(),
+                        ],
+                      ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          ListView.builder(
-            padding: const EdgeInsets.only(top: 8, bottom: 100),
-            itemCount: _notifications.length + 1, // +1 for section header
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                return _buildNewestHeader();
-              }
-              return _buildNotificationItem(_notifications[index - 1]);
-            },
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              color: AppColors.greyColor.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.notifications_none,
+              size: 50,
+              color: AppColors.secondary,
+            ),
           ),
-          _buildBlurBottomGradient(),
+          const SizedBox(height: 24),
+          Text(
+            'No notifications yet',
+            style: AppTheme.blackTextStyle.copyWith(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'When someone interacts with your content,\nit will appear here.',
+            style: AppTheme.greyTextStyle.copyWith(fontSize: 14),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: _refreshNotifications,
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size(120, 48),
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(25),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            child: Text(
+              'Refresh',
+              style: AppTheme.whiteTextStyle.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -123,19 +358,34 @@ class _NotificationPageState extends State<NotificationPage> {
   Widget _buildNewestHeader() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-      child: Text(
-        'NEWEST',
-        style: AppTheme.greyTextStyle.copyWith(
-          fontSize: 11,
-          fontWeight: AppTheme.bold,
-          letterSpacing: 1.5,
-        ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'NEWEST',
+            style: AppTheme.greyTextStyle.copyWith(
+              fontSize: 11,
+              fontWeight: AppTheme.bold,
+              letterSpacing: 1.5,
+            ),
+          ),
+          if (_notifications.isNotEmpty)
+            Text(
+              '${_notifications.length} items',
+              style: AppTheme.greyTextStyle.copyWith(fontSize: 10),
+            ),
+        ],
       ),
     );
   }
 
-  Widget _buildNotificationItem(Map<String, dynamic> item) {
+  Widget _buildNotificationItem(Map<String, dynamic> item, int index) {
     final bool isUnread = item['isUnread'] ?? false;
+    final String avatar = item['actorAvatar'] ?? '';
+    final String actorName = item['actorName'] ?? 'Someone';
+    final String content = _getNotificationContent(item);
+    final String time = _formatTime(item['createdAt']);
+    final String? postImage = item['postImage'];
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -156,16 +406,19 @@ class _NotificationPageState extends State<NotificationPage> {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () {
+        onTap: () async {
           HapticFeedback.lightImpact();
-          setState(() {
-            item['isUnread'] = false;
-          });
-          // TODO: Navigate to relevant screen based on type
+          if (isUnread) {
+            await _markAsRead(item['id'], index);
+          }
+          _navigateByType(item);
+        },
+        onLongPress: () {
+          _showDeleteDialog(item['id'], index);
         },
         child: Row(
           children: [
-            // Avatar with Status Indicator
+            // Avatar
             Stack(
               children: [
                 Container(
@@ -175,14 +428,20 @@ class _NotificationPageState extends State<NotificationPage> {
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: isUnread
-                          ? AppColors.purpleColor.withOpacity(0.3)
+                          ? AppColors.primary.withOpacity(0.3)
                           : Colors.transparent,
                       width: 2,
                     ),
-                    image: DecorationImage(
-                      fit: BoxFit.cover,
-                      image: AssetImage(item['avatar']),
-                    ),
+                  ),
+                  child: ClipOval(
+                    child: avatar.isNotEmpty && avatar.startsWith('http')
+                        ? Image.network(
+                            avatar,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                _avatarFallback(actorName),
+                          )
+                        : _avatarFallback(actorName),
                   ),
                 ),
                 if (isUnread)
@@ -190,10 +449,10 @@ class _NotificationPageState extends State<NotificationPage> {
                     right: 0,
                     top: 0,
                     child: Container(
-                      width: 14,
-                      height: 14,
+                      width: 12,
+                      height: 12,
                       decoration: BoxDecoration(
-                        color: AppColors.purpleColor,
+                        color: AppColors.primary,
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 2),
                       ),
@@ -216,11 +475,11 @@ class _NotificationPageState extends State<NotificationPage> {
                       ),
                       children: [
                         TextSpan(
-                          text: "${item['name']} ",
+                          text: '$actorName ',
                           style: const TextStyle(fontWeight: FontWeight.w800),
                         ),
                         TextSpan(
-                          text: item['content'],
+                          text: content,
                           style: TextStyle(
                             color: isUnread
                                 ? AppColors.blackColor
@@ -233,9 +492,9 @@ class _NotificationPageState extends State<NotificationPage> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    item['time'],
+                    time,
                     style: AppTheme.greyTextStyle.copyWith(
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -243,12 +502,12 @@ class _NotificationPageState extends State<NotificationPage> {
               ),
             ),
 
-            // Action Preview (Post Image or Follow Button)
-            if (item['postImage'] != null)
+            // Action Preview
+            if (postImage != null && postImage.isNotEmpty)
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: Image.asset(
-                  item['postImage'],
+                child: Image.network(
+                  postImage,
                   width: 44,
                   height: 44,
                   fit: BoxFit.cover,
@@ -257,63 +516,97 @@ class _NotificationPageState extends State<NotificationPage> {
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: AppColors.purpleColor.withOpacity(0.1),
+                        color: AppColors.primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
                         Icons.image,
-                        color: AppColors.purpleColor.withOpacity(0.5),
+                        color: AppColors.primary.withOpacity(0.5),
                         size: 20,
                       ),
                     );
                   },
                 ),
-              )
-            else if (item['type'] == 2)
-              _buildFollowButton(item),
+              ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildFollowButton(Map<String, dynamic> item) {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        setState(() {
-          item['type'] = 0; // Change type to prevent showing button again
-          item['content'] = 'You followed back.';
-          item['isUnread'] = false;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              AppColors.purpleColor,
-              AppColors.purpleColor.withOpacity(0.8),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.purpleColor.withOpacity(0.2),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
+  Widget _avatarFallback(String name) {
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+    return Container(
+      color: AppColors.primary.withOpacity(0.1),
+      child: Center(
         child: Text(
-          'Follow',
-          style: AppTheme.whiteTextStyle.copyWith(
-            fontSize: 12,
-            fontWeight: AppTheme.bold,
+          initial,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary,
           ),
         ),
       ),
     );
+  }
+
+  void _showDeleteDialog(int notificationId, int index) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Delete Notification',
+          style: AppTheme.blackTextStyle.copyWith(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Are you sure you want to delete this notification?',
+          style: AppTheme.greyTextStyle,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: AppTheme.greyTextStyle),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteNotification(notificationId, index);
+            },
+            child: Text(
+              'Delete',
+              style:
+                  AppTheme.blackTextStyle.copyWith(color: AppColors.redColor),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatTime(String? dateTimeStr) {
+    if (dateTimeStr == null) return 'Just now';
+
+    try {
+      final dateTime = DateTime.parse(dateTimeStr);
+      final now = DateTime.now();
+      final difference = now.difference(dateTime);
+
+      if (difference.inDays > 7) {
+        return '${difference.inDays ~/ 7}w ago';
+      } else if (difference.inDays > 0) {
+        return '${difference.inDays}d ago';
+      } else if (difference.inHours > 0) {
+        return '${difference.inHours}h ago';
+      } else if (difference.inMinutes > 0) {
+        return '${difference.inMinutes}m ago';
+      } else {
+        return 'Just now';
+      }
+    } catch (e) {
+      return 'Just now';
+    }
   }
 
   Widget _buildBlurBottomGradient() {

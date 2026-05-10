@@ -107,6 +107,10 @@ class _ProfilePageState extends State<ProfilePage> {
     return _user['avatar'] ?? '';
   }
 
+  String _getUserCoverImage() {
+    return _user['coverImage'] ?? _user['cover_image'] ?? '';
+  }
+
   String _getUserBio() {
     return _user['bio'] ?? '';
   }
@@ -165,7 +169,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     physics: const BouncingScrollPhysics(),
                     headerSliverBuilder: (context, innerBoxIsScrolled) {
                       return [
-                        _buildSliverAppBar(context),
+                        _buildSliverAppBarWithCover(),
                         SliverToBoxAdapter(
                           child: Column(
                             children: [
@@ -196,6 +200,110 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
                 ),
+    );
+  }
+
+  Widget _buildSliverAppBarWithCover() {
+    final coverImage = _getUserCoverImage();
+    final hasCover = coverImage.isNotEmpty;
+
+    return SliverAppBar(
+      expandedHeight: hasCover ? 300 : 150,
+      pinned: true,
+      backgroundColor: Colors.white,
+      elevation: 0,
+      leading: IconButton(
+        onPressed: () {
+          HapticFeedback.lightImpact();
+          Navigator.pop(context);
+        },
+        icon:
+            const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 20),
+      ),
+      actions: [
+        if (widget.isOwnProfile)
+          IconButton(
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsPage(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.settings_outlined, color: Colors.black),
+          ),
+        const SizedBox(width: 8),
+      ],
+      flexibleSpace: FlexibleSpaceBar(
+        background: hasCover
+            ? Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Parallax cover image
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: const Duration(milliseconds: 300),
+                    builder: (context, value, child) {
+                      return ShaderMask(
+                        shaderCallback: (rect) {
+                          return LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              Colors.white.withOpacity(0.9),
+                            ],
+                            stops: const [0.6, 1.0],
+                          ).createShader(rect);
+                        },
+                        blendMode: BlendMode.dstIn,
+                        child: Image.network(
+                          coverImage,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          height: double.infinity,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: AppColors.primary.withOpacity(0.1),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.image_not_supported,
+                                  size: 50,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              )
+            : Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.primary.withOpacity(0.3),
+                      AppColors.primary.withOpacity(0.1),
+                    ],
+                  ),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.photo_camera_back,
+                    size: 50,
+                    color: AppColors.primary.withOpacity(0.5),
+                  ),
+                ),
+              ),
+        centerTitle: false,
+        title: hasCover ? null : Container(), // Hide title when no cover
+      ),
     );
   }
 
@@ -311,38 +419,6 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildSliverAppBar(BuildContext context) {
-    return SliverAppBar(
-      pinned: true,
-      backgroundColor: Colors.white.withOpacity(0.9),
-      elevation: 0,
-      leading: IconButton(
-        onPressed: () {
-          HapticFeedback.lightImpact();
-          Navigator.pop(context);
-        },
-        icon:
-            const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 20),
-      ),
-      actions: [
-        if (widget.isOwnProfile)
-          IconButton(
-            onPressed: () {
-              HapticFeedback.lightImpact();
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const SettingsPage(),
-                ),
-              );
-            },
-            icon: const Icon(Icons.settings_outlined, color: Colors.black),
-          ),
-        const SizedBox(width: 8),
-      ],
     );
   }
 
@@ -662,7 +738,6 @@ class _ProfilePageState extends State<ProfilePage> {
                 return GestureDetector(
                   onTap: () {
                     HapticFeedback.lightImpact();
-                    // Navigate to post detail
                     _navigateToPostDetail(context, gallery.id);
                   },
                   child: Container(
@@ -682,7 +757,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     child: Stack(
                       children: [
-                        // Video indicator
                         if (gallery.type == 'video')
                           Positioned(
                             top: 12,
@@ -700,8 +774,6 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                             ),
                           ),
-
-                        // Like count
                         Positioned(
                           bottom: 12,
                           left: 12,
@@ -731,8 +803,6 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           ),
                         ),
-
-                        // Caption preview
                         if (gallery.caption != null &&
                             gallery.caption!.isNotEmpty)
                           Positioned(
@@ -881,7 +951,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     child: Stack(
                       children: [
-                        // Play button overlay
                         Positioned.fill(
                           child: Container(
                             decoration: BoxDecoration(
@@ -897,8 +966,6 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           ),
                         ),
-
-                        // Like count
                         Positioned(
                           bottom: 12,
                           left: 12,
@@ -928,8 +995,6 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           ),
                         ),
-
-                        // Duration indicator (optional)
                         Positioned(
                           bottom: 12,
                           right: 12,
@@ -992,39 +1057,12 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-// Helper method to get user posts from feed
   List<dynamic> _getUserPostsFromFeed() {
-    // You need to implement this based on your state management
-    // Example with Riverpod:
-    // final feedState = ref.read(feedProvider);
-    // final targetUserId = widget.isOwnProfile
-    //     ? _user['id']?.toString()
-    //     : widget.userId;
-    //
-    // return feedState.posts.where((post) {
-    //   final postUserId = post['userId']?.toString() ??
-    //                      post['user_id']?.toString() ??
-    //                      post['user']['id']?.toString();
-    //   return postUserId == targetUserId;
-    // }).toList();
-
-    // Temporary: return empty list
     return [];
   }
 
-// Helper method to navigate to post detail
   void _navigateToPostDetail(BuildContext context, String? postId) {
     if (postId == null) return;
-
-    // Navigate to post detail page
-    // Navigator.push(
-    //   context,
-    //   MaterialPageRoute(
-    //     builder: (context) => PostDetailPage(postId: postId),
-    //   ),
-    // );
-
-    // For now, just show a snackbar
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Open post: $postId'),
@@ -1033,22 +1071,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-// Helper method to navigate to video player
   void _navigateToVideoPlayer(BuildContext context, GalleryModel video) {
-    // Navigate to video player page
-    // Navigator.push(
-    //   context,
-    //   MaterialPageRoute(
-    //     builder: (context) => VideoPlayerPage(
-    //       videoUrl: video.videoUrl!,
-    //       thumbnail: video.image,
-    //       likes: video.like,
-    //       caption: video.caption,
-    //     ),
-    //   ),
-    // );
-
-    // For now, just show a snackbar
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Play video: ${video.videoUrl}'),

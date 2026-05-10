@@ -1,3 +1,5 @@
+import 'package:Prive/data/models/feeds_models.dart';
+
 class StatusModel {
   final int id;
   final int userId;
@@ -33,7 +35,43 @@ class StatusModel {
     this.content = '',
   });
 
+  // Convert from Story (feed_models)
+  factory StatusModel.fromStory(Story story, {int statusCount = 0}) {
+    return StatusModel(
+      id: int.tryParse(story.id) ?? 0,
+      userId: story.userId,
+      name: story.user.name,
+      imgProfile: story.user.avatar,
+      statusImage: story.attachments.isNotEmpty &&
+              story.attachments.first.type == 'image'
+          ? story.attachments.first.url
+          : '',
+      statusImageHash: '',
+      time: story.time,
+      isViewed: story.isSeen,
+      viewCount: story.viewCount,
+      statusText: story.content,
+      backgroundColor: story.backgroundColor,
+      textAlign: story.textAlign,
+      fontSize: story.fontSize,
+      statusCount: statusCount,
+      content: story.content ?? '',
+    );
+  }
+
+  // Convert from JSON (backward compatibility)
   factory StatusModel.fromJson(Map<String, dynamic> json) {
+    // Try to parse as Story first if it has the structure
+    if (json.containsKey('user') && json['user'] is Map) {
+      try {
+        final story = Story.fromJson(json);
+        final statusCount = json['statusCount'] as int? ?? 0;
+        return StatusModel.fromStory(story, statusCount: statusCount);
+      } catch (e) {
+        // Fall back to manual parsing
+      }
+    }
+
     final user = _asMap(json['user']);
     final attachments = json['attachments'];
 
@@ -118,6 +156,41 @@ class StatusModel {
       textAlign: textAlign,
       fontSize: fontSize,
       content: textContent?.toString() ?? '',
+    );
+  }
+
+  // Convert to Story (feed_models)
+  Story toStory() {
+    final attachments = <Attachment>[];
+    if (statusImage.isNotEmpty) {
+      attachments.add(Attachment(
+        type: 'image',
+        url: statusImage,
+      ));
+    }
+
+    return Story(
+      id: id.toString(),
+      userId: userId,
+      user: StoryUser(
+        id: userId,
+        name: name,
+        username: name.toLowerCase().replaceAll(' ', ''),
+        handle: name.toLowerCase().replaceAll(' ', ''),
+        avatar: imgProfile,
+        verified: false,
+      ),
+      content: statusText ?? content,
+      attachments: attachments,
+      time: time,
+      isMe: false,
+      isSeen: isViewed,
+      viewCount: viewCount,
+      backgroundColor: backgroundColor ?? effectiveBackgroundColor,
+      textAlign: textAlign ?? effectiveTextAlign,
+      fontSize: fontSize ?? effectiveFontSize,
+      createdAt: DateTime.now(),
+      expiresAt: DateTime.now().add(const Duration(hours: 24)),
     );
   }
 

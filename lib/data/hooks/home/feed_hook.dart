@@ -187,7 +187,6 @@ class FeedHook extends ChangeNotifier {
       _error = null;
       await _feedService.createPost(
         content: content,
-        imageUrl: imageUrl,
       );
 
       await fetchPosts(refresh: true);

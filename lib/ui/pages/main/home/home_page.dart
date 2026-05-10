@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
 import 'package:Prive/app/resources/constant/named_routes.dart';
-import 'package:Prive/data/models/status_model.dart';
+import 'package:Prive/data/models/feeds_models.dart';
 import 'package:Prive/data/providers/feed_provider.dart';
 import 'package:Prive/ui/pages/main/status/status_view_page.dart';
 import 'package:Prive/ui/pages/settings/settings_page.dart';
@@ -107,6 +107,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             ElevatedButton(
               onPressed: () => ref.read(feedProvider.notifier).fetchData(),
               style: ElevatedButton.styleFrom(
+                minimumSize: const Size(120, 48),
                 backgroundColor: AppColors.primary,
               ),
               child: const Text('Retry'),
@@ -116,42 +117,93 @@ class _HomePageState extends ConsumerState<HomePage> {
       );
     }
 
-    final groupedStatuses = _groupStatusesByUser(feedState.stories);
+    final stories = feedState.stories.cast<Story>();
+    final groupedStories = _groupStoriesByUser(stories);
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 130),
       children: [
-        _buildStatusBar(groupedStatuses),
+        // Stories Header
+        _buildStoriesHeader(),
+        const SizedBox(height: 12),
+        _buildStatusBar(groupedStories),
         const SizedBox(height: 18),
         _buildPostsList(feedState),
       ],
     );
   }
 
-  Map<int, List<Map<String, dynamic>>> _groupStatusesByUser(
-      List<dynamic> stories) {
-    final Map<int, List<Map<String, dynamic>>> grouped = {};
-
-    for (final story in stories) {
-      final userId = _getUserId(story);
-      if (!grouped.containsKey(userId)) {
-        grouped[userId] = [];
-      }
-      grouped[userId]!.add(story);
-    }
-
-    return grouped;
+  Widget _buildStoriesHeader() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Stories',
+            style: AppTheme.blackTextStyle.copyWith(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              Navigator.pushNamed(context, NamedRoutes.statusScreen);
+            },
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(
+              'More',
+              style: AppTheme.greyTextStyle.copyWith(
+                color: AppColors.primary,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  int _getUserId(Map<String, dynamic> story) {
-    final user = _asMap(story['user']);
-    return user['id'] ??
-        user['userId'] ??
-        user['user_id'] ??
-        story['userId'] ??
-        story['user_id'] ??
-        0;
+  List<_StoryGroup> _groupStoriesByUser(List<Story> stories) {
+    final Map<int, List<Story>> grouped = {};
+
+    for (final story in stories) {
+      if (!grouped.containsKey(story.userId)) {
+        grouped[story.userId] = [];
+      }
+      grouped[story.userId]!.add(story);
+    }
+
+    final List<_StoryGroup> groups = [];
+
+    grouped.forEach((userId, userStories) {
+      userStories.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      final firstStory = userStories.first;
+
+      groups.add(_StoryGroup(
+        userId: userId,
+        user: firstStory.user,
+        stories: userStories,
+        hasUnseen: userStories.any((s) => !s.isSeen),
+        latestStory: firstStory.createdAt,
+      ));
+    });
+
+    // Sort: unviewed first, then by latest story
+    groups.sort((a, b) {
+      if (a.hasUnseen && !b.hasUnseen) return -1;
+      if (!a.hasUnseen && b.hasUnseen) return 1;
+      return b.latestStory.compareTo(a.latestStory);
+    });
+
+    return groups;
   }
 
   Widget _buildPostsList(CachedFeedData feedState) {
@@ -228,48 +280,21 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  Widget _buildStatusBar(Map<int, List<Map<String, dynamic>>> groupedStatuses) {
-    final List<_UserStatusGroup> userGroups = [];
-
-    groupedStatuses.forEach((userId, stories) {
-      if (stories.isNotEmpty) {
-        final firstStory = stories.first;
-        final user = _asMap(firstStory['user']);
-        userGroups.add(_UserStatusGroup(
-          userId: userId,
-          name: _displayName(user),
-          avatar: _userAvatar(user),
-          statuses: stories,
-          latestTime: _getLatestStatusTime(stories),
-          hasUnviewed: stories
-              .any((s) => !(s['isSeen'] == true || s['is_seen'] == true)),
-        ));
-      }
-    });
-
-    userGroups.sort((a, b) {
-      if (a.hasUnviewed && !b.hasUnviewed) return -1;
-      if (!a.hasUnviewed && b.hasUnviewed) return 1;
-      return b.latestTime.compareTo(a.latestTime);
-    });
-
+  Widget _buildStatusBar(List<_StoryGroup> groupedStories) {
     return SizedBox(
       height: 104,
       width: double.infinity,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
-        itemCount: userGroups.length + 1,
+        itemCount: groupedStories.length + 1,
         separatorBuilder: (_, __) => const SizedBox(width: 10),
         itemBuilder: (context, index) {
           if (index == 0) {
+            // My Story button
             return StatusWidget(
-              status: StatusModel(
-                name: 'My Status',
-                imgProfile: _getUserAvatar(),
-                statusImage: '',
-                time: '',
-              ),
+              name: 'My Status',
+              avatar: _getUserAvatar(),
               isAddStatus: true,
               statusCount: 0,
               hasUnviewed: false,
@@ -280,26 +305,21 @@ class _HomePageState extends ConsumerState<HomePage> {
             );
           }
 
-          final group = userGroups[index - 1];
-          final firstStatus = group.statuses.first;
-          final status = _storyToStatus(firstStatus, group.statuses.length);
-
+          final group = groupedStories[index - 1];
           return StatusWidget(
-            status: status,
-            statusCount: group.statuses.length,
-            hasUnviewed: group.hasUnviewed,
+            name: group.user.name,
+            avatar: group.user.avatar,
+            statusCount: group.stories.length,
+            hasUnviewed: group.hasUnseen,
             onTap: () {
               HapticFeedback.lightImpact();
-              final statuses = group.statuses
-                  .map<StatusModel>((item) => _storyToStatus(item, 0))
-                  .toList();
-
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => StatusViewPage(
-                    statuses: statuses,
+                  builder: (context) => StatusViewPage(
+                    stories: group.stories,
                     initialIndex: 0,
+                    statuses: [],
                   ),
                 ),
               );
@@ -308,25 +328,6 @@ class _HomePageState extends ConsumerState<HomePage> {
         },
       ),
     );
-  }
-
-  DateTime _getLatestStatusTime(List<Map<String, dynamic>> stories) {
-    DateTime latest = DateTime(2000);
-    for (final story in stories) {
-      final timeStr =
-          story['time'] ?? story['createdAt'] ?? story['created_at'];
-      if (timeStr != null) {
-        try {
-          final time = DateTime.parse(timeStr.toString());
-          if (time.isAfter(latest)) {
-            latest = time;
-          }
-        } catch (e) {
-          // Ignore parse errors
-        }
-      }
-    }
-    return latest;
   }
 
   String _getUserDisplayName() {
@@ -390,7 +391,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 Navigator.pushNamed(context, NamedRoutes.notificationScreen);
               },
               child: Icon(
-                Icons.notification_important_outlined,
+                Icons.notifications_active,
                 color: AppColors.primary,
                 size: 30,
               ),
@@ -467,29 +468,6 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  StatusModel _storyToStatus(Map<String, dynamic> story, int statusCount) {
-    final user = _asMap(story['user']);
-
-    return StatusModel(
-      id: _toInt(story['id']),
-      userId: _toInt(story['userId'] ?? user['id']),
-      name: _displayName(user),
-      imgProfile: _userAvatar(user),
-      statusImage: '',
-      statusText: story['content']?.toString() ?? '',
-      time: story['time']?.toString() ?? '',
-      isViewed: story['isSeen'] == true || story['is_seen'] == true,
-      statusCount: statusCount,
-      backgroundColor: '#1D1B20',
-    );
-  }
-
-  int _toInt(dynamic value) {
-    if (value is int) return value;
-    if (value is String) return int.tryParse(value) ?? 0;
-    return 0;
-  }
-
   Widget _buildAvatar(String avatar,
       {required double size, required String fallbackText}) {
     if (avatar.isNotEmpty && avatar.startsWith('http')) {
@@ -539,54 +517,20 @@ class _HomePageState extends ConsumerState<HomePage> {
       ),
     );
   }
-
-  Map<String, dynamic> _asMap(dynamic value) {
-    if (value is Map<String, dynamic>) return value;
-    if (value is Map) return Map<String, dynamic>.from(value);
-    return {};
-  }
-
-  String _displayName(Map<String, dynamic> user) {
-    final name = user['name'];
-    final username = user['username'];
-    final email = user['email'];
-
-    if (name != null && name.toString().trim().isNotEmpty) {
-      return name.toString();
-    }
-    if (username != null && username.toString().trim().isNotEmpty) {
-      return username.toString();
-    }
-    if (email != null && email.toString().trim().isNotEmpty) {
-      return email.toString().split('@').first;
-    }
-    return 'User';
-  }
-
-  String _userAvatar(Map<String, dynamic> user) {
-    return (user['avatar'] ??
-            user['avatarUrl'] ??
-            user['avatar_url'] ??
-            user['image'] ??
-            '')
-        .toString();
-  }
 }
 
-class _UserStatusGroup {
+class _StoryGroup {
   final int userId;
-  final String name;
-  final String avatar;
-  final List<Map<String, dynamic>> statuses;
-  final DateTime latestTime;
-  final bool hasUnviewed;
+  final StoryUser user;
+  final List<Story> stories;
+  final bool hasUnseen;
+  final DateTime latestStory;
 
-  _UserStatusGroup({
+  _StoryGroup({
     required this.userId,
-    required this.name,
-    required this.avatar,
-    required this.statuses,
-    required this.latestTime,
-    required this.hasUnviewed,
+    required this.user,
+    required this.stories,
+    required this.hasUnseen,
+    required this.latestStory,
   });
 }
