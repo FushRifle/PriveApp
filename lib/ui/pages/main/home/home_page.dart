@@ -5,7 +5,7 @@ import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
 import 'package:Prive/app/resources/constant/named_routes.dart';
 import 'package:Prive/data/models/feeds_models.dart';
-import 'package:Prive/ui/bloc/home/feed_bloc.dart';
+import 'package:Prive/bloc/home/feed_bloc.dart';
 import 'package:Prive/ui/pages/main/status/status_view_page.dart';
 import 'package:Prive/ui/pages/settings/settings_page.dart';
 import 'package:Prive/ui/widgets/home/card_post.dart';

@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
 import 'package:Prive/data/models/profile_model.dart';
-import 'package:Prive/data/services/discover/explore_service.dart';
+import 'package:Prive/data/services/explore/explore_service.dart';
 import 'package:Prive/ui/widgets/explore/discover_header.dart';
 import 'package:Prive/ui/widgets/explore/no_more_profiles.dart';
 import 'package:Prive/ui/widgets/explore/swipe_cards_stack.dart';

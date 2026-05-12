@@ -4,7 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
 import 'package:Prive/data/models/gallery_model.dart';
-import 'package:Prive/ui/bloc/gallery_profile_cubit.dart';
+import 'package:Prive/bloc/profile/gallery_profile_cubit.dart';
 import 'package:Prive/ui/pages/main/profile/edit_profile_page.dart';
 import 'package:Prive/ui/pages/settings/settings_page.dart';
 import 'package:Prive/ui/pages/social/friends_list_page.dart';

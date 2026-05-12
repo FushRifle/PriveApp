@@ -227,7 +227,6 @@ class ApiService {
     return token != null && token.isNotEmpty;
   }
 
-  // Original methods - keep these for compatibility
   Future<Response> get(
     String path, {
     Map<String, dynamic>? queryParameters,

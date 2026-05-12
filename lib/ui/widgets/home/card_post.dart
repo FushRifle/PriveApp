@@ -5,7 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
 import 'package:Prive/data/models/post_model.dart';
-import 'package:Prive/ui/bloc/home/feed_bloc.dart';
+import 'package:Prive/bloc/home/feed_bloc.dart';
 import 'package:video_player/video_player.dart';
 import 'package:Prive/ui/widgets/home/clip_status_bar.dart';
 import 'package:Prive/ui/widgets/home/custom_bottom_sheet.dart';

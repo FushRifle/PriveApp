@@ -1,0 +1,331 @@
+import 'package:bloc/bloc.dart';
+import 'package:equatable/equatable.dart';
+import 'package:Prive/data/services/user/user_service.dart';
+
+part 'user_event.dart';
+part 'user_state.dart';
+
+class UserBloc extends Bloc<UserEvent, UserState> {
+  final UserService _userService = UserService();
+
+  UserBloc() : super(const UserState()) {
+    on<LoadCurrentUser>(_onLoadCurrentUser);
+    on<RefreshCurrentUser>(_onRefreshCurrentUser);
+    on<LoadUserById>(_onLoadUserById);
+    on<UpdateUser>(_onUpdateUser);
+    on<UpdateUserAvatar>(_onUpdateUserAvatar);
+    on<UpdateUserCoverImage>(_onUpdateUserCoverImage);
+    on<UpdateUserBio>(_onUpdateUserBio);
+    on<UpdateDemographicInfo>(_onUpdateDemographicInfo);
+    on<CompleteOnboarding>(_onCompleteOnboarding);
+    on<DeleteAccount>(_onDeleteAccount);
+    on<ClearUserError>(_onClearUserError);
+    on<ResetUserState>(_onResetUserState);
+  }
+
+  Future<void> _onLoadCurrentUser(
+    LoadCurrentUser event,
+    Emitter<UserState> emit,
+  ) async {
+    if (state.currentUser == null) {
+      emit(state.copyWith(
+        status: UserStatus.loading,
+        isLoading: true,
+        error: null,
+      ));
+    }
+
+    try {
+      final userData = await _userService.getCurrentUser();
+      final user = User.fromJson(userData);
+
+      emit(state.copyWith(
+        currentUser: user,
+        status: UserStatus.success,
+        isLoading: false,
+        error: null,
+        lastUpdated: DateTime.now(),
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        status: UserStatus.error,
+        isLoading: false,
+        error: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onRefreshCurrentUser(
+    RefreshCurrentUser event,
+    Emitter<UserState> emit,
+  ) async {
+    emit(state.copyWith(
+      status: UserStatus.refreshing,
+      isRefreshing: true,
+      error: null,
+    ));
+
+    try {
+      final userData = await _userService.getCurrentUser();
+      final user = User.fromJson(userData);
+
+      emit(state.copyWith(
+        currentUser: user,
+        status: UserStatus.success,
+        isRefreshing: false,
+        error: null,
+        lastUpdated: DateTime.now(),
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        status: UserStatus.error,
+        isRefreshing: false,
+        error: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onLoadUserById(
+    LoadUserById event,
+    Emitter<UserState> emit,
+  ) async {
+    emit(state.copyWith(
+      viewedStatus: UserStatus.loading,
+      isLoading: true,
+      error: null,
+    ));
+
+    try {
+      final userData = await _userService.getUserById(event.userId);
+      final user = User.fromJson(userData);
+
+      emit(state.copyWith(
+        viewedUser: user,
+        viewedStatus: UserStatus.success,
+        isLoading: false,
+        error: null,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        viewedStatus: UserStatus.error,
+        isLoading: false,
+        error: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onUpdateUser(
+    UpdateUser event,
+    Emitter<UserState> emit,
+  ) async {
+    emit(state.copyWith(
+      status: UserStatus.saving,
+      isSaving: true,
+      error: null,
+    ));
+
+    // Build update data
+    final updateData = <String, dynamic>{};
+    if (event.name != null) updateData['name'] = event.name;
+    if (event.username != null) updateData['username'] = event.username;
+    if (event.phone != null) updateData['phone'] = event.phone;
+    if (event.age != null) updateData['age'] = event.age;
+    if (event.occupation != null) updateData['occupation'] = event.occupation;
+    if (event.bio != null) updateData['bio'] = event.bio;
+    if (event.location != null) updateData['location'] = event.location;
+    if (event.work != null) updateData['work'] = event.work;
+    if (event.education != null) updateData['education'] = event.education;
+    if (event.languages != null) updateData['languages'] = event.languages;
+    if (event.avatar != null) updateData['avatar'] = event.avatar;
+    if (event.coverImage != null) updateData['coverImage'] = event.coverImage;
+
+    try {
+      // Optimistic update
+      final currentUser = state.currentUser;
+      if (currentUser != null) {
+        final optimisticUser = currentUser.copyWith(
+          name: event.name ?? currentUser.name,
+          username: event.username ?? currentUser.username,
+          phone: event.phone ?? currentUser.phone,
+          age: event.age ?? currentUser.age,
+          occupation: event.occupation ?? currentUser.occupation,
+          bio: event.bio ?? currentUser.bio,
+          location: event.location ?? currentUser.location,
+          work: event.work ?? currentUser.work,
+          education: event.education ?? currentUser.education,
+          languages: event.languages ?? currentUser.languages,
+          avatar: event.avatar ?? currentUser.avatar,
+          coverImage: event.coverImage ?? currentUser.coverImage,
+        );
+        emit(state.copyWith(currentUser: optimisticUser));
+      }
+
+      final result = await _userService.updateUser(
+        name: event.name,
+        username: event.username,
+        phone: event.phone,
+        age: event.age,
+        occupation: event.occupation,
+        bio: event.bio,
+        location: event.location,
+        work: event.work,
+        education: event.education,
+        languages: event.languages,
+        avatar: event.avatar,
+        coverImage: event.coverImage,
+      );
+
+      final updatedUser = User.fromJson(result);
+
+      emit(state.copyWith(
+        currentUser: updatedUser,
+        status: UserStatus.success,
+        isSaving: false,
+        error: null,
+        lastUpdated: DateTime.now(),
+        lastUpdateData: updateData,
+      ));
+    } catch (e) {
+      // Refresh to revert optimistic update
+      add(RefreshCurrentUser());
+      emit(state.copyWith(
+        status: UserStatus.error,
+        isSaving: false,
+        error: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onUpdateUserAvatar(
+    UpdateUserAvatar event,
+    Emitter<UserState> emit,
+  ) async {
+    add(UpdateUser(avatar: event.avatar));
+  }
+
+  Future<void> _onUpdateUserCoverImage(
+    UpdateUserCoverImage event,
+    Emitter<UserState> emit,
+  ) async {
+    add(UpdateUser(coverImage: event.coverImage));
+  }
+
+  Future<void> _onUpdateUserBio(
+    UpdateUserBio event,
+    Emitter<UserState> emit,
+  ) async {
+    add(UpdateUser(bio: event.bio));
+  }
+
+  Future<void> _onUpdateDemographicInfo(
+    UpdateDemographicInfo event,
+    Emitter<UserState> emit,
+  ) async {
+    emit(state.copyWith(
+      status: UserStatus.saving,
+      isSaving: true,
+      error: null,
+    ));
+
+    try {
+      await _userService.updateDemographicInfo(
+        age: event.age,
+        gender: event.gender,
+        lookingFor: event.lookingFor,
+        occupation: event.occupation,
+        bio: event.bio,
+        location: event.location,
+        work: event.work,
+        education: event.education,
+        interests: event.interests,
+      );
+
+      // Refresh user after demographic update
+      add(RefreshCurrentUser());
+
+      emit(state.copyWith(
+        status: UserStatus.success,
+        isSaving: false,
+        error: null,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        status: UserStatus.error,
+        isSaving: false,
+        error: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onCompleteOnboarding(
+    CompleteOnboarding event,
+    Emitter<UserState> emit,
+  ) async {
+    emit(state.copyWith(
+      status: UserStatus.saving,
+      isSaving: true,
+      error: null,
+    ));
+
+    try {
+      await _userService.completeOnboarding();
+
+      // Refresh user to get updated onboarding status
+      add(RefreshCurrentUser());
+
+      emit(state.copyWith(
+        status: UserStatus.success,
+        isSaving: false,
+        error: null,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        status: UserStatus.error,
+        isSaving: false,
+        error: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onDeleteAccount(
+    DeleteAccount event,
+    Emitter<UserState> emit,
+  ) async {
+    emit(state.copyWith(
+      status: UserStatus.deleting,
+      isDeleting: true,
+      error: null,
+    ));
+
+    try {
+      await _userService.deleteAccount();
+
+      emit(state.copyWith(
+        currentUser: null,
+        status: UserStatus.success,
+        isDeleting: false,
+        error: null,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        status: UserStatus.error,
+        isDeleting: false,
+        error: e.toString(),
+      ));
+    }
+  }
+
+  void _onClearUserError(
+    ClearUserError event,
+    Emitter<UserState> emit,
+  ) {
+    emit(state.copyWith(error: null));
+  }
+
+  void _onResetUserState(
+    ResetUserState event,
+    Emitter<UserState> emit,
+  ) {
+    emit(const UserState());
+  }
+}

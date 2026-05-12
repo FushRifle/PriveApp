@@ -29,9 +29,7 @@ import 'package:Prive/ui/widgets/home/clip_status_bar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:Prive/app/configs/api_config.dart';
 import 'package:Prive/data/providers/theme_provider.dart';
-import 'package:Prive/ui/bloc/home/feed_bloc.dart';
-
-// Cloudinary imports
+import 'package:Prive/bloc/home/feed_bloc.dart';
 import 'package:cloudinary_url_gen/cloudinary.dart';
 import 'package:cloudinary_flutter/cloudinary_context.dart';
 
