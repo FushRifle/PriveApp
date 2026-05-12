@@ -44,7 +44,6 @@ class CommentsHook extends ChangeNotifier {
         _comments.addAll(newComments as Iterable<Map<String, dynamic>>);
       }
 
-      _hasMore = newComments.length >= 20;
       _loading = false;
       notifyListeners();
     } catch (e) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
 import 'package:Prive/app/resources/constant/named_routes.dart';
@@ -28,6 +29,7 @@ import 'package:Prive/ui/widgets/home/clip_status_bar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:Prive/app/configs/api_config.dart';
 import 'package:Prive/data/providers/theme_provider.dart';
+import 'package:Prive/ui/bloc/home/feed_bloc.dart';
 
 // Cloudinary imports
 import 'package:cloudinary_url_gen/cloudinary.dart';
@@ -103,33 +105,40 @@ class _MyAppState extends ConsumerState<MyApp> {
       );
     }
 
-    return MaterialApp(
-      title: 'Prive',
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: themeMode,
-      debugShowCheckedModeBanner: false,
-      scrollBehavior: const CustomScrollBehavior(),
-      initialRoute: _initialRoute,
-      onGenerateRoute: _generateRoute,
-      builder: (context, child) {
-        if (child == null) return const SizedBox.shrink();
-        final mediaQueryData = MediaQuery.of(context);
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<FeedBloc>(
+          create: (context) => FeedBloc()..add(FetchFeedData()),
+        ),
+      ],
+      child: MaterialApp(
+        title: 'Prive',
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: themeMode,
+        debugShowCheckedModeBanner: false,
+        scrollBehavior: const CustomScrollBehavior(),
+        initialRoute: _initialRoute,
+        onGenerateRoute: _generateRoute,
+        builder: (context, child) {
+          if (child == null) return const SizedBox.shrink();
+          final mediaQueryData = MediaQuery.of(context);
 
-        if (kIsWeb) {
-          return MediaQuery(
-            data: mediaQueryData.copyWith(
-              viewInsets: EdgeInsets.zero,
-              viewPadding: EdgeInsets.only(
-                top: mediaQueryData.padding.top,
-                bottom: mediaQueryData.padding.bottom,
+          if (kIsWeb) {
+            return MediaQuery(
+              data: mediaQueryData.copyWith(
+                viewInsets: EdgeInsets.zero,
+                viewPadding: EdgeInsets.only(
+                  top: mediaQueryData.padding.top,
+                  bottom: mediaQueryData.padding.bottom,
+                ),
               ),
-            ),
-            child: child,
-          );
-        }
-        return child;
-      },
+              child: child,
+            );
+          }
+          return child;
+        },
+      ),
     );
   }
 

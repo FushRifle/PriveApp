@@ -1,10 +1,11 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
 import 'package:Prive/data/models/post_model.dart';
-import 'package:Prive/data/services/home/feed_service.dart';
+import 'package:Prive/ui/bloc/home/feed_bloc.dart';
 import 'package:video_player/video_player.dart';
 import 'package:Prive/ui/widgets/home/clip_status_bar.dart';
 import 'package:Prive/ui/widgets/home/custom_bottom_sheet.dart';
@@ -25,8 +26,6 @@ class CardPost extends StatefulWidget {
 }
 
 class _CardPostState extends State<CardPost> {
-  final FeedService _feedService = FeedService();
-
   double _handleOffset = 0.0;
   bool isLiked = false;
   bool isSaved = false;
@@ -41,8 +40,6 @@ class _CardPostState extends State<CardPost> {
   VideoPlayerController? _videoController;
   bool _isVideoInitialized = false;
   DateTime createdAt = DateTime.now();
-  bool _isLiking = false;
-  bool _isSaving = false;
 
   @override
   void initState() {
@@ -73,6 +70,7 @@ class _CardPostState extends State<CardPost> {
       return;
     }
 
+    // Parse from Map
     isLiked = widget.post['isLiked'] ?? false;
     likeCount = widget.post['likes'] ?? 0;
     commentCount = widget.post['commentCount'] ?? widget.post['comments'] ?? 0;
@@ -135,79 +133,38 @@ class _CardPostState extends State<CardPost> {
       });
   }
 
-  Future<void> _toggleLike() async {
-    if (_isLiking) return;
+  void _toggleLike() {
+    if (isLiked) {
+      context.read<FeedBloc>().add(UnlikePost(postId));
+    } else {
+      context.read<FeedBloc>().add(LikePost(postId));
+    }
 
     setState(() {
-      _isLiking = true;
-    });
-
-    try {
+      isLiked = !isLiked;
       if (isLiked) {
-        await _feedService.unlikePost(postId);
-        setState(() {
-          isLiked = false;
-          likeCount--;
-        });
+        likeCount++;
       } else {
-        await _feedService.likePost(postId);
-        setState(() {
-          isLiked = true;
-          likeCount++;
-        });
+        likeCount--;
       }
-    } catch (e) {
-      debugPrint('Error toggling like: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to ${isLiked ? "unlike" : "like"} post'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLiking = false;
-        });
-      }
-    }
+    });
   }
 
-  Future<void> _toggleSave() async {
-    if (_isSaving) return;
-
+  void _toggleSave() async {
     setState(() {
-      _isSaving = true;
+      isSaved = !isSaved;
     });
 
-    try {
-      // TODO: Implement save/unsave API when available
-      setState(() {
-        isSaved = !isSaved;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content:
-              Text(isSaved ? 'Saved to collection' : 'Removed from collection'),
-          duration: const Duration(seconds: 1),
-        ),
-      );
-    } catch (e) {
-      debugPrint('Error toggling save: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSaving = false;
-        });
-      }
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content:
+            Text(isSaved ? 'Saved to collection' : 'Removed from collection'),
+        duration: const Duration(seconds: 1),
+      ),
+    );
   }
 
   void _onShare() {
-    // TODO: Implement share functionality
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Share feature coming soon'),
@@ -222,11 +179,11 @@ class _CardPostState extends State<CardPost> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
+    final cardContent = LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
 
-        final cardContent = Container(
+        return Container(
           margin: const EdgeInsets.only(bottom: 16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
@@ -257,22 +214,22 @@ class _CardPostState extends State<CardPost> {
                   ),
           ),
         );
+      },
+    );
 
-        if (widget.isDetailView) {
-          return cardContent;
-        }
+    if (widget.isDetailView) {
+      return cardContent;
+    }
 
-        return GestureDetector(
-          onTap: () {
-            Navigator.pushNamed(
-              context,
-              NamedRoutes.postDetailScreen,
-              arguments: widget.post,
-            );
-          },
-          child: cardContent,
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(
+          context,
+          NamedRoutes.postDetailScreen,
+          arguments: widget.post,
         );
       },
+      child: cardContent,
     );
   }
 

@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import '../api_service.dart';
+import '../../../core/api_service.dart';
 import 'package:Prive/data/models/profile_model.dart';
 
 class ExploreService {

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
 import 'package:Prive/app/resources/constant/named_routes.dart';
 import 'package:Prive/data/models/feeds_models.dart';
-import 'package:Prive/data/providers/feed_provider.dart';
+import 'package:Prive/ui/bloc/home/feed_bloc.dart';
 import 'package:Prive/ui/pages/main/status/status_view_page.dart';
 import 'package:Prive/ui/pages/settings/settings_page.dart';
 import 'package:Prive/ui/widgets/home/card_post.dart';
@@ -13,14 +13,14 @@ import 'package:Prive/ui/widgets/status/status_widget.dart';
 import '../../../widgets/home/custom_app_bar.dart';
 import 'package:Prive/data/services/user/user_service.dart';
 
-class HomePage extends ConsumerStatefulWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
-  ConsumerState<HomePage> createState() => _HomePageState();
+  State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends ConsumerState<HomePage> {
+class _HomePageState extends State<HomePage> {
   final UserService _userService = UserService();
   Map<String, dynamic> _currentUser = {};
   bool _isLoadingUser = true;
@@ -30,7 +30,9 @@ class _HomePageState extends ConsumerState<HomePage> {
     super.initState();
     _loadCurrentUser();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(feedProvider.notifier).fetchData();
+      if (mounted) {
+        context.read<FeedBloc>().add(FetchFeedData());
+      }
     });
   }
 
@@ -55,7 +57,9 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   Future<void> _refreshAll() async {
     await _loadCurrentUser();
-    await ref.read(feedProvider.notifier).refresh();
+    if (mounted) {
+      context.read<FeedBloc>().add(RefreshFeed());
+    }
   }
 
   @override
@@ -67,8 +71,6 @@ class _HomePageState extends ConsumerState<HomePage> {
       ),
     );
 
-    final feedState = ref.watch(feedProvider);
-
     return SafeArea(
       bottom: false,
       child: Column(
@@ -78,7 +80,11 @@ class _HomePageState extends ConsumerState<HomePage> {
             child: RefreshIndicator(
               color: AppColors.primary,
               onRefresh: _refreshAll,
-              child: _buildBody(feedState),
+              child: BlocBuilder<FeedBloc, FeedState>(
+                builder: (context, state) {
+                  return _buildBody(state);
+                },
+              ),
             ),
           ),
         ],
@@ -86,26 +92,28 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  Widget _buildBody(CachedFeedData feedState) {
-    if (feedState.isLoading && feedState.posts.isEmpty) {
+  Widget _buildBody(FeedState state) {
+    if (state.status == FeedStatus.loading && state.posts.isEmpty) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primary),
       );
     }
 
-    if (feedState.error != null && feedState.posts.isEmpty) {
+    if (state.status == FeedStatus.failure && state.posts.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              feedState.error!,
+              state.error ?? 'An error occurred',
               textAlign: TextAlign.center,
               style: AppTheme.greyTextStyle,
             ),
             const SizedBox(height: 12),
             ElevatedButton(
-              onPressed: () => ref.read(feedProvider.notifier).fetchData(),
+              onPressed: () {
+                context.read<FeedBloc>().add(FetchFeedData());
+              },
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(120, 48),
                 backgroundColor: AppColors.primary,
@@ -117,7 +125,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       );
     }
 
-    final stories = feedState.stories.cast<Story>();
+    final stories = state.stories.cast<Story>();
     final groupedStories = _groupStoriesByUser(stories);
 
     return ListView(
@@ -129,7 +137,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         const SizedBox(height: 12),
         _buildStatusBar(groupedStories),
         const SizedBox(height: 18),
-        _buildPostsList(feedState),
+        _buildPostsList(state),
       ],
     );
   }
@@ -206,10 +214,10 @@ class _HomePageState extends ConsumerState<HomePage> {
     return groups;
   }
 
-  Widget _buildPostsList(CachedFeedData feedState) {
-    final posts = feedState.posts;
-    final isLoadingMore = feedState.isLoadingMore;
-    final hasMore = feedState.hasMore;
+  Widget _buildPostsList(FeedState state) {
+    final posts = state.posts;
+    final isLoadingMore = state.status == FeedStatus.loadingMore;
+    final hasMore = state.hasMore;
 
     if (posts.isEmpty) {
       return SizedBox(
@@ -261,8 +269,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ),
                     )
                   : TextButton(
-                      onPressed: () =>
-                          ref.read(feedProvider.notifier).loadMore(),
+                      onPressed: () {
+                        context.read<FeedBloc>().add(LoadMorePosts());
+                      },
                       style: TextButton.styleFrom(
                         foregroundColor: AppColors.primary,
                       ),

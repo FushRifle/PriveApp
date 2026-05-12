@@ -65,6 +65,31 @@ class FeedPost {
       'createdAt': createdAt.toIso8601String(),
     };
   }
+
+  // CopyWith method for immutable updates
+  FeedPost copyWith({
+    int? id,
+    UserInfo? user,
+    String? content,
+    List<Attachment>? attachments,
+    String? time,
+    int? likes,
+    int? comments,
+    bool? isLiked,
+    DateTime? createdAt,
+  }) {
+    return FeedPost(
+      id: id ?? this.id,
+      user: user ?? this.user,
+      content: content ?? this.content,
+      attachments: attachments ?? this.attachments,
+      time: time ?? this.time,
+      likes: likes ?? this.likes,
+      comments: comments ?? this.comments,
+      isLiked: isLiked ?? this.isLiked,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 }
 
 // ============================================================================
@@ -98,6 +123,20 @@ class UserInfo {
         'avatar': avatar,
         'verified': verified,
       };
+
+  UserInfo copyWith({
+    String? name,
+    String? handle,
+    String? avatar,
+    bool? verified,
+  }) {
+    return UserInfo(
+      name: name ?? this.name,
+      handle: handle ?? this.handle,
+      avatar: avatar ?? this.avatar,
+      verified: verified ?? this.verified,
+    );
+  }
 }
 
 // ============================================================================
@@ -147,6 +186,28 @@ class Attachment {
         if (height != null) 'height': height,
         if (createdAt != null) 'createdAt': createdAt?.toIso8601String(),
       };
+
+  Attachment copyWith({
+    String? id,
+    String? type,
+    String? url,
+    String? uri,
+    String? thumbnail,
+    int? width,
+    int? height,
+    DateTime? createdAt,
+  }) {
+    return Attachment(
+      id: id ?? this.id,
+      type: type ?? this.type,
+      url: url ?? this.url,
+      uri: uri ?? this.uri,
+      thumbnail: thumbnail ?? this.thumbnail,
+      width: width ?? this.width,
+      height: height ?? this.height,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 }
 
 // ============================================================================
@@ -223,6 +284,41 @@ class Story {
         'expiresAt': expiresAt.toIso8601String(),
       };
 
+  // CopyWith method for immutable updates
+  Story copyWith({
+    String? id,
+    int? userId,
+    StoryUser? user,
+    String? content,
+    List<Attachment>? attachments,
+    String? time,
+    bool? isMe,
+    bool? isSeen,
+    int? viewCount,
+    String? backgroundColor,
+    String? textAlign,
+    double? fontSize,
+    DateTime? createdAt,
+    DateTime? expiresAt,
+  }) {
+    return Story(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      user: user ?? this.user,
+      content: content ?? this.content,
+      attachments: attachments ?? this.attachments,
+      time: time ?? this.time,
+      isMe: isMe ?? this.isMe,
+      isSeen: isSeen ?? this.isSeen,
+      viewCount: viewCount ?? this.viewCount,
+      backgroundColor: backgroundColor ?? this.backgroundColor,
+      textAlign: textAlign ?? this.textAlign,
+      fontSize: fontSize ?? this.fontSize,
+      createdAt: createdAt ?? this.createdAt,
+      expiresAt: expiresAt ?? this.expiresAt,
+    );
+  }
+
   bool get isExpired => DateTime.now().isAfter(expiresAt);
 
   double get effectiveFontSize => fontSize ?? 24.0;
@@ -288,6 +384,24 @@ class StoryUser {
         'avatar': avatar,
         'verified': verified,
       };
+
+  StoryUser copyWith({
+    int? id,
+    String? name,
+    String? username,
+    String? handle,
+    String? avatar,
+    bool? verified,
+  }) {
+    return StoryUser(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      username: username ?? this.username,
+      handle: handle ?? this.handle,
+      avatar: avatar ?? this.avatar,
+      verified: verified ?? this.verified,
+    );
+  }
 }
 
 // ============================================================================
@@ -333,6 +447,25 @@ class Comment {
         'content': content,
         'createdAt': createdAt.toIso8601String(),
       };
+
+  // CopyWith method for immutable updates
+  Comment copyWith({
+    int? id,
+    int? userId,
+    String? userName,
+    String? userAvatar,
+    String? content,
+    DateTime? createdAt,
+  }) {
+    return Comment(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      userName: userName ?? this.userName,
+      userAvatar: userAvatar ?? this.userAvatar,
+      content: content ?? this.content,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 
   String get formattedTimeAgo {
     final now = DateTime.now();
@@ -438,6 +571,18 @@ class PostsResponse {
       page: _toInt(json['page'], defaultValue: 1),
     );
   }
+
+  PostsResponse copyWith({
+    List<FeedPost>? posts,
+    bool? hasMore,
+    int? page,
+  }) {
+    return PostsResponse(
+      posts: posts ?? this.posts,
+      hasMore: hasMore ?? this.hasMore,
+      page: page ?? this.page,
+    );
+  }
 }
 
 class CommentsResponse {
@@ -471,7 +616,19 @@ class CommentsResponse {
     );
   }
 
-  get length => null;
+  CommentsResponse copyWith({
+    List<Comment>? comments,
+    bool? hasMore,
+    int? page,
+  }) {
+    return CommentsResponse(
+      comments: comments ?? this.comments,
+      hasMore: hasMore ?? this.hasMore,
+      page: page ?? this.page,
+    );
+  }
+
+  Null get length => null;
 }
 
 // ============================================================================

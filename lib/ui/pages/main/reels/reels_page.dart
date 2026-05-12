@@ -1,54 +1,182 @@
-import 'package:Prive/app/configs/colors.dart';
-import 'package:Prive/app/configs/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:Prive/app/resources/constant/named_routes.dart';
-import 'package:Prive/data/providers/reels_provider.dart';
+import 'package:Prive/data/services/reel/reel_service.dart';
 import 'package:Prive/data/services/user/user_service.dart';
 import 'package:Prive/ui/widgets/reels/reel_item.dart';
 
-class ReelsPage extends ConsumerStatefulWidget {
+class ReelsPage extends StatefulWidget {
   const ReelsPage({super.key});
 
   @override
-  ConsumerState<ReelsPage> createState() => _ReelsPageState();
+  State<ReelsPage> createState() => _ReelsPageState();
 }
 
-class _ReelsPageState extends ConsumerState<ReelsPage> {
+class _ReelsPageState extends State<ReelsPage> {
   late PageController _pageController;
+  final ReelService _reelService = ReelService();
+  final UserService _userService = UserService();
+
+  List<dynamic> _reels = [];
   int _currentIndex = 0;
   int _currentUserId = 0;
+  int _currentPage = 1;
+  bool _isLoading = true;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  bool _isRefreshing = false;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
-    _loadCurrentUserAndReels();
+    _loadInitialData();
   }
 
-  Future<void> _loadCurrentUserAndReels() async {
+  Future<void> _loadInitialData() async {
     await _getCurrentUserId();
-    // Load reels after getting user ID
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(reelsProvider.notifier).loadReels();
-    });
+    await _loadReels();
   }
 
   Future<void> _getCurrentUserId() async {
     try {
-      final userService = UserService();
-      final userData = await userService.getCurrentUser();
+      final userData = await _userService.getCurrentUser();
       final userId = userData['id'];
       setState(() {
         _currentUserId = userId != null ? int.parse(userId.toString()) : 0;
       });
-      debugPrint('Current user ID: $_currentUserId');
     } catch (e) {
       debugPrint('Error getting current user: $e');
       setState(() {
         _currentUserId = 0;
       });
+    }
+  }
+
+  Future<void> _loadReels() async {
+    if (_isLoading) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final reels = await _reelService.getReels(page: 1);
+      setState(() {
+        _reels = reels;
+        _currentPage = 1;
+        _hasMore = reels.length >= 10;
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading reels: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadMoreReels() async {
+    if (_isLoadingMore || !_hasMore || _isRefreshing) return;
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      final nextPage = _currentPage + 1;
+      final newReels = await _reelService.getReels(page: nextPage);
+
+      setState(() {
+        if (newReels.isNotEmpty) {
+          _reels.addAll(newReels);
+          _currentPage = nextPage;
+          _hasMore = newReels.length >= 10;
+        } else {
+          _hasMore = false;
+        }
+        _isLoadingMore = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading more reels: $e');
+      setState(() {
+        _isLoadingMore = false;
+      });
+    }
+  }
+
+  Future<void> _refreshReels() async {
+    if (_isRefreshing) return;
+
+    setState(() {
+      _isRefreshing = true;
+    });
+
+    try {
+      final reels = await _reelService.getReels(page: 1);
+      setState(() {
+        _reels = reels;
+        _currentPage = 1;
+        _hasMore = reels.length >= 10;
+        _isRefreshing = false;
+      });
+    } catch (e) {
+      debugPrint('Error refreshing reels: $e');
+      setState(() {
+        _isRefreshing = false;
+      });
+    }
+  }
+
+  Future<void> _toggleLike(String reelId, int index) async {
+    final oldReel = _reels[index];
+    final wasLiked = oldReel['isLiked'] ?? false;
+
+    // Optimistic update
+    setState(() {
+      _reels[index] = {
+        ...oldReel,
+        'isLiked': !wasLiked,
+        'likes': (oldReel['likes'] ?? 0) + (wasLiked ? -1 : 1),
+      };
+    });
+
+    try {
+      if (wasLiked) {
+        await _reelService.unlikeReel(reelId);
+      } else {
+        await _reelService.likeReel(reelId);
+      }
+    } catch (e) {
+      // Rollback on error
+      setState(() {
+        _reels[index] = oldReel;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to ${wasLiked ? "unlike" : "like"} reel'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _shareReel(String reelId, int index) async {
+    try {
+      await _reelService.shareReel(reelId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Reel shared successfully'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to share: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -60,12 +188,6 @@ class _ReelsPageState extends ConsumerState<ReelsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final reelsState = ref.watch(reelsProvider);
-    final reels = reelsState.reels;
-    final isLoading = reelsState.isLoading;
-    final hasMore = reelsState.hasMore;
-    final error = reelsState.error;
-
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -77,114 +199,79 @@ class _ReelsPageState extends ConsumerState<ReelsPage> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          if (isLoading && reels.isEmpty)
-            const Center(
-              child: CircularProgressIndicator(
-                color: Colors.white,
-                strokeWidth: 2,
-              ),
-            )
-          else if (error != null && reels.isEmpty)
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.error_outline,
-                    color: AppColors.primary,
-                    size: 64,
+          // Show loading only on initial load with no data
+          _reels.isEmpty && _isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Something went wrong, refresh page.',
-                    style: const TextStyle(color: Colors.white),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: () {
-                      ref.read(reelsProvider.notifier).refreshReels();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      minimumSize: const Size(120, 48),
-                      foregroundColor: Colors.black,
-                    ),
-                    child: Text(
-                      'Refresh',
-                      style: AppTheme.whiteTextStyle.copyWith(
-                        fontWeight: AppTheme.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else
-            PageView.builder(
-              controller: _pageController,
-              scrollDirection: Axis.vertical,
-              itemCount: reels.length + 1,
-              onPageChanged: (index) {
-                setState(() {
-                  _currentIndex = index;
-                });
+                )
+              : PageView.builder(
+                  controller: _pageController,
+                  scrollDirection: Axis.vertical,
+                  itemCount: _reels.length + 1,
+                  onPageChanged: (index) {
+                    setState(() {
+                      _currentIndex = index;
+                    });
 
-                // Load more when approaching the end
-                if (index >= reels.length - 2 && hasMore && !isLoading) {
-                  ref.read(reelsProvider.notifier).loadMoreReels();
-                }
-              },
-              itemBuilder: (context, index) {
-                if (index == reels.length) {
-                  if (hasMore) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    );
-                  } else {
-                    return const Center(
-                      child: Text(
-                        'No more reels',
-                        style: TextStyle(color: Colors.white54),
-                      ),
-                    );
-                  }
-                }
-
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    await ref.read(reelsProvider.notifier).refreshReels();
+                    // Load more when nearing the end
+                    if (index >= _reels.length - 2 &&
+                        _hasMore &&
+                        !_isLoadingMore) {
+                      _loadMoreReels();
+                    }
                   },
-                  color: Colors.white,
-                  child: ReelItem(
-                    reel: reels[index],
-                    isActive: _currentIndex == index,
-                    onNextReel: () {
-                      if (index < reels.length - 1) {
-                        _pageController.nextPage(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
+                  itemBuilder: (context, index) {
+                    if (index == _reels.length) {
+                      if (_hasMore) {
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        );
+                      } else if (_reels.isEmpty) {
+                        return const Center(
+                          child: Text(
+                            'No reels available',
+                            style: TextStyle(color: Colors.white54),
+                          ),
+                        );
+                      } else {
+                        return const Center(
+                          child: Text(
+                            'No more reels',
+                            style: TextStyle(color: Colors.white54),
+                          ),
                         );
                       }
-                    },
-                    onLike: () {
-                      ref
-                          .read(reelsProvider.notifier)
-                          .toggleLike(reels[index].id, index);
-                    },
-                    onShare: () {
-                      ref
-                          .read(reelsProvider.notifier)
-                          .shareReel(reels[index].id, index);
-                    },
-                    currentUserId: _currentUserId,
-                  ),
-                );
-              },
-            ),
+                    }
+
+                    return RefreshIndicator(
+                      onRefresh: _refreshReels,
+                      color: Colors.white,
+                      child: ReelItem(
+                        reel: _reels[index],
+                        isActive: _currentIndex == index,
+                        onNextReel: () {
+                          if (index < _reels.length - 1) {
+                            _pageController.nextPage(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                            );
+                          }
+                        },
+                        onLike: () =>
+                            _toggleLike(_reels[index]['id'].toString(), index),
+                        onShare: () =>
+                            _shareReel(_reels[index]['id'].toString(), index),
+                        currentUserId: _currentUserId,
+                      ),
+                    );
+                  },
+                ),
           // Header - Back button and Camera
           Positioned(
             top: MediaQuery.of(context).padding.top + 10,
@@ -218,10 +305,10 @@ class _ReelsPageState extends ConsumerState<ReelsPage> {
                 GestureDetector(
                   onTap: () {
                     HapticFeedback.lightImpact();
-                    // TODO: Open camera for reel
+                    // TODO: Create reel
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Camera feature coming soon'),
+                        content: Text('Create reel feature coming soon'),
                         duration: Duration(seconds: 1),
                       ),
                     );
@@ -234,7 +321,7 @@ class _ReelsPageState extends ConsumerState<ReelsPage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
-                      Icons.camera_alt_outlined,
+                      Icons.add,
                       color: Colors.white,
                       size: 20,
                     ),
