@@ -2,11 +2,12 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
-import 'package:Prive/data/hooks/home/feed_hook.dart';
+import 'package:Prive/bloc/home/feed_bloc.dart';
 import 'package:Prive/core/cloudinary_service.dart';
 
 class CreatePostPage extends StatefulWidget {
@@ -29,14 +30,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
   bool _isPrivate = false;
   bool _isSubmitting = false;
 
-  late final FeedHook _feedHook;
   final CloudinaryService _cloudinaryService = CloudinaryService();
-
-  @override
-  void initState() {
-    super.initState();
-    _feedHook = FeedHook();
-  }
 
   @override
   void dispose() {
@@ -44,7 +38,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
     _hashtagController.dispose();
     _disposeAllMedia();
     _videoController?.dispose();
-    _feedHook.dispose();
     super.dispose();
   }
 
@@ -619,7 +612,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
       _videoController = VideoPlayerController.file(file)
         ..initialize().then((_) {
           if (mounted) setState(() {});
-          // ignore: invalid_return_type_for_catch_error
         }).catchError((e) => debugPrint('Video init error: $e'));
     }
   }
@@ -652,17 +644,19 @@ class _CreatePostPageState extends State<CreatePostPage> {
         content += '\n\n${_hashtags.map((h) => '#$h').join(' ')}';
       }
 
-      final success = await _feedHook.createPost(
-        content: content,
-        imageUrl: uploadedUrls.first,
-        isPrivate: _isPrivate,
-      );
+      // Dispatch CreatePost event to FeedBloc
+      context.read<FeedBloc>().add(CreatePost(
+            content: content,
+            imageUrl: uploadedUrls.first,
+          ));
 
-      if (success && mounted) {
-        _showSnackBar('Post created successfully!');
+      _showSnackBar('Post created successfully!');
+
+      // Wait a moment for the post to be created before popping
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      if (mounted) {
         Navigator.pop(context, true);
-      } else if (mounted) {
-        throw Exception('Failed to create post');
       }
     } catch (e) {
       _showSnackBar('Error creating post: ${e.toString()}', isError: true);

@@ -1,3 +1,4 @@
+import 'package:Prive/bloc/profile/profile_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -30,6 +31,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:Prive/app/configs/api_config.dart';
 import 'package:Prive/data/providers/theme_provider.dart';
 import 'package:Prive/bloc/home/feed_bloc.dart';
+import 'package:Prive/bloc/user/user_bloc.dart';
+import 'package:Prive/bloc/friends/friends_bloc.dart';
+import 'package:Prive/bloc/explore/explore_bloc.dart';
+import 'package:Prive/bloc/reels/reel_bloc.dart';
 import 'package:cloudinary_url_gen/cloudinary.dart';
 import 'package:cloudinary_flutter/cloudinary_context.dart';
 
@@ -105,9 +110,22 @@ class _MyAppState extends ConsumerState<MyApp> {
 
     return MultiBlocProvider(
       providers: [
+        BlocProvider<UserBloc>(
+          create: (context) => UserBloc(),
+        ),
+        BlocProvider<FriendsBloc>(
+          create: (context) => FriendsBloc(),
+        ),
         BlocProvider<FeedBloc>(
           create: (context) => FeedBloc()..add(FetchFeedData()),
         ),
+        BlocProvider<ExploreBloc>(
+          create: (context) => ExploreBloc(),
+        ),
+        BlocProvider<ReelBloc>(
+          create: (context) => ReelBloc(),
+        ),
+        BlocProvider(create: (context) => ProfileBloc()),
       ],
       child: MaterialApp(
         title: 'Prive',
@@ -276,7 +294,7 @@ class _MainWrapperState extends State<MainWrapper> {
           if (_currentIndex != 2) _buildBackgroundGradient(),
           if (_currentIndex != 2)
             Positioned(
-              bottom: 70,
+              bottom: 72,
               child: Transform.rotate(
                 angle: 11,
                 child: InkWell(

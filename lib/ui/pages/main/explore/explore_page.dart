@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
 import 'package:Prive/data/models/profile_model.dart';
-import 'package:Prive/data/services/explore/explore_service.dart';
+import 'package:Prive/bloc/explore/explore_bloc.dart';
 import 'package:Prive/ui/widgets/explore/discover_header.dart';
 import 'package:Prive/ui/widgets/explore/no_more_profiles.dart';
 import 'package:Prive/ui/widgets/explore/swipe_cards_stack.dart';
@@ -12,7 +13,7 @@ import 'package:Prive/ui/widgets/explore/loading_shimmer.dart';
 import 'package:Prive/ui/widgets/explore/match_dialog.dart';
 import 'package:Prive/ui/widgets/explore/action_buttons.dart';
 
-enum LoadingState { initial, loading, loaded, empty, error }
+enum SwipeActionType { like, pass, superLike, none }
 
 class DiscoverPage extends StatefulWidget {
   const DiscoverPage({super.key});
@@ -23,26 +24,7 @@ class DiscoverPage extends StatefulWidget {
 
 class _DiscoverPageState extends State<DiscoverPage>
     with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
-  final ExploreService _exploreService = ExploreService();
-
-  List<ProfileModel> _profiles = [];
-  int _currentIndex = 0;
-  LoadingState _loadingState = LoadingState.initial;
-
-  // Filter parameters
-  Map<String, dynamic> _currentFilters = {
-    'filter': 'all',
-    'page': 1,
-    'minAge': null,
-    'maxAge': null,
-    'distance': null,
-    'verifiedOnly': false,
-    'sortBy': null,
-  };
-
-  // Match stats
-  int _totalLikes = 0;
-  bool _hasMoreProfiles = true;
+  late PageController _pageController;
 
   // Animation controllers
   late AnimationController _swipeController;
@@ -53,7 +35,6 @@ class _DiscoverPageState extends State<DiscoverPage>
   double _swipeProgress = 0.0;
   double _verticalSwipeProgress = 0.0;
   SwipeDirection _swipeDirection = SwipeDirection.none;
-  SwipeActionType _lastSwipeAction = SwipeActionType.none;
 
   // Drag tracking
   Offset _dragStart = Offset.zero;
@@ -69,10 +50,10 @@ class _DiscoverPageState extends State<DiscoverPage>
   void initState() {
     super.initState();
     _initializeControllers();
-    _loadInitialData();
   }
 
   void _initializeControllers() {
+    _pageController = PageController();
     _swipeController = AnimationController(
       duration: const Duration(milliseconds: 400),
       vsync: this,
@@ -91,158 +72,10 @@ class _DiscoverPageState extends State<DiscoverPage>
     );
   }
 
-  Future<void> _loadInitialData() async {
-    await Future.wait([
-      _loadProfiles(),
-      _loadStats(),
-    ]);
-  }
-
-  Future<void> _loadProfiles() async {
-    if (_loadingState == LoadingState.loading) return;
-
-    setState(() {
-      _loadingState = LoadingState.loading;
-    });
-
-    try {
-      final result = await _exploreService.getExploreProfiles(
-        page: _currentFilters['page'],
-        filter: _currentFilters['filter'],
-        minAge: _currentFilters['minAge'],
-        maxAge: _currentFilters['maxAge'],
-        distance: _currentFilters['distance'],
-        verifiedOnly: _currentFilters['verifiedOnly'],
-        sortBy: _currentFilters['sortBy'],
-      );
-
-      final newProfiles = result['profiles'] as List<ProfileModel>;
-      final hasMore = result['hasMore'] as bool;
-
-      setState(() {
-        if (_currentFilters['page'] == 1) {
-          _profiles = newProfiles;
-          _currentIndex = 0;
-        } else {
-          _profiles.addAll(newProfiles);
-        }
-        _loadingState =
-            newProfiles.isEmpty ? LoadingState.empty : LoadingState.loaded;
-        _hasMoreProfiles = hasMore;
-      });
-    } catch (e) {
-      setState(() {
-        _loadingState = LoadingState.error;
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading profiles: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _loadStats() async {
-    try {
-      final stats = await _exploreService.getStats();
-      setState(() {
-        _totalLikes = stats['totalLikes'] ?? 0;
-      });
-    } catch (e) {
-      debugPrint('Error loading stats: $e');
-      setState(() {});
-    }
-  }
-
-  Future<void> _handleSwipeAction(
-      SwipeDirection direction, ProfileModel profile) async {
-    String action;
-    SwipeActionType actionType;
-
-    switch (direction) {
-      case SwipeDirection.right:
-        action = 'like';
-        actionType = SwipeActionType.like;
-        break;
-      case SwipeDirection.left:
-        action = 'pass';
-        actionType = SwipeActionType.pass;
-        break;
-      case SwipeDirection.up:
-        action = 'super_like';
-        actionType = SwipeActionType.superLike;
-        break;
-      case SwipeDirection.none:
-        return;
-    }
-
-    _showSwipeFeedback(actionType);
-
-    try {
-      final response = await _exploreService.swipe(profile.id, action);
-
-      // Check if it's a match
-      if (response['isMatch'] == true) {
-        _showMatchDialog(profile, response['matchId']);
-      }
-
-      // Update stats
-      if (actionType == SwipeActionType.like) {
-        setState(() => _totalLikes++);
-      }
-
-      // Load next profile
-      _moveToNextProfile();
-    } catch (e) {
-      debugPrint('Swipe error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to $action: ${e.toString()}'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-
-      // Don't move to next profile if API call failed
-      _resetSwipe();
-    }
-  }
-
-  void _moveToNextProfile() {
-    setState(() {
-      _currentIndex++;
-      _swipeProgress = 0.0;
-      _verticalSwipeProgress = 0.0;
-      _swipeDirection = SwipeDirection.none;
-    });
-    _swipeController.reset();
-
-    if (_currentIndex >= _profiles.length - 2 &&
-        _hasMoreProfiles &&
-        _loadingState != LoadingState.loading) {
-      _currentFilters['page'] = (_currentFilters['page'] as int) + 1;
-      _loadProfiles();
-    }
-  }
-
   void _showSwipeFeedback(SwipeActionType action) {
-    setState(() {
-      _lastSwipeAction = action;
-    });
-
     _feedbackAnimationController.forward().then((_) {
       Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) {
-          setState(() {
-            _lastSwipeAction = SwipeActionType.none;
-          });
-          _feedbackAnimationController.reset();
-        }
+        _feedbackAnimationController.reset();
       });
     });
 
@@ -283,32 +116,165 @@ class _DiscoverPageState extends State<DiscoverPage>
     // TODO: Implement navigation
   }
 
-  void _showFilters() async {
+  void _showFilters(
+      BuildContext context, Map<String, dynamic> currentFilters) async {
     final newFilters = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => FilterBottomSheet(
-        currentFilters: _currentFilters,
+        currentFilters: currentFilters,
       ),
     );
 
     if (newFilters != null && mounted) {
-      setState(() {
-        _currentFilters = newFilters;
-        _currentFilters['page'] = 1;
-        _currentFilters['filter'] = 'all';
-      });
-      _loadProfiles();
+      final updatedFilters = {
+        ...newFilters,
+        'page': 1,
+        'filter': 'all',
+      };
+      context
+          .read<ExploreBloc>()
+          .add(UpdateExploreFilters(filters: updatedFilters));
     }
   }
 
-  void _refreshProfiles() {
+  void _onPanStart(DragStartDetails details) {
     setState(() {
-      _currentFilters['page'] = 1;
-      _currentIndex = 0;
+      _dragStart = details.localPosition;
     });
-    _loadProfiles();
+  }
+
+  void _onPanUpdate(DragUpdateDetails details) {
+    final exploreState = context.read<ExploreBloc>().state;
+    if (exploreState.status != ExploreStatus.success) return;
+
+    setState(() {
+      final screenWidth = MediaQuery.of(context).size.width;
+      final screenHeight = MediaQuery.of(context).size.height;
+
+      final dx = details.localPosition.dx - _dragStart.dx;
+      final dy = details.localPosition.dy - _dragStart.dy;
+
+      _swipeProgress = dx / screenWidth;
+      _verticalSwipeProgress = -dy / screenHeight;
+
+      if (dx.abs() > dy.abs()) {
+        _swipeDirection = dx > 0 ? SwipeDirection.right : SwipeDirection.left;
+        _verticalSwipeProgress = 0.0;
+      } else if (dy < -10) {
+        _swipeDirection = SwipeDirection.up;
+        _swipeProgress = 0.0;
+        _verticalSwipeProgress = _verticalSwipeProgress.clamp(0.0, 1.0);
+      }
+    });
+  }
+
+  void _onPanEnd(
+      DragEndDetails details, BuildContext context, ExploreState state) {
+    if (state.status != ExploreStatus.success) return;
+    if (state.currentProfile == null) return;
+
+    final velocity = details.velocity.pixelsPerSecond;
+    final isFastSwipe = velocity.dx.abs() > 800 || velocity.dy.abs() > 800;
+    final currentProfile = state.currentProfile!;
+    final currentIndex = state.currentIndex;
+
+    if (_swipeDirection == SwipeDirection.right &&
+        (_swipeProgress > _horizontalThreshold ||
+            (isFastSwipe && velocity.dx > 0))) {
+      _completeSwipe(
+          SwipeDirection.right, currentProfile, currentIndex, context);
+    } else if (_swipeDirection == SwipeDirection.left &&
+        (_swipeProgress < -_horizontalThreshold ||
+            (isFastSwipe && velocity.dx < 0))) {
+      _completeSwipe(
+          SwipeDirection.left, currentProfile, currentIndex, context);
+    } else if (_swipeDirection == SwipeDirection.up &&
+        (_verticalSwipeProgress > _verticalThreshold ||
+            (isFastSwipe && velocity.dy < -500))) {
+      _completeSwipe(SwipeDirection.up, currentProfile, currentIndex, context);
+    } else {
+      _resetSwipe();
+    }
+  }
+
+  void _triggerSwipe(
+      SwipeDirection direction, BuildContext context, ExploreState state) {
+    if (state.currentProfile == null) return;
+
+    _buttonAnimationController.forward().then((_) {
+      _buttonAnimationController.reverse();
+    });
+
+    setState(() {
+      _swipeDirection = direction;
+    });
+
+    _swipeController.forward().then((_) {
+      _handleSwipeComplete(
+          direction, state.currentProfile!, state.currentIndex, context);
+    });
+  }
+
+  void _completeSwipe(SwipeDirection direction, ProfileModel profile, int index,
+      BuildContext context) {
+    setState(() {
+      _swipeDirection = direction;
+    });
+
+    _swipeController.forward().then((_) {
+      _handleSwipeComplete(direction, profile, index, context);
+    });
+  }
+
+  void _handleSwipeComplete(SwipeDirection direction, ProfileModel profile,
+      int index, BuildContext context) {
+    String action;
+    SwipeActionType actionType;
+
+    switch (direction) {
+      case SwipeDirection.right:
+        action = 'like';
+        actionType = SwipeActionType.like;
+        break;
+      case SwipeDirection.left:
+        action = 'pass';
+        actionType = SwipeActionType.pass;
+        break;
+      case SwipeDirection.up:
+        action = 'super_like';
+        actionType = SwipeActionType.superLike;
+        break;
+      case SwipeDirection.none:
+        return;
+    }
+
+    _showSwipeFeedback(actionType);
+
+    // Dispatch swipe event to BLoC
+    context.read<ExploreBloc>().add(SwipeProfile(
+          profileId: profile.id,
+          action: action,
+          index: index,
+        ));
+  }
+
+  void _resetSwipe() {
+    setState(() {
+      _swipeProgress = 0.0;
+      _verticalSwipeProgress = 0.0;
+      _swipeDirection = SwipeDirection.none;
+    });
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _swipeController.dispose();
+    _buttonAnimationController.dispose();
+    _feedbackAnimationController.dispose();
+    super.dispose();
   }
 
   @override
@@ -322,96 +288,134 @@ class _DiscoverPageState extends State<DiscoverPage>
       ),
     );
 
-    return Scaffold(
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // Main content
-            RefreshIndicator(
-              onRefresh: () async => _refreshProfiles(),
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.zero,
-                child: Column(
-                  children: [
-                    const SizedBox(height: 12),
-                    DiscoverHeader(
-                      remainingCount: _profiles.length - _currentIndex,
-                      onFilterTap: _showFilters,
-                    ),
-                    const SizedBox(height: 24),
-                    _buildSwipeContent(),
-                    const SizedBox(height: 24),
-                    if (_loadingState == LoadingState.loaded &&
-                        _currentIndex < _profiles.length)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: ActionButtons(
-                          onSkip: () => _triggerSwipe(SwipeDirection.left),
-                          onSuperLike: () => _triggerSwipe(SwipeDirection.up),
-                          onLike: () => _triggerSwipe(SwipeDirection.right),
-                          onMessage: () =>
-                              _navigateToChat(_profiles[_currentIndex]),
-                        ),
-                      ),
-                    const SizedBox(height: 40),
-                  ],
-                ),
+    return BlocProvider(
+      create: (context) => ExploreBloc()
+        ..add(LoadExploreProfiles())
+        ..add(LoadExploreStats()),
+      child: BlocConsumer<ExploreBloc, ExploreState>(
+        listener: (context, state) {
+          if (state.error != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error: ${state.error}'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
               ),
-            ),
-            // Swipe feedback overlay
-            if (_lastSwipeAction != SwipeActionType.none)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: Center(
-                    child: AnimatedBuilder(
-                      animation: _feedbackAnimationController,
-                      builder: (context, child) {
-                        final opacity =
-                            1.0 - _feedbackAnimationController.value;
-                        final scale =
-                            0.5 + (_feedbackAnimationController.value * 0.5);
+            );
+            context.read<ExploreBloc>().add(ClearExploreError());
+          }
 
-                        return Opacity(
-                          opacity: opacity * 0.8,
-                          child: Transform.scale(
-                            scale: scale,
-                            child: _buildFeedbackContent(),
+          // Check for match (would need to be handled via a separate stream or callback)
+          // For now, we'll handle matches in the swipe response
+        },
+        builder: (context, state) {
+          final remainingProfiles = state.remainingProfiles;
+          final currentProfile = state.currentProfile;
+          final isLoading = state.isLoading;
+          final status = state.status;
+
+          return Scaffold(
+            body: SafeArea(
+              child: Stack(
+                children: [
+                  // Main content
+                  RefreshIndicator(
+                    onRefresh: () async {
+                      context.read<ExploreBloc>().add(RefreshExploreProfiles());
+                      context.read<ExploreBloc>().add(LoadExploreStats());
+                    },
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: EdgeInsets.zero,
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 12),
+                          DiscoverHeader(
+                            remainingCount: remainingProfiles,
+                            onFilterTap: () =>
+                                _showFilters(context, state.currentFilters),
                           ),
-                        );
-                      },
+                          const SizedBox(height: 24),
+                          _buildSwipeContent(context, state),
+                          const SizedBox(height: 24),
+                          if (status == ExploreStatus.success &&
+                              currentProfile != null)
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
+                              child: ActionButtons(
+                                onSkip: () => _triggerSwipe(
+                                    SwipeDirection.left, context, state),
+                                onSuperLike: () => _triggerSwipe(
+                                    SwipeDirection.up, context, state),
+                                onLike: () => _triggerSwipe(
+                                    SwipeDirection.right, context, state),
+                                onMessage: () =>
+                                    _navigateToChat(currentProfile),
+                              ),
+                            ),
+                          const SizedBox(height: 40),
+                        ],
+                      ),
                     ),
                   ),
-                ),
+                  // Swipe feedback overlay
+                  if (state.lastSwipeAction != null)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: Center(
+                          child: AnimatedBuilder(
+                            animation: _feedbackAnimationController,
+                            builder: (context, child) {
+                              final opacity =
+                                  1.0 - _feedbackAnimationController.value;
+                              final scale = 0.5 +
+                                  (_feedbackAnimationController.value * 0.5);
+
+                              return Opacity(
+                                opacity: opacity * 0.8,
+                                child: Transform.scale(
+                                  scale: scale,
+                                  child: _buildFeedbackContent(
+                                      state.lastSwipeAction!),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
-          ],
-        ),
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildFeedbackContent() {
+  Widget _buildFeedbackContent(String action) {
     late IconData icon;
     late Color color;
     late String text;
 
-    switch (_lastSwipeAction) {
-      case SwipeActionType.like:
+    switch (action) {
+      case 'like':
         icon = Icons.favorite;
         color = Colors.green;
         text = 'LIKED!';
         break;
-      case SwipeActionType.pass:
+      case 'pass':
         icon = Icons.close;
         color = Colors.red;
         text = 'PASSED';
         break;
-      case SwipeActionType.superLike:
+      case 'super_like':
         icon = Icons.star;
         color = Colors.blue;
         text = 'SUPER LIKE!';
         break;
-      case SwipeActionType.none:
+      default:
         return const SizedBox.shrink();
     }
 
@@ -451,22 +455,23 @@ class _DiscoverPageState extends State<DiscoverPage>
     );
   }
 
-  Widget _buildSwipeContent() {
-    switch (_loadingState) {
-      case LoadingState.initial:
-      case LoadingState.loading:
+  Widget _buildSwipeContent(BuildContext context, ExploreState state) {
+    switch (state.status) {
+      case ExploreStatus.loading:
         return const Padding(
           padding: EdgeInsets.symmetric(horizontal: 40),
           child: LoadingShimmer(),
         );
 
-      case LoadingState.empty:
+      case ExploreStatus.empty:
         return NoMoreProfiles(
-          onRefresh: _refreshProfiles,
+          onRefresh: () {
+            context.read<ExploreBloc>().add(RefreshExploreProfiles());
+          },
           message: 'No more profiles in your area\nTry adjusting your filters',
         );
 
-      case LoadingState.error:
+      case ExploreStatus.error:
         return Center(
           child: Column(
             children: [
@@ -479,7 +484,9 @@ class _DiscoverPageState extends State<DiscoverPage>
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: _loadProfiles,
+                onPressed: () {
+                  context.read<ExploreBloc>().add(RefreshExploreProfiles());
+                },
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size(120, 48),
                   backgroundColor: AppColors.primary,
@@ -493,10 +500,12 @@ class _DiscoverPageState extends State<DiscoverPage>
           ),
         );
 
-      case LoadingState.loaded:
-        if (_currentIndex >= _profiles.length) {
+      case ExploreStatus.success:
+        if (state.currentProfile == null) {
           return NoMoreProfiles(
-            onRefresh: _refreshProfiles,
+            onRefresh: () {
+              context.read<ExploreBloc>().add(RefreshExploreProfiles());
+            },
             message: 'You\'ve seen everyone!\nNew profiles coming soon',
           );
         }
@@ -506,119 +515,19 @@ class _DiscoverPageState extends State<DiscoverPage>
           child: GestureDetector(
             onPanStart: _onPanStart,
             onPanUpdate: _onPanUpdate,
-            onPanEnd: _onPanEnd,
+            onPanEnd: (details) => _onPanEnd(details, context, state),
             child: SwipeCardsStack(
-              profiles: _profiles,
-              currentIndex: _currentIndex,
+              profiles: state.profiles,
+              currentIndex: state.currentIndex,
               swipeProgress: _swipeProgress,
               verticalSwipeProgress: _verticalSwipeProgress,
               swipeDirection: _swipeDirection,
             ),
           ),
         );
+
+      default:
+        return const SizedBox.shrink();
     }
-  }
-
-  void _onPanStart(DragStartDetails details) {
-    if (_loadingState != LoadingState.loaded) return;
-    setState(() {
-      _dragStart = details.localPosition;
-    });
-  }
-
-  void _onPanUpdate(DragUpdateDetails details) {
-    if (_loadingState != LoadingState.loaded) return;
-
-    setState(() {
-      final screenWidth = MediaQuery.of(context).size.width;
-      final screenHeight = MediaQuery.of(context).size.height;
-
-      final dx = details.localPosition.dx - _dragStart.dx;
-      final dy = details.localPosition.dy - _dragStart.dy;
-
-      _swipeProgress = dx / screenWidth;
-      _verticalSwipeProgress = -dy / screenHeight;
-
-      if (dx.abs() > dy.abs()) {
-        _swipeDirection = dx > 0 ? SwipeDirection.right : SwipeDirection.left;
-        _verticalSwipeProgress = 0.0;
-      } else if (dy < -10) {
-        _swipeDirection = SwipeDirection.up;
-        _swipeProgress = 0.0;
-        _verticalSwipeProgress = _verticalSwipeProgress.clamp(0.0, 1.0);
-      }
-    });
-  }
-
-  void _onPanEnd(DragEndDetails details) {
-    if (_loadingState != LoadingState.loaded) return;
-
-    final velocity = details.velocity.pixelsPerSecond;
-    final isFastSwipe = velocity.dx.abs() > 800 || velocity.dy.abs() > 800;
-    final currentProfile = _profiles[_currentIndex];
-
-    if (_swipeDirection == SwipeDirection.right &&
-        (_swipeProgress > _horizontalThreshold ||
-            (isFastSwipe && velocity.dx > 0))) {
-      _completeSwipe(SwipeDirection.right, currentProfile);
-    } else if (_swipeDirection == SwipeDirection.left &&
-        (_swipeProgress < -_horizontalThreshold ||
-            (isFastSwipe && velocity.dx < 0))) {
-      _completeSwipe(SwipeDirection.left, currentProfile);
-    } else if (_swipeDirection == SwipeDirection.up &&
-        (_verticalSwipeProgress > _verticalThreshold ||
-            (isFastSwipe && velocity.dy < -500))) {
-      _completeSwipe(SwipeDirection.up, currentProfile);
-    } else {
-      _resetSwipe();
-    }
-  }
-
-  void _triggerSwipe(SwipeDirection direction) {
-    if (_currentIndex >= _profiles.length) return;
-
-    _buttonAnimationController.forward().then((_) {
-      _buttonAnimationController.reverse();
-    });
-
-    setState(() {
-      _swipeDirection = direction;
-    });
-
-    _swipeController.forward().then((_) {
-      _handleSwipeComplete(direction, _profiles[_currentIndex]);
-    });
-  }
-
-  void _completeSwipe(SwipeDirection direction, ProfileModel profile) {
-    setState(() {
-      _swipeDirection = direction;
-    });
-
-    _swipeController.forward().then((_) {
-      _handleSwipeComplete(direction, profile);
-    });
-  }
-
-  void _handleSwipeComplete(SwipeDirection direction, ProfileModel profile) {
-    _handleSwipeAction(direction, profile);
-  }
-
-  void _resetSwipe() {
-    setState(() {
-      _swipeProgress = 0.0;
-      _verticalSwipeProgress = 0.0;
-      _swipeDirection = SwipeDirection.none;
-    });
-  }
-
-  @override
-  void dispose() {
-    _swipeController.dispose();
-    _buttonAnimationController.dispose();
-    _feedbackAnimationController.dispose();
-    super.dispose();
   }
 }
-
-enum SwipeActionType { like, pass, superLike, none }

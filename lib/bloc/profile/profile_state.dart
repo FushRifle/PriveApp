@@ -11,6 +11,8 @@ class Profile {
   final int age;
   final String? gender;
   final String? location;
+  final String? work;
+  final String? education;
   final double? latitude;
   final double? longitude;
   final Map<String, dynamic>? settings;
@@ -31,6 +33,8 @@ class Profile {
     required this.age,
     this.gender,
     this.location,
+    this.work,
+    this.education,
     this.latitude,
     this.longitude,
     this.settings,
@@ -54,6 +58,8 @@ class Profile {
       age: json['age'] ?? 0,
       gender: json['gender']?.toString(),
       location: json['location']?.toString(),
+      work: json['work']?.toString(), // Add this
+      education: json['education']?.toString(), // Add this
       latitude: json['latitude']?.toDouble(),
       longitude: json['longitude']?.toDouble(),
       settings: json['settings'] as Map<String, dynamic>?,
@@ -82,6 +88,8 @@ class Profile {
         'age': age,
         if (gender != null) 'gender': gender,
         if (location != null) 'location': location,
+        if (work != null) 'work': work,
+        if (education != null) 'education': education,
         if (latitude != null) 'latitude': latitude,
         if (longitude != null) 'longitude': longitude,
         if (settings != null) 'settings': settings,
@@ -103,6 +111,8 @@ class Profile {
     int? age,
     String? gender,
     String? location,
+    String? work,
+    String? education,
     double? latitude,
     double? longitude,
     Map<String, dynamic>? settings,
@@ -123,6 +133,8 @@ class Profile {
       age: age ?? this.age,
       gender: gender ?? this.gender,
       location: location ?? this.location,
+      work: work ?? this.work,
+      education: education ?? this.education,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       settings: settings ?? this.settings,
@@ -143,6 +155,8 @@ class Profile {
   bool get hasPhotos => photos.isNotEmpty;
   bool get hasInterests => interests.isNotEmpty;
   String get ageText => age > 0 ? '$age years old' : 'Age not specified';
+  String get workOrDefault => work ?? 'Work not specified';
+  String get educationOrDefault => education ?? 'Education not specified';
 }
 
 class ProfileState extends Equatable {

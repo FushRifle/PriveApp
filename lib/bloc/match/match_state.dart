@@ -147,6 +147,7 @@ class Recommendation extends MatchUser {
     );
   }
 
+  @override
   Map<String, dynamic> toJson() => {
         ...super.toJson(),
         'matchPercentage': matchPercentage,

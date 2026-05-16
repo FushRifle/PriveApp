@@ -1,20 +1,104 @@
-// gallery_profile_cubit.dart
+import 'package:Prive/data/services/home/feed_service.dart';
+import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:Prive/data/models/gallery_model.dart';
-
 part 'gallery_profile_state.dart';
 
 class GalleryProfileCubit extends Cubit<GalleryProfileState> {
+  final FeedService _feedService = FeedService();
+
   GalleryProfileCubit() : super(GalleryProfileInitial());
 
+  // New method: Fetch media directly from API using FeedService
+  Future<void> getUserMedia({
+    required int userId,
+    String? type, // 'image', 'video', or null for all
+    int page = 1,
+    bool loadMore = false,
+  }) async {
+    if (loadMore && state is GalleryProfileLoaded) {
+      final currentState = state as GalleryProfileLoaded;
+      if (!currentState.hasMore) {
+        return; // No more media to load
+      }
+      emit(GalleryProfileLoadingMore(currentState.galleryProfiles));
+    } else {
+      emit(GalleryProfileLoading());
+    }
+
+    try {
+      final response = await _feedService.getUserMedia(
+        userId: userId,
+        page: page,
+        type: type,
+      );
+
+      final mediaList = response.media;
+
+      // Convert UserMedia to GalleryModel
+      final galleryItems = mediaList
+          .map((media) => GalleryModel(
+                id: media.postId.toString(),
+                image: media.url,
+                thumbnail: media.thumbnail ?? media.url,
+                videoUrl: media.type == 'video' ? media.url : null,
+                type: media.type,
+                like: _formatLikes(media.likes),
+                caption: media.caption,
+                createdAt: media.createdAt,
+              ))
+          .toList();
+
+      if (loadMore && state is GalleryProfileLoaded) {
+        final currentState = state as GalleryProfileLoaded;
+        final allItems = [...currentState.galleryProfiles, ...galleryItems];
+        emit(GalleryProfileLoaded(
+          galleryProfiles: allItems,
+          hasMore: response.hasMore,
+          currentPage: response.page,
+        ));
+      } else {
+        emit(GalleryProfileLoaded(
+          galleryProfiles: galleryItems,
+          hasMore: response.hasMore,
+          currentPage: response.page,
+        ));
+      }
+    } catch (e) {
+      emit(GalleryProfileError(message: e.toString()));
+    }
+  }
+
+  // Load more media (pagination)
+  Future<void> loadMoreMedia({
+    required int userId,
+    String? type,
+  }) async {
+    if (state is GalleryProfileLoaded) {
+      final currentState = state as GalleryProfileLoaded;
+      if (currentState.hasMore && !currentState.isLoadingMore) {
+        final nextPage = (currentState.currentPage ?? 1) + 1;
+        await getUserMedia(
+          userId: userId,
+          type: type,
+          page: nextPage,
+          loadMore: true,
+        );
+      }
+    }
+  }
+
+  // Legacy method: Extract from feed posts (for backward compatibility)
   void getGalleryProfile({required List<dynamic> feedPosts}) {
     emit(GalleryProfileLoading());
 
     try {
-      // Filter attachments from user feeds
       final galleryItems = _extractMediaFromPosts(feedPosts);
-
-      emit(GalleryProfileLoaded(galleryProfiles: galleryItems));
+      emit(GalleryProfileLoaded(
+        galleryProfiles: galleryItems,
+        hasMore: false, // No pagination for local extraction
+        currentPage: 1,
+      ));
     } catch (e) {
       emit(GalleryProfileError(message: e.toString()));
     }
@@ -26,8 +110,6 @@ class GalleryProfileCubit extends Cubit<GalleryProfileState> {
     for (var post in posts) {
       // Extract post ID
       final postId = post['id']?.toString();
-
-      // Extract likes count from various possible structures
       int likesCount = 0;
       if (post['likesCount'] != null) {
         likesCount = post['likesCount'];
@@ -38,11 +120,7 @@ class GalleryProfileCubit extends Cubit<GalleryProfileState> {
       } else if (post['likeCount'] != null) {
         likesCount = post['likeCount'];
       }
-
-      // Extract content/caption
       final caption = post['content'] ?? post['caption'] ?? '';
-
-      // Check for attachments array (most common structure)
       final attachments = post['attachments'] ?? [];
 
       if (attachments.isNotEmpty) {
@@ -88,7 +166,6 @@ class GalleryProfileCubit extends Cubit<GalleryProfileState> {
         }
       }
 
-      // Check for single imageUrl field
       final imageUrl = post['imageUrl'] ?? post['image_url'] ?? post['image'];
       if (imageUrl != null &&
           imageUrl.toString().isNotEmpty &&
@@ -159,7 +236,7 @@ class GalleryProfileCubit extends Cubit<GalleryProfileState> {
     return count.toString();
   }
 
-  // Refresh gallery with new posts
+  // Refresh gallery with new posts (legacy)
   void refreshGallery({required List<dynamic> feedPosts}) {
     getGalleryProfile(feedPosts: feedPosts);
   }

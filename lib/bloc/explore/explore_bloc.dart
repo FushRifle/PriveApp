@@ -1,28 +1,23 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:Prive/data/services/explore/explore_service.dart';
 import 'package:Prive/data/models/profile_model.dart';
+import 'package:Prive/data/services/explore/explore_service.dart';
+import 'package:flutter/foundation.dart';
 
 part 'explore_event.dart';
 part 'explore_state.dart';
 
 class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
   final ExploreService _exploreService = ExploreService();
-
-  Map<String, dynamic> _currentQueryParams = {};
+  static const int _pageSize = 10;
 
   ExploreBloc() : super(const ExploreState()) {
     on<LoadExploreProfiles>(_onLoadExploreProfiles);
     on<RefreshExploreProfiles>(_onRefreshExploreProfiles);
     on<LoadMoreExploreProfiles>(_onLoadMoreExploreProfiles);
     on<SwipeProfile>(_onSwipeProfile);
-    on<LoadExploreFilters>(_onLoadExploreFilters);
-    on<LoadMatches>(_onLoadMatches);
-    on<LoadMoreMatches>(_onLoadMoreMatches);
-    on<LoadLikedProfiles>(_onLoadLikedProfiles);
-    on<LoadLikedByProfiles>(_onLoadLikedByProfiles);
-    on<LoadExploreStats>(_onLoadExploreStats);
     on<UpdateExploreFilters>(_onUpdateExploreFilters);
+    on<LoadExploreStats>(_onLoadExploreStats);
     on<ClearExploreError>(_onClearExploreError);
     on<ResetExploreState>(_onResetExploreState);
   }
@@ -31,23 +26,13 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
     LoadExploreProfiles event,
     Emitter<ExploreState> emit,
   ) async {
-    if (state.isLoading) return;
-
-    // Save current query params for pagination
-    _currentQueryParams = {
-      'filter': event.filter,
-      if (event.minAge != null) 'minAge': event.minAge,
-      if (event.maxAge != null) 'maxAge': event.maxAge,
-      if (event.distance != null) 'distance': event.distance,
-      if (event.verifiedOnly != null) 'verifiedOnly': event.verifiedOnly,
-      if (event.sortBy != null) 'sortBy': event.sortBy,
-    };
-
-    emit(state.copyWith(
-      status: ExploreStatus.loading,
-      isLoading: true,
-      error: null,
-    ));
+    if (state.profiles.isEmpty) {
+      emit(state.copyWith(
+        status: ExploreStatus.loading,
+        isLoading: true,
+        error: null,
+      ));
+    }
 
     try {
       final result = await _exploreService.getExploreProfiles(
@@ -60,12 +45,17 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
         sortBy: event.sortBy,
       );
 
+      final newProfiles = result['profiles'] as List<ProfileModel>;
+      final hasMore = result['hasMore'] as bool;
+
       emit(state.copyWith(
-        profiles: result['profiles'],
-        hasMoreProfiles: result['hasMore'],
-        currentPage: result['page'],
-        totalProfiles: result['total'],
-        status: ExploreStatus.success,
+        profiles:
+            event.page == 1 ? newProfiles : [...state.profiles, ...newProfiles],
+        currentIndex: event.page == 1 ? 0 : state.currentIndex,
+        hasMore: hasMore,
+        currentPage: event.page,
+        status:
+            newProfiles.isEmpty ? ExploreStatus.empty : ExploreStatus.success,
         isLoading: false,
         error: null,
       ));
@@ -91,20 +81,24 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
     try {
       final result = await _exploreService.getExploreProfiles(
         page: 1,
-        filter: state.currentFilter,
-        minAge: state.minAge,
-        maxAge: state.maxAge,
-        distance: state.distance,
-        verifiedOnly: state.verifiedOnly,
-        sortBy: state.sortBy,
+        filter: state.currentFilters['filter'],
+        minAge: state.currentFilters['minAge'],
+        maxAge: state.currentFilters['maxAge'],
+        distance: state.currentFilters['distance'],
+        verifiedOnly: state.currentFilters['verifiedOnly'],
+        sortBy: state.currentFilters['sortBy'],
       );
 
+      final newProfiles = result['profiles'] as List<ProfileModel>;
+      final hasMore = result['hasMore'] as bool;
+
       emit(state.copyWith(
-        profiles: result['profiles'],
-        hasMoreProfiles: result['hasMore'],
-        currentPage: result['page'],
-        totalProfiles: result['total'],
-        status: ExploreStatus.success,
+        profiles: newProfiles,
+        currentIndex: 0,
+        hasMore: hasMore,
+        currentPage: 1,
+        status:
+            newProfiles.isEmpty ? ExploreStatus.empty : ExploreStatus.success,
         isRefreshing: false,
         error: null,
       ));
@@ -121,8 +115,7 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
     LoadMoreExploreProfiles event,
     Emitter<ExploreState> emit,
   ) async {
-    if (!state.hasMoreProfiles || state.isLoadingMore || state.isRefreshing)
-      return;
+    if (!state.hasMore || state.isLoadingMore || state.isRefreshing) return;
 
     emit(state.copyWith(
       status: ExploreStatus.loadingMore,
@@ -133,21 +126,21 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
       final nextPage = state.currentPage + 1;
       final result = await _exploreService.getExploreProfiles(
         page: nextPage,
-        filter: state.currentFilter,
-        minAge: state.minAge,
-        maxAge: state.maxAge,
-        distance: state.distance,
-        verifiedOnly: state.verifiedOnly,
-        sortBy: state.sortBy,
+        filter: state.currentFilters['filter'],
+        minAge: state.currentFilters['minAge'],
+        maxAge: state.currentFilters['maxAge'],
+        distance: state.currentFilters['distance'],
+        verifiedOnly: state.currentFilters['verifiedOnly'],
+        sortBy: state.currentFilters['sortBy'],
       );
 
-      final updatedProfiles = List<ProfileModel>.from(state.profiles)
-        ..addAll(result['profiles']);
+      final newProfiles = result['profiles'] as List<ProfileModel>;
+      final hasMore = result['hasMore'] as bool;
 
       emit(state.copyWith(
-        profiles: updatedProfiles,
-        hasMoreProfiles: result['hasMore'],
-        currentPage: result['page'],
+        profiles: [...state.profiles, ...newProfiles],
+        hasMore: hasMore,
+        currentPage: nextPage,
         status: ExploreStatus.success,
         isLoadingMore: false,
       ));
@@ -164,163 +157,63 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
     SwipeProfile event,
     Emitter<ExploreState> emit,
   ) async {
-    // Find and remove the swiped profile optimistically
-    final swipedIndex =
-        state.profiles.indexWhere((p) => p.id == event.profileId);
-    if (swipedIndex == -1) return;
+    if (state.swipedProfileIds.contains(event.profileId)) return;
 
-    final updatedProfiles = List<ProfileModel>.from(state.profiles)
-      ..removeAt(swipedIndex);
+    final updatedSwipedIds = Set<int>.from(state.swipedProfileIds)
+      ..add(event.profileId);
+
+    // Update last swipe action for UI feedback
+    String? actionFeedback;
+    switch (event.action) {
+      case 'like':
+        actionFeedback = 'like';
+        break;
+      case 'pass':
+        actionFeedback = 'pass';
+        break;
+      case 'super_like':
+        actionFeedback = 'super_like';
+        break;
+    }
 
     emit(state.copyWith(
-      profiles: updatedProfiles,
+      swipedProfileIds: updatedSwipedIds,
+      lastSwipeAction: actionFeedback,
     ));
 
     try {
-      final result = await _exploreService.swipe(event.profileId, event.action);
+      final response =
+          await _exploreService.swipe(event.profileId, event.action);
 
-      // If it's a match, you might want to show a match dialog
-      if (result['isMatch'] == true) {
-        // Emit match event or show dialog (handled in UI)
+      // Update total likes if it was a like
+      if (event.action == 'like') {
+        emit(state.copyWith(totalLikes: state.totalLikes + 1));
+      }
+
+      // Move to next profile
+      final nextIndex = state.currentIndex + 1;
+
+      // Clear swipe feedback after a short delay
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (!emit.isDone) {
+          emit(state.copyWith(lastSwipeAction: null));
+        }
+      });
+
+      emit(state.copyWith(
+        currentIndex: nextIndex,
+      ));
+
+      // Check if it's a match
+      if (response['isMatch'] == true) {
+        // Emit a match event (handled in UI listener)
+        // We'll handle this in the UI via a stream or callback
       }
     } catch (e) {
       // Rollback on error
       emit(state.copyWith(
-        profiles: state.profiles,
-        error: e.toString(),
-      ));
-    }
-  }
-
-  Future<void> _onLoadExploreFilters(
-    LoadExploreFilters event,
-    Emitter<ExploreState> emit,
-  ) async {
-    try {
-      final filters = await _exploreService.getFilters();
-      emit(state.copyWith(
-        availableFilters: filters,
-      ));
-    } catch (e) {
-      print('Error loading filters: $e');
-    }
-  }
-
-  Future<void> _onLoadMatches(
-    LoadMatches event,
-    Emitter<ExploreState> emit,
-  ) async {
-    emit(state.copyWith(
-      matchesStatus: ExploreStatus.loading,
-    ));
-
-    try {
-      final result = await _exploreService.getMatches(page: event.page);
-
-      emit(state.copyWith(
-        matches: result['matches'] ?? [],
-        hasMoreMatches: result['hasMore'] ?? false,
-        matchesPage: result['page'] ?? 1,
-        matchesStatus: ExploreStatus.success,
-      ));
-    } catch (e) {
-      emit(state.copyWith(
-        matchesStatus: ExploreStatus.error,
-        error: e.toString(),
-      ));
-    }
-  }
-
-  Future<void> _onLoadMoreMatches(
-    LoadMoreMatches event,
-    Emitter<ExploreState> emit,
-  ) async {
-    if (!state.hasMoreMatches || state.matchesStatus == ExploreStatus.loading)
-      return;
-
-    emit(state.copyWith(matchesStatus: ExploreStatus.loadingMore));
-
-    try {
-      final nextPage = state.matchesPage + 1;
-      final result = await _exploreService.getMatches(page: nextPage);
-
-      final updatedMatches = List.from(state.matches)
-        ..addAll(result['matches'] ?? []);
-
-      emit(state.copyWith(
-        matches: updatedMatches,
-        hasMoreMatches: result['hasMore'] ?? false,
-        matchesPage: result['page'] ?? nextPage,
-        matchesStatus: ExploreStatus.success,
-      ));
-    } catch (e) {
-      emit(state.copyWith(
-        matchesStatus: ExploreStatus.error,
-        error: e.toString(),
-      ));
-    }
-  }
-
-  Future<void> _onLoadLikedProfiles(
-    LoadLikedProfiles event,
-    Emitter<ExploreState> emit,
-  ) async {
-    emit(state.copyWith(likedStatus: ExploreStatus.loading));
-
-    try {
-      final result = await _exploreService.getLikedProfiles(page: event.page);
-
-      emit(state.copyWith(
-        likedProfiles: result['profiles'] ?? [],
-        hasMoreLiked: result['hasMore'] ?? false,
-        likedStatus: ExploreStatus.success,
-      ));
-    } catch (e) {
-      emit(state.copyWith(
-        likedStatus: ExploreStatus.error,
-        error: e.toString(),
-      ));
-    }
-  }
-
-  Future<void> _onLoadLikedByProfiles(
-    LoadLikedByProfiles event,
-    Emitter<ExploreState> emit,
-  ) async {
-    emit(state.copyWith(likedByStatus: ExploreStatus.loading));
-
-    try {
-      final result = await _exploreService.getLikedByProfiles(page: event.page);
-
-      emit(state.copyWith(
-        likedByProfiles: result['profiles'] ?? [],
-        hasMoreLikedBy: result['hasMore'] ?? false,
-        likedByStatus: ExploreStatus.success,
-      ));
-    } catch (e) {
-      emit(state.copyWith(
-        likedByStatus: ExploreStatus.error,
-        error: e.toString(),
-      ));
-    }
-  }
-
-  Future<void> _onLoadExploreStats(
-    LoadExploreStats event,
-    Emitter<ExploreState> emit,
-  ) async {
-    emit(state.copyWith(statsStatus: ExploreStatus.loading));
-
-    try {
-      final stats = await _exploreService.getStats();
-
-      emit(state.copyWith(
-        stats: stats,
-        statsStatus: ExploreStatus.success,
-      ));
-    } catch (e) {
-      emit(state.copyWith(
-        statsStatus: ExploreStatus.error,
+        swipedProfileIds: state.swipedProfileIds..remove(event.profileId),
+        lastSwipeAction: null,
         error: e.toString(),
       ));
     }
@@ -331,16 +224,34 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
     Emitter<ExploreState> emit,
   ) async {
     emit(state.copyWith(
-      currentFilter: event.filter,
-      minAge: event.minAge,
-      maxAge: event.maxAge,
-      distance: event.distance,
-      verifiedOnly: event.verifiedOnly,
-      sortBy: event.sortBy,
+      currentFilters: event.filters,
+      currentPage: 1,
+      profiles: [],
+      currentIndex: 0,
     ));
+    add(LoadExploreProfiles(
+      page: 1,
+      filter: event.filters['filter'],
+      minAge: event.filters['minAge'],
+      maxAge: event.filters['maxAge'],
+      distance: event.filters['distance'],
+      verifiedOnly: event.filters['verifiedOnly'],
+      sortBy: event.filters['sortBy'],
+    ));
+  }
 
-    // Reload profiles with new filters
-    add(const LoadExploreProfiles(page: 1));
+  Future<void> _onLoadExploreStats(
+    LoadExploreStats event,
+    Emitter<ExploreState> emit,
+  ) async {
+    try {
+      final stats = await _exploreService.getStats();
+      emit(state.copyWith(
+        totalLikes: stats['totalLikes'] ?? 0,
+      ));
+    } catch (e) {
+      debugPrint('Error loading stats: $e');
+    }
   }
 
   void _onClearExploreError(

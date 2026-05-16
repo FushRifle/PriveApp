@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
-// ============================================================================
 // FeedPost Model - Matches backend FeedPost structure
-// ============================================================================
 class FeedPost {
   final int id;
   final UserInfo user;
@@ -92,9 +90,7 @@ class FeedPost {
   }
 }
 
-// ============================================================================
 // UserInfo Model
-// ============================================================================
 class UserInfo {
   final String name;
   final String handle;
@@ -139,9 +135,7 @@ class UserInfo {
   }
 }
 
-// ============================================================================
 // Attachment Model
-// ============================================================================
 class Attachment {
   final String? id;
   final String type; // 'image', 'video', 'audio'
@@ -210,9 +204,7 @@ class Attachment {
   }
 }
 
-// ============================================================================
 // Story Model - Matches backend Story structure
-// ============================================================================
 class Story {
   final String id;
   final int userId;
@@ -345,9 +337,7 @@ class Story {
       attachments.isNotEmpty ? attachments.first.url : null;
 }
 
-// ============================================================================
 // StoryUser Model - User info within story context
-// ============================================================================
 class StoryUser {
   final int id;
   final String name;
@@ -404,9 +394,8 @@ class StoryUser {
   }
 }
 
-// ============================================================================
 // Comment Model - Matches backend Comment structure
-// ============================================================================
+// ========
 class Comment {
   final int id;
   final int userId;
@@ -485,9 +474,7 @@ class Comment {
   }
 }
 
-// ============================================================================
-// Request Models
-// ============================================================================
+//Request Models
 class CreatePostRequest {
   final String content;
   final List<Attachment> attachments;
@@ -538,9 +525,7 @@ class CreateCommentRequest {
   Map<String, dynamic> toJson() => {'content': content};
 }
 
-// ============================================================================
 // Response Wrappers
-// ============================================================================
 class PostsResponse {
   final List<FeedPost> posts;
   final bool hasMore;
@@ -631,9 +616,7 @@ class CommentsResponse {
   Null get length => null;
 }
 
-// ============================================================================
 // Helper Functions
-// ============================================================================
 int _toInt(dynamic value, {int defaultValue = 0}) {
   if (value == null) return defaultValue;
   if (value is int) return value;

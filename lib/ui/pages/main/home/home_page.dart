@@ -93,13 +93,18 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildBody(FeedState state) {
-    if (state.status == FeedStatus.loading && state.posts.isEmpty) {
+    // Only show fullscreen loading on first load
+    if (state.status == FeedStatus.loading &&
+        state.posts.isEmpty &&
+        state.stories.isEmpty) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primary),
       );
     }
 
-    if (state.status == FeedStatus.failure && state.posts.isEmpty) {
+    if (state.status == FeedStatus.failure &&
+        state.posts.isEmpty &&
+        state.stories.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -132,17 +137,22 @@ class _HomePageState extends State<HomePage> {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 130),
       children: [
-        // Stories Header
-        _buildStoriesHeader(),
+        // ALWAYS show stories header, even if stories are empty
+        _buildStoriesHeader(hasStories: stories.isNotEmpty),
         const SizedBox(height: 12),
-        _buildStatusBar(groupedStories),
-        const SizedBox(height: 18),
+        if (stories.isNotEmpty) ...[
+          _buildStatusBar(groupedStories),
+          const SizedBox(height: 18),
+        ] else ...[
+          _buildEmptyStatusBar(),
+          const SizedBox(height: 18),
+        ],
         _buildPostsList(state),
       ],
     );
   }
 
-  Widget _buildStoriesHeader() {
+  Widget _buildStoriesHeader({required bool hasStories}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Row(
@@ -155,26 +165,53 @@ class _HomePageState extends State<HomePage> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          TextButton(
-            onPressed: () {
-              HapticFeedback.lightImpact();
-              Navigator.pushNamed(context, NamedRoutes.statusScreen);
-            },
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: Text(
-              'More',
-              style: AppTheme.greyTextStyle.copyWith(
-                color: AppColors.primary,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
+          if (hasStories)
+            TextButton(
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                Navigator.pushNamed(context, NamedRoutes.statusScreen);
+              },
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(
+                'More',
+                style: AppTheme.greyTextStyle.copyWith(
+                  color: AppColors.primary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyStatusBar() {
+    return SizedBox(
+      height: 104,
+      width: double.infinity,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: 1, // Only "My Status" button
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          return StatusWidget(
+            name: 'My Status',
+            avatar: _getUserAvatar(),
+            isAddStatus: true,
+            statusCount: 0,
+            hasUnviewed: false,
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Navigator.pushNamed(context, NamedRoutes.createStatusScreen);
+            },
+          );
+        },
       ),
     );
   }
@@ -322,6 +359,12 @@ class _HomePageState extends State<HomePage> {
             hasUnviewed: group.hasUnseen,
             onTap: () {
               HapticFeedback.lightImpact();
+              // Mark all unseen stories in this group as seen
+              for (final story in group.stories) {
+                if (!story.isSeen && mounted) {
+                  context.read<FeedBloc>().add(MarkStoryAsSeen(story.id));
+                }
+              }
               Navigator.push(
                 context,
                 MaterialPageRoute(

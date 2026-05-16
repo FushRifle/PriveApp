@@ -1,26 +1,28 @@
 import 'package:Prive/app/resources/constant/named_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
 import 'package:Prive/data/models/feeds_models.dart';
+import 'package:Prive/bloc/home/feed_bloc.dart';
 import './status_view_page.dart';
-import 'package:Prive/data/providers/feed_provider.dart';
 
-class StatusPage extends ConsumerStatefulWidget {
+class StatusPage extends StatefulWidget {
   const StatusPage({super.key, required List<dynamic> stories});
 
   @override
-  ConsumerState<StatusPage> createState() => _StatusPageState();
+  State<StatusPage> createState() => _StatusPageState();
 }
 
-class _StatusPageState extends ConsumerState<StatusPage> {
+class _StatusPageState extends State<StatusPage> {
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(feedProvider.notifier).fetchStories();
+      if (mounted) {
+        context.read<FeedBloc>().add(FetchStories());
+      }
     });
   }
 
@@ -32,9 +34,6 @@ class _StatusPageState extends ConsumerState<StatusPage> {
         statusBarIconBrightness: Brightness.dark,
       ),
     );
-
-    final feedState = ref.watch(feedProvider);
-    final stories = feedState.stories.cast<Story>();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -59,11 +58,17 @@ class _StatusPageState extends ConsumerState<StatusPage> {
           ),
         ],
       ),
-      body: _buildBody(stories, feedState.isLoading),
+      body: BlocBuilder<FeedBloc, FeedState>(
+        builder: (context, state) {
+          final stories = state.stories.cast<Story>();
+          final isLoading = state.status == FeedStatus.loading;
+          return _buildBody(stories, isLoading, state);
+        },
+      ),
     );
   }
 
-  Widget _buildBody(List<Story> stories, bool isLoading) {
+  Widget _buildBody(List<Story> stories, bool isLoading, FeedState state) {
     if (isLoading && stories.isEmpty) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primary),
@@ -115,7 +120,11 @@ class _StatusPageState extends ConsumerState<StatusPage> {
     return RefreshIndicator(
       color: AppColors.primary,
       onRefresh: () async {
-        await ref.read(feedProvider.notifier).fetchStories();
+        if (mounted) {
+          context.read<FeedBloc>().add(FetchStories());
+          // Wait a bit for the stories to load
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
       },
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -165,74 +174,81 @@ class _StatusPageState extends ConsumerState<StatusPage> {
 
   Widget _buildStoryListItem(_StoryGroup group) {
     return ListTile(
-        leading: Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: group.hasUnseen
-                ? LinearGradient(
-                    colors: [AppColors.primary, Colors.purple.shade300],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  )
-                : null,
-            border: !group.hasUnseen
-                ? Border.all(color: Colors.grey.shade300, width: 1)
-                : null,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(2),
-            child: ClipOval(
-              child: _buildAvatar(group.user.avatar),
-            ),
+      leading: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: group.hasUnseen
+              ? LinearGradient(
+                  colors: [AppColors.primary, Colors.purple.shade300],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          border: !group.hasUnseen
+              ? Border.all(color: Colors.grey.shade300, width: 1)
+              : null,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(2),
+          child: ClipOval(
+            child: _buildAvatar(group.user.avatar),
           ),
         ),
-        title: Text(
-          group.user.name,
-          style: TextStyle(
-            fontWeight: group.hasUnseen ? FontWeight.bold : FontWeight.normal,
-            fontSize: 16,
-          ),
+      ),
+      title: Text(
+        group.user.name,
+        style: TextStyle(
+          fontWeight: group.hasUnseen ? FontWeight.bold : FontWeight.normal,
+          fontSize: 16,
         ),
-        subtitle: Text(
-          group.hasUnseen
-              ? 'Tap to view'
-              : 'Viewed ${_formatTimeAgo(group.latestStory)}',
-          style: TextStyle(
-            color: group.hasUnseen ? AppColors.primary : Colors.grey.shade600,
-            fontWeight: group.hasUnseen ? FontWeight.w500 : FontWeight.normal,
-          ),
+      ),
+      subtitle: Text(
+        group.hasUnseen
+            ? 'Tap to view'
+            : 'Viewed ${_formatTimeAgo(group.latestStory)}',
+        style: TextStyle(
+          color: group.hasUnseen ? AppColors.primary : Colors.grey.shade600,
+          fontWeight: group.hasUnseen ? FontWeight.w500 : FontWeight.normal,
         ),
-        trailing: group.stories.length > 1
-            ? Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${group.stories.length}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              )
-            : null,
-        onTap: () {
-          HapticFeedback.lightImpact();
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => StatusViewPage(
-                stories: group.stories,
-                initialIndex: 0,
-                statuses: [],
+      ),
+      trailing: group.stories.length > 1
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(12),
               ),
+              child: Text(
+                '${group.stories.length}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            )
+          : null,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        // Mark stories as seen when tapped
+        for (final story in group.stories) {
+          if (!story.isSeen && mounted) {
+            context.read<FeedBloc>().add(MarkStoryAsSeen(story.id));
+          }
+        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => StatusViewPage(
+              stories: group.stories,
+              initialIndex: 0,
+              statuses: [],
             ),
-          );
-        });
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildAvatar(String avatarUrl) {

@@ -1,5 +1,9 @@
+import 'package:Prive/bloc/profile/gallery_profile_cubit.dart';
+import 'package:Prive/bloc/profile/profile_bloc.dart';
+import 'package:Prive/ui/pages/main/profile/profile_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
@@ -434,7 +438,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Widget _buildProfileSection(String userName, String userAvatar) {
     return GestureDetector(
       onTap: () {
-        Navigator.pushNamed(context, NamedRoutes.profileScreen);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MultiBlocProvider(
+              providers: [
+                BlocProvider(
+                  create: (context) => ProfileBloc(), // Add ProfileBloc here
+                ),
+                BlocProvider(
+                  create: (context) => GalleryProfileCubit(),
+                ),
+              ],
+              child: const ProfilePage(
+                isOwnProfile: true,
+              ),
+            ),
+          ),
+        );
       },
       child: Container(
         padding: const EdgeInsets.all(16),
