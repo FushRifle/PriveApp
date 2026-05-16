@@ -213,6 +213,7 @@ class _ProfilePageState extends State<ProfilePage>
           width: double.infinity,
           height: double.infinity,
           placeholder: (context, url) =>
+              // ignore: deprecated_member_use
               Container(color: AppColors.primary.withOpacity(0.1)),
           errorWidget: (context, url, error) => _buildCoverPlaceholder(),
         ),
@@ -1022,7 +1023,8 @@ class _Badge extends StatelessWidget {
   final Widget? child;
   final Color? color;
 
-  const _Badge({this.icon, this.child});
+  // ignore: unused_element_parameter
+  const _Badge({this.icon, this.child, this.color});
 
   @override
   Widget build(BuildContext context) {
