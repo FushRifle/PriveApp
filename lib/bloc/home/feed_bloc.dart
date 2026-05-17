@@ -1,7 +1,7 @@
-import 'package:Prive/data/models/feeds_models.dart';
+import 'package:Prive/data/services/home/feed_service.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:Prive/data/services/home/feed_service.dart';
+import 'package:Prive/data/models/feeds_models.dart';
 
 part 'feed_event.dart';
 part 'feed_state.dart';
@@ -9,57 +9,65 @@ part 'feed_state.dart';
 class FeedBloc extends Bloc<FeedEvent, FeedState> {
   final FeedService _feedService = FeedService();
 
-  // Keep track locally
-  List<FeedPost> _posts = [];
-  List<Story> _stories = [];
-  int _currentPage = 1;
-  final int _pageSize = 10;
-
   FeedBloc() : super(const FeedState()) {
-    on<FetchFeedData>(_onFetchFeedData);
+    on<GetFeedPosts>(_onGetFeedPosts);
     on<RefreshFeed>(_onRefreshFeed);
-    on<LoadMorePosts>(_onLoadMorePosts);
-    on<LikePost>(_onLikePost);
-    on<UnlikePost>(_onUnlikePost);
-    on<CreatePost>(_onCreatePost);
-    on<MarkStoryAsSeen>(_onMarkStoryAsSeen);
+    on<LoadMoreFeedPosts>(_onLoadMoreFeedPosts);
+    on<CreateFeedPost>(_onCreateFeedPost);
+    on<LikeFeedPost>(_onLikeFeedPost);
+    on<UnlikeFeedPost>(_onUnlikeFeedPost);
+    on<GetPostComments>(_onGetPostComments);
+    on<LoadMoreComments>(_onLoadMoreComments);
+    on<CreatePostComment>(_onCreatePostComment);
+    on<GetUserMedia>(_onGetUserMedia);
+    on<LoadMoreUserMedia>(_onLoadMoreUserMedia);
+    on<ClearFeedError>(_onClearFeedError);
+    on<ResetFeedState>(_onResetFeedState);
   }
 
-  Future<void> _onFetchFeedData(
-    FetchFeedData event,
+  void setAuthToken(String token) {
+    _feedService.setAuthToken(token);
+  }
+
+  void clearAuthToken() {
+    _feedService.clearAuthToken();
+  }
+
+  Future<void> _onGetFeedPosts(
+    GetFeedPosts event,
     Emitter<FeedState> emit,
   ) async {
-    if (state.posts.isEmpty) {
-      emit(state.copyWith(status: FeedStatus.loading));
+    if (event.refresh) {
+      emit(state.copyWith(
+        postsStatus: FeedStatus.loading,
+        currentPage: 1,
+        postsError: null,
+      ));
+    } else if (state.posts.isEmpty) {
+      emit(state.copyWith(
+        postsStatus: FeedStatus.loading,
+        postsError: null,
+      ));
     }
 
     try {
-      // Reset pagination
-      _currentPage = 1;
+      final response = await _feedService.getPosts(page: event.page);
 
-      // Fetch posts and stories in parallel
-      final results = await Future.wait([
-        _feedService.getPosts(page: _currentPage),
-        _feedService.getStories(),
-      ]);
-
-      final postsResponse = results[0] as PostsResponse;
-      final storiesList = results[1] as List<Story>;
-
-      _posts = postsResponse.posts;
-      _stories = storiesList;
+      final newPosts = event.refresh || event.page == 1
+          ? response.posts
+          : [...state.posts, ...response.posts];
 
       emit(state.copyWith(
-        posts: _posts.map((post) => post.toJson()).toList(),
-        stories: _stories.map((story) => story.toJson()).toList(),
-        hasMore: postsResponse.hasMore,
-        status: FeedStatus.success,
-        error: null,
+        postsStatus: FeedStatus.loaded,
+        posts: newPosts,
+        hasMorePosts: response.hasMore,
+        currentPage: event.page,
+        postsError: null,
       ));
     } catch (e) {
       emit(state.copyWith(
-        status: FeedStatus.failure,
-        error: e.toString(),
+        postsStatus: FeedStatus.error,
+        postsError: e.toString(),
       ));
     }
   }
@@ -68,172 +76,268 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     RefreshFeed event,
     Emitter<FeedState> emit,
   ) async {
-    _currentPage = 1;
-
-    try {
-      // Fetch fresh data
-      final results = await Future.wait([
-        _feedService.getPosts(page: _currentPage),
-        _feedService.getStories(),
-      ]);
-
-      final postsResponse = results[0] as PostsResponse;
-      final storiesList = results[1] as List<Story>;
-
-      _posts = postsResponse.posts;
-      _stories = storiesList;
-
-      emit(state.copyWith(
-        posts: _posts.map((post) => post.toJson()).toList(),
-        stories: _stories.map((story) => story.toJson()).toList(),
-        hasMore: postsResponse.hasMore,
-        status: FeedStatus.success,
-        error: null,
-      ));
-    } catch (e) {
-      emit(state.copyWith(
-        status: FeedStatus.failure,
-        error: e.toString(),
-      ));
-    }
+    add(GetFeedPosts(page: 1, refresh: true));
   }
 
-  Future<void> _onLoadMorePosts(
-    LoadMorePosts event,
+  Future<void> _onLoadMoreFeedPosts(
+    LoadMoreFeedPosts event,
     Emitter<FeedState> emit,
   ) async {
-    if (state.status == FeedStatus.loadingMore || !state.hasMore) return;
+    if (!state.hasMorePosts || state.isLoadingMore) return;
 
-    emit(state.copyWith(status: FeedStatus.loadingMore));
+    emit(state.copyWith(postsStatus: FeedStatus.loadingMore));
 
-    try {
-      _currentPage++;
-      final response = await _feedService.getPosts(page: _currentPage);
-
-      _posts.addAll(response.posts);
-
-      emit(state.copyWith(
-        posts: _posts.map((post) => post.toJson()).toList(),
-        hasMore: response.hasMore,
-        status: FeedStatus.success,
-      ));
-    } catch (e) {
-      // Rollback page on error
-      _currentPage--;
-      emit(state.copyWith(
-        status: FeedStatus.failure,
-        error: e.toString(),
-      ));
-    }
+    final nextPage = state.currentPage + 1;
+    add(GetFeedPosts(page: nextPage));
   }
 
-  Future<void> _onLikePost(
-    LikePost event,
+  Future<void> _onCreateFeedPost(
+    CreateFeedPost event,
     Emitter<FeedState> emit,
   ) async {
-    // Find and update locally first (optimistic update)
-    final postIndex = _posts.indexWhere((post) => post.id == event.postId);
-    if (postIndex == -1) return;
+    emit(state.copyWith(isCreatingPost: true, generalError: null));
 
-    final oldPost = _posts[postIndex];
-    final updatedPost = oldPost.copyWith(
-      isLiked: true,
-      likes: oldPost.likes + 1,
-    );
-
-    _posts[postIndex] = updatedPost;
-
-    // Emit updated state
-    emit(state.copyWith(
-      posts: _posts.map((post) => post.toJson()).toList(),
-    ));
-
-    // Make API call
     try {
-      await _feedService.likePost(event.postId);
-    } catch (e) {
-      // Rollback on error
-      _posts[postIndex] = oldPost;
-      emit(state.copyWith(
-        posts: _posts.map((post) => post.toJson()).toList(),
-        error: e.toString(),
-      ));
-    }
-  }
+      await _feedService.createPost(
+        content: event.content,
+        attachments: event.attachments,
+      );
 
-  Future<void> _onUnlikePost(
-    UnlikePost event,
-    Emitter<FeedState> emit,
-  ) async {
-    // Find and update locally first (optimistic update)
-    final postIndex = _posts.indexWhere((post) => post.id == event.postId);
-    if (postIndex == -1) return;
-
-    final oldPost = _posts[postIndex];
-    final updatedPost = oldPost.copyWith(
-      isLiked: false,
-      likes: (oldPost.likes - 1).clamp(0, 999999),
-    );
-
-    _posts[postIndex] = updatedPost;
-
-    // Emit updated state
-    emit(state.copyWith(
-      posts: _posts.map((post) => post.toJson()).toList(),
-    ));
-
-    // Make API call
-    try {
-      await _feedService.unlikePost(event.postId);
-    } catch (e) {
-      // Rollback on error
-      _posts[postIndex] = oldPost;
-      emit(state.copyWith(
-        posts: _posts.map((post) => post.toJson()).toList(),
-        error: e.toString(),
-      ));
-    }
-  }
-
-  Future<void> _onCreatePost(
-    CreatePost event,
-    Emitter<FeedState> emit,
-  ) async {
-    try {
-      await _feedService.createPost(content: event.content);
-      // Refresh the feed after creating post
+      emit(state.copyWith(isCreatingPost: false));
       add(RefreshFeed());
     } catch (e) {
       emit(state.copyWith(
-        error: e.toString(),
+        isCreatingPost: false,
+        generalError: e.toString(),
       ));
     }
   }
 
-  Future<void> _onMarkStoryAsSeen(
-    MarkStoryAsSeen event,
+  Future<void> _onLikeFeedPost(
+    LikeFeedPost event,
     Emitter<FeedState> emit,
   ) async {
+    // Optimistic update
+    final updatedPosts = state.posts.map((post) {
+      if (post.id == event.postId && !post.isLiked) {
+        return post.copyWith(isLiked: true, likes: post.likes + 1);
+      }
+      return post;
+    }).toList();
+
+    emit(state.copyWith(posts: updatedPosts));
+
     try {
-      await _feedService.markStoryAsSeen(event.storyId);
-
-      // Update local story list
-      final updatedStories = _stories.map((story) {
-        if (story.id == event.storyId) {
-          return story.copyWith(isSeen: true);
+      await _feedService.likePost(event.postId);
+    } catch (e) {
+      // Revert on error
+      final revertedPosts = state.posts.map((post) {
+        if (post.id == event.postId && post.isLiked) {
+          return post.copyWith(isLiked: false, likes: post.likes - 1);
         }
-        return story;
+        return post;
       }).toList();
+      emit(state.copyWith(posts: revertedPosts, generalError: e.toString()));
+    }
+  }
 
-      _stories = updatedStories;
+  Future<void> _onUnlikeFeedPost(
+    UnlikeFeedPost event,
+    Emitter<FeedState> emit,
+  ) async {
+    // Optimistic update
+    final updatedPosts = state.posts.map((post) {
+      if (post.id == event.postId && post.isLiked) {
+        return post.copyWith(isLiked: false, likes: post.likes - 1);
+      }
+      return post;
+    }).toList();
+
+    emit(state.copyWith(posts: updatedPosts));
+
+    try {
+      await _feedService.unlikePost(event.postId);
+    } catch (e) {
+      // Revert on error
+      final revertedPosts = state.posts.map((post) {
+        if (post.id == event.postId && !post.isLiked) {
+          return post.copyWith(isLiked: true, likes: post.likes + 1);
+        }
+        return post;
+      }).toList();
+      emit(state.copyWith(posts: revertedPosts, generalError: e.toString()));
+    }
+  }
+
+  Future<void> _onGetPostComments(
+    GetPostComments event,
+    Emitter<FeedState> emit,
+  ) async {
+    final isFirstPage = event.page == 1;
+
+    final updatedStatus = Map<int, CommentsStatus>.from(state.commentsStatus);
+    updatedStatus[event.postId] = CommentsStatus.loading;
+
+    emit(state.copyWith(
+      commentsStatus: updatedStatus,
+      commentsError: null,
+    ));
+
+    try {
+      final response =
+          await _feedService.getComments(event.postId, page: event.page);
+
+      final existingComments = state.comments[event.postId] ?? [];
+      final newComments = isFirstPage
+          ? response.comments
+          : [...existingComments, ...response.comments];
+
+      final updatedComments = Map<int, List<Comment>>.from(state.comments);
+      updatedComments[event.postId] = newComments;
+
+      final updatedHasMore = Map<int, bool>.from(state.hasMoreComments);
+      updatedHasMore[event.postId] = response.hasMore;
+
+      final updatedPage = Map<int, int>.from(state.commentsPage);
+      updatedPage[event.postId] = event.page;
+
+      final updatedStatusDone =
+          Map<int, CommentsStatus>.from(state.commentsStatus);
+      updatedStatusDone[event.postId] = CommentsStatus.loaded;
 
       emit(state.copyWith(
-        stories: _stories.map((story) => story.toJson()).toList(),
+        comments: updatedComments,
+        commentsStatus: updatedStatusDone,
+        hasMoreComments: updatedHasMore,
+        commentsPage: updatedPage,
+      ));
+    } catch (e) {
+      final updatedStatusError =
+          Map<int, CommentsStatus>.from(state.commentsStatus);
+      updatedStatusError[event.postId] = CommentsStatus.error;
+
+      emit(state.copyWith(
+        commentsStatus: updatedStatusError,
+        commentsError: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onLoadMoreComments(
+    LoadMoreComments event,
+    Emitter<FeedState> emit,
+  ) async {
+    final currentStatus = state.commentsStatus[event.postId];
+    final hasMore = state.hasMoreComments[event.postId] ?? false;
+    final currentPage = state.commentsPage[event.postId] ?? 1;
+
+    if (currentStatus == CommentsStatus.loadingMore || !hasMore) return;
+
+    final updatedStatus = Map<int, CommentsStatus>.from(state.commentsStatus);
+    updatedStatus[event.postId] = CommentsStatus.loadingMore;
+
+    emit(state.copyWith(commentsStatus: updatedStatus));
+
+    add(GetPostComments(postId: event.postId, page: currentPage + 1));
+  }
+
+  Future<void> _onCreatePostComment(
+    CreatePostComment event,
+    Emitter<FeedState> emit,
+  ) async {
+    emit(state.copyWith(isCreatingComment: true, generalError: null));
+
+    try {
+      final newComment = await _feedService.addComment(
+        postId: event.postId,
+        content: event.content,
+      );
+
+      final existingComments = state.comments[event.postId] ?? [];
+      final updatedComments = Map<int, List<Comment>>.from(state.comments);
+      updatedComments[event.postId] = [newComment, ...existingComments];
+
+      emit(state.copyWith(
+        comments: updatedComments,
+        isCreatingComment: false,
       ));
     } catch (e) {
       emit(state.copyWith(
-        error: e.toString(),
+        isCreatingComment: false,
+        generalError: e.toString(),
       ));
     }
+  }
+
+  Future<void> _onGetUserMedia(
+    GetUserMedia event,
+    Emitter<FeedState> emit,
+  ) async {
+    if (event.page == 1) {
+      emit(state.copyWith(
+        mediaStatus: MediaStatus.loading,
+        mediaError: null,
+      ));
+    }
+
+    try {
+      final response = await _feedService.getUserMedia(
+        userId: event.userId,
+        page: event.page,
+        type: event.type,
+      );
+
+      final newMedia = event.page == 1
+          ? response.media
+          : [...state.media, ...response.media];
+
+      emit(state.copyWith(
+        mediaStatus: MediaStatus.loaded,
+        media: newMedia,
+        hasMoreMedia: response.hasMore,
+        mediaPage: event.page,
+        mediaError: null,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        mediaStatus: MediaStatus.error,
+        mediaError: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onLoadMoreUserMedia(
+    LoadMoreUserMedia event,
+    Emitter<FeedState> emit,
+  ) async {
+    if (!state.hasMoreMedia || state.mediaStatus == MediaStatus.loadingMore)
+      return;
+
+    emit(state.copyWith(mediaStatus: MediaStatus.loadingMore));
+
+    add(GetUserMedia(
+      userId: event.userId,
+      page: state.mediaPage + 1,
+      type: event.type,
+    ));
+  }
+
+  void _onClearFeedError(
+    ClearFeedError event,
+    Emitter<FeedState> emit,
+  ) {
+    emit(state.copyWith(
+      postsError: null,
+      commentsError: null,
+      mediaError: null,
+      generalError: null,
+    ));
+  }
+
+  void _onResetFeedState(
+    ResetFeedState event,
+    Emitter<FeedState> emit,
+  ) {
+    emit(const FeedState());
   }
 }

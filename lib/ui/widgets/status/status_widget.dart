@@ -1,7 +1,9 @@
+import 'package:Prive/data/models/status_model.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
-import 'package:Prive/data/models/feeds_models.dart';
+import 'package:Prive/bloc/status/stories_bloc.dart';
 
 class StatusWidget extends StatelessWidget {
   final String name;
@@ -21,7 +23,6 @@ class StatusWidget extends StatelessWidget {
     this.hasUnviewed = false,
   });
 
-  // Convenience factory to create from StoryUser
   factory StatusWidget.fromStoryUser({
     required StoryUser user,
     required VoidCallback onTap,
@@ -38,7 +39,6 @@ class StatusWidget extends StatelessWidget {
     );
   }
 
-  // Convenience factory for add status button
   factory StatusWidget.addStatus({required VoidCallback onTap}) {
     return StatusWidget(
       name: 'My Status',
@@ -53,7 +53,17 @@ class StatusWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        if (isAddStatus) {
+          onTap();
+        } else {
+          // Mark stories as seen when tapped
+          if (hasUnviewed && !isAddStatus) {
+            // The marking will be handled in the parent
+          }
+          onTap();
+        }
+      },
       child: Container(
         width: 74,
         margin: const EdgeInsets.only(right: 12),
@@ -99,8 +109,6 @@ class StatusWidget extends StatelessWidget {
                     ),
                   ),
                 ),
-
-                // Status count badge
                 if (!isAddStatus && statusCount > 1)
                   Positioned(
                     bottom: 0,
@@ -128,8 +136,6 @@ class StatusWidget extends StatelessWidget {
                       ),
                     ),
                   ),
-
-                // Add story icon for "My Status"
                 if (isAddStatus)
                   Positioned(
                     bottom: 0,
@@ -173,7 +179,6 @@ class StatusWidget extends StatelessWidget {
 
   Widget _buildAvatar() {
     if (isAddStatus) {
-      // For "My Status", show a placeholder or the user's avatar if available
       if (avatar.isEmpty) {
         return Container(
           color: Colors.grey[300],

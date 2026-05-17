@@ -1,14 +1,16 @@
 import 'dart:ui';
 
+import 'package:Prive/bloc/home/feed_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
-import 'package:Prive/data/models/post_model.dart';
+import 'package:Prive/data/models/feeds_models.dart';
 import 'package:Prive/ui/widgets/home/card_post.dart';
 
 class PostDetailPage extends StatefulWidget {
-  final dynamic post;
+  final FeedPost post;
 
   const PostDetailPage({
     super.key,
@@ -23,21 +25,21 @@ class _PostDetailPageState extends State<PostDetailPage> {
   final TextEditingController _commentController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  final List<Map<String, dynamic>> _comments = [];
-
-  late PostModel _post;
-  bool _isLiked = false;
-  bool _isSaved = false;
-  int _likeCount = 0;
+  late FeedPost _post;
+  late bool _isLiked;
+  late int _likeCount;
+  List<Comment> _comments = [];
+  bool _isLoadingComments = false;
+  int _commentsPage = 1;
+  bool _hasMoreComments = false;
 
   @override
   void initState() {
     super.initState();
-    _post = _parsePost(widget.post);
+    _post = widget.post;
     _isLiked = _post.isLiked;
-    _likeCount = _post.likeCount;
-    _isSaved = _post.isSaved;
-    _loadSampleComments();
+    _likeCount = _post.likes;
+    _loadComments();
   }
 
   @override
@@ -47,74 +49,49 @@ class _PostDetailPageState extends State<PostDetailPage> {
     super.dispose();
   }
 
-  PostModel _parsePost(dynamic value) {
-    if (value is PostModel) return value;
-
-    if (value is Map<String, dynamic>) {
-      return PostModel.fromJson(value);
-    }
-
-    if (value is Map) {
-      return PostModel.fromJson(Map<String, dynamic>.from(value));
-    }
-
-    return PostModel(
-      name: 'User',
-      imgProfile: '',
-      picture: '',
-      caption: '',
-      createdAt: DateTime.now(),
-    );
+  void _loadComments() {
+    setState(() => _isLoadingComments = true);
+    context
+        .read<FeedBloc>()
+        .add(GetPostComments(postId: _post.id, page: _commentsPage));
   }
 
-  void _loadSampleComments() {
-    _comments.addAll([
-      {
-        'name': 'Sarah Johnson',
-        'avatar': 'https://randomuser.me/api/portraits/women/1.jpg',
-        'comment': 'Absolutely stunning! 🔥',
-        'time': '30m ago',
-        'likes': 24,
-        'isLiked': false,
-      },
-      {
-        'name': 'Michael Chen',
-        'avatar': 'https://randomuser.me/api/portraits/men/2.jpg',
-        'comment': 'This is so inspiring. Keep up the great work! 👏',
-        'time': '1h ago',
-        'likes': 12,
-        'isLiked': false,
-      },
-    ]);
+  void _loadMoreComments() {
+    if (!_hasMoreComments || _isLoadingComments) return;
+    _commentsPage++;
+    setState(() => _isLoadingComments = true);
+    context
+        .read<FeedBloc>()
+        .add(GetPostComments(postId: _post.id, page: _commentsPage));
   }
 
   void _toggleLike() {
+    if (_isLiked) {
+      context.read<FeedBloc>().add(UnlikeFeedPost(postId: _post.id));
+    } else {
+      context.read<FeedBloc>().add(LikeFeedPost(postId: _post.id));
+    }
     setState(() {
       _isLiked = !_isLiked;
       _likeCount += _isLiked ? 1 : -1;
     });
   }
 
-  void _toggleSave() {
-    setState(() {
-      _isSaved = !_isSaved;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_isSaved ? 'Saved to collection' : 'Removed from saved'),
-        duration: const Duration(seconds: 1),
-        backgroundColor: AppColors.primary,
-      ),
-    );
-  }
+  void _addComment(String text) {
+    final value = text.trim();
+    if (value.isEmpty) return;
 
-  void _onShare() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Share feature coming soon'),
-        duration: Duration(seconds: 1),
-      ),
-    );
+    HapticFeedback.lightImpact();
+    _commentController.clear();
+
+    context.read<FeedBloc>().add(CreatePostComment(
+          postId: _post.id,
+          content: value,
+        ));
+
+    // Refresh comments after adding
+    _commentsPage = 1;
+    _loadComments();
   }
 
   @override
@@ -124,47 +101,79 @@ class _PostDetailPageState extends State<PostDetailPage> {
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
       resizeToAvoidBottomInset: true,
-      body: Stack(
-        children: [
-          CustomScrollView(
-            controller: _scrollController,
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              _buildModernAppBar(),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  child: CardPost(
-                    post: _post,
-                    isDetailView: true,
-                  ),
-                ),
+      body: BlocListener<FeedBloc, FeedState>(
+        listener: (context, state) {
+          if (state.comments[_post.id] != null) {
+            setState(() {
+              _comments = state.comments[_post.id]!;
+              _hasMoreComments = state.hasMoreComments[_post.id] ?? false;
+              _isLoadingComments = false;
+            });
+          }
+          if (state.generalError != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.generalError!),
+                backgroundColor: Colors.red,
               ),
-              SliverToBoxAdapter(child: _buildModernEngagementStats()),
-              SliverToBoxAdapter(child: _buildCommentHeader()),
-              if (_comments.isEmpty)
+            );
+          }
+        },
+        child: Stack(
+          children: [
+            CustomScrollView(
+              controller: _scrollController,
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                _buildModernAppBar(),
                 SliverToBoxAdapter(
-                  child: _buildEmptyComments(),
-                )
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        return _buildModernComment(_comments[index], index);
-                      },
-                      childCount: _comments.length,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: CardPost(
+                      post: _post,
+                      isDetailView: true,
                     ),
                   ),
                 ),
-              SliverToBoxAdapter(
-                child: SizedBox(height: 130 + bottomInset),
-              ),
-            ],
-          ),
-          _buildModernBottomBar(),
-        ],
+                SliverToBoxAdapter(child: _buildModernEngagementStats()),
+                SliverToBoxAdapter(child: _buildCommentHeader()),
+                if (_isLoadingComments && _comments.isEmpty)
+                  const SliverToBoxAdapter(
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(32),
+                        child: CircularProgressIndicator(),
+                      ),
+                    ),
+                  )
+                else if (_comments.isEmpty)
+                  SliverToBoxAdapter(
+                    child: _buildEmptyComments(),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          if (index == _comments.length - 1 &&
+                              _hasMoreComments) {
+                            _loadMoreComments();
+                          }
+                          return _buildModernComment(_comments[index]);
+                        },
+                        childCount: _comments.length,
+                      ),
+                    ),
+                  ),
+                SliverToBoxAdapter(
+                  child: SizedBox(height: 130 + bottomInset),
+                ),
+              ],
+            ),
+            _buildModernBottomBar(),
+          ],
+        ),
       ),
     );
   }
@@ -253,20 +262,12 @@ class _PostDetailPageState extends State<PostDetailPage> {
             isActive: false,
           ),
           _buildModernStatItem(
-            icon: _isSaved ? Icons.bookmark : Icons.bookmark_outline,
-            count: 0,
-            label: 'Save',
-            color: AppColors.secondary,
-            isActive: _isSaved,
-            onTap: _toggleSave,
-          ),
-          _buildModernStatItem(
             icon: Icons.share_outlined,
-            count: _post.shareCount,
-            label: 'Shares',
+            count: 0,
+            label: 'Share',
             color: Colors.blueAccent,
             isActive: false,
-            onTap: _onShare,
+            onTap: () {},
           ),
         ],
       ),
@@ -329,19 +330,14 @@ class _PostDetailPageState extends State<PostDetailPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              const SizedBox(width: 8),
-              Text(
-                'COMMENTS',
-                style: AppTheme.blackTextStyle.copyWith(
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1,
-                  fontSize: 13,
-                  color: AppColors.blackTextColor,
-                ),
-              ),
-            ],
+          Text(
+            'COMMENTS',
+            style: AppTheme.blackTextStyle.copyWith(
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1,
+              fontSize: 13,
+              color: AppColors.blackTextColor,
+            ),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -396,10 +392,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
     );
   }
 
-  Widget _buildModernComment(Map<String, dynamic> comment, int index) {
-    final isLiked = comment['isLiked'] ?? false;
-    final likes = comment['likes'] ?? 0;
-
+  Widget _buildModernComment(Comment comment) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -417,7 +410,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildAvatar(comment['avatar'] ?? '', size: 40),
+          _buildAvatar(comment.userAvatar, size: 40),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -427,7 +420,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   children: [
                     Expanded(
                       child: Text(
-                        comment['name'] ?? 'User',
+                        comment.userName,
                         style: AppTheme.blackTextStyle.copyWith(
                           fontWeight: FontWeight.w700,
                           fontSize: 14,
@@ -435,76 +428,21 @@ class _PostDetailPageState extends State<PostDetailPage> {
                       ),
                     ),
                     Text(
-                      comment['time'] ?? '',
+                      comment.formattedTimeAgo,
                       style: AppTheme.greyTextStyle.copyWith(fontSize: 11),
                     ),
                   ],
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  comment['comment'] ?? '',
+                  comment.content,
                   style: AppTheme.blackTextStyle.copyWith(
                     fontSize: 14,
                     height: 1.4,
                     color: Colors.black87,
                   ),
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    _buildCommentAction(
-                      icon: isLiked ? Icons.favorite : Icons.favorite_border,
-                      label: likes > 0 ? '$likes' : 'Like',
-                      isActive: isLiked,
-                      onTap: () {
-                        setState(() {
-                          _comments[index]['isLiked'] = !isLiked;
-                          _comments[index]['likes'] =
-                              isLiked ? likes - 1 : likes + 1;
-                        });
-                      },
-                    ),
-                    const SizedBox(width: 24),
-                    _buildCommentAction(
-                      icon: Icons.reply,
-                      label: 'Reply',
-                      onTap: () {
-                        _commentController.text = '@${comment['name']} ';
-                        FocusScope.of(context).requestFocus(FocusNode());
-                      },
-                    ),
-                  ],
-                ),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCommentAction({
-    required IconData icon,
-    required String label,
-    bool isActive = false,
-    VoidCallback? onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            size: 16,
-            color: isActive ? Colors.redAccent : AppColors.greyColor,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: isActive ? Colors.redAccent : AppColors.greyColor,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -541,7 +479,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
           ),
           child: Row(
             children: [
-              _buildAvatar(_post.imgProfile, size: 40),
+              _buildAvatar(_post.user.avatar, size: 40),
               const SizedBox(width: 12),
               Expanded(
                 child: TextField(
@@ -555,6 +493,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                     border: InputBorder.none,
                     isDense: true,
                   ),
+                  onSubmitted: (value) => _addComment(value),
                 ),
               ),
               AnimatedContainer(
@@ -632,34 +571,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
     );
   }
 
-  void _addComment(String text) {
-    final value = text.trim();
-    if (value.isEmpty) return;
-
-    HapticFeedback.lightImpact();
-
-    setState(() {
-      _comments.insert(0, {
-        'name': 'You',
-        'avatar': _post.imgProfile,
-        'comment': value,
-        'time': 'Just now',
-        'likes': 0,
-        'isLiked': false,
-      });
-
-      _commentController.clear();
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Comment added!'),
-        duration: Duration(seconds: 1),
-        backgroundColor: AppColors.primary,
-      ),
-    );
-  }
-
   void _showPostOptions() {
     showModalBottomSheet(
       context: context,
@@ -686,8 +597,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
               _buildOptionTile(Icons.link, 'Copy Link', Colors.black87),
               _buildOptionTile(
                   Icons.share_outlined, 'Share Post', Colors.black87),
-              _buildOptionTile(
-                  Icons.bookmark_border, 'Save Post', Colors.black87),
               const Divider(height: 1),
               _buildOptionTile(Icons.flag_outlined, 'Report', Colors.redAccent),
               const SizedBox(height: 20),
@@ -707,12 +616,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
       ),
       onTap: () {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$title tapped'),
-            duration: const Duration(seconds: 1),
-          ),
-        );
       },
     );
   }

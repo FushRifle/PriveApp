@@ -1,11 +1,14 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:Prive/core/cloudinary_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:Prive/app/configs/colors.dart';
-import 'package:Prive/data/services/home/feed_service.dart';
-import 'package:Prive/data/services/user/user_service.dart';
+import 'package:Prive/bloc/status/stories_bloc.dart';
+import 'package:Prive/bloc/user/user_bloc.dart';
+import 'package:Prive/data/models/status_model.dart';
 
 class CreateStatusPage extends StatefulWidget {
   const CreateStatusPage({super.key});
@@ -16,8 +19,6 @@ class CreateStatusPage extends StatefulWidget {
 
 class _CreateStatusPageState extends State<CreateStatusPage> {
   final TextEditingController _textController = TextEditingController();
-  final UserService _userService = UserService();
-  final FeedService _feedService = FeedService();
   final CloudinaryService _cloudinaryService = CloudinaryService();
   final ImagePicker _imagePicker = ImagePicker();
 
@@ -44,23 +45,9 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   ];
 
   @override
-  void initState() {
-    super.initState();
-    _loadUserData();
-  }
-
-  @override
   void dispose() {
     _textController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadUserData() async {
-    try {
-      await _userService.getCurrentUser();
-    } catch (e) {
-      debugPrint('Error loading user: $e');
-    }
   }
 
   bool get _hasText => _textController.text.trim().isNotEmpty;
@@ -328,7 +315,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
             Text(
               _uploadProgress > 0
                   ? 'Uploading story... ${(_uploadProgress * 100).toStringAsFixed(0)}%'
-                  : 'Uploading your story...',
+                  : 'Creating your story...',
               style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
           ],
@@ -542,34 +529,50 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
         if (imageUrl == null) throw Exception('Failed to upload image');
       }
 
-      String? backgroundColor;
-      if (!_hasImage && _selectedColor != Colors.transparent) {
-        backgroundColor =
-            '#${_selectedColor.value.toRadixString(16).substring(2)}';
+      // Prepare attachments if image exists
+      List<Attachment> attachments = [];
+      if (imageUrl != null) {
+        attachments = [
+          Attachment(
+            type: 'image',
+            url: imageUrl,
+          ),
+        ];
       }
 
-      await _feedService.createStory(
-        backgroundColor: backgroundColor,
-        textAlign: _textAlign == TextAlign.center ? 'center' : 'left',
-        fontSize: _fontSize,
-      );
+      // Create story using StoriesBloc
+      context.read<StoriesBloc>().add(CreateStoryEvent(
+            content: _textController.text.trim(),
+            attachments: attachments.isNotEmpty ? attachments : null,
+            backgroundColor: _hasImage
+                ? null
+                : '#${_selectedColor.value.toRadixString(16).substring(2)}',
+            textAlign: _textAlign == TextAlign.center ? 'center' : 'left',
+            fontSize: _fontSize,
+          ));
 
-      if (mounted) {
-        _showSnackBar('Story shared successfully!');
-        Navigator.pop(context, true);
-      }
+      // Declare subscription first
+      late final StreamSubscription<StoriesState> subscription;
+
+      subscription = context.read<StoriesBloc>().stream.listen((state) {
+        if (state.status == StoriesStatus.loaded && !state.isCreating) {
+          if (mounted) {
+            _showSnackBar('Story shared successfully!');
+            Navigator.pop(context, true);
+          }
+          subscription.cancel();
+        } else if (state.status == StoriesStatus.error && mounted) {
+          _showSnackBar(state.error ?? 'Failed to share story', isError: true);
+          setState(() => _isSubmitting = false);
+          subscription.cancel();
+        }
+      });
     } catch (e) {
       debugPrint('Error sharing story: $e');
       if (mounted) {
         _showSnackBar('Failed to share story: ${e.toString()}', isError: true);
       }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-          _uploadProgress = 0.0;
-        });
-      }
+      setState(() => _isSubmitting = false);
     }
   }
 

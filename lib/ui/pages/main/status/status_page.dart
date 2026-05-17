@@ -1,11 +1,11 @@
 import 'package:Prive/app/resources/constant/named_routes.dart';
+import 'package:Prive/bloc/status/stories_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
-import 'package:Prive/data/models/feeds_models.dart';
-import 'package:Prive/bloc/home/feed_bloc.dart';
+import 'package:Prive/data/models/status_model.dart';
 import './status_view_page.dart';
 
 class StatusPage extends StatefulWidget {
@@ -21,7 +21,7 @@ class _StatusPageState extends State<StatusPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        context.read<FeedBloc>().add(FetchStories());
+        context.read<StoriesBloc>().add(GetStories());
       }
     });
   }
@@ -58,20 +58,62 @@ class _StatusPageState extends State<StatusPage> {
           ),
         ],
       ),
-      body: BlocBuilder<FeedBloc, FeedState>(
+      body: BlocBuilder<StoriesBloc, StoriesState>(
         builder: (context, state) {
-          final stories = state.stories.cast<Story>();
-          final isLoading = state.status == FeedStatus.loading;
-          return _buildBody(stories, isLoading, state);
+          return _buildBody(state);
         },
       ),
     );
   }
 
-  Widget _buildBody(List<Story> stories, bool isLoading, FeedState state) {
+  Widget _buildBody(StoriesState state) {
+    final stories = state.stories;
+    final isLoading = state.status == StoriesStatus.loading;
+    final error = state.error;
+
     if (isLoading && stories.isEmpty) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primary),
+      );
+    }
+
+    if (error != null && stories.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: AppColors.greyColor.withOpacity(0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Failed to load stories',
+              style: AppTheme.greyTextStyle.copyWith(fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error,
+              style: AppTheme.greyTextStyle.copyWith(fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                context.read<StoriesBloc>().add(GetStories());
+              },
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(120, 48),
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
+              child: const Text('Try Again'),
+            ),
+          ],
+        ),
       );
     }
 
@@ -120,11 +162,8 @@ class _StatusPageState extends State<StatusPage> {
     return RefreshIndicator(
       color: AppColors.primary,
       onRefresh: () async {
-        if (mounted) {
-          context.read<FeedBloc>().add(FetchStories());
-          // Wait a bit for the stories to load
-          await Future.delayed(const Duration(milliseconds: 500));
-        }
+        context.read<StoriesBloc>().add(GetStories());
+        await Future.delayed(const Duration(milliseconds: 500));
       },
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -234,7 +273,7 @@ class _StatusPageState extends State<StatusPage> {
         // Mark stories as seen when tapped
         for (final story in group.stories) {
           if (!story.isSeen && mounted) {
-            context.read<FeedBloc>().add(MarkStoryAsSeen(story.id));
+            context.read<StoriesBloc>().add(MarkStorySeen(storyId: story.id));
           }
         }
         Navigator.push(
@@ -243,7 +282,6 @@ class _StatusPageState extends State<StatusPage> {
             builder: (context) => StatusViewPage(
               stories: group.stories,
               initialIndex: 0,
-              statuses: [],
             ),
           ),
         );

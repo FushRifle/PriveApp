@@ -7,78 +7,118 @@ abstract class FeedEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class FetchFeedData extends FeedEvent {}
+// Load feed posts
+class GetFeedPosts extends FeedEvent {
+  final int page;
+  final bool refresh;
 
+  const GetFeedPosts({this.page = 1, this.refresh = false});
+
+  @override
+  List<Object?> get props => [page, refresh];
+}
+
+// Refresh feed
 class RefreshFeed extends FeedEvent {}
 
-class LoadMorePosts extends FeedEvent {}
+// Load more posts (pagination)
+class LoadMoreFeedPosts extends FeedEvent {}
 
-class FetchStories extends FeedEvent {}
-
-class MarkStoryAsSeen extends FeedEvent {
-  final String storyId;
-
-  const MarkStoryAsSeen(this.storyId);
-
-  @override
-  List<Object?> get props => [storyId];
-}
-
-class LikePost extends FeedEvent {
-  final int postId;
-
-  const LikePost(this.postId);
-
-  @override
-  List<Object?> get props => [postId];
-}
-
-class UnlikePost extends FeedEvent {
-  final int postId;
-
-  const UnlikePost(this.postId);
-
-  @override
-  List<Object?> get props => [postId];
-}
-
-class CreatePost extends FeedEvent {
+// Create a post
+class CreateFeedPost extends FeedEvent {
   final String content;
-  final String? imageUrl;
+  final List<Map<String, dynamic>>? attachments;
 
-  const CreatePost({
+  const CreateFeedPost({
     required this.content,
-    this.imageUrl,
+    this.attachments,
   });
 
   @override
-  List<Object?> get props => [content, imageUrl];
+  List<Object?> get props => [content, attachments];
 }
 
-class CreateStory extends FeedEvent {
-  final String? text;
-  final String? imageUrl;
-  final String? videoUrl;
-  final String? backgroundColor;
-  final String? textAlign;
-  final double? fontSize;
+// Like a post
+class LikeFeedPost extends FeedEvent {
+  final int postId;
 
-  const CreateStory({
-    this.text,
-    this.imageUrl,
-    this.videoUrl,
-    this.backgroundColor,
-    this.textAlign,
-    this.fontSize,
+  const LikeFeedPost({required this.postId});
+
+  @override
+  List<Object?> get props => [postId];
+}
+
+// Unlike a post
+class UnlikeFeedPost extends FeedEvent {
+  final int postId;
+
+  const UnlikeFeedPost({required this.postId});
+
+  @override
+  List<Object?> get props => [postId];
+}
+
+// Load comments for a post
+class GetPostComments extends FeedEvent {
+  final int postId;
+  final int page;
+
+  const GetPostComments({required this.postId, this.page = 1});
+
+  @override
+  List<Object?> get props => [postId, page];
+}
+
+// Load more comments
+class LoadMoreComments extends FeedEvent {
+  final int postId;
+
+  const LoadMoreComments({required this.postId});
+
+  @override
+  List<Object?> get props => [postId];
+}
+
+// Create a comment
+class CreatePostComment extends FeedEvent {
+  final int postId;
+  final String content;
+
+  const CreatePostComment({required this.postId, required this.content});
+
+  @override
+  List<Object?> get props => [postId, content];
+}
+
+// Get user media (gallery)
+class GetUserMedia extends FeedEvent {
+  final int userId;
+  final int page;
+  final String? type;
+
+  const GetUserMedia({
+    required this.userId,
+    this.page = 1,
+    this.type,
   });
 
   @override
-  List<Object?> get props => [
-        text,
-        imageUrl,
-        videoUrl,
-        backgroundColor,
-        textAlign,
-        fontSize,
-      ];
+  List<Object?> get props => [userId, page, type];
 }
+
+// Load more user media
+class LoadMoreUserMedia extends FeedEvent {
+  final int userId;
+  final String? type;
+
+  const LoadMoreUserMedia({required this.userId, this.type});
+
+  @override
+  List<Object?> get props => [userId, type];
+}
+
+// Clear errors
+class ClearFeedError extends FeedEvent {}
+
+// Reset feed state
+class ResetFeedState extends FeedEvent {}

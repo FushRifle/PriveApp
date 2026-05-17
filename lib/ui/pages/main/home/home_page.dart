@@ -1,11 +1,12 @@
+import 'package:Prive/bloc/home/feed_bloc.dart';
+import 'package:Prive/bloc/status/stories_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
 import 'package:Prive/app/resources/constant/named_routes.dart';
-import 'package:Prive/data/models/feeds_models.dart';
-import 'package:Prive/bloc/home/feed_bloc.dart';
+import 'package:Prive/data/models/status_model.dart';
 import 'package:Prive/ui/pages/main/status/status_view_page.dart';
 import 'package:Prive/ui/pages/settings/settings_page.dart';
 import 'package:Prive/ui/widgets/home/card_post.dart';
@@ -31,7 +32,8 @@ class _HomePageState extends State<HomePage> {
     _loadCurrentUser();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        context.read<FeedBloc>().add(FetchFeedData());
+        context.read<FeedBloc>().add(GetFeedPosts());
+        context.read<StoriesBloc>().add(GetStories());
       }
     });
   }
@@ -59,6 +61,7 @@ class _HomePageState extends State<HomePage> {
     await _loadCurrentUser();
     if (mounted) {
       context.read<FeedBloc>().add(RefreshFeed());
+      context.read<StoriesBloc>().add(GetStories());
     }
   }
 
@@ -80,10 +83,21 @@ class _HomePageState extends State<HomePage> {
             child: RefreshIndicator(
               color: AppColors.primary,
               onRefresh: _refreshAll,
-              child: BlocBuilder<FeedBloc, FeedState>(
-                builder: (context, state) {
-                  return _buildBody(state);
-                },
+              child: Column(
+                children: [
+                  BlocBuilder<StoriesBloc, StoriesState>(
+                    builder: (context, storiesState) {
+                      return _buildStoriesSection(storiesState);
+                    },
+                  ),
+                  Expanded(
+                    child: BlocBuilder<FeedBloc, FeedState>(
+                      builder: (context, feedState) {
+                        return _buildFeedSection(feedState);
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -92,126 +106,238 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildBody(FeedState state) {
-    // Only show fullscreen loading on first load
-    if (state.status == FeedStatus.loading &&
-        state.posts.isEmpty &&
-        state.stories.isEmpty) {
+  Widget _buildStoriesSection(StoriesState storiesState) {
+    final stories = storiesState.stories;
+    final isLoading = storiesState.status == StoriesStatus.loading;
+
+    // Show loading only on first load
+    if (isLoading && stories.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+
+    final groupedStories = _groupStoriesByUser(stories);
+    final hasStories = stories.isNotEmpty;
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Stories',
+                style: AppTheme.blackTextStyle.copyWith(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              if (hasStories)
+                TextButton(
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.pushNamed(context, NamedRoutes.statusScreen);
+                  },
+                  style: TextButton.styleFrom(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    'More',
+                    style: AppTheme.greyTextStyle.copyWith(
+                      color: AppColors.primary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 104,
+          width: double.infinity,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            itemCount: hasStories ? groupedStories.length + 1 : 1,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (context, index) {
+              // My Status button (always first)
+              if (index == 0) {
+                return StatusWidget(
+                  name: 'My Status',
+                  avatar: _getUserAvatar(),
+                  isAddStatus: true,
+                  statusCount: 0,
+                  hasUnviewed: false,
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.pushNamed(
+                        context, NamedRoutes.createStatusScreen);
+                  },
+                );
+              }
+
+              if (!hasStories) return const SizedBox.shrink();
+
+              final group = groupedStories[index - 1];
+              return StatusWidget(
+                name: group.user.name,
+                avatar: group.user.avatar,
+                statusCount: group.stories.length,
+                hasUnviewed: group.hasUnseen,
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  // Mark unseen stories as seen
+                  for (final story in group.stories) {
+                    if (!story.isSeen && mounted) {
+                      context
+                          .read<StoriesBloc>()
+                          .add(MarkStorySeen(storyId: story.id));
+                    }
+                  }
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => StatusViewPage(
+                        stories: group.stories,
+                        initialIndex: 0,
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 18),
+      ],
+    );
+  }
+
+  Widget _buildFeedSection(FeedState feedState) {
+    final posts = feedState.posts;
+    final isLoading = feedState.postsStatus == FeedStatus.loading;
+    final isLoadingMore = feedState.postsStatus == FeedStatus.loadingMore;
+    final hasMore = feedState.hasMorePosts;
+    final error = feedState.postsError;
+
+    if (isLoading && posts.isEmpty) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primary),
       );
     }
 
-    if (state.status == FeedStatus.failure &&
-        state.posts.isEmpty &&
-        state.stories.isEmpty) {
+    if (feedState.postsStatus == FeedStatus.error && posts.isEmpty) {
+      return _buildErrorWidget(error);
+    }
+
+    // Posts section
+    if (posts.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              state.error ?? 'An error occurred',
-              textAlign: TextAlign.center,
-              style: AppTheme.greyTextStyle,
+            Icon(
+              Icons.post_add,
+              size: 64,
+              color: AppColors.greyColor.withOpacity(0.5),
             ),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: () {
-                context.read<FeedBloc>().add(FetchFeedData());
-              },
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(120, 48),
-                backgroundColor: AppColors.primary,
+            const SizedBox(height: 16),
+            Text(
+              'No posts yet',
+              style: AppTheme.greyTextStyle.copyWith(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
               ),
-              child: const Text('Retry'),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Pull down to refresh',
+              style: AppTheme.greyTextStyle.copyWith(fontSize: 14),
             ),
           ],
         ),
       );
     }
 
-    final stories = state.stories.cast<Story>();
-    final groupedStories = _groupStoriesByUser(stories);
-
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 130),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 130),
       children: [
-        // ALWAYS show stories header, even if stories are empty
-        _buildStoriesHeader(hasStories: stories.isNotEmpty),
-        const SizedBox(height: 12),
-        if (stories.isNotEmpty) ...[
-          _buildStatusBar(groupedStories),
-          const SizedBox(height: 18),
-        ] else ...[
-          _buildEmptyStatusBar(),
-          const SizedBox(height: 18),
-        ],
-        _buildPostsList(state),
+        for (final post in posts)
+          SizedBox(
+            width: double.infinity,
+            child: CardPost(post: post),
+          ),
+        if (hasMore)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Center(
+              child: isLoadingMore
+                  ? const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                      ),
+                    )
+                  : TextButton(
+                      onPressed: () {
+                        context.read<FeedBloc>().add(LoadMoreFeedPosts());
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                      ),
+                      child: Text(
+                        'Load More',
+                        style: AppTheme.blackTextStyle.copyWith(
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+            ),
+          ),
+        const SizedBox(height: 20),
       ],
     );
   }
 
-  Widget _buildStoriesHeader({required bool hasStories}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildErrorWidget(String? error) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            'Stories',
-            style: AppTheme.blackTextStyle.copyWith(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
+          Icon(
+            Icons.error_outline,
+            size: 64,
+            color: AppColors.greyColor.withOpacity(0.5),
           ),
-          if (hasStories)
-            TextButton(
-              onPressed: () {
-                HapticFeedback.lightImpact();
-                Navigator.pushNamed(context, NamedRoutes.statusScreen);
-              },
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: Text(
-                'More',
-                style: AppTheme.greyTextStyle.copyWith(
-                  color: AppColors.primary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyStatusBar() {
-    return SizedBox(
-      height: 104,
-      width: double.infinity,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        itemCount: 1, // Only "My Status" button
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
-        itemBuilder: (context, index) {
-          return StatusWidget(
-            name: 'My Status',
-            avatar: _getUserAvatar(),
-            isAddStatus: true,
-            statusCount: 0,
-            hasUnviewed: false,
-            onTap: () {
-              HapticFeedback.lightImpact();
-              Navigator.pushNamed(context, NamedRoutes.createStatusScreen);
+          const SizedBox(height: 16),
+          Text(
+            error ?? 'Something went wrong',
+            textAlign: TextAlign.center,
+            style: AppTheme.greyTextStyle,
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton(
+            onPressed: () {
+              context.read<FeedBloc>().add(GetFeedPosts());
             },
-          );
-        },
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size(120, 48),
+              backgroundColor: AppColors.primary,
+            ),
+            child: const Text('Try Again'),
+          ),
+        ],
       ),
     );
   }
@@ -241,7 +367,6 @@ class _HomePageState extends State<HomePage> {
       ));
     });
 
-    // Sort: unviewed first, then by latest story
     groups.sort((a, b) {
       if (a.hasUnseen && !b.hasUnseen) return -1;
       if (!a.hasUnseen && b.hasUnseen) return 1;
@@ -251,159 +376,21 @@ class _HomePageState extends State<HomePage> {
     return groups;
   }
 
-  Widget _buildPostsList(FeedState state) {
-    final posts = state.posts;
-    final isLoadingMore = state.status == FeedStatus.loadingMore;
-    final hasMore = state.hasMore;
-
-    if (posts.isEmpty) {
-      return SizedBox(
-        height: 300,
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.post_add,
-                size: 64,
-                color: AppColors.greyColor.withOpacity(0.5),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'No posts yet',
-                style: AppTheme.greyTextStyle.copyWith(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Pull down to refresh',
-                style: AppTheme.greyTextStyle.copyWith(fontSize: 14),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Column(
-      children: [
-        for (final post in posts)
-          SizedBox(
-            width: double.infinity,
-            child: CardPost(post: post),
-          ),
-        if (hasMore)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            child: Center(
-              child: isLoadingMore
-                  ? const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
-                      ),
-                    )
-                  : TextButton(
-                      onPressed: () {
-                        context.read<FeedBloc>().add(LoadMorePosts());
-                      },
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppColors.primary,
-                      ),
-                      child: Text(
-                        'Load More',
-                        style: AppTheme.blackTextStyle.copyWith(
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ),
-            ),
-          ),
-        const SizedBox(height: 20),
-      ],
-    );
-  }
-
-  Widget _buildStatusBar(List<_StoryGroup> groupedStories) {
-    return SizedBox(
-      height: 104,
-      width: double.infinity,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        itemCount: groupedStories.length + 1,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            // My Story button
-            return StatusWidget(
-              name: 'My Status',
-              avatar: _getUserAvatar(),
-              isAddStatus: true,
-              statusCount: 0,
-              hasUnviewed: false,
-              onTap: () {
-                HapticFeedback.lightImpact();
-                Navigator.pushNamed(context, NamedRoutes.createStatusScreen);
-              },
-            );
-          }
-
-          final group = groupedStories[index - 1];
-          return StatusWidget(
-            name: group.user.name,
-            avatar: group.user.avatar,
-            statusCount: group.stories.length,
-            hasUnviewed: group.hasUnseen,
-            onTap: () {
-              HapticFeedback.lightImpact();
-              // Mark all unseen stories in this group as seen
-              for (final story in group.stories) {
-                if (!story.isSeen && mounted) {
-                  context.read<FeedBloc>().add(MarkStoryAsSeen(story.id));
-                }
-              }
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => StatusViewPage(
-                    stories: group.stories,
-                    initialIndex: 0,
-                    statuses: [],
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-
   String _getUserDisplayName() {
-    if (_isLoadingUser) {
-      return 'Loading...';
-    }
-
+    if (_isLoadingUser) return 'User';
     final name = _currentUser['name'];
     if (name != null && name.toString().trim().isNotEmpty) {
       return name.toString().trim();
     }
-
     final username = _currentUser['username'];
     if (username != null && username.toString().trim().isNotEmpty) {
       return username.toString().trim();
     }
-
     return 'User';
   }
 
   String _getUserAvatar() {
-    if (_isLoadingUser) {
-      return '';
-    }
+    if (_isLoadingUser) return '';
     return (_currentUser['avatar'] ??
             _currentUser['avatarUrl'] ??
             _currentUser['avatar_url'] ??
@@ -422,7 +409,6 @@ class _HomePageState extends State<HomePage> {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
         child: Row(
           children: [
-            // App logo
             Container(
               width: 40,
               height: 40,
@@ -433,10 +419,10 @@ class _HomePageState extends State<HomePage> {
                 'assets/images/prive.png',
                 width: 40,
                 height: 40,
+                errorBuilder: (_, __, ___) => const SizedBox(),
               ),
             ),
             const SizedBox(width: 10),
-            // Notification button
             InkWell(
               onTap: () {
                 HapticFeedback.lightImpact();
@@ -449,7 +435,6 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             const SizedBox(width: 14),
-            // Search button
             InkWell(
               onTap: () {
                 HapticFeedback.lightImpact();
@@ -462,7 +447,6 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             const Spacer(),
-            // Profile button
             InkWell(
               onTap: () {
                 HapticFeedback.lightImpact();

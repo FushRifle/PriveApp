@@ -2,8 +2,9 @@ import 'package:Prive/app/resources/constant/named_routes.dart';
 import 'package:Prive/data/models/status_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:Prive/app/configs/colors.dart';
-import 'package:Prive/data/models/feeds_models.dart';
+import 'package:Prive/bloc/status/stories_bloc.dart';
 
 class StatusViewPage extends StatefulWidget {
   final List<Story> stories;
@@ -13,7 +14,6 @@ class StatusViewPage extends StatefulWidget {
     super.key,
     required this.stories,
     required this.initialIndex,
-    required List<StatusModel> statuses,
   });
 
   @override
@@ -83,6 +83,10 @@ class _StatusViewPageState extends State<StatusViewPage>
     });
   }
 
+  void _markStoryAsSeen(String storyId) {
+    context.read<StoriesBloc>().add(MarkStorySeen(storyId: storyId));
+  }
+
   @override
   void dispose() {
     _progressController.dispose();
@@ -127,6 +131,8 @@ class _StatusViewPageState extends State<StatusViewPage>
                 if (!_isPaused) {
                   _progressController.forward();
                 }
+                // Mark story as seen when viewed
+                _markStoryAsSeen(widget.stories[index].id);
               },
               itemBuilder: (context, index) {
                 return _buildStatusContent(widget.stories[index]);
@@ -167,7 +173,6 @@ class _StatusViewPageState extends State<StatusViewPage>
         story.attachments.isNotEmpty && story.attachments.first.type == 'video';
     final hasText = story.content != null && story.content!.isNotEmpty;
 
-    // Get media URL if exists
     final mediaUrl = hasImage || hasVideo ? story.attachments.first.url : null;
 
     return Container(
@@ -238,10 +243,8 @@ class _StatusViewPageState extends State<StatusViewPage>
   }
 
   TextStyle _getTextStyle(Story story, {bool hasMedia = false}) {
-    // Use font size from backend, fallback to 24
     double fontSize = story.fontSize ?? 24;
 
-    // Adjust font size based on content length
     final contentLength = story.content?.length ?? 0;
     if (contentLength > 200) {
       fontSize = (fontSize * 0.8).clamp(16.0, 24.0);
@@ -268,7 +271,6 @@ class _StatusViewPageState extends State<StatusViewPage>
   }
 
   Color _getBackgroundColor(String? hexColor) {
-    // Use backend color if provided
     if (hexColor != null && hexColor.isNotEmpty) {
       try {
         String colorStr = hexColor;
@@ -289,7 +291,6 @@ class _StatusViewPageState extends State<StatusViewPage>
       }
     }
 
-    // Default to dark background if no color provided
     return const Color(0xFF1D1B20);
   }
 
@@ -301,7 +302,6 @@ class _StatusViewPageState extends State<StatusViewPage>
       right: 16,
       child: Row(
         children: [
-          // Avatar
           Container(
             width: 40,
             height: 40,
@@ -314,8 +314,6 @@ class _StatusViewPageState extends State<StatusViewPage>
             ),
           ),
           const SizedBox(width: 12),
-
-          // Name and Time
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -340,16 +338,11 @@ class _StatusViewPageState extends State<StatusViewPage>
               ],
             ),
           ),
-
-          // Close button
           IconButton(
             icon: const Icon(Icons.close, color: Colors.white, size: 28),
             onPressed: () {
               HapticFeedback.lightImpact();
-              Navigator.pushReplacementNamed(
-                context,
-                NamedRoutes.homeScreen,
-              );
+              Navigator.pushReplacementNamed(context, NamedRoutes.homeScreen);
             },
           ),
         ],
@@ -441,7 +434,6 @@ class _StatusViewPageState extends State<StatusViewPage>
       right: 16,
       child: Row(
         children: [
-          // Message Input
           Expanded(
             child: Container(
               height: 44,
@@ -476,10 +468,7 @@ class _StatusViewPageState extends State<StatusViewPage>
               ),
             ),
           ),
-
           const SizedBox(width: 12),
-
-          // Like Button
           IconButton(
             onPressed: () => _likeStory(story),
             icon: const Icon(
@@ -498,10 +487,7 @@ class _StatusViewPageState extends State<StatusViewPage>
               padding: const EdgeInsets.all(10),
             ),
           ),
-
           const SizedBox(width: 8),
-
-          // Send Button
           GestureDetector(
             onTap: () {
               if (replyController.text.isNotEmpty) {

@@ -1,303 +1,275 @@
-import 'package:Prive/data/models/feeds_models.dart';
+import 'package:equatable/equatable.dart';
 
-class StatusModel {
-  final int id;
+class Story extends Equatable {
+  final String id;
   final int userId;
-  final String name;
-  final String imgProfile;
-  final String statusImage;
-  final String statusImageHash;
+  final StoryUser user;
+  final String? content;
+  final List<Attachment> attachments;
   final String time;
-  final bool isViewed;
+  final bool isMe;
+  final bool isSeen;
   final int viewCount;
-  final String? statusText;
   final String? backgroundColor;
   final String? textAlign;
   final double? fontSize;
-  final int statusCount;
-  final String content;
+  final DateTime createdAt;
+  final DateTime expiresAt;
 
-  const StatusModel({
-    this.id = 0,
-    this.userId = 0,
-    required this.name,
-    required this.imgProfile,
-    required this.statusImage,
-    this.statusImageHash = '',
+  const Story({
+    required this.id,
+    required this.userId,
+    required this.user,
+    this.content,
+    this.attachments = const [],
     required this.time,
-    this.isViewed = false,
+    this.isMe = false,
+    this.isSeen = false,
     this.viewCount = 0,
-    this.statusText,
     this.backgroundColor,
     this.textAlign,
     this.fontSize,
-    this.statusCount = 0,
-    this.content = '',
+    required this.createdAt,
+    required this.expiresAt,
   });
 
-  // Convert from Story (feed_models)
-  factory StatusModel.fromStory(Story story, {int statusCount = 0}) {
-    return StatusModel(
-      id: int.tryParse(story.id) ?? 0,
-      userId: story.userId,
-      name: story.user.name,
-      imgProfile: story.user.avatar,
-      statusImage: story.attachments.isNotEmpty &&
-              story.attachments.first.type == 'image'
-          ? story.attachments.first.url
-          : '',
-      statusImageHash: '',
-      time: story.time,
-      isViewed: story.isSeen,
-      viewCount: story.viewCount,
-      statusText: story.content,
-      backgroundColor: story.backgroundColor,
-      textAlign: story.textAlign,
-      fontSize: story.fontSize,
-      statusCount: statusCount,
-      content: story.content ?? '',
-    );
-  }
-
-  // Convert from JSON (backward compatibility)
-  factory StatusModel.fromJson(Map<String, dynamic> json) {
-    // Try to parse as Story first if it has the structure
-    if (json.containsKey('user') && json['user'] is Map) {
-      try {
-        final story = Story.fromJson(json);
-        final statusCount = json['statusCount'] as int? ?? 0;
-        return StatusModel.fromStory(story, statusCount: statusCount);
-      } catch (e) {
-        // Fall back to manual parsing
-      }
-    }
-
-    final user = _asMap(json['user']);
-    final attachments = json['attachments'];
-
-    // Get text from either 'content' or 'statusText' field
-    final textContent = json['content'] ?? json['statusText'];
-    final hasText = textContent != null && textContent.toString().isNotEmpty;
-
-    String statusImage = '';
-
-    // Only get image if there's no text content
-    if (!hasText && attachments is List && attachments.isNotEmpty) {
-      final first = attachments.first;
-      if (first is Map) {
-        statusImage = (first['url'] ?? first['uri'] ?? '').toString();
-      } else if (first is String) {
-        statusImage = first;
-      }
-    }
-
-    // If still no image, check direct fields
-    if (statusImage.isEmpty && !hasText) {
-      statusImage = (json['statusImage'] ??
-              json['status_image'] ??
-              json['image'] ??
-              json['imageUrl'] ??
-              json['image_url'] ??
-              '')
-          .toString();
-    }
-
-    // Parse background color (for text stories)
-    String? backgroundColor = json['backgroundColor'] ??
-        json['background_color'] ??
-        json['bgColor'] ??
-        json['bg_color'];
-
-    // Default background color for text stories if not provided
-    if (hasText && (backgroundColor == null || backgroundColor.isEmpty)) {
-      backgroundColor = '#1D1B20'; // Dark gray default
-    }
-
-    // Parse text alignment
-    String? textAlign =
-        json['textAlign'] ?? json['text_align'] ?? json['alignment'];
-
-    // Parse font size
-    double? fontSize;
-    if (json['fontSize'] != null) {
-      fontSize = _toDouble(json['fontSize']);
-    } else if (json['font_size'] != null) {
-      fontSize = _toDouble(json['font_size']);
-    }
-
-    return StatusModel(
-      id: _toInt(json['id']),
-      userId: _toInt(json['userId'] ?? json['user_id'] ?? user['id']),
-      name: (user['name'] ??
-              user['username'] ??
-              json['name'] ??
-              json['username'] ??
-              'User')
-          .toString(),
-      imgProfile: (user['avatar'] ??
-              user['avatarUrl'] ??
-              user['avatar_url'] ??
-              json['imgProfile'] ??
-              json['avatar'] ??
-              '')
-          .toString(),
-      statusImage: statusImage,
-      statusImageHash:
-          (json['statusImageHash'] ?? json['status_image_hash'] ?? '')
-              .toString(),
-      time: _formatTime(
-          json['time'] ?? json['createdAt'] ?? json['created_at'] ?? ''),
-      isViewed: json['isViewed'] == true ||
-          json['isSeen'] == true ||
-          json['is_seen'] == true,
-      viewCount: _toInt(json['viewCount'] ?? json['view_count']),
-      statusText: textContent?.toString(),
-      backgroundColor: backgroundColor,
-      textAlign: textAlign,
-      fontSize: fontSize,
-      content: textContent?.toString() ?? '',
-    );
-  }
-
-  // Convert to Story (feed_models)
-  Story toStory() {
-    final attachments = <Attachment>[];
-    if (statusImage.isNotEmpty) {
-      attachments.add(Attachment(
-        type: 'image',
-        url: statusImage,
-      ));
-    }
-
+  factory Story.fromJson(Map<String, dynamic> json) {
     return Story(
-      id: id.toString(),
-      userId: userId,
-      user: StoryUser(
-        id: userId,
-        name: name,
-        username: name.toLowerCase().replaceAll(' ', ''),
-        handle: name.toLowerCase().replaceAll(' ', ''),
-        avatar: imgProfile,
-        verified: false,
-      ),
-      content: statusText ?? content,
-      attachments: attachments,
-      time: time,
-      isMe: false,
-      isSeen: isViewed,
-      viewCount: viewCount,
-      backgroundColor: backgroundColor ?? effectiveBackgroundColor,
-      textAlign: textAlign ?? effectiveTextAlign,
-      fontSize: fontSize ?? effectiveFontSize,
-      createdAt: DateTime.now(),
-      expiresAt: DateTime.now().add(const Duration(hours: 24)),
+      id: json['id']?.toString() ?? '',
+      userId: json['userId'] ?? 0,
+      user: StoryUser.fromJson(json['user'] ?? {}),
+      content: json['content'],
+      attachments: (json['attachments'] as List?)
+              ?.map((a) => Attachment.fromJson(a))
+              .toList() ??
+          [],
+      time: json['time'] ?? '',
+      isMe: json['isMe'] ?? false,
+      isSeen: json['isSeen'] ?? false,
+      viewCount: json['viewCount'] ?? 0,
+      backgroundColor: json['backgroundColor'],
+      textAlign: json['textAlign'],
+      fontSize: json['fontSize']?.toDouble(),
+      createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
+      expiresAt: DateTime.tryParse(json['expiresAt'] ?? '') ?? DateTime.now(),
     );
   }
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'userId': userId,
-        'name': name,
-        'imgProfile': imgProfile,
-        'statusImage': statusImage,
-        'statusImageHash': statusImageHash,
-        'time': time,
-        'isViewed': isViewed,
-        'viewCount': viewCount,
-        'statusText': statusText,
-        'backgroundColor': backgroundColor,
-        'textAlign': textAlign,
-        'fontSize': fontSize,
-        'content': content,
-      };
-
-  // Helper to check if this is a text-only story
-  bool get isTextOnly =>
-      statusText != null && statusText!.isNotEmpty && statusImage.isEmpty;
-
-  // Helper to check if this has an image
-  bool get hasImage => statusImage.isNotEmpty;
-
-  // Helper to get display text
-  String get displayText => statusText ?? content;
-
-  // Helper to get background color with default
-  String get effectiveBackgroundColor {
-    if (backgroundColor != null && backgroundColor!.isNotEmpty) {
-      return backgroundColor!;
-    }
-    return isTextOnly ? '#1D1B20' : '#000000';
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'userId': userId,
+      'user': user.toJson(),
+      'content': content,
+      'attachments': attachments.map((a) => a.toJson()).toList(),
+      'time': time,
+      'isMe': isMe,
+      'isSeen': isSeen,
+      'viewCount': viewCount,
+      'backgroundColor': backgroundColor,
+      'textAlign': textAlign,
+      'fontSize': fontSize,
+      'createdAt': createdAt.toIso8601String(),
+      'expiresAt': expiresAt.toIso8601String(),
+    };
   }
 
-  // Helper to get text alignment with default
-  String get effectiveTextAlign => textAlign ?? 'center';
-
-  // Helper to get font size with default
-  double get effectiveFontSize => fontSize ?? 24.0;
-}
-
-// Helper functions
-double _toDouble(dynamic value) {
-  if (value is double) return value;
-  if (value is int) return value.toDouble();
-  if (value is num) return value.toDouble();
-  if (value is String) return double.tryParse(value) ?? 24.0;
-  return 24.0;
-}
-
-int _toInt(dynamic value) {
-  if (value is int) return value;
-  if (value is num) return value.toInt();
-  if (value is String) return int.tryParse(value) ?? 0;
-  return 0;
-}
-
-Map<String, dynamic> _asMap(dynamic value) {
-  if (value is Map<String, dynamic>) return value;
-  if (value is Map) return Map<String, dynamic>.from(value);
-  return {};
-}
-
-String _formatTime(dynamic timeValue) {
-  if (timeValue == null) return '';
-
-  try {
-    if (timeValue is String) {
-      // Check if it's already a formatted time like "15m ago"
-      if (timeValue.contains('ago') ||
-          timeValue.contains('min') ||
-          timeValue.contains('hour') ||
-          timeValue.contains('day')) {
-        return timeValue;
-      }
-      // Try to parse as DateTime
-      final dateTime = DateTime.parse(timeValue);
-      return _timeAgo(dateTime);
-    }
-
-    if (timeValue is DateTime) {
-      return _timeAgo(timeValue);
-    }
-
-    return timeValue.toString();
-  } catch (e) {
-    return timeValue.toString();
+  Story copyWith({
+    String? id,
+    int? userId,
+    StoryUser? user,
+    String? content,
+    List<Attachment>? attachments,
+    String? time,
+    bool? isMe,
+    bool? isSeen,
+    int? viewCount,
+    String? backgroundColor,
+    String? textAlign,
+    double? fontSize,
+    DateTime? createdAt,
+    DateTime? expiresAt,
+  }) {
+    return Story(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      user: user ?? this.user,
+      content: content ?? this.content,
+      attachments: attachments ?? this.attachments,
+      time: time ?? this.time,
+      isMe: isMe ?? this.isMe,
+      isSeen: isSeen ?? this.isSeen,
+      viewCount: viewCount ?? this.viewCount,
+      backgroundColor: backgroundColor ?? this.backgroundColor,
+      textAlign: textAlign ?? this.textAlign,
+      fontSize: fontSize ?? this.fontSize,
+      createdAt: createdAt ?? this.createdAt,
+      expiresAt: expiresAt ?? this.expiresAt,
+    );
   }
+
+  bool get isExpired => DateTime.now().isAfter(expiresAt);
+
+  @override
+  List<Object?> get props => [
+        id,
+        userId,
+        user,
+        content,
+        attachments,
+        time,
+        isMe,
+        isSeen,
+        viewCount,
+        backgroundColor,
+        textAlign,
+        fontSize,
+        createdAt,
+        expiresAt,
+      ];
 }
 
-String _timeAgo(DateTime dateTime) {
-  final now = DateTime.now();
-  final difference = now.difference(dateTime);
+class StoryUser extends Equatable {
+  final int id;
+  final String name;
+  final String username;
+  final String handle;
+  final String avatar;
+  final bool verified;
 
-  if (difference.inDays > 7) {
-    return '${difference.inDays ~/ 7}w ago';
-  } else if (difference.inDays > 0) {
-    return '${difference.inDays}d ago';
-  } else if (difference.inHours > 0) {
-    return '${difference.inHours}h ago';
-  } else if (difference.inMinutes > 0) {
-    return '${difference.inMinutes}m ago';
-  } else {
-    return 'Just now';
+  const StoryUser({
+    required this.id,
+    required this.name,
+    required this.username,
+    required this.handle,
+    required this.avatar,
+    this.verified = false,
+  });
+
+  factory StoryUser.fromJson(Map<String, dynamic> json) {
+    return StoryUser(
+      id: json['id'] ?? 0,
+      name: json['name'] ?? '',
+      username: json['username'] ?? '',
+      handle: json['handle'] ?? json['username'] ?? '',
+      avatar: json['avatar'] ?? '',
+      verified: json['verified'] ?? false,
+    );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'username': username,
+      'handle': handle,
+      'avatar': avatar,
+      'verified': verified,
+    };
+  }
+
+  StoryUser copyWith({
+    int? id,
+    String? name,
+    String? username,
+    String? handle,
+    String? avatar,
+    bool? verified,
+  }) {
+    return StoryUser(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      username: username ?? this.username,
+      handle: handle ?? this.handle,
+      avatar: avatar ?? this.avatar,
+      verified: verified ?? this.verified,
+    );
+  }
+
+  @override
+  List<Object?> get props => [id, name, username, handle, avatar, verified];
+}
+
+class Attachment extends Equatable {
+  final String? id;
+  final String type;
+  final String url;
+  final String? uri;
+  final String? thumbnail;
+  final int? width;
+  final int? height;
+  final DateTime? createdAt;
+
+  const Attachment({
+    this.id,
+    required this.type,
+    required this.url,
+    this.uri,
+    this.thumbnail,
+    this.width,
+    this.height,
+    this.createdAt,
+  });
+
+  factory Attachment.fromJson(Map<String, dynamic> json) {
+    return Attachment(
+      id: json['id']?.toString(),
+      type: json['type'] ?? 'image',
+      url: json['url'] ?? '',
+      uri: json['uri'],
+      thumbnail: json['thumbnail'],
+      width: json['width'],
+      height: json['height'],
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'])
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (id != null) 'id': id,
+      'type': type,
+      'url': url,
+      if (uri != null) 'uri': uri,
+      if (thumbnail != null) 'thumbnail': thumbnail,
+      if (width != null) 'width': width,
+      if (height != null) 'height': height,
+      if (createdAt != null) 'createdAt': createdAt?.toIso8601String(),
+    };
+  }
+
+  Attachment copyWith({
+    String? id,
+    String? type,
+    String? url,
+    String? uri,
+    String? thumbnail,
+    int? width,
+    int? height,
+    DateTime? createdAt,
+  }) {
+    return Attachment(
+      id: id ?? this.id,
+      type: type ?? this.type,
+      url: url ?? this.url,
+      uri: uri ?? this.uri,
+      thumbnail: thumbnail ?? this.thumbnail,
+      width: width ?? this.width,
+      height: height ?? this.height,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+        id,
+        type,
+        url,
+        uri,
+        thumbnail,
+        width,
+        height,
+        createdAt,
+      ];
 }

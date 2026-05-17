@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:Prive/bloc/home/feed_bloc.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -7,8 +8,8 @@ import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
-import 'package:Prive/bloc/home/feed_bloc.dart';
 import 'package:Prive/core/cloudinary_service.dart';
+import 'package:Prive/data/models/feeds_models.dart';
 
 class CreatePostPage extends StatefulWidget {
   const CreatePostPage({super.key});
@@ -36,15 +37,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
   void dispose() {
     _captionController.dispose();
     _hashtagController.dispose();
-    _disposeAllMedia();
     _videoController?.dispose();
     super.dispose();
-  }
-
-  void _disposeAllMedia() {
-    for (var media in _mediaItems) {
-      media.dispose();
-    }
   }
 
   @override
@@ -82,24 +76,20 @@ class _CreatePostPageState extends State<CreatePostPage> {
   }
 
   PreferredSizeWidget _buildAppBar() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return AppBar(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? AppColors.darkBackground
-          : AppColors.backgroundColor,
+      backgroundColor:
+          isDarkMode ? AppColors.darkBackground : AppColors.backgroundColor,
       elevation: 0,
       leading: IconButton(
-        icon: Icon(Icons.close,
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white
-                : Colors.black),
+        icon:
+            Icon(Icons.close, color: isDarkMode ? Colors.white : Colors.black),
         onPressed: () => Navigator.pop(context),
       ),
       title: Text(
         'New Post',
         style: TextStyle(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white
-              : Colors.black,
+          color: isDarkMode ? Colors.white : Colors.black,
           fontWeight: FontWeight.w600,
           fontSize: 18,
         ),
@@ -197,10 +187,16 @@ class _CreatePostPageState extends State<CreatePostPage> {
         width: double.infinity,
       );
     }
-    return Image.file(
-      media.file!,
-      fit: BoxFit.cover,
-      width: double.infinity,
+    if (media.file != null) {
+      return Image.file(
+        media.file!,
+        fit: BoxFit.cover,
+        width: double.infinity,
+      );
+    }
+    return Container(
+      color: Colors.grey,
+      child: const Center(child: Text('No image')),
     );
   }
 
@@ -290,15 +286,14 @@ class _CreatePostPageState extends State<CreatePostPage> {
   }
 
   Widget _buildEmptyMediaGrid() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: _showAddMediaOptions,
       child: Container(
         height: 200,
         width: double.infinity,
         decoration: BoxDecoration(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? AppColors.darkCard
-              : Colors.white,
+          color: isDarkMode ? AppColors.darkCard : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: AppColors.greyColor.withOpacity(0.2),
@@ -332,6 +327,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
   }
 
   Widget _buildCaptionInput() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -340,9 +336,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
           style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 14,
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white
-                : Colors.black,
+            color: isDarkMode ? Colors.white : Colors.black,
           ),
         ),
         const SizedBox(height: 8),
@@ -370,6 +364,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
   }
 
   Widget _buildHashtagSection() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -378,9 +373,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
           style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 14,
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white
-                : Colors.black,
+            color: isDarkMode ? Colors.white : Colors.black,
           ),
         ),
         const SizedBox(height: 8),
@@ -443,12 +436,11 @@ class _CreatePostPageState extends State<CreatePostPage> {
   }
 
   Widget _buildOptionsSection() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? AppColors.darkCard
-            : Colors.white,
+        color: isDarkMode ? AppColors.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.greyColor.withOpacity(0.1)),
       ),
@@ -464,9 +456,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 style: TextStyle(
                   fontWeight: FontWeight.w500,
                   fontSize: 14,
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white
-                      : Colors.black,
+                  color: isDarkMode ? Colors.white : Colors.black,
                 ),
               ),
             ],
@@ -474,7 +464,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
           Switch(
             value: _isPrivate,
             onChanged: (value) => setState(() => _isPrivate = value),
-            activeThumbColor: AppColors.primary,
+            activeColor: AppColors.primary,
           ),
         ],
       ),
@@ -482,11 +472,10 @@ class _CreatePostPageState extends State<CreatePostPage> {
   }
 
   void _showAddMediaOptions() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? AppColors.darkCard
-          : Colors.white,
+      backgroundColor: isDarkMode ? AppColors.darkCard : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -531,10 +520,16 @@ class _CreatePostPageState extends State<CreatePostPage> {
     required String title,
     required VoidCallback onTap,
   }) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return ListTile(
-      leading: Icon(icon, size: 24, color: Colors.black),
-      title: Text(title, style: const TextStyle(fontSize: 16)),
-      onTap: onTap,
+      leading:
+          Icon(icon, size: 24, color: isDarkMode ? Colors.white : Colors.black),
+      title: Text(title,
+          style: TextStyle(color: isDarkMode ? Colors.white : Colors.black)),
+      onTap: () {
+        Navigator.pop(context);
+        onTap();
+      },
     );
   }
 
@@ -556,7 +551,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
         setState(() {
           _mediaItems.add(MediaItem(
             fileBytes: fileBytes,
-            fileName: pickedFile?.name,
+            fileName: pickedFile!.name,
             type: type,
           ));
         });
@@ -579,9 +574,10 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
   void _deleteCurrentMedia() {
     setState(() {
+      _videoController?.dispose();
       _mediaItems.removeAt(_currentMediaIndex);
       if (_mediaItems.isEmpty) {
-        _videoController?.dispose();
+        _videoController = null;
       } else {
         _currentMediaIndex =
             _currentMediaIndex.clamp(0, _mediaItems.length - 1);
@@ -638,21 +634,48 @@ class _CreatePostPageState extends State<CreatePostPage> {
     setState(() => _isSubmitting = true);
 
     try {
-      final uploadedUrls = await _uploadAllMedia();
-      String content = _captionController.text;
-      if (_hashtags.isNotEmpty) {
-        content += '\n\n${_hashtags.map((h) => '#$h').join(' ')}';
+      List<Attachment> attachments = [];
+
+      // Upload media if exists (optional)
+      for (int i = 0; i < _mediaItems.length; i++) {
+        final media = _mediaItems[i];
+        final file = media.file;
+
+        if (file != null) {
+          String? url;
+
+          if (media.type == MediaType.image) {
+            url = await _cloudinaryService.uploadImage(file);
+          } else if (media.type == MediaType.video) {
+            url = await _cloudinaryService.uploadVideo(file);
+          }
+
+          if (url != null && url.isNotEmpty) {
+            attachments.add(Attachment(
+              type: media.type == MediaType.image ? 'image' : 'video',
+              url: url,
+            ));
+          }
+        }
       }
 
-      // Dispatch CreatePost event to FeedBloc
-      context.read<FeedBloc>().add(CreatePost(
+      // Build content with hashtags
+      String content = _captionController.text.trim();
+      if (_hashtags.isNotEmpty) {
+        if (content.isNotEmpty) content += '\n\n';
+        content += _hashtags.map((h) => '#$h').join(' ');
+      }
+
+      // Dispatch CreateFeedPost event to FeedBloc
+      context.read<FeedBloc>().add(CreateFeedPost(
             content: content,
-            imageUrl: uploadedUrls.first,
+            attachments: attachments.isNotEmpty
+                ? attachments.map((a) => a.toJson()).toList()
+                : null,
           ));
 
       _showSnackBar('Post created successfully!');
 
-      // Wait a moment for the post to be created before popping
       await Future.delayed(const Duration(milliseconds: 500));
 
       if (mounted) {
@@ -663,35 +686,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
-  }
-
-  Future<List<String>> _uploadAllMedia() async {
-    final List<String> uploadedUrls = [];
-
-    for (int i = 0; i < _mediaItems.length; i++) {
-      final media = _mediaItems[i];
-      final file = media.file;
-
-      if (file == null) {
-        throw Exception('File not found for ${media.type}');
-      }
-
-      String? url;
-
-      if (media.type == MediaType.image) {
-        url = await _cloudinaryService.uploadImage(file);
-      } else if (media.type == MediaType.video) {
-        url = await _cloudinaryService.uploadVideo(file);
-      }
-
-      if (url != null && url.isNotEmpty) {
-        uploadedUrls.add(url);
-      } else {
-        throw Exception('Failed to upload ${media.type}');
-      }
-    }
-
-    return uploadedUrls;
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
@@ -720,6 +714,4 @@ class MediaItem {
     this.fileName,
     required this.type,
   });
-
-  void dispose() {}
 }

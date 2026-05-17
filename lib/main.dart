@@ -1,4 +1,6 @@
 import 'package:Prive/bloc/profile/profile_bloc.dart';
+import 'package:Prive/bloc/status/stories_bloc.dart';
+import 'package:Prive/data/models/feeds_models.dart';
 import 'package:Prive/ui/pages/auth/success_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -106,7 +108,10 @@ class _MyAppState extends ConsumerState<MyApp> {
           create: (context) => FriendsBloc(),
         ),
         BlocProvider<FeedBloc>(
-          create: (context) => FeedBloc()..add(FetchFeedData()),
+          create: (context) => FeedBloc(),
+        ),
+        BlocProvider<StoriesBloc>(
+          create: (context) => StoriesBloc(),
         ),
         BlocProvider<ExploreBloc>(
           create: (context) => ExploreBloc(),
@@ -128,7 +133,6 @@ class _MyAppState extends ConsumerState<MyApp> {
           ),
           BlocListener<ProfileBloc, ProfileState>(
             listener: (context, state) {
-              // Use WidgetsBinding to ensure context is safe for navigation
               if (state.status == ProfileStatus.success && mounted) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (mounted) {
@@ -190,28 +194,15 @@ class _MyAppState extends ConsumerState<MyApp> {
     switch (settings.name) {
       case NamedRoutes.postDetailScreen:
         final args = settings.arguments;
-        if (args == null) {
+        if (args == null || args is! FeedPost) {
           return MaterialPageRoute(
             builder: (context) => const Scaffold(
               body: Center(child: Text('Invalid post data')),
             ),
           );
         }
-
-        final post = args is PostModel
-            ? args
-            : args is Map<String, dynamic>
-                ? PostModel.fromJson(args)
-                : PostModel(
-                    name: 'User',
-                    imgProfile: '',
-                    picture: '',
-                    caption: '',
-                    createdAt: DateTime.now(),
-                  );
-
         return MaterialPageRoute(
-          builder: (context) => PostDetailPage(post: post),
+          builder: (context) => PostDetailPage(post: args),
         );
 
       case NamedRoutes.loginScreen:

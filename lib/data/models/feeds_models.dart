@@ -50,21 +50,6 @@ class FeedPost {
         'createdAt': createdAt.toIso8601String(),
       };
 
-  // Helper to convert to PostModel (your existing model)
-  Map<String, dynamic> toPostModelJson() {
-    return {
-      'id': id,
-      'user': user.toJson(),
-      'content': content,
-      'attachments': attachments.map((a) => a.toJson()).toList(),
-      'likes': likes,
-      'comments': comments,
-      'isLiked': isLiked,
-      'createdAt': createdAt.toIso8601String(),
-    };
-  }
-
-  // CopyWith method for immutable updates
   FeedPost copyWith({
     int? id,
     UserInfo? user,
@@ -138,7 +123,7 @@ class UserInfo {
 // Attachment Model
 class Attachment {
   final String? id;
-  final String type; // 'image', 'video', 'audio'
+  final String type;
   final String url;
   final String? uri;
   final String? thumbnail;
@@ -204,198 +189,7 @@ class Attachment {
   }
 }
 
-// Story Model - Matches backend Story structure
-class Story {
-  final String id;
-  final int userId;
-  final StoryUser user;
-  final String? content;
-  final List<Attachment> attachments;
-  final String time;
-  final bool isMe;
-  final bool isSeen;
-  final int viewCount;
-  final String? backgroundColor;
-  final String? textAlign;
-  final double? fontSize;
-  final DateTime createdAt;
-  final DateTime expiresAt;
-
-  const Story({
-    required this.id,
-    required this.userId,
-    required this.user,
-    this.content,
-    required this.attachments,
-    required this.time,
-    required this.isMe,
-    required this.isSeen,
-    required this.viewCount,
-    this.backgroundColor,
-    this.textAlign,
-    this.fontSize,
-    required this.createdAt,
-    required this.expiresAt,
-  });
-
-  factory Story.fromJson(Map<String, dynamic> json) {
-    return Story(
-      id: json['id']?.toString() ?? '',
-      userId: _toInt(json['userId'] ?? json['user_id']),
-      user: StoryUser.fromJson(_asMap(json['user'])),
-      content: json['content']?.toString(),
-      attachments: _parseAttachments(json['attachments']),
-      time: json['time']?.toString() ?? '',
-      isMe: json['isMe'] == true || json['is_me'] == true,
-      isSeen: json['isSeen'] == true || json['is_seen'] == true,
-      viewCount: _toInt(json['viewCount'] ?? json['view_count']),
-      backgroundColor: json['backgroundColor']?.toString() ??
-          json['background_color']?.toString(),
-      textAlign:
-          json['textAlign']?.toString() ?? json['text_align']?.toString(),
-      fontSize: _toDoubleOrNull(json['fontSize'] ?? json['font_size']),
-      createdAt: _parseDateTime(json['createdAt'] ?? json['created_at']),
-      expiresAt: _parseDateTime(json['expiresAt'] ?? json['expires_at']),
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'userId': userId,
-        'user': user.toJson(),
-        if (content != null) 'content': content,
-        'attachments': attachments.map((a) => a.toJson()).toList(),
-        'time': time,
-        'isMe': isMe,
-        'isSeen': isSeen,
-        'viewCount': viewCount,
-        if (backgroundColor != null) 'backgroundColor': backgroundColor,
-        if (textAlign != null) 'textAlign': textAlign,
-        if (fontSize != null) 'fontSize': fontSize,
-        'createdAt': createdAt.toIso8601String(),
-        'expiresAt': expiresAt.toIso8601String(),
-      };
-
-  // CopyWith method for immutable updates
-  Story copyWith({
-    String? id,
-    int? userId,
-    StoryUser? user,
-    String? content,
-    List<Attachment>? attachments,
-    String? time,
-    bool? isMe,
-    bool? isSeen,
-    int? viewCount,
-    String? backgroundColor,
-    String? textAlign,
-    double? fontSize,
-    DateTime? createdAt,
-    DateTime? expiresAt,
-  }) {
-    return Story(
-      id: id ?? this.id,
-      userId: userId ?? this.userId,
-      user: user ?? this.user,
-      content: content ?? this.content,
-      attachments: attachments ?? this.attachments,
-      time: time ?? this.time,
-      isMe: isMe ?? this.isMe,
-      isSeen: isSeen ?? this.isSeen,
-      viewCount: viewCount ?? this.viewCount,
-      backgroundColor: backgroundColor ?? this.backgroundColor,
-      textAlign: textAlign ?? this.textAlign,
-      fontSize: fontSize ?? this.fontSize,
-      createdAt: createdAt ?? this.createdAt,
-      expiresAt: expiresAt ?? this.expiresAt,
-    );
-  }
-
-  bool get isExpired => DateTime.now().isAfter(expiresAt);
-
-  double get effectiveFontSize => fontSize ?? 24.0;
-
-  String get effectiveBackgroundColor => backgroundColor ?? '#1D1B20';
-
-  TextAlign get effectiveTextAlign {
-    switch (textAlign?.toLowerCase()) {
-      case 'center':
-        return TextAlign.center;
-      case 'left':
-        return TextAlign.left;
-      case 'right':
-        return TextAlign.right;
-      default:
-        return TextAlign.center;
-    }
-  }
-
-  bool get hasMedia => attachments.isNotEmpty;
-  bool get hasImage => attachments.any((a) => a.type == 'image');
-  bool get hasVideo => attachments.any((a) => a.type == 'video');
-  String? get firstMediaUrl =>
-      attachments.isNotEmpty ? attachments.first.url : null;
-}
-
-// StoryUser Model - User info within story context
-class StoryUser {
-  final int id;
-  final String name;
-  final String username;
-  final String handle;
-  final String avatar;
-  final bool verified;
-
-  const StoryUser({
-    required this.id,
-    required this.name,
-    required this.username,
-    required this.handle,
-    required this.avatar,
-    this.verified = false,
-  });
-
-  factory StoryUser.fromJson(Map<String, dynamic> json) {
-    return StoryUser(
-      id: _toInt(json['id']),
-      name: json['name']?.toString() ?? 'User',
-      username: json['username']?.toString() ?? '',
-      handle: json['handle']?.toString() ?? json['username']?.toString() ?? '',
-      avatar: json['avatar']?.toString() ?? '',
-      verified: json['verified'] == true,
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'username': username,
-        'handle': handle,
-        'avatar': avatar,
-        'verified': verified,
-      };
-
-  StoryUser copyWith({
-    int? id,
-    String? name,
-    String? username,
-    String? handle,
-    String? avatar,
-    bool? verified,
-  }) {
-    return StoryUser(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      username: username ?? this.username,
-      handle: handle ?? this.handle,
-      avatar: avatar ?? this.avatar,
-      verified: verified ?? this.verified,
-    );
-  }
-}
-
-// Comment Model - Matches backend Comment structure
-// ========
+// Comment Model
 class Comment {
   final int id;
   final int userId;
@@ -437,7 +231,6 @@ class Comment {
         'createdAt': createdAt.toIso8601String(),
       };
 
-  // CopyWith method for immutable updates
   Comment copyWith({
     int? id,
     int? userId,
@@ -474,7 +267,112 @@ class Comment {
   }
 }
 
-//Request Models
+// UserMedia Model
+class UserMedia {
+  final int id;
+  final int postId;
+  final String type;
+  final String url;
+  final String? thumbnail;
+  final String? caption;
+  final int likes;
+  final int comments;
+  final DateTime createdAt;
+
+  UserMedia({
+    required this.id,
+    required this.postId,
+    required this.type,
+    required this.url,
+    this.thumbnail,
+    this.caption,
+    required this.likes,
+    required this.comments,
+    required this.createdAt,
+  });
+
+  factory UserMedia.fromJson(Map<String, dynamic> json) {
+    return UserMedia(
+      id: _toInt(json['id']),
+      postId: _toInt(json['postId'] ?? json['post_id']),
+      type: json['type']?.toString() ?? 'image',
+      url: json['url']?.toString() ?? '',
+      thumbnail: json['thumbnail']?.toString(),
+      caption: json['caption']?.toString(),
+      likes: _toInt(json['likes']),
+      comments: _toInt(json['comments']),
+      createdAt: _parseDateTime(json['createdAt'] ?? json['created_at']),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'postId': postId,
+        'type': type,
+        'url': url,
+        if (thumbnail != null) 'thumbnail': thumbnail,
+        if (caption != null) 'caption': caption,
+        'likes': likes,
+        'comments': comments,
+        'createdAt': createdAt.toIso8601String(),
+      };
+}
+
+// UserMediaResponse Model
+class UserMediaResponse {
+  final List<UserMedia> media;
+  final bool hasMore;
+  final int page;
+  final int? total;
+
+  UserMediaResponse({
+    required this.media,
+    required this.hasMore,
+    required this.page,
+    this.total,
+  });
+
+  factory UserMediaResponse.fromJson(Map<String, dynamic> json) {
+    List<UserMedia> mediaList = [];
+
+    if (json['media'] != null && json['media'] is List) {
+      mediaList = (json['media'] as List)
+          .map((item) => UserMedia.fromJson(_asMap(item)))
+          .toList();
+    } else if (json['data'] != null && json['data'] is List) {
+      mediaList = (json['data'] as List)
+          .map((item) => UserMedia.fromJson(_asMap(item)))
+          .toList();
+    } else if (json['items'] != null && json['items'] is List) {
+      mediaList = (json['items'] as List)
+          .map((item) => UserMedia.fromJson(_asMap(item)))
+          .toList();
+    }
+
+    return UserMediaResponse(
+      media: mediaList,
+      hasMore: json['hasMore'] == true || json['has_more'] == true,
+      page: _toInt(json['page'], defaultValue: 1),
+      total: json['total'],
+    );
+  }
+
+  UserMediaResponse copyWith({
+    List<UserMedia>? media,
+    bool? hasMore,
+    int? page,
+    int? total,
+  }) {
+    return UserMediaResponse(
+      media: media ?? this.media,
+      hasMore: hasMore ?? this.hasMore,
+      page: page ?? this.page,
+      total: total ?? this.total,
+    );
+  }
+}
+
+// Request Models
 class CreatePostRequest {
   final String content;
   final List<Attachment> attachments;
@@ -488,32 +386,6 @@ class CreatePostRequest {
         'content': content,
         if (attachments.isNotEmpty)
           'attachments': attachments.map((a) => a.toJson()).toList(),
-      };
-}
-
-class CreateStoryRequest {
-  final String? content;
-  final List<Attachment> attachments;
-  final String? backgroundColor;
-  final String? textAlign;
-  final double? fontSize;
-
-  const CreateStoryRequest({
-    this.content,
-    this.attachments = const [],
-    this.backgroundColor,
-    this.textAlign,
-    this.fontSize,
-  });
-
-  Map<String, dynamic> toJson() => {
-        if (content != null && content!.isNotEmpty) 'content': content,
-        if (attachments.isNotEmpty)
-          'attachments': attachments.map((a) => a.toJson()).toList(),
-        if (backgroundColor != null && backgroundColor!.isNotEmpty)
-          'backgroundColor': backgroundColor,
-        if (textAlign != null && textAlign!.isNotEmpty) 'textAlign': textAlign,
-        if (fontSize != null) 'fontSize': fontSize,
       };
 }
 
@@ -612,8 +484,6 @@ class CommentsResponse {
       page: page ?? this.page,
     );
   }
-
-  Null get length => null;
 }
 
 // Helper Functions
@@ -630,24 +500,6 @@ int? _toIntOrNull(dynamic value) {
   if (value is int) return value;
   if (value is num) return value.toInt();
   if (value is String) return int.tryParse(value);
-  return null;
-}
-
-double _toDouble(dynamic value, {double defaultValue = 0.0}) {
-  if (value == null) return defaultValue;
-  if (value is double) return value;
-  if (value is int) return value.toDouble();
-  if (value is num) return value.toDouble();
-  if (value is String) return double.tryParse(value) ?? defaultValue;
-  return defaultValue;
-}
-
-double? _toDoubleOrNull(dynamic value) {
-  if (value == null) return null;
-  if (value is double) return value;
-  if (value is int) return value.toDouble();
-  if (value is num) return value.toDouble();
-  if (value is String) return double.tryParse(value);
   return null;
 }
 

@@ -5,29 +5,14 @@ import '../../models/feeds_models.dart';
 class FeedService {
   final ApiService _api = ApiService();
 
-  Future<List<Story>> getStories() async {
-    try {
-      final response = await _api.get('/api/feed/stories');
-      print('Stories response: ${response.data}');
-
-      List<dynamic> storiesData = [];
-
-      if (response.data is List) {
-        storiesData = response.data;
-      } else if (response.data is Map && response.data['stories'] is List) {
-        storiesData = response.data['stories'];
-      } else if (response.data is Map && response.data['data'] is List) {
-        storiesData = response.data['data'];
-      }
-
-      return storiesData.map((json) => Story.fromJson(json)).toList();
-    } on DioException catch (e) {
-      print('Get stories error: ${e.response?.data}');
-      throw e.response?.data['message'] ?? 'Failed to get stories';
-    }
+  void setAuthToken(String token) {
+    _api.setAuthToken(token);
   }
 
-  // Get feed posts - returns typed PostsResponse
+  void clearAuthToken() {
+    _api.clearAuthToken();
+  }
+
   Future<PostsResponse> getPosts({int page = 1}) async {
     try {
       final response = await _api.get(
@@ -75,68 +60,6 @@ class FeedService {
     } on DioException catch (e) {
       print('Create post error: ${e.response?.data}');
       throw e.response?.data['message'] ?? 'Failed to create post';
-    }
-  }
-
-  // Create story
-  Future<Map<String, dynamic>> createStory({
-    String? content,
-    List<Map<String, dynamic>>? attachments,
-    String? backgroundColor,
-    String? textAlign,
-    double? fontSize,
-  }) async {
-    try {
-      final data = <String, dynamic>{};
-
-      if (content != null && content.isNotEmpty) {
-        data['content'] = content;
-      }
-
-      if (attachments != null && attachments.isNotEmpty) {
-        data['attachments'] = attachments;
-      }
-
-      if (backgroundColor != null && backgroundColor.isNotEmpty) {
-        data['backgroundColor'] = backgroundColor;
-      }
-
-      if (textAlign != null && textAlign.isNotEmpty) {
-        data['textAlign'] = textAlign;
-      }
-
-      if (fontSize != null) {
-        data['fontSize'] = fontSize;
-      }
-
-      final response = await _api.post('/api/feed/stories', data: data);
-      return response.data;
-    } on DioException catch (e) {
-      print('Create story error: ${e.response?.data}');
-      throw e.response?.data['message'] ?? 'Failed to create story';
-    } catch (e) {
-      print('Create story error: $e');
-      throw Exception('Failed to create story: $e');
-    }
-  }
-
-  // Delete story
-  Future<void> deleteStory(String storyId) async {
-    try {
-      await _api.delete('/api/feed/stories/$storyId');
-    } on DioException catch (e) {
-      print('Delete story error: ${e.response?.data}');
-      throw e.response?.data['message'] ?? 'Failed to delete story';
-    }
-  }
-
-  // Mark story as seen
-  Future<void> markStoryAsSeen(String storyId) async {
-    try {
-      await _api.post('/api/feed/stories/$storyId/seen');
-    } on DioException catch (e) {
-      print('Mark story as seen error: ${e.response?.data}');
-      throw e.response?.data['message'] ?? 'Failed to mark story as seen';
     }
   }
 
@@ -213,7 +136,7 @@ class FeedService {
   Future<UserMediaResponse> getUserMedia({
     required int userId,
     int page = 1,
-    String? type, // 'image', 'video', or null for all
+    String? type,
   }) async {
     try {
       final queryParams = <String, dynamic>{'page': page};
@@ -256,8 +179,6 @@ class FeedService {
     String? type,
   }) async {
     try {
-      // You might want to add a separate endpoint for count
-      // Or just get first page and check total from response headers
       final response = await _api.get(
         '/api/feed/users/$userId/media',
         queryParameters: {'page': 1, 'limit': 1},
@@ -276,100 +197,5 @@ class FeedService {
       print('Get user media count error: ${e.response?.data}');
       return 0;
     }
-  }
-}
-
-// Response models for paginated data
-class UserMediaResponse {
-  final List<UserMedia> media;
-  final bool hasMore;
-  final int page;
-  final int? total;
-
-  UserMediaResponse({
-    required this.media,
-    required this.hasMore,
-    required this.page,
-    this.total,
-  });
-
-  factory UserMediaResponse.fromJson(Map<String, dynamic> json) {
-    List<UserMedia> mediaList = [];
-
-    if (json['media'] != null && json['media'] is List) {
-      mediaList = (json['media'] as List)
-          .map((item) => UserMedia.fromJson(item))
-          .toList();
-    } else if (json['data'] != null && json['data'] is List) {
-      mediaList = (json['data'] as List)
-          .map((item) => UserMedia.fromJson(item))
-          .toList();
-    } else if (json['items'] != null && json['items'] is List) {
-      mediaList = (json['items'] as List)
-          .map((item) => UserMedia.fromJson(item))
-          .toList();
-    }
-
-    return UserMediaResponse(
-      media: mediaList,
-      hasMore: json['hasMore'] ?? json['has_more'] ?? false,
-      page: json['page'] ?? 1,
-      total: json['total'],
-    );
-  }
-}
-
-// UserMedia model (add this to your feeds_models.dart or create separate file)
-class UserMedia {
-  final int id;
-  final int postId;
-  final String type;
-  final String url;
-  final String? thumbnail;
-  final String? caption;
-  final int likes;
-  final int comments;
-  final DateTime createdAt;
-
-  UserMedia({
-    required this.id,
-    required this.postId,
-    required this.type,
-    required this.url,
-    this.thumbnail,
-    this.caption,
-    required this.likes,
-    required this.comments,
-    required this.createdAt,
-  });
-
-  factory UserMedia.fromJson(Map<String, dynamic> json) {
-    return UserMedia(
-      id: json['id'] ?? 0,
-      postId: json['postId'] ?? json['post_id'] ?? 0,
-      type: json['type'] ?? 'image',
-      url: json['url'] ?? '',
-      thumbnail: json['thumbnail'],
-      caption: json['caption'],
-      likes: json['likes'] ?? 0,
-      comments: json['comments'] ?? 0,
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'].toString())
-          : DateTime.now(),
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'postId': postId,
-      'type': type,
-      'url': url,
-      'thumbnail': thumbnail,
-      'caption': caption,
-      'likes': likes,
-      'comments': comments,
-      'createdAt': createdAt.toIso8601String(),
-    };
   }
 }

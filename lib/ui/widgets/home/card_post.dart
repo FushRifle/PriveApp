@@ -1,18 +1,18 @@
 import 'dart:ui';
+import 'package:Prive/bloc/home/feed_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
-import 'package:Prive/data/models/post_model.dart';
-import 'package:Prive/bloc/home/feed_bloc.dart';
+import 'package:Prive/data/models/feeds_models.dart';
 import 'package:video_player/video_player.dart';
 import 'package:Prive/ui/widgets/home/clip_status_bar.dart';
 import 'package:Prive/ui/widgets/home/custom_bottom_sheet.dart';
 import 'package:Prive/app/resources/constant/named_routes.dart';
 
 class CardPost extends StatefulWidget {
-  final dynamic post;
+  final FeedPost post;
   final bool isDetailView;
 
   const CardPost({
@@ -27,96 +27,35 @@ class CardPost extends StatefulWidget {
 
 class _CardPostState extends State<CardPost> {
   double _handleOffset = 0.0;
-  bool isLiked = false;
-  bool isSaved = false;
-  int likeCount = 0;
-  int commentCount = 0;
-  int postId = 0;
-  String? mediaUrl;
-  String? mediaType;
-  String userName = '';
-  String userAvatar = '';
-  String content = '';
+  late bool isLiked;
+  late int likeCount;
+  late int commentCount;
   VideoPlayerController? _videoController;
   bool _isVideoInitialized = false;
-  DateTime createdAt = DateTime.now();
 
   @override
   void initState() {
     super.initState();
-    _parsePost();
+    isLiked = widget.post.isLiked;
+    likeCount = widget.post.likes;
+    commentCount = widget.post.comments;
+
+    _checkForVideo();
   }
 
-  @override
-  void dispose() {
-    _videoController?.dispose();
-    super.dispose();
-  }
+  void _checkForVideo() {
+    final videoAttachment = widget.post.attachments.firstWhere(
+      (a) => a.type == 'video',
+      orElse: () => Attachment(type: '', url: ''),
+    );
 
-  void _parsePost() {
-    if (widget.post is PostModel) {
-      final post = widget.post as PostModel;
-      isLiked = post.isLiked;
-      likeCount = post.likeCount;
-      commentCount = post.commentCount;
-      isSaved = post.isSaved;
-      userName = post.name;
-      userAvatar = post.imgProfile;
-      content = post.displayText;
-      postId = post.id;
-      mediaUrl = post.picture;
-      mediaType = post.picture.isNotEmpty ? 'image' : null;
-      createdAt = post.createdAt;
-      return;
-    }
-
-    // Parse from Map
-    isLiked = widget.post['isLiked'] ?? false;
-    likeCount = widget.post['likes'] ?? 0;
-    commentCount = widget.post['commentCount'] ?? widget.post['comments'] ?? 0;
-    isSaved = widget.post['isSaved'] ?? false;
-    userName =
-        widget.post['user']?['name'] ?? widget.post['username'] ?? 'User';
-    userAvatar = widget.post['user']?['avatar'] ?? '';
-    content = widget.post['caption'] ?? widget.post['content'] ?? '';
-
-    final createdAtStr = widget.post['createdAt'] ??
-        widget.post['created_at'] ??
-        widget.post['time'];
-    if (createdAtStr != null) {
-      try {
-        createdAt = DateTime.parse(createdAtStr.toString());
-      } catch (e) {
-        createdAt = DateTime.now();
-      }
-    }
-
-    final id = widget.post['id'] ?? widget.post['_id'];
-    if (id is int) {
-      postId = id;
-    } else if (id is String) {
-      postId = int.tryParse(id) ?? 0;
-    } else {
-      postId = 0;
-    }
-
-    final attachments = widget.post['attachments'];
-    if (attachments != null && attachments.isNotEmpty) {
-      final firstAttachment = attachments[0];
-      mediaUrl = firstAttachment['url'];
-      mediaType = firstAttachment['type'];
-
-      if (mediaType == 'video' && mediaUrl != null) {
-        _initializeVideoController();
-      }
-    } else {
-      mediaType = null;
-      mediaUrl = null;
+    if (videoAttachment.url.isNotEmpty) {
+      _initializeVideoController(videoAttachment.url);
     }
   }
 
-  void _initializeVideoController() {
-    _videoController = VideoPlayerController.network(mediaUrl!)
+  void _initializeVideoController(String videoUrl) {
+    _videoController = VideoPlayerController.network(videoUrl)
       ..initialize().then((_) {
         if (mounted) {
           setState(() {
@@ -125,19 +64,20 @@ class _CardPostState extends State<CardPost> {
         }
       }).catchError((error) {
         debugPrint('Error initializing video: $error');
-        if (mounted) {
-          setState(() {
-            mediaType = null;
-          });
-        }
       });
+  }
+
+  @override
+  void dispose() {
+    _videoController?.dispose();
+    super.dispose();
   }
 
   void _toggleLike() {
     if (isLiked) {
-      context.read<FeedBloc>().add(UnlikePost(postId));
+      context.read<FeedBloc>().add(UnlikeFeedPost(postId: widget.post.id));
     } else {
-      context.read<FeedBloc>().add(LikePost(postId));
+      context.read<FeedBloc>().add(LikeFeedPost(postId: widget.post.id));
     }
 
     setState(() {
@@ -150,16 +90,11 @@ class _CardPostState extends State<CardPost> {
     });
   }
 
-  void _toggleSave() async {
-    setState(() {
-      isSaved = !isSaved;
-    });
-
+  void _toggleSave() {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content:
-            Text(isSaved ? 'Saved to collection' : 'Removed from collection'),
-        duration: const Duration(seconds: 1),
+      const SnackBar(
+        content: Text('Save feature coming soon'),
+        duration: Duration(seconds: 1),
       ),
     );
   }
@@ -174,7 +109,7 @@ class _CardPostState extends State<CardPost> {
   }
 
   void _openComments() {
-    customBottomSheetComments(context, postId: postId);
+    customBottomSheetComments(context, postId: widget.post.id);
   }
 
   @override
@@ -197,7 +132,7 @@ class _CardPostState extends State<CardPost> {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(20),
-            child: mediaType == null
+            child: widget.post.attachments.isEmpty
                 ? _buildTextOnlyPost()
                 : SizedBox(
                     width: width,
@@ -226,7 +161,7 @@ class _CardPostState extends State<CardPost> {
         Navigator.pushNamed(
           context,
           NamedRoutes.postDetailScreen,
-          arguments: widget.post,
+          arguments: widget.post.toJson(),
         );
       },
       child: cardContent,
@@ -259,20 +194,21 @@ class _CardPostState extends State<CardPost> {
           children: [
             Row(
               children: [
-                if (userAvatar.isNotEmpty)
+                if (widget.post.user.avatar.isNotEmpty)
                   CircleAvatar(
                     radius: 20,
-                    backgroundImage: NetworkImage(userAvatar),
+                    backgroundImage: NetworkImage(widget.post.user.avatar),
                     onBackgroundImageError: (_, __) {},
                   ),
-                if (userAvatar.isNotEmpty) const SizedBox(width: 12),
+                if (widget.post.user.avatar.isNotEmpty)
+                  const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        userName,
+                        widget.post.user.name,
                         style: AppTheme.blackTextStyle.copyWith(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
@@ -280,7 +216,7 @@ class _CardPostState extends State<CardPost> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        _formatTimeAgo(createdAt),
+                        widget.post.time,
                         style: AppTheme.greyTextStyle.copyWith(
                           fontSize: 11,
                         ),
@@ -292,7 +228,7 @@ class _CardPostState extends State<CardPost> {
             ),
             const SizedBox(height: 16),
             Text(
-              content,
+              widget.post.content,
               style: AppTheme.blackTextStyle.copyWith(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -323,11 +259,9 @@ class _CardPostState extends State<CardPost> {
                 ),
                 Expanded(
                   child: _buildTextOnlyActionButton(
-                    icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
+                    icon: Icons.bookmark_border,
                     count: 0,
                     onTap: _toggleSave,
-                    isActive: isSaved,
-                    activeColor: AppColors.secondary,
                   ),
                 ),
                 Expanded(
@@ -390,25 +324,18 @@ class _CardPostState extends State<CardPost> {
     );
   }
 
-  String _formatTimeAgo(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inDays > 7) {
-      return '${difference.inDays ~/ 7}w ago';
-    } else if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
-    } else {
-      return 'Just now';
-    }
-  }
-
   Widget _buildMediaContent() {
-    if (mediaType == 'video' &&
+    final imageAttachment = widget.post.attachments.firstWhere(
+      (a) => a.type == 'image',
+      orElse: () => Attachment(type: '', url: ''),
+    );
+
+    final videoAttachment = widget.post.attachments.firstWhere(
+      (a) => a.type == 'video',
+      orElse: () => Attachment(type: '', url: ''),
+    );
+
+    if (videoAttachment.url.isNotEmpty &&
         _isVideoInitialized &&
         _videoController != null) {
       return Stack(
@@ -443,9 +370,9 @@ class _CardPostState extends State<CardPost> {
             ),
         ],
       );
-    } else if (mediaType == 'image' && mediaUrl != null) {
+    } else if (imageAttachment.url.isNotEmpty) {
       return Image.network(
-        mediaUrl!,
+        imageAttachment.url,
         fit: BoxFit.cover,
         width: double.infinity,
         height: double.infinity,
@@ -481,7 +408,9 @@ class _CardPostState extends State<CardPost> {
       color: AppColors.greyColor.withOpacity(0.2),
       child: Center(
         child: Text(
-          content.isNotEmpty ? content : 'No media content',
+          widget.post.content.isNotEmpty
+              ? widget.post.content
+              : 'No media content',
           style: AppTheme.blackTextStyle.copyWith(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -565,11 +494,9 @@ class _CardPostState extends State<CardPost> {
         ),
         const SizedBox(height: 20),
         _buildActionButton(
-          icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
+          icon: Icons.bookmark_border,
           label: 'Save',
           onTap: _toggleSave,
-          isActive: isSaved,
-          activeColor: Colors.amber,
         ),
         const SizedBox(height: 20),
         _buildActionButton(
@@ -677,20 +604,20 @@ class _CardPostState extends State<CardPost> {
         children: [
           Row(
             children: [
-              if (userAvatar.isNotEmpty)
+              if (widget.post.user.avatar.isNotEmpty)
                 CircleAvatar(
                   radius: 14,
-                  backgroundImage: NetworkImage(userAvatar),
+                  backgroundImage: NetworkImage(widget.post.user.avatar),
                   onBackgroundImageError: (_, __) {},
                 ),
-              if (userAvatar.isNotEmpty) const SizedBox(width: 8),
+              if (widget.post.user.avatar.isNotEmpty) const SizedBox(width: 8),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      userName,
+                      widget.post.user.name,
                       style: TextStyle(
                         color: AppColors.whiteColor,
                         fontSize: 12,
@@ -698,9 +625,10 @@ class _CardPostState extends State<CardPost> {
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (content.isNotEmpty && mediaType != null)
+                    if (widget.post.content.isNotEmpty &&
+                        widget.post.attachments.isNotEmpty)
                       Text(
-                        content,
+                        widget.post.content,
                         style: TextStyle(
                           color: AppColors.whiteColor.withOpacity(0.9),
                           fontSize: 15,

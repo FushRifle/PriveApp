@@ -40,7 +40,6 @@ class FeedHook extends ChangeNotifier {
     try {
       await Future.wait([
         fetchUser(notify: false),
-        fetchStories(notify: false),
         fetchPosts(refresh: true, notify: false),
       ]);
     } catch (e) {
@@ -61,18 +60,6 @@ class FeedHook extends ChangeNotifier {
       _user = result;
     } catch (e) {
       debugPrint('Error fetching user: $e');
-      _error = _cleanError(e);
-    } finally {
-      if (notify) notifyListeners();
-    }
-  }
-
-  Future<void> fetchStories({bool notify = true}) async {
-    try {
-      final result = await _feedService.getStories();
-      _stories = _normalizeList(result);
-    } catch (e) {
-      debugPrint('Error fetching stories: $e');
       _error = _cleanError(e);
     } finally {
       if (notify) notifyListeners();
@@ -208,7 +195,6 @@ class FeedHook extends ChangeNotifier {
     try {
       await Future.wait([
         fetchUser(notify: false),
-        fetchStories(notify: false),
         fetchPosts(refresh: true, notify: false),
       ]);
     } finally {

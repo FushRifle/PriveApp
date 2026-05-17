@@ -1,7 +1,9 @@
+import 'package:Prive/bloc/home/feed_bloc.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
-import 'package:Prive/data/hooks/home/comment_hook.dart';
+import 'package:Prive/data/models/feeds_models.dart';
 
 void customBottomSheetComments(BuildContext context, {required int postId}) =>
     showModalBottomSheet(
@@ -22,119 +24,189 @@ class CommentBottomSheetContent extends StatefulWidget {
 }
 
 class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
-  late CommentsHook _commentsHook;
   final TextEditingController _commentController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+
+  List<Comment> _comments = [];
+  bool _isLoading = true;
+  bool _isLoadingMore = false;
+  bool _hasMore = false;
+  bool _isPosting = false;
+  int _currentPage = 1;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _commentsHook = CommentsHook(postId: widget.postId);
-    _commentsHook.fetchComments();
+    _loadComments();
   }
 
   @override
   void dispose() {
-    _commentsHook.dispose();
     _commentController.dispose();
     _focusNode.dispose();
     super.dispose();
   }
 
-  void _submitComment() async {
-    if (_commentController.text.trim().isEmpty) return;
+  void _loadComments() {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    context
+        .read<FeedBloc>()
+        .add(GetPostComments(postId: widget.postId, page: 1));
+  }
 
-    final success =
-        await _commentsHook.addComment(_commentController.text.trim());
-    if (success) {
-      _commentController.clear();
-      _focusNode.unfocus();
-    }
+  void _loadMoreComments() {
+    if (_isLoadingMore || !_hasMore) return;
+    setState(() {
+      _isLoadingMore = true;
+      _currentPage++;
+    });
+    context
+        .read<FeedBloc>()
+        .add(GetPostComments(postId: widget.postId, page: _currentPage));
+  }
+
+  void _submitComment() async {
+    final content = _commentController.text.trim();
+    if (content.isEmpty) return;
+
+    setState(() => _isPosting = true);
+    context.read<FeedBloc>().add(CreatePostComment(
+          postId: widget.postId,
+          content: content,
+        ));
+
+    // Clear input
+    _commentController.clear();
+    _focusNode.unfocus();
+
+    // Refresh comments after a short delay
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _currentPage = 1;
+      _loadComments();
+      setState(() => _isPosting = false);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.6,
-      width: double.infinity,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            width: 40,
-            height: 6,
-            margin: const EdgeInsets.only(top: 16, bottom: 6),
-            decoration: BoxDecoration(
-              color: AppColors.backgroundColor,
-              borderRadius: BorderRadius.circular(50),
+    return BlocListener<FeedBloc, FeedState>(
+      listener: (context, state) {
+        // Update comments when loaded
+        if (state.comments.containsKey(widget.postId)) {
+          setState(() {
+            _comments = state.comments[widget.postId]!;
+            _hasMore = state.hasMoreComments[widget.postId] ?? false;
+            _isLoading = false;
+            _isLoadingMore = false;
+            _error = null;
+          });
+        }
+
+        // Handle errors
+        if (state.commentsError != null && _isLoading) {
+          setState(() {
+            _error = state.commentsError;
+            _isLoading = false;
+          });
+        }
+
+        // Handle posting error
+        if (state.generalError != null && _isPosting) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.generalError!),
+              backgroundColor: Colors.red,
             ),
-          ),
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.only(top: 30),
+          );
+          setState(() => _isPosting = false);
+        }
+      },
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.6,
+        width: double.infinity,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 40,
+              height: 6,
+              margin: const EdgeInsets.only(top: 16, bottom: 6),
               decoration: BoxDecoration(
                 color: AppColors.backgroundColor,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(30),
-                ),
-              ),
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 26),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "Comments",
-                          style: AppTheme.blackTextStyle.copyWith(
-                            fontSize: 18,
-                            fontWeight: AppTheme.bold,
-                          ),
-                        ),
-                        Text(
-                          "${_commentsHook.comments.length} comments",
-                          style: AppTheme.greyTextStyle.copyWith(
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Expanded(
-                    child: _buildCommentsList(),
-                  ),
-                  _buildCommentInput(),
-                ],
+                borderRadius: BorderRadius.circular(50),
               ),
             ),
-          ),
-        ],
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.only(top: 30),
+                decoration: BoxDecoration(
+                  color: AppColors.backgroundColor,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(30),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 26),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Comments",
+                            style: AppTheme.blackTextStyle.copyWith(
+                              fontSize: 18,
+                              fontWeight: AppTheme.bold,
+                            ),
+                          ),
+                          Text(
+                            "${_comments.length} comments",
+                            style: AppTheme.greyTextStyle.copyWith(
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Expanded(
+                      child: _buildCommentsList(),
+                    ),
+                    _buildCommentInput(),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildCommentsList() {
-    if (_commentsHook.loading && _commentsHook.comments.isEmpty) {
+    if (_isLoading && _comments.isEmpty) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primary),
       );
     }
 
-    if (_commentsHook.error != null && _commentsHook.comments.isEmpty) {
+    if (_error != null && _comments.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              _commentsHook.error!,
+              _error!,
               style: AppTheme.greyTextStyle,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
             ElevatedButton(
-              onPressed: () => _commentsHook.fetchComments(refresh: true),
+              onPressed: () => _loadComments(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
               ),
@@ -145,7 +217,7 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
       );
     }
 
-    if (_commentsHook.comments.isEmpty) {
+    if (_comments.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -175,19 +247,18 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
 
     return NotificationListener<ScrollNotification>(
       onNotification: (ScrollNotification scrollInfo) {
-        if (!_commentsHook.loadingMore &&
-            _commentsHook.hasMore &&
+        if (!_isLoadingMore &&
+            _hasMore &&
             scrollInfo.metrics.pixels == scrollInfo.metrics.maxScrollExtent) {
-          _commentsHook.loadMore();
+          _loadMoreComments();
         }
         return false;
       },
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 26),
-        itemCount:
-            _commentsHook.comments.length + (_commentsHook.loadingMore ? 1 : 0),
+        itemCount: _comments.length + (_isLoadingMore ? 1 : 0),
         itemBuilder: (context, index) {
-          if (index == _commentsHook.comments.length) {
+          if (index == _comments.length) {
             return const Padding(
               padding: EdgeInsets.symmetric(vertical: 16),
               child: Center(
@@ -195,17 +266,17 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
               ),
             );
           }
-          final comment = _commentsHook.comments[index];
+          final comment = _comments[index];
           return Column(
             children: [
               _buildCommentCard(
-                comment['user']?['avatar'] ?? '',
-                comment['user']?['name'] ?? 'User',
-                comment['content'] ?? '',
-                _formatTime(comment['createdAt']),
-                comment['isTemp'] == true,
+                comment.userAvatar,
+                comment.userName,
+                comment.content,
+                comment.formattedTimeAgo,
+                false,
               ),
-              if (index < _commentsHook.comments.length - 1)
+              if (index < _comments.length - 1)
                 Divider(
                   color: AppColors.dashedLineColor.withOpacity(0.3),
                   thickness: 1,
@@ -257,14 +328,14 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
           ),
           const SizedBox(width: 12),
           GestureDetector(
-            onTap: _commentsHook.posting ? null : _submitComment,
+            onTap: _isPosting ? null : _submitComment,
             child: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: AppColors.primary,
                 shape: BoxShape.circle,
               ),
-              child: _commentsHook.posting
+              child: _isPosting
                   ? const SizedBox(
                       width: 20,
                       height: 20,
@@ -368,7 +439,6 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
                         ),
                       ),
                       onPressed: () {
-                        // Reply to specific comment
                         _commentController.text = '@$name ';
                         _focusNode.requestFocus();
                       },
@@ -404,25 +474,5 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
         ],
       ),
     );
-  }
-
-  String _formatTime(String? isoString) {
-    if (isoString == null) return 'Just now';
-
-    final DateTime time = DateTime.parse(isoString);
-    final now = DateTime.now();
-    final difference = now.difference(time);
-
-    if (difference.inDays > 7) {
-      return '${difference.inDays ~/ 7}w ago';
-    } else if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
-    } else {
-      return 'Just now';
-    }
   }
 }
