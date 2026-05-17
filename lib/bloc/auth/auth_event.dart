@@ -10,14 +10,16 @@ abstract class AuthEvent extends Equatable {
 class SignInRequested extends AuthEvent {
   final String email;
   final String password;
+  final bool rememberMe;
 
   const SignInRequested({
     required this.email,
     required this.password,
+    required this.rememberMe,
   });
 
   @override
-  List<Object?> get props => [email, password];
+  List<Object?> get props => [email, password, rememberMe];
 }
 
 class SignUpRequested extends AuthEvent {
@@ -37,11 +39,17 @@ class SignUpRequested extends AuthEvent {
   List<Object?> get props => [email, password, firstName, lastName];
 }
 
-class SignOutRequested extends AuthEvent {}
+class SignOutRequested extends AuthEvent {
+  const SignOutRequested();
+}
 
-class CheckAuthStatus extends AuthEvent {}
+class CheckAuthStatus extends AuthEvent {
+  const CheckAuthStatus();
+}
 
-class LoadSavedCredentials extends AuthEvent {}
+class LoadSavedCredentials extends AuthEvent {
+  const LoadSavedCredentials();
+}
 
 class SaveCredentialsRequested extends AuthEvent {
   final String email;
@@ -53,9 +61,30 @@ class SaveCredentialsRequested extends AuthEvent {
     required this.password,
     required this.rememberMe,
   });
-
-  @override
-  List<Object?> get props => [email, password, rememberMe];
 }
 
-class ClearAuthError extends AuthEvent {}
+class ClearAuthError extends AuthEvent {
+  const ClearAuthError();
+}
+
+class VerifyEmailRequested extends AuthEvent {
+  final String code;
+
+  const VerifyEmailRequested({required this.code});
+}
+
+class ResendVerificationCode extends AuthEvent {
+  const ResendVerificationCode();
+}
+
+class UpdateEmail extends AuthEvent {
+  final String email;
+
+  const UpdateEmail({required this.email});
+}
+
+class UpdatePassword extends AuthEvent {
+  final String password;
+
+  const UpdatePassword({required this.password});
+}

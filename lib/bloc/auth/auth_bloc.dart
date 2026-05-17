@@ -16,6 +16,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LoadSavedCredentials>(_onLoadSavedCredentials);
     on<SaveCredentialsRequested>(_onSaveCredentialsRequested);
     on<ClearAuthError>(_onClearAuthError);
+    on<VerifyEmailRequested>(_onVerifyEmailRequested);
+    on<ResendVerificationCode>(_onResendVerificationCode);
+    on<UpdateEmail>(_onUpdateEmail);
+    on<UpdatePassword>(_onUpdatePassword);
 
     // Check auth status on initialization
     add(CheckAuthStatus());
@@ -31,6 +35,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       error: null,
       needsVerification: false,
     ));
+
+    // Save credentials if remember me is checked
+    if (event.rememberMe) {
+      await _authService.saveCredentials(event.email, event.password, true);
+    }
 
     final result = await _authService.signIn(event.email, event.password);
 
@@ -50,6 +59,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         isLoading: false,
         error: result.error,
         needsVerification: true,
+        email: event.email,
       ));
     } else {
       emit(state.copyWith(
@@ -96,6 +106,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         isLoading: false,
         error: result.error,
         needsVerification: true,
+        email: event.email,
       ));
     } else {
       emit(state.copyWith(
@@ -132,12 +143,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     final isAuthenticated = await _authService.isAuthenticated();
     final token = await _authService.getToken();
+    final user = await _authService.getCurrentUser();
 
     if (isAuthenticated && token != null) {
       emit(state.copyWith(
         status: AuthStatus.authenticated,
         isAuthenticated: true,
         token: token,
+        user: user,
         isLoading: false,
       ));
     } else {
@@ -170,24 +183,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       event.password,
       event.rememberMe,
     );
-
-    if (event.rememberMe) {
-      emit(state.copyWith(
-        savedCredentials: {
-          'rememberMe': true,
-          'email': event.email,
-          'password': event.password,
-        },
-      ));
-    } else {
-      emit(state.copyWith(
-        savedCredentials: {
-          'rememberMe': false,
-          'email': '',
-          'password': '',
-        },
-      ));
-    }
   }
 
   void _onClearAuthError(
@@ -198,5 +193,81 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       error: null,
       status: AuthStatus.unauthenticated,
     ));
+  }
+
+  Future<void> _onVerifyEmailRequested(
+    VerifyEmailRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    // In a real implementation, you would verify the code with your backend
+    // For now, we'll assume verification is handled by Supabase via email link
+    emit(state.copyWith(
+      status: AuthStatus.loading,
+      isLoading: true,
+    ));
+
+    // Simulate verification check
+    await Future.delayed(const Duration(seconds: 1));
+
+    // Check if email is now verified
+    final isAuthenticated = await _authService.isAuthenticated();
+    if (isAuthenticated) {
+      final token = await _authService.getToken();
+      final user = await _authService.getCurrentUser();
+      emit(state.copyWith(
+        status: AuthStatus.authenticated,
+        isAuthenticated: true,
+        token: token,
+        user: user,
+        isLoading: false,
+        needsVerification: false,
+      ));
+    } else {
+      emit(state.copyWith(
+        status: AuthStatus.verificationRequired,
+        isLoading: false,
+        error: 'Invalid or expired verification code',
+      ));
+    }
+  }
+
+  Future<void> _onResendVerificationCode(
+    ResendVerificationCode event,
+    Emitter<AuthState> emit,
+  ) async {
+    if (state.email.isEmpty) {
+      emit(state.copyWith(
+        error: 'Email address not found',
+      ));
+      return;
+    }
+
+    emit(state.copyWith(
+      isLoading: true,
+      error: null,
+    ));
+
+    final success = await _authService.resendVerification(state.email);
+
+    if (success) {
+      emit(state.copyWith(
+        isLoading: false,
+        error: null,
+      ));
+      // Show success message to user
+    } else {
+      emit(state.copyWith(
+        isLoading: false,
+        error: 'Failed to resend verification code. Please try again.',
+      ));
+    }
+  }
+
+  void _onUpdateEmail(UpdateEmail event, Emitter<AuthState> emit) {
+    emit(state.copyWith(email: event.email));
+  }
+
+  void _onUpdatePassword(UpdatePassword event, Emitter<AuthState> emit) {
+    emit(state.copyWith(password: event.password));
   }
 }

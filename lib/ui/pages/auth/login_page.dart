@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
 import 'package:Prive/app/resources/constant/named_routes.dart';
-import 'package:Prive/data/hooks/auth/auth_hook.dart';
+import 'package:Prive/bloc/auth/auth_bloc.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -16,36 +17,30 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _codeController = TextEditingController();
-  final AuthHook _authHook = AuthHook();
   bool _obscurePassword = true;
-  bool _isInitializing = true;
+  bool _rememberMe = false;
 
   @override
   void initState() {
     super.initState();
-    _initialize();
+    _loadSavedCredentials();
   }
 
-  Future<void> _initialize() async {
-    await _authHook.initialize();
+  void _loadSavedCredentials() {
+    final authBloc = context.read<AuthBloc>();
+    authBloc.add(LoadSavedCredentials());
 
-    if (!mounted) return;
-
-    if (_authHook.savedEmail.isNotEmpty) {
-      _emailController.text = _authHook.savedEmail;
-    }
-    if (_authHook.savedPassword.isNotEmpty) {
-      _passwordController.text = _authHook.savedPassword;
-    }
-
-    setState(() => _isInitializing = false);
-
-    if (_authHook.isTokenReady) {
-      final isAuth = await _authHook.isAuthenticated();
-      if (isAuth && mounted) {
-        Navigator.pushReplacementNamed(context, NamedRoutes.homeScreen);
+    // Wait for credentials to load
+    Future.delayed(const Duration(milliseconds: 100), () {
+      final state = authBloc.state;
+      if (state.savedCredentials['rememberMe'] == true) {
+        setState(() {
+          _rememberMe = true;
+          _emailController.text = state.savedCredentials['email'] ?? '';
+          _passwordController.text = state.savedCredentials['password'] ?? '';
+        });
       }
-    }
+    });
   }
 
   @override
@@ -53,7 +48,6 @@ class _LoginPageState extends State<LoginPage> {
     _emailController.dispose();
     _passwordController.dispose();
     _codeController.dispose();
-    _authHook.dispose();
     super.dispose();
   }
 
@@ -66,19 +60,38 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
 
-    if (_isInitializing || _authHook.isLoadingStorage) {
-      return _buildLoadingScreen();
-    }
-
     return Scaffold(
       backgroundColor: AppColors.whiteColor,
       body: SafeArea(
-        child: ListenableBuilder(
-          listenable: _authHook,
-          builder: (context, _) {
-            return _authHook.showVerification
-                ? _buildVerificationView()
-                : _buildLoginView();
+        child: BlocConsumer<AuthBloc, AuthState>(
+          listener: (context, state) {
+            if (state.status == AuthStatus.authenticated) {
+              Navigator.pushReplacementNamed(context, NamedRoutes.homeScreen);
+            } else if (state.status == AuthStatus.error &&
+                state.error != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.error!),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+              // Clear error after showing
+              context.read<AuthBloc>().add(ClearAuthError());
+            }
+          },
+          builder: (context, state) {
+            if (state.status == AuthStatus.loading &&
+                state.isLoading &&
+                _emailController.text.isEmpty) {
+              return _buildLoadingScreen();
+            }
+
+            if (state.needsVerification) {
+              return _buildVerificationView(state);
+            }
+
+            return _buildLoginView(state);
           },
         ),
       ),
@@ -130,7 +143,7 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _buildLoginView() {
+  Widget _buildLoginView(AuthState state) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -172,7 +185,6 @@ class _LoginPageState extends State<LoginPage> {
             hint: 'Enter your email',
             icon: Icons.email_outlined,
             keyboardType: TextInputType.emailAddress,
-            onChanged: (value) => _authHook.updateEmail(value),
           ),
           const SizedBox(height: 20),
           _buildInputField(
@@ -181,7 +193,6 @@ class _LoginPageState extends State<LoginPage> {
             hint: 'Enter your password',
             icon: Icons.lock_outlined,
             obscureText: _obscurePassword,
-            onChanged: (value) => _authHook.updatePassword(value),
             suffixIcon: IconButton(
               icon: Icon(
                   _obscurePassword
@@ -193,54 +204,28 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
           const SizedBox(height: 16),
-          // Reactive error
-          ListenableBuilder(
-            listenable: _authHook,
-            builder: (_, __) {
-              if (_authHook.loginError.isEmpty) return const SizedBox.shrink();
-              return Container(
-                padding: const EdgeInsets.all(12),
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                    color: AppColors.redColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12)),
-                child: Row(
-                  children: [
-                    const Icon(Icons.error_outline,
-                        color: AppColors.red2, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                        child: Text(_authHook.loginError,
-                            style: AppTheme.blackTextStyle.copyWith(
-                                color: AppColors.redColor, fontSize: 13))),
-                  ],
-                ),
-              );
-            },
-          ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
                   GestureDetector(
-                    onTap: () =>
-                        _authHook.toggleRememberMe(!_authHook.rememberMe),
+                    onTap: () => setState(() => _rememberMe = !_rememberMe),
                     child: Container(
                       width: 20,
                       height: 20,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
-                            color: _authHook.rememberMe
+                            color: _rememberMe
                                 ? AppColors.primary
                                 : AppColors.greyColor,
                             width: 2),
-                        color: _authHook.rememberMe
+                        color: _rememberMe
                             ? AppColors.primary
                             : Colors.transparent,
                       ),
-                      child: _authHook.rememberMe
+                      child: _rememberMe
                           ? const Icon(Icons.check,
                               size: 14, color: Colors.white)
                           : null,
@@ -253,7 +238,9 @@ class _LoginPageState extends State<LoginPage> {
                 ],
               ),
               GestureDetector(
-                onTap: () {},
+                onTap: () {
+                  // Navigate to forgot password
+                },
                 child: Text('Forgot Password?',
                     style: AppTheme.blackTextStyle.copyWith(
                         color: AppColors.primary,
@@ -263,36 +250,30 @@ class _LoginPageState extends State<LoginPage> {
             ],
           ),
           const SizedBox(height: 32),
-          // Reactive button
-          ListenableBuilder(
-            listenable: _authHook,
-            builder: (_, __) {
-              return GestureDetector(
-                onTap: _authHook.loading ? null : _handleLogin,
-                child: Container(
-                  width: double.infinity,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [
-                      AppColors.primary,
-                      AppColors.secondary.withOpacity(0.8)
-                    ]),
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                  child: Center(
-                    child: _authHook.loading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2))
-                        : Text('Sign In',
-                            style: AppTheme.whiteTextStyle.copyWith(
-                                fontWeight: AppTheme.bold, fontSize: 18)),
-                  ),
-                ),
-              );
-            },
+          GestureDetector(
+            onTap: state.isLoading ? null : _handleLogin,
+            child: Container(
+              width: double.infinity,
+              height: 56,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [
+                  AppColors.primary,
+                  AppColors.secondary.withOpacity(0.8)
+                ]),
+                borderRadius: BorderRadius.circular(28),
+              ),
+              child: Center(
+                child: state.isLoading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2))
+                    : Text('Sign In',
+                        style: AppTheme.whiteTextStyle
+                            .copyWith(fontWeight: AppTheme.bold, fontSize: 18)),
+              ),
+            ),
           ),
           const SizedBox(height: 24),
           Row(
@@ -343,7 +324,7 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _buildVerificationView() {
+  Widget _buildVerificationView(AuthState state) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -351,7 +332,9 @@ class _LoginPageState extends State<LoginPage> {
         children: [
           const SizedBox(height: 20),
           GestureDetector(
-            onTap: () => _authHook.backToLogin(),
+            onTap: () {
+              context.read<AuthBloc>().add(const ClearAuthError());
+            },
             child: Container(
               width: 40,
               height: 40,
@@ -379,84 +362,52 @@ class _LoginPageState extends State<LoginPage> {
               style: AppTheme.blackTextStyle
                   .copyWith(fontWeight: AppTheme.bold, fontSize: 28)),
           const SizedBox(height: 8),
-          Text("We've sent a verification code to your email",
+          Text("We've sent a verification link to your email",
               style: AppTheme.greyTextStyle.copyWith(fontSize: 14)),
           const SizedBox(height: 32),
-          _buildInputField(
-            controller: _codeController,
-            label: 'Verification Code',
-            hint: 'Enter 6-digit code',
-            icon: Icons.pin_outlined,
-            keyboardType: TextInputType.number,
-            onChanged: (value) => _authHook.updateCode(value),
-          ),
-          const SizedBox(height: 12),
-          ListenableBuilder(
-            listenable: _authHook,
-            builder: (_, __) {
-              if (_authHook.verificationError.isEmpty) {
-                return const SizedBox.shrink();
-              }
-              return Container(
-                padding: const EdgeInsets.all(12),
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                    color: AppColors.redColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12)),
-                child: Row(
-                  children: [
-                    const Icon(Icons.error_outline,
-                        color: AppColors.red2, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                        child: Text(_authHook.verificationError,
-                            style: AppTheme.blackTextStyle.copyWith(
-                                color: AppColors.redColor, fontSize: 13))),
-                  ],
-                ),
-              );
-            },
-          ),
+          if (state.error != null)
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                  color: AppColors.redColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12)),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline,
+                      color: AppColors.red2, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                      child: Text(state.error!,
+                          style: AppTheme.blackTextStyle.copyWith(
+                              color: AppColors.redColor, fontSize: 13))),
+                ],
+              ),
+            ),
           const SizedBox(height: 24),
-          ListenableBuilder(
-            listenable: _authHook,
-            builder: (_, __) {
-              return GestureDetector(
-                onTap: _authHook.loading ? null : _handleVerify,
-                child: Container(
-                  width: double.infinity,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [
-                      AppColors.primary,
-                      AppColors.primary.withOpacity(0.8)
-                    ]),
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                  child: Center(
-                    child: _authHook.loading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2))
-                        : Text('Verify',
-                            style: AppTheme.whiteTextStyle.copyWith(
-                                fontWeight: AppTheme.bold, fontSize: 18)),
-                  ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 16),
-          Center(
-            child: GestureDetector(
-              onTap: () => _authHook.resendCode(),
-              child: Text('Resend Code',
-                  style: AppTheme.blackTextStyle.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: AppTheme.bold,
-                      fontSize: 14)),
+          GestureDetector(
+            onTap: state.isLoading ? null : _handleResendVerification,
+            child: Container(
+              width: double.infinity,
+              height: 56,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [
+                  AppColors.primary,
+                  AppColors.primary.withOpacity(0.8)
+                ]),
+                borderRadius: BorderRadius.circular(28),
+              ),
+              child: Center(
+                child: state.isLoading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2))
+                    : Text('Resend Verification Email',
+                        style: AppTheme.whiteTextStyle
+                            .copyWith(fontWeight: AppTheme.bold, fontSize: 16)),
+              ),
             ),
           ),
         ],
@@ -472,7 +423,6 @@ class _LoginPageState extends State<LoginPage> {
     bool obscureText = false,
     Widget? suffixIcon,
     TextInputType keyboardType = TextInputType.text,
-    ValueChanged<String>? onChanged,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -492,7 +442,6 @@ class _LoginPageState extends State<LoginPage> {
             controller: controller,
             obscureText: obscureText,
             keyboardType: keyboardType,
-            onChanged: onChanged,
             style: AppTheme.blackTextStyle.copyWith(fontSize: 16),
             decoration: InputDecoration(
               hintText: hint,
@@ -529,17 +478,34 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Future<void> _handleLogin() async {
-    final success = await _authHook.handleLogin();
-    if (success && mounted) {
-      Navigator.pushReplacementNamed(context, NamedRoutes.homeScreen);
+  void _handleLogin() {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your email')),
+      );
+      return;
     }
+
+    if (password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your password')),
+      );
+      return;
+    }
+
+    context.read<AuthBloc>().add(
+          SignInRequested(
+            email: email,
+            password: password,
+            rememberMe: _rememberMe,
+          ),
+        );
   }
 
-  Future<void> _handleVerify() async {
-    final success = await _authHook.handleVerify();
-    if (success && mounted) {
-      Navigator.pushReplacementNamed(context, NamedRoutes.homeScreen);
-    }
+  void _handleResendVerification() {
+    context.read<AuthBloc>().add(const ResendVerificationCode());
   }
 }

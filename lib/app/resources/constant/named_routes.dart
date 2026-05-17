@@ -24,9 +24,10 @@ class NamedRoutes {
 
   // Auth routes
   static const onboardingScreen = '/onboarding-screen';
+  static const String onboardingSuccessScreen = '/onboarding-success';
   static const loginScreen = '/login-screen';
   static const registerScreen = '/register-screen';
-  static const demograpicScreen = '/demograpics-screen';
+  static const demographicScreen = '/demographics-screen';
 
   // Settings routes
   static const settingsScreen = '/settings-screen';

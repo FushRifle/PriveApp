@@ -6,10 +6,12 @@ class Profile {
   final String? displayName;
   final String? bio;
   final String? avatar;
+  final String? coverImage; // Added cover image
   final List<String> photos;
   final List<String> interests;
   final int age;
   final String? gender;
+  final String? lookingFor;
   final String? location;
   final String? work;
   final String? education;
@@ -28,10 +30,12 @@ class Profile {
     this.displayName,
     this.bio,
     this.avatar,
+    this.coverImage, // Added cover image
     this.photos = const [],
     this.interests = const [],
     required this.age,
     this.gender,
+    this.lookingFor,
     this.location,
     this.work,
     this.education,
@@ -52,14 +56,17 @@ class Profile {
       displayName: json['displayName']?.toString() ?? json['name']?.toString(),
       bio: json['bio']?.toString(),
       avatar: json['avatar']?.toString(),
+      coverImage: json['coverImage']?.toString() ??
+          json['cover_image']?.toString(), // Added cover image
       photos: json['photos'] != null ? List<String>.from(json['photos']) : [],
       interests:
           json['interests'] != null ? List<String>.from(json['interests']) : [],
       age: json['age'] ?? 0,
       gender: json['gender']?.toString(),
+      lookingFor: json['lookingFor']?.toString(),
       location: json['location']?.toString(),
-      work: json['work']?.toString(), // Add this
-      education: json['education']?.toString(), // Add this
+      work: json['work']?.toString(),
+      education: json['education']?.toString(),
       latitude: json['latitude']?.toDouble(),
       longitude: json['longitude']?.toDouble(),
       settings: json['settings'] as Map<String, dynamic>?,
@@ -83,10 +90,12 @@ class Profile {
         if (displayName != null) 'displayName': displayName,
         if (bio != null) 'bio': bio,
         if (avatar != null) 'avatar': avatar,
+        if (coverImage != null) 'coverImage': coverImage, // Added cover image
         'photos': photos,
         'interests': interests,
         'age': age,
         if (gender != null) 'gender': gender,
+        if (lookingFor != null) 'lookingFor': lookingFor,
         if (location != null) 'location': location,
         if (work != null) 'work': work,
         if (education != null) 'education': education,
@@ -106,10 +115,12 @@ class Profile {
     String? displayName,
     String? bio,
     String? avatar,
+    String? coverImage, // Added cover image
     List<String>? photos,
     List<String>? interests,
     int? age,
     String? gender,
+    String? lookingFor,
     String? location,
     String? work,
     String? education,
@@ -128,10 +139,12 @@ class Profile {
       displayName: displayName ?? this.displayName,
       bio: bio ?? this.bio,
       avatar: avatar ?? this.avatar,
+      coverImage: coverImage ?? this.coverImage, // Added cover image
       photos: photos ?? this.photos,
       interests: interests ?? this.interests,
       age: age ?? this.age,
       gender: gender ?? this.gender,
+      lookingFor: lookingFor ?? this.lookingFor,
       location: location ?? this.location,
       work: work ?? this.work,
       education: education ?? this.education,
@@ -149,6 +162,7 @@ class Profile {
   // Helper getters
   String get displayNameOrDefault => displayName ?? 'User';
   String get avatarOrDefault => avatar ?? '';
+  String get coverImageOrDefault => coverImage ?? '';
   String get bioOrDefault => bio ?? 'No bio yet';
   String get locationOrDefault => location ?? 'Location not set';
   List<String> get photosOrDefault => photos.isEmpty ? [] : photos;
@@ -157,6 +171,16 @@ class Profile {
   String get ageText => age > 0 ? '$age years old' : 'Age not specified';
   String get workOrDefault => work ?? 'Work not specified';
   String get educationOrDefault => education ?? 'Education not specified';
+  String get lookingForOrDefault => lookingFor ?? 'Not specified';
+}
+
+enum ProfileStatus {
+  initial,
+  loading,
+  refreshing,
+  saving,
+  success,
+  error,
 }
 
 class ProfileState extends Equatable {
@@ -218,13 +242,4 @@ class ProfileState extends Equatable {
         isRefreshing,
         lastUpdated,
       ];
-}
-
-enum ProfileStatus {
-  initial,
-  loading,
-  refreshing,
-  saving,
-  success,
-  error,
 }

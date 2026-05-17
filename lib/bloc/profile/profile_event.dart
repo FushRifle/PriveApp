@@ -43,6 +43,26 @@ class UpdateProfileAvatar extends ProfileEvent {
   List<Object?> get props => [avatarUrl];
 }
 
+class UpdateProfileCoverImage extends ProfileEvent {
+  // Added cover image event
+  final String coverImageUrl;
+
+  const UpdateProfileCoverImage({required this.coverImageUrl});
+
+  @override
+  List<Object?> get props => [coverImageUrl];
+}
+
+class UpdateProfileDisplayName extends ProfileEvent {
+  // Added display name event
+  final String displayName;
+
+  const UpdateProfileDisplayName({required this.displayName});
+
+  @override
+  List<Object?> get props => [displayName];
+}
+
 class UpdateProfileBio extends ProfileEvent {
   final String bio;
 

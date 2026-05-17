@@ -7,23 +7,18 @@ abstract class UserEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-// Load current user
 class LoadCurrentUser extends UserEvent {}
 
-// Refresh current user
 class RefreshCurrentUser extends UserEvent {}
 
-// Load user by ID
 class LoadUserById extends UserEvent {
   final int userId;
-
   const LoadUserById({required this.userId});
 
   @override
   List<Object?> get props => [userId];
 }
 
-// Update user
 class UpdateUser extends UserEvent {
   final String? name;
   final String? username;
@@ -70,37 +65,30 @@ class UpdateUser extends UserEvent {
       ];
 }
 
-// Update user avatar
 class UpdateUserAvatar extends UserEvent {
   final String avatar;
-
   const UpdateUserAvatar({required this.avatar});
 
   @override
   List<Object?> get props => [avatar];
 }
 
-// Update user cover image
 class UpdateUserCoverImage extends UserEvent {
   final String coverImage;
-
   const UpdateUserCoverImage({required this.coverImage});
 
   @override
   List<Object?> get props => [coverImage];
 }
 
-// Update user bio
 class UpdateUserBio extends UserEvent {
   final String bio;
-
   const UpdateUserBio({required this.bio});
 
   @override
   List<Object?> get props => [bio];
 }
 
-// Update user demographic info
 class UpdateDemographicInfo extends UserEvent {
   final int age;
   final String gender;
@@ -138,14 +126,10 @@ class UpdateDemographicInfo extends UserEvent {
       ];
 }
 
-// Complete onboarding
 class CompleteOnboarding extends UserEvent {}
 
-// Delete account
 class DeleteAccount extends UserEvent {}
 
-// Clear user error
 class ClearUserError extends UserEvent {}
 
-// Reset user state
 class ResetUserState extends UserEvent {}

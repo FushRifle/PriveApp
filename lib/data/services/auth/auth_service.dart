@@ -19,7 +19,11 @@ class AuthService {
     ),
   );
 
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+    ),
+  );
 
   // SIGN IN
   Future<AuthResult> signIn(String email, String password) async {
@@ -44,40 +48,53 @@ class AuthService {
 
       final token = session.accessToken;
 
-      // Backend sync / user bootstrap
-      final backendResponse = await _dio.post(
-        '/api/auth/signin',
-        data: {
-          'email': normalizedEmail,
-          'password': password,
-        },
-      );
+      // Check if email is verified
+      if (user.confirmedAt == null) {
+        return AuthResult(
+          success: false,
+          needsVerification: true,
+          error: 'Please verify your email before logging in',
+        );
+      }
 
-      final backendData = backendResponse.data;
+      // Backend sync (optional, don't fail if backend is down)
+      try {
+        await _dio.post(
+          '/api/auth/signin',
+          data: {
+            'email': normalizedEmail,
+            'password': password,
+          },
+        );
+      } catch (e) {
+        // Log but don't fail - Supabase is the source of truth
+        print('Backend sync failed: $e');
+      }
 
       return AuthResult(
         success: true,
         token: token,
-        user: backendData['user'] ??
-            {
-              'id': user.id,
-              'email': user.email,
-            },
+        user: {
+          'id': user.id,
+          'email': user.email,
+          'firstName': user.userMetadata?['first_name'] ?? '',
+          'lastName': user.userMetadata?['last_name'] ?? '',
+        },
       );
-    } on AuthApiException catch (e) {
+    } on AuthException catch (e) {
       return AuthResult(
         success: false,
-        error: e.message,
+        error: _handleAuthError(e),
       );
     } on DioException catch (e) {
       return AuthResult(
         success: false,
-        error: _handleError(e),
+        error: _handleDioError(e),
       );
     } catch (e) {
       return AuthResult(
         success: false,
-        error: 'Unexpected authentication error: $e',
+        error: 'Unable to connect. Please check your internet connection.',
       );
     }
   }
@@ -105,26 +122,30 @@ class AuthService {
       final user = authResponse.user;
 
       // Email verification required
-      if (session == null) {
+      if (session == null || user?.confirmedAt == null) {
         return AuthResult(
           success: false,
           needsVerification: true,
-          error: 'Please verify your email before logging in',
+          error: 'Verification email sent. Please verify your email.',
         );
       }
 
       final token = session.accessToken;
 
-      // Backend sync
-      await _dio.post(
-        '/api/auth/signup',
-        data: {
-          'email': normalizedEmail,
-          'password': password,
-          'firstName': firstName,
-          'lastName': lastName,
-        },
-      );
+      // Backend sync (optional)
+      try {
+        await _dio.post(
+          '/api/auth/signup',
+          data: {
+            'email': normalizedEmail,
+            'password': password,
+            'firstName': firstName,
+            'lastName': lastName,
+          },
+        );
+      } catch (e) {
+        print('Backend sync failed: $e');
+      }
 
       return AuthResult(
         success: true,
@@ -132,23 +153,48 @@ class AuthService {
         user: {
           'id': user?.id,
           'email': user?.email,
+          'firstName': firstName,
+          'lastName': lastName,
         },
       );
-    } on AuthApiException catch (e) {
+    } on AuthException catch (e) {
       return AuthResult(
         success: false,
-        error: e.message,
+        error: _handleAuthError(e),
       );
     } on DioException catch (e) {
       return AuthResult(
         success: false,
-        error: _handleError(e),
+        error: _handleDioError(e),
       );
     } catch (e) {
       return AuthResult(
         success: false,
-        error: 'Unexpected signup error: $e',
+        error: 'Unable to create account. Please try again.',
       );
+    }
+  }
+
+  // RESEND VERIFICATION
+  Future<bool> resendVerification(String email) async {
+    try {
+      final tempPassword = 'Temp_${DateTime.now().millisecondsSinceEpoch}';
+      await SupabaseConfig.client.auth.signUp(
+        email: email.trim().toLowerCase(),
+        password: tempPassword,
+        emailRedirectTo: 'com.prive.app://verify-email',
+      );
+
+      return true;
+    } on AuthException catch (e) {
+      if (e.message.contains('already registered')) {
+        return false;
+      }
+      print('Resend verification error: $e');
+      return false;
+    } catch (e) {
+      print('Failed to resend verification: $e');
+      return false;
     }
   }
 
@@ -158,39 +204,72 @@ class AuthService {
       await SupabaseConfig.client.auth.signOut();
     } catch (_) {}
 
-    await _storage.delete(key: 'remember_me');
-    await _storage.delete(key: 'email');
-    await _storage.delete(key: 'password');
+    // Clear all stored credentials
+    await _storage.deleteAll();
   }
 
   // GET CURRENT TOKEN
   Future<String?> getToken() async {
-    return SupabaseConfig.client.auth.currentSession?.accessToken;
+    try {
+      final session = SupabaseConfig.client.auth.currentSession;
+      return session?.accessToken;
+    } catch (e) {
+      return null;
+    }
   }
 
   // AUTH CHECK
   Future<bool> isAuthenticated() async {
-    final token = await getToken();
-    return token != null && token.isNotEmpty;
+    try {
+      final session = SupabaseConfig.client.auth.currentSession;
+      return session != null && session.accessToken.isNotEmpty;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // GET CURRENT USER
+  Future<Map<String, dynamic>?> getCurrentUser() async {
+    try {
+      final user = SupabaseConfig.client.auth.currentUser;
+      if (user == null) return null;
+
+      return {
+        'id': user.id,
+        'email': user.email,
+        'firstName': user.userMetadata?['first_name'] ?? '',
+        'lastName': user.userMetadata?['last_name'] ?? '',
+      };
+    } catch (e) {
+      return null;
+    }
   }
 
   // GET SAVED CREDENTIALS
   Future<Map<String, dynamic>> getSavedCredentials() async {
-    final rememberMe = await _storage.read(key: 'remember_me') == 'true';
+    try {
+      final rememberMe = await _storage.read(key: 'remember_me') == 'true';
 
-    if (!rememberMe) {
+      if (!rememberMe) {
+        return {
+          'rememberMe': false,
+          'email': '',
+          'password': '',
+        };
+      }
+
+      return {
+        'rememberMe': true,
+        'email': await _storage.read(key: 'email') ?? '',
+        'password': await _storage.read(key: 'password') ?? '',
+      };
+    } catch (e) {
       return {
         'rememberMe': false,
         'email': '',
         'password': '',
       };
     }
-
-    return {
-      'rememberMe': true,
-      'email': await _storage.read(key: 'email') ?? '',
-      'password': await _storage.read(key: 'password') ?? '',
-    };
   }
 
   // SAVE REMEMBER ME CREDENTIALS
@@ -199,82 +278,51 @@ class AuthService {
     String password,
     bool remember,
   ) async {
-    if (remember) {
-      await _storage.write(
-        key: 'email',
-        value: email.trim().toLowerCase(),
-      );
+    try {
+      if (remember) {
+        await _storage.write(
+          key: 'email',
+          value: email.trim().toLowerCase(),
+        );
 
-      await _storage.write(
-        key: 'password',
-        value: password,
-      );
+        await _storage.write(
+          key: 'password',
+          value: password,
+        );
 
-      await _storage.write(
-        key: 'remember_me',
-        value: 'true',
-      );
-
-      return;
+        await _storage.write(
+          key: 'remember_me',
+          value: 'true',
+        );
+      } else {
+        await _storage.delete(key: 'email');
+        await _storage.delete(key: 'password');
+        await _storage.write(
+          key: 'remember_me',
+          value: 'false',
+        );
+      }
+    } catch (e) {
+      print('Error saving credentials: $e');
     }
-
-    await _storage.delete(key: 'email');
-    await _storage.delete(key: 'password');
-
-    await _storage.write(
-      key: 'remember_me',
-      value: 'false',
-    );
   }
 
-  // ERROR HANDLER
-  String _handleError(DioException e) {
-    final data = e.response?.data;
-
-    if (data is Map<String, dynamic>) {
-      if (data['message'] != null) {
-        return data['message'].toString();
-      }
-
-      if (data['error'] != null) {
-        return data['error'].toString();
-      }
+  String _handleAuthError(AuthException e) {
+    if (e.message.contains('Invalid login credentials')) {
+      return 'Invalid email or password';
     }
-
-    switch (e.response?.statusCode) {
-      case 400:
-        return 'Invalid request';
-      case 401:
-        return 'Invalid email or password';
-      case 403:
-        return 'Access denied';
-      case 404:
-        return 'Service unavailable';
-      case 409:
-        return 'User already exists';
-      case 422:
-        return 'Invalid form submission';
-      case 500:
-        return 'Server error';
+    if (e.message.contains('Email not confirmed')) {
+      return 'Please verify your email first';
     }
+    return e.message;
+  }
 
-    switch (e.type) {
-      case DioExceptionType.connectionTimeout:
-        return 'Connection timeout';
-      case DioExceptionType.sendTimeout:
-        return 'Request timeout';
-      case DioExceptionType.receiveTimeout:
-        return 'Server took too long to respond';
-      case DioExceptionType.badCertificate:
-        return 'Security certificate error';
-      case DioExceptionType.cancel:
-        return 'Request cancelled';
-      case DioExceptionType.connectionError:
-      case DioExceptionType.unknown:
-        return 'Network error. Check your connection';
-      default:
-        return 'Authentication failed. Please try again';
+  String _handleDioError(DioException e) {
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.connectionError) {
+      return 'Network error. Please check your connection.';
     }
+    return 'Service temporarily unavailable. Please try again.';
   }
 }
 
@@ -292,20 +340,4 @@ class AuthResult {
     this.error,
     this.needsVerification = false,
   });
-
-  AuthResult copyWith({
-    bool? success,
-    String? token,
-    Map<String, dynamic>? user,
-    String? error,
-    bool? needsVerification,
-  }) {
-    return AuthResult(
-      success: success ?? this.success,
-      token: token ?? this.token,
-      user: user ?? this.user,
-      error: error ?? this.error,
-      needsVerification: needsVerification ?? this.needsVerification,
-    );
-  }
 }

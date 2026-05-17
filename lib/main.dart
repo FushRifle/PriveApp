@@ -1,33 +1,30 @@
 import 'package:Prive/bloc/profile/profile_bloc.dart';
+import 'package:Prive/ui/pages/auth/success_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:Prive/app/configs/colors.dart';
 import 'package:Prive/app/configs/theme.dart';
 import 'package:Prive/app/resources/constant/named_routes.dart';
+import 'package:Prive/bloc/auth/auth_bloc.dart';
 import 'package:Prive/data/models/post_model.dart';
-import 'package:Prive/ui/pages/main/explore/explore_page.dart';
-import 'package:Prive/ui/pages/main/chat/inbox_page.dart';
-import 'package:Prive/ui/pages/main/home/home_page.dart';
 import 'package:Prive/ui/pages/main/home/post_detail_page.dart';
 import 'package:Prive/ui/pages/main/notification/notification_page.dart';
 import 'package:Prive/ui/pages/main/profile/edit_profile_page.dart';
 import 'package:Prive/ui/pages/social/insights_page.dart';
 import 'package:Prive/ui/pages/main/profile/profile_page.dart';
-import 'package:Prive/ui/pages/main/reels/reels_page.dart';
 import 'package:Prive/ui/pages/main/home/create_post_page.dart';
 import 'package:Prive/ui/pages/main/status/create_status_page.dart';
 import 'package:Prive/ui/pages/main/status/status_page.dart';
 import 'package:Prive/ui/pages/auth/login_page.dart';
 import 'package:Prive/ui/pages/auth/register_page.dart';
+import 'package:Prive/ui/pages/auth/demographic_page.dart';
 import 'package:Prive/ui/pages/settings/settings_page.dart';
 import 'package:Prive/ui/pages/settings/subscribe_page.dart';
 import 'package:Prive/ui/pages/social/friends_list_page.dart';
 import 'package:Prive/ui/pages/social/matches_page.dart';
-import 'package:Prive/ui/widgets/home/clip_status_bar.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import 'package:Prive/app/configs/api_config.dart';
 import 'package:Prive/data/providers/theme_provider.dart';
 import 'package:Prive/bloc/home/feed_bloc.dart';
@@ -37,6 +34,7 @@ import 'package:Prive/bloc/explore/explore_bloc.dart';
 import 'package:Prive/bloc/reels/reel_bloc.dart';
 import 'package:cloudinary_url_gen/cloudinary.dart';
 import 'package:cloudinary_flutter/cloudinary_context.dart';
+import 'package:Prive/managers/auth_guard.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -77,39 +75,30 @@ class MyApp extends ConsumerStatefulWidget {
 }
 
 class _MyAppState extends ConsumerState<MyApp> {
-  bool _isLoading = true;
-  String? _initialRoute;
+  late final AuthBloc _authBloc;
 
   @override
   void initState() {
     super.initState();
-    _checkAuthState();
+    _authBloc = AuthBloc();
+    _authBloc.add(CheckAuthStatus());
   }
 
-  Future<void> _checkAuthState() async {
-    final session = Supabase.instance.client.auth.currentSession;
-    setState(() {
-      _initialRoute =
-          session != null ? NamedRoutes.homeScreen : NamedRoutes.loginScreen;
-      _isLoading = false;
-    });
+  @override
+  void dispose() {
+    _authBloc.close();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
 
-    if (_isLoading) {
-      return const MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: Scaffold(
-          body: Center(child: CircularProgressIndicator()),
-        ),
-      );
-    }
-
     return MultiBlocProvider(
       providers: [
+        BlocProvider<AuthBloc>.value(
+          value: _authBloc,
+        ),
         BlocProvider<UserBloc>(
           create: (context) => UserBloc(),
         ),
@@ -127,33 +116,72 @@ class _MyAppState extends ConsumerState<MyApp> {
         ),
         BlocProvider(create: (context) => ProfileBloc()),
       ],
-      child: MaterialApp(
-        title: 'Prive',
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: themeMode,
-        debugShowCheckedModeBanner: false,
-        scrollBehavior: const CustomScrollBehavior(),
-        initialRoute: _initialRoute,
-        onGenerateRoute: _generateRoute,
-        builder: (context, child) {
-          if (child == null) return const SizedBox.shrink();
-          final mediaQueryData = MediaQuery.of(context);
+      child: MultiBlocListener(
+        listeners: [
+          BlocListener<AuthBloc, AuthState>(
+            listener: (context, state) {
+              if (state.status == AuthStatus.error &&
+                  state.error?.contains('token') == true) {
+                _authBloc.add(SignOutRequested());
+              }
+            },
+          ),
+          BlocListener<ProfileBloc, ProfileState>(
+            listener: (context, state) {
+              // Use WidgetsBinding to ensure context is safe for navigation
+              if (state.status == ProfileStatus.success && mounted) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    Navigator.pushReplacementNamed(
+                        context, NamedRoutes.onboardingSuccessScreen);
+                  }
+                });
+              }
+              if (state.status == ProfileStatus.error &&
+                  state.error != null &&
+                  mounted) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(state.error!),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                });
+              }
+            },
+          ),
+        ],
+        child: MaterialApp(
+          title: 'Prive',
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: themeMode,
+          debugShowCheckedModeBanner: false,
+          scrollBehavior: const CustomScrollBehavior(),
+          home: const AuthGuard(),
+          onGenerateRoute: _generateRoute,
+          builder: (context, child) {
+            if (child == null) return const SizedBox.shrink();
+            final mediaQueryData = MediaQuery.of(context);
 
-          if (kIsWeb) {
-            return MediaQuery(
-              data: mediaQueryData.copyWith(
-                viewInsets: EdgeInsets.zero,
-                viewPadding: EdgeInsets.only(
-                  top: mediaQueryData.padding.top,
-                  bottom: mediaQueryData.padding.bottom,
+            if (kIsWeb) {
+              return MediaQuery(
+                data: mediaQueryData.copyWith(
+                  viewInsets: EdgeInsets.zero,
+                  viewPadding: EdgeInsets.only(
+                    top: mediaQueryData.padding.top,
+                    bottom: mediaQueryData.padding.bottom,
+                  ),
                 ),
-              ),
-              child: child,
-            );
-          }
-          return child;
-        },
+                child: child,
+              );
+            }
+            return child;
+          },
+        ),
       ),
     );
   }
@@ -192,8 +220,15 @@ class _MyAppState extends ConsumerState<MyApp> {
       case NamedRoutes.registerScreen:
         return MaterialPageRoute(builder: (context) => const RegisterPage());
 
+      case NamedRoutes.demographicScreen:
+        return MaterialPageRoute(
+            builder: (context) => const OnboardingDemographicPage());
+      case NamedRoutes.onboardingSuccessScreen:
+        return MaterialPageRoute(
+            builder: (context) => const OnboardingSuccessPage());
+
       case NamedRoutes.homeScreen:
-        return MaterialPageRoute(builder: (context) => const MainWrapper());
+        return MaterialPageRoute(builder: (context) => const AuthGuard());
 
       case NamedRoutes.profileScreen:
         return MaterialPageRoute(builder: (context) => const ProfilePage());
@@ -235,10 +270,8 @@ class _MyAppState extends ConsumerState<MyApp> {
             builder: (context) => const NotificationPage());
 
       default:
-        final session = Supabase.instance.client.auth.currentSession;
         return MaterialPageRoute(
-          builder: (context) =>
-              session != null ? const MainWrapper() : const LoginPage(),
+          builder: (context) => const AuthGuard(),
         );
     }
   }
@@ -251,197 +284,4 @@ class CustomScrollBehavior extends ScrollBehavior {
   ScrollPhysics getScrollPhysics(BuildContext context) {
     return const BouncingScrollPhysics();
   }
-}
-
-class MainWrapper extends StatefulWidget {
-  const MainWrapper({super.key});
-
-  @override
-  State<MainWrapper> createState() => _MainWrapperState();
-}
-
-class _MainWrapperState extends State<MainWrapper> {
-  int _currentIndex = 0;
-
-  final List<Widget> _pages = [
-    const HomePage(),
-    const DiscoverPage(),
-    const ReelsPage(),
-    const InboxPage(),
-  ];
-
-  final List<BottomNavItem> _navItems = [
-    BottomNavItem(icon: Icons.home, label: 'Home'),
-    BottomNavItem(icon: Icons.explore, label: 'Discover'),
-    BottomNavItem(icon: Icons.play_circle_fill, label: 'Reels'),
-    BottomNavItem(icon: Icons.message, label: 'Inbox'),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor =
-        isDarkMode ? AppColors.darkBackground : Colors.white;
-
-    return Scaffold(
-      body: Stack(
-        alignment: Alignment.bottomCenter,
-        children: [
-          IndexedStack(
-            index: _currentIndex,
-            children: _pages,
-          ),
-          if (_currentIndex != 2) _buildBackgroundGradient(),
-          if (_currentIndex != 2)
-            Positioned(
-              bottom: 72,
-              child: Transform.rotate(
-                angle: 11,
-                child: InkWell(
-                  onTap: () {
-                    HapticFeedback.lightImpact();
-                    Navigator.pushNamed(
-                      context,
-                      NamedRoutes.createPostScreen,
-                    );
-                  },
-                  child: ClipPath(
-                    clipper: ClipStatusBar(),
-                    child: Container(
-                      height: 110,
-                      width: 40,
-                      color: AppColors.primary,
-                      child: const Icon(
-                        Icons.add,
-                        size: 24,
-                        color: AppColors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          if (_currentIndex != 2) _buildBottomNavBar(backgroundColor),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBackgroundGradient() {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final gradientColor = isDarkMode ? AppColors.darkBackground : Colors.white;
-
-    return Container(
-      width: double.infinity,
-      height: 150,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            gradientColor.withOpacity(0),
-            gradientColor.withOpacity(0.9),
-          ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottomNavBar(Color backgroundColor) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final unselectedColor =
-        isDarkMode ? Colors.grey.shade500 : Colors.grey.shade600;
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 25),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        bottom: true,
-        child: SizedBox(
-          height: 70,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              for (int i = 0; i < _navItems.length; i++)
-                _buildNavItem(_navItems[i], i, unselectedColor),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(BottomNavItem item, int index, Color unselectedColor) {
-    final isSelected = _currentIndex == index;
-
-    return Expanded(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            setState(() => _currentIndex = index);
-          },
-          borderRadius: BorderRadius.circular(30),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    if (isSelected)
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    Icon(
-                      item.icon,
-                      size: 24,
-                      color: isSelected ? AppColors.primary : unselectedColor,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  item.label,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                    color: isSelected ? AppColors.primary : unselectedColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class BottomNavItem {
-  final IconData icon;
-  final String label;
-
-  const BottomNavItem({
-    required this.icon,
-    required this.label,
-  });
 }

@@ -4,6 +4,14 @@ import '../../../core/api_service.dart';
 class UserService {
   final ApiService _api = ApiService();
 
+  void setAuthToken(String token) {
+    _api.setAuthToken(token);
+  }
+
+  void clearAuthToken() {
+    _api.clearAuthToken();
+  }
+
   Future<Map<String, dynamic>> getCurrentUser() async {
     try {
       final response = await _api.get('/api/users/me');

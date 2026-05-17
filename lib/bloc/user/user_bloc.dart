@@ -23,6 +23,14 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     on<ResetUserState>(_onResetUserState);
   }
 
+  void setAuthToken(String token) {
+    _userService.setAuthToken(token);
+  }
+
+  void clearAuthToken() {
+    _userService.clearAuthToken();
+  }
+
   Future<void> _onLoadCurrentUser(
     LoadCurrentUser event,
     Emitter<UserState> emit,
@@ -37,10 +45,9 @@ class UserBloc extends Bloc<UserEvent, UserState> {
 
     try {
       final userData = await _userService.getCurrentUser();
-      final user = User.fromJson(userData);
 
       emit(state.copyWith(
-        currentUser: user,
+        currentUser: userData,
         status: UserStatus.success,
         isLoading: false,
         error: null,
@@ -67,10 +74,9 @@ class UserBloc extends Bloc<UserEvent, UserState> {
 
     try {
       final userData = await _userService.getCurrentUser();
-      final user = User.fromJson(userData);
 
       emit(state.copyWith(
-        currentUser: user,
+        currentUser: userData,
         status: UserStatus.success,
         isRefreshing: false,
         error: null,
@@ -90,24 +96,20 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     Emitter<UserState> emit,
   ) async {
     emit(state.copyWith(
-      viewedStatus: UserStatus.loading,
       isLoading: true,
       error: null,
     ));
 
     try {
       final userData = await _userService.getUserById(event.userId);
-      final user = User.fromJson(userData);
 
       emit(state.copyWith(
-        viewedUser: user,
-        viewedStatus: UserStatus.success,
+        viewedUser: userData,
         isLoading: false,
         error: null,
       ));
     } catch (e) {
       emit(state.copyWith(
-        viewedStatus: UserStatus.error,
         isLoading: false,
         error: e.toString(),
       ));
@@ -124,7 +126,6 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       error: null,
     ));
 
-    // Build update data
     final updateData = <String, dynamic>{};
     if (event.name != null) updateData['name'] = event.name;
     if (event.username != null) updateData['username'] = event.username;
@@ -141,22 +142,9 @@ class UserBloc extends Bloc<UserEvent, UserState> {
 
     try {
       // Optimistic update
-      final currentUser = state.currentUser;
-      if (currentUser != null) {
-        final optimisticUser = currentUser.copyWith(
-          name: event.name ?? currentUser.name,
-          username: event.username ?? currentUser.username,
-          phone: event.phone ?? currentUser.phone,
-          age: event.age ?? currentUser.age,
-          occupation: event.occupation ?? currentUser.occupation,
-          bio: event.bio ?? currentUser.bio,
-          location: event.location ?? currentUser.location,
-          work: event.work ?? currentUser.work,
-          education: event.education ?? currentUser.education,
-          languages: event.languages ?? currentUser.languages,
-          avatar: event.avatar ?? currentUser.avatar,
-          coverImage: event.coverImage ?? currentUser.coverImage,
-        );
+      if (state.currentUser != null) {
+        final optimisticUser = Map<String, dynamic>.from(state.currentUser!);
+        optimisticUser.addAll(updateData);
         emit(state.copyWith(currentUser: optimisticUser));
       }
 
@@ -175,10 +163,8 @@ class UserBloc extends Bloc<UserEvent, UserState> {
         coverImage: event.coverImage,
       );
 
-      final updatedUser = User.fromJson(result);
-
       emit(state.copyWith(
-        currentUser: updatedUser,
+        currentUser: result,
         status: UserStatus.success,
         isSaving: false,
         error: null,
