@@ -1,6 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:Prive/data/services/settings/settings_service.dart';
+import 'package:cirqle/data/services/settings/settings_service.dart';
 
 part 'settings_event.dart';
 part 'settings_state.dart';
@@ -95,7 +95,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
 
       emit(updatedState);
 
-      final result = await _settingsService.updateSettings(
+      await _settingsService.updateSettings(
         notificationsEnabled: event.notificationsEnabled,
         privateAccount: event.privateAccount,
         twoFactorAuth: event.twoFactorAuth,

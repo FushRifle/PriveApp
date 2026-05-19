@@ -1,6 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:Prive/data/services/auth/auth_service.dart';
+import 'package:cirqle/data/services/auth/auth_service.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';

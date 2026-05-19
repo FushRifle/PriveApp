@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
-import 'package:Prive/app/configs/api_config.dart';
-import 'package:Prive/core/supabase_client.dart';
+import 'package:cirqle/app/configs/api_config.dart';
+import 'package:cirqle/core/supabase_client.dart';
 import './retrofit_client.dart';
 
 class ApiService {

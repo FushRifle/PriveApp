@@ -1,7 +1,7 @@
-import 'package:Prive/data/services/home/feed_service.dart';
+import 'package:cirqle/data/services/home/feed_service.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:Prive/data/models/feeds_models.dart';
+import 'package:cirqle/data/models/feeds_models.dart';
 
 part 'feed_event.dart';
 part 'feed_state.dart';
@@ -23,6 +23,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     on<LoadMoreUserMedia>(_onLoadMoreUserMedia);
     on<ClearFeedError>(_onClearFeedError);
     on<ResetFeedState>(_onResetFeedState);
+    on<DeleteFeedPost>(_onDeleteFeedPost);
   }
 
   void setAuthToken(String token) {
@@ -310,8 +311,9 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     LoadMoreUserMedia event,
     Emitter<FeedState> emit,
   ) async {
-    if (!state.hasMoreMedia || state.mediaStatus == MediaStatus.loadingMore)
+    if (!state.hasMoreMedia || state.mediaStatus == MediaStatus.loadingMore) {
       return;
+    }
 
     emit(state.copyWith(mediaStatus: MediaStatus.loadingMore));
 
@@ -339,5 +341,25 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     Emitter<FeedState> emit,
   ) {
     emit(const FeedState());
+  }
+
+  Future<void> _onDeleteFeedPost(
+    DeleteFeedPost event,
+    Emitter<FeedState> emit,
+  ) async {
+    try {
+      await _feedService.deletePost(event.postId);
+
+      // Remove post from state
+      final updatedPosts = List<FeedPost>.from(state.posts)
+        ..removeWhere((post) => post.id == event.postId);
+
+      emit(state.copyWith(
+        posts: updatedPosts,
+        hasMorePosts: updatedPosts.length >= 10,
+      ));
+    } catch (e) {
+      emit(state.copyWith(generalError: e.toString()));
+    }
   }
 }

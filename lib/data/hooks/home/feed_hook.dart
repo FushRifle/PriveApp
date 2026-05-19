@@ -1,13 +1,13 @@
 import 'package:flutter/foundation.dart';
-import 'package:Prive/data/services/home/feed_service.dart';
-import 'package:Prive/data/services/user/user_service.dart';
+import 'package:cirqle/data/services/home/feed_service.dart';
+import 'package:cirqle/data/services/user/user_service.dart';
 
 class FeedHook extends ChangeNotifier {
   final FeedService _feedService = FeedService();
   final UserService _userService = UserService();
 
   List<Map<String, dynamic>> _posts = [];
-  List<Map<String, dynamic>> _stories = [];
+  final List<Map<String, dynamic>> _stories = [];
   Map<String, dynamic>? _user;
 
   bool _loading = false;

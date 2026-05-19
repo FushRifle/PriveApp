@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:Prive/app/configs/colors.dart';
-import 'package:Prive/data/models/profile_model.dart';
-import 'package:Prive/ui/widgets/explore/profile_card.dart';
+import 'package:cirqle/app/configs/colors.dart';
+import 'package:cirqle/data/models/profile_model.dart';
+import 'package:cirqle/ui/widgets/explore/profile_card.dart';
 
 class SwipeableCard extends StatelessWidget {
   final ProfileModel profile;

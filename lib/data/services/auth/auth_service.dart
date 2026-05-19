@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:Prive/app/configs/api_config.dart';
-import 'package:Prive/core/supabase_client.dart';
+import 'package:cirqle/app/configs/api_config.dart';
+import 'package:cirqle/core/supabase_client.dart';
 
 class AuthService {
   final Dio _dio = Dio(
@@ -182,7 +182,7 @@ class AuthService {
       await SupabaseConfig.client.auth.signUp(
         email: email.trim().toLowerCase(),
         password: tempPassword,
-        emailRedirectTo: 'com.prive.app://verify-email',
+        emailRedirectTo: 'com.cirqle.app://verify-email',
       );
 
       return true;

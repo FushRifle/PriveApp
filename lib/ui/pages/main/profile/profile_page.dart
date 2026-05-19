@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:Prive/app/configs/colors.dart';
-import 'package:Prive/app/configs/theme.dart';
-import 'package:Prive/data/models/gallery_model.dart';
-import 'package:Prive/bloc/profile/gallery_profile_cubit.dart';
-import 'package:Prive/bloc/profile/profile_bloc.dart';
-import 'package:Prive/ui/pages/main/profile/edit_profile_page.dart';
-import 'package:Prive/ui/pages/settings/settings_page.dart';
-import 'package:Prive/ui/pages/social/friends_list_page.dart';
-import 'package:Prive/ui/pages/social/insights_page.dart';
-import 'package:Prive/ui/pages/social/matches_page.dart';
+import 'package:cirqle/app/configs/colors.dart';
+import 'package:cirqle/app/configs/theme.dart';
+import 'package:cirqle/data/models/gallery_model.dart';
+import 'package:cirqle/bloc/profile/gallery_profile_cubit.dart';
+import 'package:cirqle/bloc/profile/profile_bloc.dart';
+import 'package:cirqle/ui/pages/main/profile/edit_profile_page.dart';
+import 'package:cirqle/ui/pages/settings/settings_page.dart';
+import 'package:cirqle/ui/pages/social/friends_list_page.dart';
+import 'package:cirqle/ui/pages/social/insights_page.dart';
+import 'package:cirqle/ui/pages/main/match/matches_page.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -32,6 +32,7 @@ class _ProfilePageState extends State<ProfilePage>
   late TabController _tabController;
   late GalleryProfileCubit _galleryCubit;
   bool _isFollowing = false;
+  ScrollController? _scrollController;
 
   @override
   void initState() {
@@ -45,6 +46,7 @@ class _ProfilePageState extends State<ProfilePage>
   void dispose() {
     _tabController.dispose();
     _galleryCubit.close();
+    _scrollController?.dispose();
     super.dispose();
   }
 
@@ -60,11 +62,11 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   void _loadUserMedia(int userId) {
-    _galleryCubit.getUserMedia(
-      userId: userId,
-      type: null,
-      page: 1,
-    );
+    _galleryCubit.getUserMedia(userId: userId, type: null, page: 1);
+  }
+
+  void _loadMoreMedia(int userId) {
+    _galleryCubit.loadMoreMedia(userId: userId, type: null);
   }
 
   @override
@@ -86,21 +88,16 @@ class _ProfilePageState extends State<ProfilePage>
               final userId = widget.isOwnProfile
                   ? state.myProfile?.userId ?? state.myProfile?.id
                   : state.viewedProfile?.userId ?? state.viewedProfile?.id;
-              if (userId != null) {
-                _loadUserMedia(userId);
-              }
+              if (userId != null) _loadUserMedia(userId);
             }
           },
-          builder: (context, state) {
-            return _buildBody(state);
-          },
+          builder: (context, state) => _buildBody(state),
         ),
       ),
     );
   }
 
   Widget _buildBody(ProfileState state) {
-    // Loading state
     if (state.status == ProfileStatus.loading ||
         (state.status == ProfileStatus.initial &&
             (widget.isOwnProfile
@@ -111,23 +108,18 @@ class _ProfilePageState extends State<ProfilePage>
       );
     }
 
-    // Error state
     if (state.status == ProfileStatus.error && state.error != null) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              state.error!,
-              style: AppTheme.greyTextStyle,
-              textAlign: TextAlign.center,
-            ),
+            Text(state.error!,
+                style: AppTheme.greyTextStyle, textAlign: TextAlign.center),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _loadProfile,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-              ),
+              style:
+                  ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
               child: const Text('Retry'),
             ),
           ],
@@ -135,17 +127,15 @@ class _ProfilePageState extends State<ProfilePage>
       );
     }
 
-    // Get profile data
     final profile = widget.isOwnProfile ? state.myProfile : state.viewedProfile;
     if (profile == null) {
       return const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
-      );
+          child: CircularProgressIndicator(color: AppColors.primary));
     }
 
     return NestedScrollView(
       physics: const BouncingScrollPhysics(),
-      controller: _getScrollController(),
+      controller: _scrollController ??= ScrollController(),
       headerSliverBuilder: (context, innerBoxIsScrolled) => [
         _buildSliverAppBar(profile),
         SliverToBoxAdapter(child: _buildProfileHeader(profile)),
@@ -161,12 +151,6 @@ class _ProfilePageState extends State<ProfilePage>
         ],
       ),
     );
-  }
-
-  ScrollController? _scrollController;
-  ScrollController _getScrollController() {
-    _scrollController ??= ScrollController();
-    return _scrollController!;
   }
 
   Widget _buildSliverAppBar(Profile profile) {
@@ -192,13 +176,11 @@ class _ProfilePageState extends State<ProfilePage>
             ),
             icon: const Icon(Icons.settings_outlined, color: Colors.black),
           ),
-        const SizedBox(width: 8),
       ],
       flexibleSpace: FlexibleSpaceBar(
         background: hasCover
             ? _buildCoverImage(profile.photos.first)
             : _buildCoverPlaceholder(),
-        centerTitle: false,
       ),
     );
   }
@@ -213,7 +195,6 @@ class _ProfilePageState extends State<ProfilePage>
           width: double.infinity,
           height: double.infinity,
           placeholder: (context, url) =>
-              // ignore: deprecated_member_use
               Container(color: AppColors.primary.withOpacity(0.1)),
           errorWidget: (context, url, error) => _buildCoverPlaceholder(),
         ),
@@ -223,10 +204,7 @@ class _ProfilePageState extends State<ProfilePage>
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  Colors.transparent,
-                  Colors.white.withOpacity(0.95),
-                ],
+                colors: [Colors.transparent, Colors.white.withOpacity(0.95)],
                 stops: const [0.65, 1.0],
               ),
             ),
@@ -244,16 +222,13 @@ class _ProfilePageState extends State<ProfilePage>
           end: Alignment.bottomRight,
           colors: [
             AppColors.primary.withOpacity(0.3),
-            AppColors.primary.withOpacity(0.1),
+            AppColors.primary.withOpacity(0.1)
           ],
         ),
       ),
       child: Center(
-        child: Icon(
-          Icons.photo_camera_back,
-          size: 50,
-          color: AppColors.primary.withOpacity(0.5),
-        ),
+        child: Icon(Icons.photo_camera_back,
+            size: 50, color: AppColors.primary.withOpacity(0.5)),
       ),
     );
   }
@@ -269,7 +244,7 @@ class _ProfilePageState extends State<ProfilePage>
         const SizedBox(height: 8),
         _buildBioSection(profile),
         const SizedBox(height: 16),
-        _buildStatsRow(profile),
+        _buildStatsRow(),
         const SizedBox(height: 24),
         if (widget.isOwnProfile) _buildInsightsButton(),
         if (widget.isOwnProfile) const SizedBox(height: 12),
@@ -289,10 +264,9 @@ class _ProfilePageState extends State<ProfilePage>
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 12,
+              offset: const Offset(0, 4))
         ],
       ),
       child: CircleAvatar(
@@ -304,14 +278,11 @@ class _ProfilePageState extends State<ProfilePage>
           backgroundImage:
               avatar.isNotEmpty ? CachedNetworkImageProvider(avatar) : null,
           child: avatar.isEmpty
-              ? Text(
-                  firstLetter,
+              ? Text(firstLetter,
                   style: TextStyle(
-                    fontSize: 48,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
-                  ),
-                )
+                      fontSize: 48,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary))
               : null,
         ),
       ),
@@ -321,21 +292,13 @@ class _ProfilePageState extends State<ProfilePage>
   Widget _buildNameSection(Profile profile) {
     return Column(
       children: [
-        Text(
-          profile.displayName ?? 'User',
-          style: AppTheme.blackTextStyle.copyWith(
-            fontWeight: AppTheme.bold,
-            fontSize: 24,
-          ),
-        ),
+        Text(profile.displayName ?? 'User',
+            style: AppTheme.blackTextStyle
+                .copyWith(fontWeight: AppTheme.bold, fontSize: 24)),
         const SizedBox(height: 4),
-        Text(
-          profile.ageText,
-          style: AppTheme.greyTextStyle.copyWith(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-          ),
-        ),
+        Text(profile.ageText,
+            style: AppTheme.greyTextStyle
+                .copyWith(fontWeight: FontWeight.w600, fontSize: 14)),
       ],
     );
   }
@@ -359,12 +322,10 @@ class _ProfilePageState extends State<ProfilePage>
           if (bio != null && bio.isNotEmpty && bio != 'No bio yet')
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                bio,
-                style:
-                    AppTheme.blackTextStyle.copyWith(fontSize: 14, height: 1.4),
-                textAlign: TextAlign.center,
-              ),
+              child: Text(bio,
+                  style: AppTheme.blackTextStyle
+                      .copyWith(fontSize: 14, height: 1.4),
+                  textAlign: TextAlign.center),
             ),
           Wrap(
             alignment: WrapAlignment.center,
@@ -377,9 +338,7 @@ class _ProfilePageState extends State<ProfilePage>
                 _buildInfoChip(Icons.location_on, location),
               if (gender != null && gender.isNotEmpty)
                 _buildInfoChip(
-                  gender == 'male' ? Icons.male : Icons.female,
-                  gender,
-                ),
+                    gender == 'male' ? Icons.male : Icons.female, gender),
             ],
           ),
         ],
@@ -398,39 +357,32 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  Widget _buildStatsRow(Profile profile) {
-    // These would come from your API - you might need to add these fields to Profile model
-    final followingCount = 0; // TODO: Get from API
-    final followersCount = 0; // TODO: Get from API
-    final likesCount = 0; // TODO: Get from API
-
+  Widget _buildStatsRow() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        _buildStatItem(_formatCount(followingCount), "Following", () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const FriendsListPage(isFollowers: false),
-            ),
-          );
-        }),
-        _buildStatItem(_formatCount(followersCount), "Followers", () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const FriendsListPage(isFollowers: true),
-            ),
-          );
-        }),
-        _buildStatItem(_formatCount(likesCount), "Likes", () {
-          if (widget.isOwnProfile) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const InsightsPage()),
-            );
-          }
-        }),
+        _buildStatItem(
+            "0",
+            "Following",
+            () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) =>
+                        const FriendsListPage(isFollowers: false)))),
+        _buildStatItem(
+            "0",
+            "Followers",
+            () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const FriendsListPage(isFollowers: true)))),
+        _buildStatItem(
+            "0",
+            "Likes",
+            widget.isOwnProfile
+                ? () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const InsightsPage()))
+                : null),
       ],
     );
   }
@@ -443,31 +395,16 @@ class _ProfilePageState extends State<ProfilePage>
       },
       child: Column(
         children: [
-          Text(
-            value,
-            style: AppTheme.blackTextStyle.copyWith(
-              fontWeight: AppTheme.bold,
-              fontSize: 18,
-            ),
-          ),
+          Text(value,
+              style: AppTheme.blackTextStyle
+                  .copyWith(fontWeight: AppTheme.bold, fontSize: 18)),
           const SizedBox(height: 4),
-          Text(
-            label,
-            style: AppTheme.greyTextStyle.copyWith(
-              fontWeight: AppTheme.bold,
-              fontSize: 12,
-              letterSpacing: 0.5,
-            ),
-          ),
+          Text(label,
+              style: AppTheme.greyTextStyle.copyWith(
+                  fontWeight: AppTheme.bold, fontSize: 12, letterSpacing: 0.5)),
         ],
       ),
     );
-  }
-
-  String _formatCount(int count) {
-    if (count >= 1000000) return '${(count / 1000000).toStringAsFixed(1)}M';
-    if (count >= 1000) return '${(count / 1000).toStringAsFixed(1)}K';
-    return count.toString();
   }
 
   Widget _buildInsightsButton() {
@@ -475,9 +412,7 @@ class _ProfilePageState extends State<ProfilePage>
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: GestureDetector(
         onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const InsightsPage()),
-        ),
+            context, MaterialPageRoute(builder: (_) => const InsightsPage())),
         child: Container(
           height: 44,
           decoration: BoxDecoration(
@@ -491,14 +426,11 @@ class _ProfilePageState extends State<ProfilePage>
               children: [
                 const Icon(Icons.insights, color: AppColors.primary, size: 20),
                 const SizedBox(width: 8),
-                Text(
-                  'View Insights',
-                  style: AppTheme.blackTextStyle.copyWith(
-                    fontWeight: AppTheme.bold,
-                    fontSize: 14,
-                    color: AppColors.primary,
-                  ),
-                ),
+                Text('View Insights',
+                    style: AppTheme.blackTextStyle.copyWith(
+                        fontWeight: AppTheme.bold,
+                        fontSize: 14,
+                        color: AppColors.primary)),
               ],
             ),
           ),
@@ -514,21 +446,20 @@ class _ProfilePageState extends State<ProfilePage>
         child: Row(
           children: [
             Expanded(
-              child: _buildActionButton(
-                  'EDIT PROFILE', AppColors.primary, Colors.white, () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const EditProfilePage()),
-                );
-              }),
-            ),
+                child: _buildActionButton(
+                    'EDIT PROFILE',
+                    AppColors.primary,
+                    Colors.white,
+                    () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const EditProfilePage())))),
             const SizedBox(width: 12),
-            _buildIconButton(Icons.favorite_outline, AppColors.redColor, () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const MatchesPage()),
-              );
-            }),
+            _buildIconButton(
+                Icons.favorite_outline,
+                AppColors.redColor,
+                () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const MatchesPage()))),
           ],
         ),
       );
@@ -555,12 +486,8 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   Widget _buildActionButton(
-    String text,
-    Color bgColor,
-    Color textColor,
-    VoidCallback onTap, {
-    bool hasBorder = false,
-  }) {
+      String text, Color bgColor, Color textColor, VoidCallback onTap,
+      {bool hasBorder = false}) {
     return GestureDetector(
       onTap: () {
         HapticFeedback.mediumImpact();
@@ -579,15 +506,11 @@ class _ProfilePageState extends State<ProfilePage>
               : null,
         ),
         child: Center(
-          child: Text(
-            text,
-            style: TextStyle(
-              color: textColor,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-        ),
+            child: Text(text,
+                style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14))),
       ),
     );
   }
@@ -622,14 +545,11 @@ class _ProfilePageState extends State<ProfilePage>
           labelColor: Colors.black,
           unselectedLabelColor: AppColors.greyColor,
           labelStyle: const TextStyle(
-            fontWeight: FontWeight.w900,
-            fontSize: 13,
-            letterSpacing: 1,
-          ),
+              fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 1),
           tabs: const [
             Tab(text: "PHOTOS"),
             Tab(text: "VIDEOS"),
-            Tab(text: "TAGGED"),
+            Tab(text: "TAGGED")
           ],
         ),
       ),
@@ -641,14 +561,12 @@ class _ProfilePageState extends State<ProfilePage>
       builder: (context, state) {
         if (state is GalleryProfileLoading) {
           return const Center(
-            child: CircularProgressIndicator(color: AppColors.primary),
-          );
+              child: CircularProgressIndicator(color: AppColors.primary));
         }
 
         if (state is GalleryProfileLoaded) {
           final galleries =
               state.galleryProfiles.where((g) => g.type != 'video').toList();
-
           if (galleries.isEmpty) {
             return _buildEmptyState(Icons.photo_library, 'No photos yet');
           }
@@ -681,7 +599,6 @@ class _ProfilePageState extends State<ProfilePage>
         if (state is GalleryProfileLoadingMore) {
           final galleries =
               state.currentProfiles.where((g) => g.type != 'video').toList();
-
           return GridView.builder(
             padding: const EdgeInsets.all(16),
             physics: const BouncingScrollPhysics(),
@@ -697,8 +614,8 @@ class _ProfilePageState extends State<ProfilePage>
                 return const Padding(
                   padding: EdgeInsets.all(16),
                   child: Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  ),
+                      child:
+                          CircularProgressIndicator(color: AppColors.primary)),
                 );
               }
               return _buildGalleryItem(galleries[index]);
@@ -707,26 +624,15 @@ class _ProfilePageState extends State<ProfilePage>
         }
 
         if (state is GalleryProfileError) {
-          return _buildErrorState(state.message, () {
-            _galleryCubit.getUserMedia(
-              userId: userId,
-              type: null,
-              page: 1,
-            );
-          });
+          return _buildErrorState(
+              state.message,
+              () => _galleryCubit.getUserMedia(
+                  userId: userId, type: null, page: 1));
         }
 
         return const Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
-        );
+            child: CircularProgressIndicator(color: AppColors.primary));
       },
-    );
-  }
-
-  void _loadMoreMedia(int userId) {
-    _galleryCubit.loadMoreMedia(
-      userId: userId,
-      type: null,
     );
   }
 
@@ -737,25 +643,20 @@ class _ProfilePageState extends State<ProfilePage>
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
           image: DecorationImage(
-            image: CachedNetworkImageProvider(gallery.image),
-            fit: BoxFit.cover,
-          ),
+              image: CachedNetworkImageProvider(gallery.image),
+              fit: BoxFit.cover),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 5))
           ],
         ),
         child: Stack(
           children: [
             if (gallery.type == 'video')
               const Positioned(
-                top: 12,
-                right: 12,
-                child: _Badge(icon: Icons.play_arrow),
-              ),
+                  top: 12, right: 12, child: _Badge(icon: Icons.play_arrow)),
             Positioned(
               bottom: 12,
               left: 12,
@@ -764,14 +665,11 @@ class _ProfilePageState extends State<ProfilePage>
                   children: [
                     const Icon(Icons.favorite, color: Colors.white, size: 12),
                     const SizedBox(width: 4),
-                    Text(
-                      gallery.like,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    Text(gallery.like,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
@@ -782,12 +680,10 @@ class _ProfilePageState extends State<ProfilePage>
                 left: 12,
                 right: 50,
                 child: _Badge(
-                  child: Text(
-                    gallery.caption!,
-                    style: const TextStyle(color: Colors.white, fontSize: 10),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  child: Text(gallery.caption!,
+                      style: const TextStyle(color: Colors.white, fontSize: 10),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
                 ),
               ),
           ],
@@ -801,15 +697,13 @@ class _ProfilePageState extends State<ProfilePage>
       builder: (context, state) {
         if (state is GalleryProfileLoading) {
           return const Center(
-            child: CircularProgressIndicator(color: AppColors.primary),
-          );
+              child: CircularProgressIndicator(color: AppColors.primary));
         }
 
         if (state is GalleryProfileLoaded) {
           final videos = state.galleryProfiles
               .where((item) => item.type == 'video')
               .toList();
-
           if (videos.isEmpty) {
             return _buildEmptyState(Icons.videocam, 'No videos yet');
           }
@@ -842,7 +736,6 @@ class _ProfilePageState extends State<ProfilePage>
           final videos = state.currentProfiles
               .where((item) => item.type == 'video')
               .toList();
-
           return GridView.builder(
             padding: const EdgeInsets.all(16),
             physics: const BouncingScrollPhysics(),
@@ -858,8 +751,8 @@ class _ProfilePageState extends State<ProfilePage>
                 return const Padding(
                   padding: EdgeInsets.all(16),
                   child: Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  ),
+                      child:
+                          CircularProgressIndicator(color: AppColors.primary)),
                 );
               }
               return _buildVideoItem(videos[index]);
@@ -868,18 +761,14 @@ class _ProfilePageState extends State<ProfilePage>
         }
 
         if (state is GalleryProfileError) {
-          return _buildErrorState(state.message, () {
-            _galleryCubit.getUserMedia(
-              userId: userId,
-              type: 'video',
-              page: 1,
-            );
-          });
+          return _buildErrorState(
+              state.message,
+              () => _galleryCubit.getUserMedia(
+                  userId: userId, type: 'video', page: 1));
         }
 
         return const Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
-        );
+            child: CircularProgressIndicator(color: AppColors.primary));
       },
     );
   }
@@ -891,15 +780,13 @@ class _ProfilePageState extends State<ProfilePage>
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
           image: DecorationImage(
-            image: CachedNetworkImageProvider(video.image),
-            fit: BoxFit.cover,
-          ),
+              image: CachedNetworkImageProvider(video.image),
+              fit: BoxFit.cover),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 5))
           ],
         ),
         child: Stack(
@@ -907,16 +794,11 @@ class _ProfilePageState extends State<ProfilePage>
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  color: Colors.black.withOpacity(0.2),
-                ),
+                    borderRadius: BorderRadius.circular(24),
+                    color: Colors.black.withOpacity(0.2)),
                 child: const Center(
-                  child: Icon(
-                    Icons.play_circle_filled,
-                    color: Colors.white,
-                    size: 40,
-                  ),
-                ),
+                    child: Icon(Icons.play_circle_filled,
+                        color: Colors.white, size: 40)),
               ),
             ),
             Positioned(
@@ -927,14 +809,11 @@ class _ProfilePageState extends State<ProfilePage>
                   children: [
                     const Icon(Icons.favorite, color: Colors.white, size: 12),
                     const SizedBox(width: 4),
-                    Text(
-                      video.like,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    Text(video.like,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
@@ -950,21 +829,14 @@ class _ProfilePageState extends State<ProfilePage>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.bookmark,
-            size: 48,
-            color: AppColors.greyColor.withOpacity(0.5),
-          ),
+          Icon(Icons.bookmark,
+              size: 48, color: AppColors.greyColor.withOpacity(0.5)),
           const SizedBox(height: 12),
-          Text(
-            'No tagged posts',
-            style: AppTheme.greyTextStyle.copyWith(fontSize: 14),
-          ),
+          Text('No tagged posts',
+              style: AppTheme.greyTextStyle.copyWith(fontSize: 14)),
           const SizedBox(height: 8),
-          Text(
-            'Posts you\'re tagged in will appear here',
-            style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
-          ),
+          Text('Posts you\'re tagged in will appear here',
+              style: AppTheme.greyTextStyle.copyWith(fontSize: 12)),
         ],
       ),
     );
@@ -990,50 +862,36 @@ class _ProfilePageState extends State<ProfilePage>
         children: [
           Icon(Icons.error_outline, size: 48, color: AppColors.greyColor),
           const SizedBox(height: 12),
-          Text(
-            message,
-            style: AppTheme.greyTextStyle,
-            textAlign: TextAlign.center,
-          ),
+          Text(message,
+              style: AppTheme.greyTextStyle, textAlign: TextAlign.center),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: onRetry,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-            ),
-            child: const Text('Retry'),
-          ),
+              onPressed: onRetry,
+              style:
+                  ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              child: const Text('Retry')),
         ],
       ),
     );
   }
 
-  void _navigateToPostDetail(String? postId) {
-    if (postId == null) return;
-    // TODO: Navigate to post detail
-  }
-
-  void _navigateToVideoPlayer(GalleryModel video) {
-    // TODO: Navigate to video player
-  }
+  void _navigateToPostDetail(String? postId) {}
+  void _navigateToVideoPlayer(GalleryModel video) {}
 }
 
 class _Badge extends StatelessWidget {
   final IconData? icon;
   final Widget? child;
-  final Color? color;
 
-  // ignore: unused_element_parameter
-  const _Badge({this.icon, this.child, this.color});
+  const _Badge({this.icon, this.child});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(12),
-      ),
+          color: Colors.black.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(12)),
       child: child ?? Icon(icon, color: Colors.white, size: 16),
     );
   }
@@ -1051,10 +909,7 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(color: AppColors.backgroundColor, child: _tabBar);
   }
 

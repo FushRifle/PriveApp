@@ -1,20 +1,22 @@
 import 'dart:ui';
+import 'dart:async';
 
-import 'package:Prive/bloc/home/feed_bloc.dart';
+import 'package:cirqle/bloc/home/feed_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:Prive/app/configs/colors.dart';
-import 'package:Prive/app/configs/theme.dart';
-import 'package:Prive/data/models/feeds_models.dart';
-import 'package:Prive/ui/widgets/home/card_post.dart';
+import 'package:cirqle/app/configs/colors.dart';
+import 'package:cirqle/app/configs/theme.dart';
+import 'package:cirqle/data/models/feeds_models.dart';
+import 'package:cirqle/ui/widgets/home/card_post.dart';
+import 'package:cirqle/data/services/user/user_service.dart';
 
 class PostDetailPage extends StatefulWidget {
-  final FeedPost post;
+  final int postId;
 
   const PostDetailPage({
     super.key,
-    required this.post,
+    required this.postId,
   });
 
   @override
@@ -24,74 +26,113 @@ class PostDetailPage extends StatefulWidget {
 class _PostDetailPageState extends State<PostDetailPage> {
   final TextEditingController _commentController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final UserService _userService = UserService();
 
-  late FeedPost _post;
-  late bool _isLiked;
-  late int _likeCount;
+  FeedPost? _post;
   List<Comment> _comments = [];
   bool _isLoadingComments = false;
+  bool _isLoadingPost = true;
   int _commentsPage = 1;
   bool _hasMoreComments = false;
+  String? _commentsError;
+  Timer? _commentsTimeoutTimer;
+  int _currentUserId = 0;
+  bool _isOwnPost = false;
 
   @override
   void initState() {
     super.initState();
-    _post = widget.post;
-    _isLiked = _post.isLiked;
-    _likeCount = _post.likes;
-    _loadComments();
+    _loadCurrentUser();
+    _loadPost();
   }
 
   @override
   void dispose() {
     _commentController.dispose();
     _scrollController.dispose();
+    _commentsTimeoutTimer?.cancel();
     super.dispose();
   }
 
+  Future<void> _loadCurrentUser() async {
+    try {
+      final user = await _userService.getCurrentUser();
+      setState(() {
+        _currentUserId = user['id'] ?? 0;
+      });
+    } catch (e) {
+      debugPrint('Error loading user: $e');
+    }
+  }
+
+  void _loadPost() {
+    setState(() => _isLoadingPost = true);
+    final currentPosts = context.read<FeedBloc>().state.posts;
+    try {
+      final existingPost =
+          currentPosts.firstWhere((p) => p.id == widget.postId);
+      setState(() {
+        _post = existingPost;
+        _isOwnPost = _currentUserId == existingPost.user;
+        _isLoadingPost = false;
+      });
+      _loadComments();
+    } catch (e) {
+      setState(() {
+        _isLoadingPost = false;
+      });
+      _loadComments();
+    }
+  }
+
   void _loadComments() {
-    setState(() => _isLoadingComments = true);
+    _commentsTimeoutTimer?.cancel();
+    setState(() {
+      _isLoadingComments = true;
+      _commentsError = null;
+    });
+
+    _commentsTimeoutTimer = Timer(const Duration(seconds: 10), () {
+      if (mounted && _isLoadingComments) {
+        setState(() {
+          _isLoadingComments = false;
+          _commentsError = 'Request timed out. Please try again.';
+        });
+      }
+    });
+
     context
         .read<FeedBloc>()
-        .add(GetPostComments(postId: _post.id, page: _commentsPage));
+        .add(GetPostComments(postId: widget.postId, page: _commentsPage));
+  }
+
+  void _retryLoadComments() {
+    _commentsPage = 1;
+    _loadComments();
   }
 
   void _loadMoreComments() {
     if (!_hasMoreComments || _isLoadingComments) return;
     _commentsPage++;
-    setState(() => _isLoadingComments = true);
-    context
-        .read<FeedBloc>()
-        .add(GetPostComments(postId: _post.id, page: _commentsPage));
-  }
-
-  void _toggleLike() {
-    if (_isLiked) {
-      context.read<FeedBloc>().add(UnlikeFeedPost(postId: _post.id));
-    } else {
-      context.read<FeedBloc>().add(LikeFeedPost(postId: _post.id));
-    }
-    setState(() {
-      _isLiked = !_isLiked;
-      _likeCount += _isLiked ? 1 : -1;
-    });
+    _loadComments();
   }
 
   void _addComment(String text) {
     final value = text.trim();
-    if (value.isEmpty) return;
+    if (value.isEmpty || _post == null) return;
 
     HapticFeedback.lightImpact();
     _commentController.clear();
 
     context.read<FeedBloc>().add(CreatePostComment(
-          postId: _post.id,
+          postId: widget.postId,
           content: value,
         ));
 
-    // Refresh comments after adding
     _commentsPage = 1;
-    _loadComments();
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _loadComments();
+    });
   }
 
   @override
@@ -103,76 +144,149 @@ class _PostDetailPageState extends State<PostDetailPage> {
       resizeToAvoidBottomInset: true,
       body: BlocListener<FeedBloc, FeedState>(
         listener: (context, state) {
-          if (state.comments[_post.id] != null) {
+          if (state.comments[widget.postId] != null && mounted) {
+            _commentsTimeoutTimer?.cancel();
             setState(() {
-              _comments = state.comments[_post.id]!;
-              _hasMoreComments = state.hasMoreComments[_post.id] ?? false;
+              _comments = state.comments[widget.postId]!;
+              _hasMoreComments = state.hasMoreComments[widget.postId] ?? false;
               _isLoadingComments = false;
+              _commentsError = null;
             });
           }
-          if (state.generalError != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.generalError!),
-                backgroundColor: Colors.red,
-              ),
+          if (state.generalError != null && mounted) {
+            setState(() {
+              _isLoadingComments = false;
+              _commentsError = state.generalError;
+            });
+          }
+
+          if (_post != null) {
+            final updatedPost = state.posts.firstWhere(
+              (p) => p.id == widget.postId,
+              orElse: () => _post!,
             );
+            if (updatedPost.id == _post!.id &&
+                updatedPost.likes != _post!.likes) {
+              setState(() {
+                _post = updatedPost;
+              });
+            }
           }
         },
-        child: Stack(
+        child: _buildBody(bottomInset),
+      ),
+    );
+  }
+
+  Widget _buildBody(double bottomInset) {
+    if (_isLoadingPost) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      );
+    }
+
+    if (_post == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CustomScrollView(
-              controller: _scrollController,
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                _buildModernAppBar(),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                    child: CardPost(
-                      post: _post,
-                      isDetailView: true,
-                    ),
-                  ),
-                ),
-                SliverToBoxAdapter(child: _buildModernEngagementStats()),
-                SliverToBoxAdapter(child: _buildCommentHeader()),
-                if (_isLoadingComments && _comments.isEmpty)
-                  const SliverToBoxAdapter(
-                    child: Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(32),
-                        child: CircularProgressIndicator(),
-                      ),
-                    ),
-                  )
-                else if (_comments.isEmpty)
-                  SliverToBoxAdapter(
-                    child: _buildEmptyComments(),
-                  )
-                else
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          if (index == _comments.length - 1 &&
-                              _hasMoreComments) {
-                            _loadMoreComments();
-                          }
-                          return _buildModernComment(_comments[index]);
-                        },
-                        childCount: _comments.length,
-                      ),
-                    ),
-                  ),
-                SliverToBoxAdapter(
-                  child: SizedBox(height: 130 + bottomInset),
-                ),
-              ],
+            const Icon(Icons.error_outline, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
+            Text('Post not found', style: AppTheme.greyTextStyle),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+              ),
+              child: const Text('Go Back'),
             ),
-            _buildModernBottomBar(),
           ],
+        ),
+      );
+    }
+
+    return Stack(
+      children: [
+        CustomScrollView(
+          controller: _scrollController,
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            _buildModernAppBar(),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: CardPost(
+                  post: _post!,
+                  isDetailView: true,
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(child: _buildCommentHeader()),
+            _buildCommentsSection(),
+            SliverToBoxAdapter(
+              child: SizedBox(height: 130 + bottomInset),
+            ),
+          ],
+        ),
+        _buildModernBottomBar(),
+      ],
+    );
+  }
+
+  Widget _buildCommentsSection() {
+    if (_isLoadingComments && _comments.isEmpty) {
+      return const SliverToBoxAdapter(
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.all(32),
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      );
+    }
+
+    if (_commentsError != null && _comments.isEmpty) {
+      return SliverToBoxAdapter(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.grey),
+              const SizedBox(height: 12),
+              Text(_commentsError!, style: AppTheme.greyTextStyle),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _retryLoadComments,
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(120, 48),
+                  backgroundColor: AppColors.primary,
+                ),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_comments.isEmpty) {
+      return const SliverToBoxAdapter(
+        child: _EmptyComments(),
+      );
+    }
+
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            if (index == _comments.length - 1 && _hasMoreComments) {
+              _loadMoreComments();
+            }
+            return _buildModernComment(_comments[index]);
+          },
+          childCount: _comments.length,
         ),
       ),
     );
@@ -203,13 +317,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      title: Text(
-        'Post Details',
-        style: AppTheme.blackTextStyle.copyWith(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
       centerTitle: true,
       actions: [
         Container(
@@ -228,102 +335,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
     );
   }
 
-  Widget _buildModernEngagementStats() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildModernStatItem(
-            icon: _isLiked ? Icons.favorite : Icons.favorite_border,
-            count: _likeCount,
-            label: 'Likes',
-            color: Colors.redAccent,
-            isActive: _isLiked,
-            onTap: _toggleLike,
-          ),
-          _buildModernStatItem(
-            icon: Icons.chat_bubble_outline,
-            count: _comments.length,
-            label: 'Comments',
-            color: AppColors.primary,
-            isActive: false,
-          ),
-          _buildModernStatItem(
-            icon: Icons.share_outlined,
-            count: 0,
-            label: 'Share',
-            color: Colors.blueAccent,
-            isActive: false,
-            onTap: () {},
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildModernStatItem({
-    required IconData icon,
-    required int count,
-    required String label,
-    required Color color,
-    required bool isActive,
-    VoidCallback? onTap,
-  }) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Column(
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isActive ? color.withOpacity(0.15) : Colors.transparent,
-              ),
-              child: Icon(
-                icon,
-                size: 24,
-                color: isActive ? color : AppColors.greyColor,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              count > 999
-                  ? '${(count / 1000).toStringAsFixed(1)}K'
-                  : count.toString(),
-              style: AppTheme.blackTextStyle.copyWith(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: AppTheme.greyTextStyle.copyWith(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildCommentHeader() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
@@ -331,7 +342,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'COMMENTS',
+            'Comments',
             style: AppTheme.blackTextStyle.copyWith(
               fontWeight: FontWeight.w700,
               letterSpacing: 1,
@@ -353,39 +364,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
                 fontSize: 11,
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyComments() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-      padding: const EdgeInsets.all(40),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            Icons.chat_bubble_outline,
-            size: 64,
-            color: AppColors.greyColor.withOpacity(0.5),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No comments yet',
-            style: AppTheme.blackTextStyle.copyWith(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Be the first to comment!',
-            style: AppTheme.greyTextStyle.copyWith(fontSize: 14),
           ),
         ],
       ),
@@ -460,68 +438,67 @@ class _PostDetailPageState extends State<PostDetailPage> {
       child: Container(
         padding: EdgeInsets.fromLTRB(16, 12, 16, bottomPadding + 12),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.transparent,
-              AppColors.backgroundColor.withOpacity(0.9),
-              AppColors.backgroundColor,
-            ],
-            stops: const [0, 0.3, 0.6],
-          ),
+          color: Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
+            ),
+          ],
         ),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(32),
-          ),
-          child: Row(
-            children: [
-              _buildAvatar(_post.user.avatar, size: 40),
-              const SizedBox(width: 12),
-              Expanded(
+        child: Row(
+          children: [
+            _buildAvatar(_post!.user.avatar, size: 40),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.backgroundColor,
+                  borderRadius: BorderRadius.circular(30),
+                ),
                 child: TextField(
                   controller: _commentController,
                   minLines: 1,
                   maxLines: 4,
                   textInputAction: TextInputAction.done,
+                  style: const TextStyle(fontSize: 15),
                   decoration: InputDecoration(
                     hintText: 'Write a comment...',
                     hintStyle: AppTheme.greyTextStyle.copyWith(fontSize: 14),
                     border: InputBorder.none,
                     isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                   onSubmitted: (value) => _addComment(value),
                 ),
               ),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.all(8),
+            ),
+            const SizedBox(width: 12),
+            GestureDetector(
+              onTap: _commentController.text.trim().isNotEmpty
+                  ? () => _addComment(_commentController.text)
+                  : null,
+              child: Container(
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
                   color: _commentController.text.trim().isNotEmpty
                       ? AppColors.primary
-                      : AppColors.greyColor.withOpacity(0.2),
+                      : AppColors.greyColor.withOpacity(0.3),
+                  shape: BoxShape.circle,
                 ),
-                child: IconButton(
-                  icon: Icon(
-                    Icons.send_rounded,
-                    size: 20,
-                    color: _commentController.text.trim().isNotEmpty
-                        ? Colors.white
-                        : AppColors.greyColor,
-                  ),
-                  onPressed: _commentController.text.trim().isNotEmpty
-                      ? () => _addComment(_commentController.text)
-                      : null,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                child: Icon(
+                  Icons.send_rounded,
+                  size: 20,
+                  color: _commentController.text.trim().isNotEmpty
+                      ? Colors.white
+                      : Colors.grey,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -594,11 +571,26 @@ class _PostDetailPageState extends State<PostDetailPage> {
                 ),
               ),
               const SizedBox(height: 20),
-              _buildOptionTile(Icons.link, 'Copy Link', Colors.black87),
+              _buildOptionTile(Icons.link, 'Copy Link', Colors.black87, () {
+                Navigator.pop(context);
+              }),
               _buildOptionTile(
-                  Icons.share_outlined, 'Share Post', Colors.black87),
+                  Icons.share_outlined, 'Share Post', Colors.black87, () {
+                Navigator.pop(context);
+              }),
+              if (_isOwnPost) ...[
+                const Divider(height: 1),
+                _buildOptionTile(
+                    Icons.delete_outline, 'Delete Post', Colors.redAccent, () {
+                  Navigator.pop(context);
+                  _confirmDelete();
+                }),
+              ],
               const Divider(height: 1),
-              _buildOptionTile(Icons.flag_outlined, 'Report', Colors.redAccent),
+              _buildOptionTile(Icons.flag_outlined, 'Report', Colors.redAccent,
+                  () {
+                Navigator.pop(context);
+              }),
               const SizedBox(height: 20),
             ],
           ),
@@ -607,16 +599,96 @@ class _PostDetailPageState extends State<PostDetailPage> {
     );
   }
 
-  Widget _buildOptionTile(IconData icon, String title, Color color) {
+  void _confirmDelete() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Delete Post'),
+        content: const Text(
+            'Are you sure you want to delete this post? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: AppColors.greyColor)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deletePost();
+            },
+            child: Text(
+              'Delete',
+              style: TextStyle(
+                color: AppColors.redColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _deletePost() {
+    context.read<FeedBloc>().add(DeleteFeedPost(postId: widget.postId));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Post deleted'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2),
+      ),
+    );
+    Navigator.pop(context);
+  }
+
+  Widget _buildOptionTile(
+      IconData icon, String title, Color color, VoidCallback onTap) {
     return ListTile(
       leading: Icon(icon, color: color, size: 22),
       title: Text(
         title,
         style: TextStyle(color: color, fontWeight: FontWeight.w500),
       ),
-      onTap: () {
-        Navigator.pop(context);
-      },
+      onTap: onTap,
+    );
+  }
+}
+
+class _EmptyComments extends StatelessWidget {
+  const _EmptyComments();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+      padding: const EdgeInsets.all(40),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.chat_bubble_outline,
+            size: 64,
+            color: AppColors.greyColor.withOpacity(0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No comments yet',
+            style: AppTheme.blackTextStyle.copyWith(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Be the first to comment!',
+            style: AppTheme.greyTextStyle.copyWith(fontSize: 14),
+          ),
+        ],
+      ),
     );
   }
 }

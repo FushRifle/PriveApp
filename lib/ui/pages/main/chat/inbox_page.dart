@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:Prive/app/configs/colors.dart';
-import 'package:Prive/app/configs/theme.dart';
-import 'package:Prive/ui/pages/main/chat/chat_page.dart';
+import 'package:cirqle/app/configs/colors.dart';
+import 'package:cirqle/app/configs/theme.dart';
+import 'package:cirqle/ui/pages/main/chat/chat_page.dart';
 import '../../../widgets/home/custom_app_bar.dart';
 
 class InboxPage extends StatelessWidget {

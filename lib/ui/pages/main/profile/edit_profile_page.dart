@@ -1,10 +1,10 @@
 import 'dart:io';
-import 'package:Prive/core/cloudinary_service.dart';
+import 'package:cirqle/core/cloudinary_service.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:Prive/app/configs/colors.dart';
-import 'package:Prive/app/configs/theme.dart';
-import 'package:Prive/data/services/user/user_service.dart';
+import 'package:cirqle/app/configs/colors.dart';
+import 'package:cirqle/app/configs/theme.dart';
+import 'package:cirqle/data/services/user/user_service.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -138,7 +138,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     try {
       final folder = isAvatar ? 'avatars' : 'covers';
-      final imageUrl = await _cloudinaryService.uploadImage(imageFile, folder);
+      final imageUrl =
+          await _cloudinaryService.uploadImage(imageFile, customFolder: folder);
 
       setState(() {
         if (isAvatar) {

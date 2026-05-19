@@ -1,6 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:Prive/data/services/chat/chat_service.dart';
+import 'package:cirqle/data/services/chat/chat_service.dart';
 
 part 'chat_event.dart';
 part 'chat_state.dart';

@@ -1,11 +1,11 @@
-import 'package:Prive/app/resources/constant/named_routes.dart';
-import 'package:Prive/bloc/status/stories_bloc.dart';
+import 'package:cirqle/app/resources/constant/named_routes.dart';
+import 'package:cirqle/bloc/status/stories_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:Prive/app/configs/colors.dart';
-import 'package:Prive/app/configs/theme.dart';
-import 'package:Prive/data/models/status_model.dart';
+import 'package:cirqle/app/configs/colors.dart';
+import 'package:cirqle/app/configs/theme.dart';
+import 'package:cirqle/data/models/status_model.dart';
 import './status_view_page.dart';
 
 class StatusPage extends StatefulWidget {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:Prive/app/configs/colors.dart';
+import 'package:cirqle/app/configs/colors.dart';
 
 class AppTheme {
   // Dynamic text styles that adapt to theme

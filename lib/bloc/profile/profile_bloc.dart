@@ -1,6 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:Prive/data/services/profile/profile_service.dart';
+import 'package:cirqle/data/services/profile/profile_service.dart';
 
 part 'profile_event.dart';
 part 'profile_state.dart';

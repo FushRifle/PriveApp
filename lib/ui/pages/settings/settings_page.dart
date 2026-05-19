@@ -1,18 +1,16 @@
-import 'package:Prive/bloc/profile/gallery_profile_cubit.dart';
-import 'package:Prive/bloc/profile/profile_bloc.dart';
-import 'package:Prive/ui/pages/main/profile/profile_page.dart';
+import 'package:cirqle/bloc/profile/gallery_profile_cubit.dart';
+import 'package:cirqle/bloc/profile/profile_bloc.dart';
+import 'package:cirqle/bloc/auth/auth_bloc.dart';
+import 'package:cirqle/ui/pages/main/profile/profile_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:Prive/app/configs/colors.dart';
-import 'package:Prive/app/configs/theme.dart';
-import 'package:Prive/app/resources/constant/named_routes.dart';
-import 'package:Prive/ui/pages/settings/subscribe_page.dart';
-import 'package:Prive/data/services/user/user_service.dart';
-import 'package:Prive/data/services/settings/settings_service.dart';
-import 'package:Prive/data/hooks/auth/auth_hook.dart';
-import 'package:Prive/data/providers/theme_provider.dart';
+import 'package:cirqle/app/configs/colors.dart';
+import 'package:cirqle/app/configs/theme.dart';
+import 'package:cirqle/app/resources/constant/named_routes.dart';
+import 'package:cirqle/ui/pages/settings/subscribe_page.dart';
+import 'package:cirqle/data/providers/theme_provider.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -22,94 +20,25 @@ class SettingsPage extends ConsumerStatefulWidget {
 }
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
-  final AuthHook _authHook = AuthHook();
-  final UserService _userService = UserService();
-  final SettingsService _settingsService = SettingsService();
-
   bool _isLoading = true;
-  Map<String, dynamic> _user = {};
   String? _error;
+  Profile? _profile;
 
   bool _isNotificationsEnabled = true;
   bool _isPrivateAccount = false;
   bool _isTwoFactorAuth = false;
   String _selectedLanguage = 'English';
   String _selectedVideoQuality = 'HD 1080p';
-  String _selectedTheme = 'light';
+  final String _selectedTheme = 'light';
 
   @override
   void initState() {
     super.initState();
-    _loadUserDataAndSettings();
+    _loadData();
   }
 
-  @override
-  void dispose() {
-    _authHook.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadUserDataAndSettings() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      // Load user data and settings in parallel
-      final results = await Future.wait([
-        _userService.getCurrentUser(),
-        _settingsService.getSettings(),
-      ]);
-
-      final userData = results[0];
-      final settings = results[1];
-
-      setState(() {
-        _user = userData;
-        _isNotificationsEnabled = settings['notificationsEnabled'] ?? true;
-        _isPrivateAccount = settings['privateAccount'] ?? false;
-        _isTwoFactorAuth = settings['twoFactorAuth'] ?? false;
-        _selectedLanguage = settings['language'] ?? 'English';
-        _selectedVideoQuality = settings['videoQuality'] ?? 'HD 1080p';
-        _selectedTheme = settings['theme'] ?? 'light';
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _updateSetting({
-    bool? notificationsEnabled,
-    bool? privateAccount,
-    bool? twoFactorAuth,
-    String? language,
-    String? videoQuality,
-    String? theme,
-  }) async {
-    try {
-      await _settingsService.updateSettings(
-        notificationsEnabled: notificationsEnabled,
-        privateAccount: privateAccount,
-        twoFactorAuth: twoFactorAuth,
-        language: language,
-        videoQuality: videoQuality,
-        theme: theme,
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update settings: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+  void _loadData() {
+    context.read<ProfileBloc>().add(LoadMyProfile());
   }
 
   @override
@@ -121,8 +50,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ),
     );
 
-    final userName = _user['name'] ?? _user['username'] ?? 'User';
-    final userAvatar = _user['avatar'] ?? '';
     final themeMode = ref.watch(themeModeProvider);
     final isDarkMode = themeMode == ThemeMode.dark;
 
@@ -136,302 +63,307 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ),
         centerTitle: true,
       ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            )
-          : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        _error!,
-                        style: AppTheme.greyTextStyle,
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadUserDataAndSettings,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                        ),
-                        child: const Text('Retry'),
-                      ),
-                    ],
+      body: BlocListener<ProfileBloc, ProfileState>(
+        listener: (context, state) {
+          if (state.status == ProfileStatus.success) {
+            setState(() {
+              _profile = state.myProfile;
+              _isLoading = false;
+              _error = null;
+            });
+          } else if (state.status == ProfileStatus.error) {
+            setState(() {
+              _error = state.error;
+              _isLoading = false;
+            });
+          }
+        },
+        child: BlocListener<AuthBloc, AuthState>(
+          listener: (context, state) {
+            if (state.status == AuthStatus.unauthenticated) {
+              Navigator.pushReplacementNamed(context, NamedRoutes.loginScreen);
+            }
+          },
+          child: _buildBody(isDarkMode),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody(bool isDarkMode) {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      );
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              _error!,
+              style: AppTheme.greyTextStyle,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadData,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+              ),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final userName =
+        _profile?.displayName ?? _profile?.displayNameOrDefault ?? 'User';
+    final userAvatar = _profile?.avatar ?? '';
+
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Profile section
+            _buildProfileSection(userName, userAvatar),
+            const SizedBox(height: 24),
+
+            // Appearance
+            _buildSectionTitle('Appearance'),
+            const SizedBox(height: 8),
+            _buildSettingsCard([
+              _buildSwitchTile(
+                icon: Icons.dark_mode,
+                title: 'Dark Mode',
+                subtitle: 'Switch between light and dark theme',
+                value: isDarkMode,
+                onChanged: (value) async {
+                  await ref.read(themeModeProvider.notifier).toggleTheme();
+                },
+              ),
+              _buildDivider(),
+              _buildNavigationTile(
+                icon: Icons.language,
+                title: 'Language',
+                subtitle: _selectedLanguage,
+                onTap: () => _showLanguagePicker(),
+              ),
+            ]),
+            const SizedBox(height: 24),
+
+            // Account Preferences
+            _buildSectionTitle('Account Preferences'),
+            const SizedBox(height: 8),
+            _buildSettingsCard([
+              _buildSwitchTile(
+                icon: Icons.lock_outline,
+                title: 'Private Account',
+                subtitle: 'Only approved followers can see your content',
+                value: _isPrivateAccount,
+                onChanged: (value) {
+                  setState(() {
+                    _isPrivateAccount = value;
+                  });
+                },
+              ),
+              _buildDivider(),
+              _buildSwitchTile(
+                icon: Icons.notifications_outlined,
+                title: 'Push Notifications',
+                subtitle: 'Receive push notifications',
+                value: _isNotificationsEnabled,
+                onChanged: (value) {
+                  setState(() {
+                    _isNotificationsEnabled = value;
+                  });
+                },
+              ),
+              _buildDivider(),
+              _buildNavigationTile(
+                icon: Icons.block,
+                title: 'Blocked Accounts',
+                subtitle: 'Manage blocked users',
+                onTap: () {},
+              ),
+              _buildDivider(),
+              _buildNavigationTile(
+                icon: Icons.person_remove,
+                title: 'Restricted Accounts',
+                subtitle: 'Manage restricted users',
+                onTap: () {},
+              ),
+            ]),
+            const SizedBox(height: 24),
+
+            // Data & Storage
+            _buildSectionTitle('Data & Storage'),
+            const SizedBox(height: 8),
+            _buildSettingsCard([
+              _buildNavigationTile(
+                icon: Icons.storage,
+                title: 'Data Usage',
+                subtitle: 'Manage data and storage settings',
+                onTap: () {},
+              ),
+              _buildDivider(),
+              _buildNavigationTile(
+                icon: Icons.high_quality,
+                title: 'Video Quality',
+                subtitle: _selectedVideoQuality,
+                onTap: () => _showVideoQualityPicker(),
+              ),
+              _buildDivider(),
+              _buildNavigationTile(
+                icon: Icons.download,
+                title: 'Downloads',
+                subtitle: 'Manage downloaded content',
+                onTap: () {},
+              ),
+            ]),
+            const SizedBox(height: 24),
+
+            // Security
+            _buildSectionTitle('Security'),
+            const SizedBox(height: 8),
+            _buildSettingsCard([
+              _buildSwitchTile(
+                icon: Icons.security,
+                title: 'Two-Factor Authentication',
+                subtitle: 'Add an extra layer of security',
+                value: _isTwoFactorAuth,
+                onChanged: (value) {
+                  setState(() {
+                    _isTwoFactorAuth = value;
+                  });
+                },
+              ),
+              _buildDivider(),
+              _buildNavigationTile(
+                icon: Icons.password,
+                title: 'Change Password',
+                subtitle: 'Update your password',
+                onTap: () {},
+              ),
+              _buildDivider(),
+              _buildNavigationTile(
+                icon: Icons.devices,
+                title: 'Active Sessions',
+                subtitle: 'Manage where you\'re logged in',
+                onTap: () {},
+              ),
+            ]),
+            const SizedBox(height: 24),
+
+            // Subscription
+            _buildSectionTitle('Subscription'),
+            const SizedBox(height: 8),
+            _buildSettingsCard([
+              _buildNavigationTile(
+                icon: Icons.workspace_premium,
+                title: 'cirqle Premium',
+                subtitle: 'Unlock exclusive features',
+                trailing: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
                   ),
-                )
-              : SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Profile section
-                        _buildProfileSection(userName, userAvatar),
-                        const SizedBox(height: 24),
-
-                        // Appearance
-                        _buildSectionTitle('Appearance'),
-                        const SizedBox(height: 8),
-                        _buildSettingsCard([
-                          _buildSwitchTile(
-                            icon: Icons.dark_mode,
-                            title: 'Dark Mode',
-                            subtitle: 'Switch between light and dark theme',
-                            value: isDarkMode,
-                            onChanged: (value) async {
-                              await ref
-                                  .read(themeModeProvider.notifier)
-                                  .toggleTheme();
-                              await _updateSetting(
-                                  theme: value ? 'dark' : 'light');
-                            },
-                          ),
-                          _buildDivider(),
-                          _buildNavigationTile(
-                            icon: Icons.language,
-                            title: 'Language',
-                            subtitle: _selectedLanguage,
-                            onTap: () => _showLanguagePicker(),
-                          ),
-                        ]),
-                        const SizedBox(height: 24),
-
-                        // Account Preferences
-                        _buildSectionTitle('Account Preferences'),
-                        const SizedBox(height: 8),
-                        _buildSettingsCard([
-                          _buildSwitchTile(
-                            icon: Icons.lock_outline,
-                            title: 'Private Account',
-                            subtitle:
-                                'Only approved followers can see your content',
-                            value: _isPrivateAccount,
-                            onChanged: (value) async {
-                              setState(() {
-                                _isPrivateAccount = value;
-                              });
-                              await _updateSetting(privateAccount: value);
-                            },
-                          ),
-                          _buildDivider(),
-                          _buildSwitchTile(
-                            icon: Icons.notifications_outlined,
-                            title: 'Push Notifications',
-                            subtitle: 'Receive push notifications',
-                            value: _isNotificationsEnabled,
-                            onChanged: (value) async {
-                              setState(() {
-                                _isNotificationsEnabled = value;
-                              });
-                              await _updateSetting(notificationsEnabled: value);
-                            },
-                          ),
-                          _buildDivider(),
-                          _buildNavigationTile(
-                            icon: Icons.block,
-                            title: 'Blocked Accounts',
-                            subtitle: 'Manage blocked users',
-                            onTap: () {
-                              // TODO: Navigate to blocked accounts
-                            },
-                          ),
-                          _buildDivider(),
-                          _buildNavigationTile(
-                            icon: Icons.person_remove,
-                            title: 'Restricted Accounts',
-                            subtitle: 'Manage restricted users',
-                            onTap: () {
-                              // TODO: Navigate to restricted accounts
-                            },
-                          ),
-                        ]),
-                        const SizedBox(height: 24),
-
-                        // Data & Storage
-                        _buildSectionTitle('Data & Storage'),
-                        const SizedBox(height: 8),
-                        _buildSettingsCard([
-                          _buildNavigationTile(
-                            icon: Icons.storage,
-                            title: 'Data Usage',
-                            subtitle: 'Manage data and storage settings',
-                            onTap: () {
-                              // TODO: Navigate to data settings
-                            },
-                          ),
-                          _buildDivider(),
-                          _buildNavigationTile(
-                            icon: Icons.high_quality,
-                            title: 'Video Quality',
-                            subtitle: _selectedVideoQuality,
-                            onTap: () => _showVideoQualityPicker(),
-                          ),
-                          _buildDivider(),
-                          _buildNavigationTile(
-                            icon: Icons.download,
-                            title: 'Downloads',
-                            subtitle: 'Manage downloaded content',
-                            onTap: () {
-                              // TODO: Navigate to downloads
-                            },
-                          ),
-                        ]),
-                        const SizedBox(height: 24),
-
-                        // Security
-                        _buildSectionTitle('Security'),
-                        const SizedBox(height: 8),
-                        _buildSettingsCard([
-                          _buildSwitchTile(
-                            icon: Icons.security,
-                            title: 'Two-Factor Authentication',
-                            subtitle: 'Add an extra layer of security',
-                            value: _isTwoFactorAuth,
-                            onChanged: (value) async {
-                              setState(() {
-                                _isTwoFactorAuth = value;
-                              });
-                              await _updateSetting(twoFactorAuth: value);
-                            },
-                          ),
-                          _buildDivider(),
-                          _buildNavigationTile(
-                            icon: Icons.password,
-                            title: 'Change Password',
-                            subtitle: 'Update your password',
-                            onTap: () {
-                              // TODO: Navigate to change password
-                            },
-                          ),
-                          _buildDivider(),
-                          _buildNavigationTile(
-                            icon: Icons.devices,
-                            title: 'Active Sessions',
-                            subtitle: 'Manage where you\'re logged in',
-                            onTap: () {
-                              // TODO: Navigate to active sessions
-                            },
-                          ),
-                        ]),
-                        const SizedBox(height: 24),
-
-                        // Subscription
-                        _buildSectionTitle('Subscription'),
-                        const SizedBox(height: 8),
-                        _buildSettingsCard([
-                          _buildNavigationTile(
-                            icon: Icons.workspace_premium,
-                            title: 'Prive Premium',
-                            subtitle: 'Unlock exclusive features',
-                            trailing: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Colors.purple, Colors.pink],
-                                ),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                'PREMIUM',
-                                style: AppTheme.whiteTextStyle.copyWith(
-                                  fontSize: 10,
-                                  fontWeight: AppTheme.bold,
-                                ),
-                              ),
-                            ),
-                            onTap: () {
-                              HapticFeedback.lightImpact();
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const SubscribePage(),
-                                ),
-                              );
-                            },
-                          ),
-                        ]),
-                        const SizedBox(height: 24),
-
-                        // About
-                        _buildSectionTitle('About'),
-                        const SizedBox(height: 8),
-                        _buildSettingsCard([
-                          _buildNavigationTile(
-                            icon: Icons.info_outline,
-                            title: 'About Prive',
-                            subtitle: 'Version 1.0.0',
-                            onTap: () {
-                              // TODO: Show about dialog
-                            },
-                          ),
-                          _buildDivider(),
-                          _buildNavigationTile(
-                            icon: Icons.description_outlined,
-                            title: 'Terms of Service',
-                            subtitle: 'Read our terms and conditions',
-                            onTap: () {
-                              // TODO: Show terms
-                            },
-                          ),
-                          _buildDivider(),
-                          _buildNavigationTile(
-                            icon: Icons.privacy_tip_outlined,
-                            title: 'Privacy Policy',
-                            subtitle: 'How we handle your data',
-                            onTap: () {
-                              // TODO: Show privacy policy
-                            },
-                          ),
-                          _buildDivider(),
-                          _buildNavigationTile(
-                            icon: Icons.help_outline,
-                            title: 'Help Center',
-                            subtitle: 'Get help and support',
-                            onTap: () {
-                              // TODO: Navigate to help center
-                            },
-                          ),
-                        ]),
-                        const SizedBox(height: 24),
-
-                        // Logout button
-                        GestureDetector(
-                          onTap: () {
-                            _showLogoutDialog();
-                          },
-                          child: Container(
-                            width: double.infinity,
-                            height: 56,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: AppColors.redColor.withOpacity(0.3),
-                                width: 1,
-                              ),
-                            ),
-                            child: Center(
-                              child: Text(
-                                'Logout',
-                                style: AppTheme.blackTextStyle.copyWith(
-                                  color: AppColors.redColor,
-                                  fontWeight: AppTheme.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                      ],
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Colors.purple, Colors.pink],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'PREMIUM',
+                    style: AppTheme.whiteTextStyle.copyWith(
+                      fontSize: 10,
+                      fontWeight: AppTheme.bold,
                     ),
                   ),
                 ),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SubscribePage(),
+                    ),
+                  );
+                },
+              ),
+            ]),
+            const SizedBox(height: 24),
+
+            // About
+            _buildSectionTitle('About'),
+            const SizedBox(height: 8),
+            _buildSettingsCard([
+              _buildNavigationTile(
+                icon: Icons.info_outline,
+                title: 'About cirqle',
+                subtitle: 'Version 1.0.0',
+                onTap: () {},
+              ),
+              _buildDivider(),
+              _buildNavigationTile(
+                icon: Icons.description_outlined,
+                title: 'Terms of Service',
+                subtitle: 'Read our terms and conditions',
+                onTap: () {},
+              ),
+              _buildDivider(),
+              _buildNavigationTile(
+                icon: Icons.privacy_tip_outlined,
+                title: 'Privacy Policy',
+                subtitle: 'How we handle your data',
+                onTap: () {},
+              ),
+              _buildDivider(),
+              _buildNavigationTile(
+                icon: Icons.help_outline,
+                title: 'Help Center',
+                subtitle: 'Get help and support',
+                onTap: () {},
+              ),
+            ]),
+            const SizedBox(height: 24),
+
+            // Logout button
+            GestureDetector(
+              onTap: _showLogoutDialog,
+              child: Container(
+                width: double.infinity,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppColors.redColor.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    'Logout',
+                    style: AppTheme.blackTextStyle.copyWith(
+                      color: AppColors.redColor,
+                      fontWeight: AppTheme.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
     );
   }
 
@@ -443,8 +375,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           MaterialPageRoute(
             builder: (context) => MultiBlocProvider(
               providers: [
-                BlocProvider(
-                  create: (context) => ProfileBloc(), // Add ProfileBloc here
+                BlocProvider.value(
+                  value: context.read<ProfileBloc>(),
                 ),
                 BlocProvider(
                   create: (context) => GalleryProfileCubit(),
@@ -462,35 +394,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         decoration: BoxDecoration(
           color: AppColors.whiteColor,
           borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.primary, width: 2),
-                image: userAvatar.isNotEmpty
-                    ? DecorationImage(
-                        fit: BoxFit.cover,
-                        image: NetworkImage(userAvatar),
-                      )
-                    : null,
-              ),
-              child: userAvatar.isEmpty
-                  ? Center(
-                      child: Text(
-                        userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    )
-                  : null,
-            ),
+            // Avatar - same as home page style
+            _buildAvatar(userAvatar, userName, size: 60),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -513,6 +428,61 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
             Icon(Icons.chevron_right, color: AppColors.greyColor),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAvatar(String avatar, String name, {required double size}) {
+    final fallbackText = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+
+    if (avatar.isNotEmpty && avatar.startsWith('http')) {
+      return ClipOval(
+        child: Image.network(
+          avatar,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _avatarFallback(size, fallbackText),
+        ),
+      );
+    }
+
+    if (avatar.isNotEmpty) {
+      return ClipOval(
+        child: Image.asset(
+          avatar,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _avatarFallback(size, fallbackText),
+        ),
+      );
+    }
+
+    return _avatarFallback(size, fallbackText);
+  }
+
+  Widget _avatarFallback(double size, String fallbackText) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.primary, AppColors.secondary],
+        ),
+      ),
+      child: Center(
+        child: Text(
+          fallbackText,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: size * 0.4,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );
@@ -564,7 +534,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ),
       value: value,
       onChanged: onChanged,
-      activeThumbColor: AppColors.primary,
+      activeColor: AppColors.primary,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
     );
   }
@@ -654,11 +624,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   trailing: _selectedLanguage == language
                       ? const Icon(Icons.check_circle, color: AppColors.primary)
                       : null,
-                  onTap: () async {
+                  onTap: () {
                     setState(() {
                       _selectedLanguage = language;
                     });
-                    await _updateSetting(language: language);
                     Navigator.pop(context);
                   },
                 ),
@@ -709,11 +678,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   trailing: _selectedVideoQuality == quality
                       ? const Icon(Icons.check_circle, color: AppColors.primary)
                       : null,
-                  onTap: () async {
+                  onTap: () {
                     setState(() {
                       _selectedVideoQuality = quality;
                     });
-                    await _updateSetting(videoQuality: quality);
                     Navigator.pop(context);
                   },
                 ),
@@ -753,15 +721,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
             ),
             TextButton(
-              onPressed: () async {
+              onPressed: () {
                 Navigator.pop(context);
-                await _authHook.signOut();
-                if (mounted) {
-                  Navigator.pushReplacementNamed(
-                    context,
-                    NamedRoutes.loginScreen,
-                  );
-                }
+                context.read<AuthBloc>().add(SignOutRequested());
               },
               child: Text(
                 'Logout',

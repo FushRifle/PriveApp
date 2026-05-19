@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 // FeedPost Model - Matches backend FeedPost structure
 class FeedPost {
   final int id;

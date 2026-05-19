@@ -1,7 +1,7 @@
-import 'package:Prive/data/services/home/feed_service.dart';
+import 'package:cirqle/data/services/home/feed_service.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:Prive/data/models/gallery_model.dart';
+import 'package:cirqle/data/models/gallery_model.dart';
 part 'gallery_profile_state.dart';
 
 class GalleryProfileCubit extends Cubit<GalleryProfileState> {

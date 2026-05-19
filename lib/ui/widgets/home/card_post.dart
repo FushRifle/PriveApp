@@ -1,15 +1,16 @@
 import 'dart:ui';
-import 'package:Prive/bloc/home/feed_bloc.dart';
+
+import 'package:cirqle/bloc/home/feed_bloc.dart';
+import 'package:cirqle/ui/widgets/ui/document_viewer.dart';
+import 'package:cirqle/ui/widgets/ui/image_viewer.dart';
+import 'package:cirqle/ui/widgets/ui/video_viewer.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:cirqle/app/configs/colors.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:Prive/app/configs/colors.dart';
-import 'package:Prive/app/configs/theme.dart';
-import 'package:Prive/data/models/feeds_models.dart';
+import 'package:cirqle/data/models/feeds_models.dart';
 import 'package:video_player/video_player.dart';
-import 'package:Prive/ui/widgets/home/clip_status_bar.dart';
-import 'package:Prive/ui/widgets/home/custom_bottom_sheet.dart';
-import 'package:Prive/app/resources/constant/named_routes.dart';
+import 'package:cirqle/ui/widgets/home/custom_bottom_sheet.dart';
+import 'package:cirqle/app/resources/constant/named_routes.dart';
 
 class CardPost extends StatefulWidget {
   final FeedPost post;
@@ -26,7 +27,6 @@ class CardPost extends StatefulWidget {
 }
 
 class _CardPostState extends State<CardPost> {
-  double _handleOffset = 0.0;
   late bool isLiked;
   late int likeCount;
   late int commentCount;
@@ -39,7 +39,6 @@ class _CardPostState extends State<CardPost> {
     isLiked = widget.post.isLiked;
     likeCount = widget.post.likes;
     commentCount = widget.post.comments;
-
     _checkForVideo();
   }
 
@@ -79,33 +78,10 @@ class _CardPostState extends State<CardPost> {
     } else {
       context.read<FeedBloc>().add(LikeFeedPost(postId: widget.post.id));
     }
-
     setState(() {
       isLiked = !isLiked;
-      if (isLiked) {
-        likeCount++;
-      } else {
-        likeCount--;
-      }
+      likeCount += isLiked ? 1 : -1;
     });
-  }
-
-  void _toggleSave() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Save feature coming soon'),
-        duration: Duration(seconds: 1),
-      ),
-    );
-  }
-
-  void _onShare() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Share feature coming soon'),
-        duration: Duration(seconds: 1),
-      ),
-    );
   }
 
   void _openComments() {
@@ -114,211 +90,311 @@ class _CardPostState extends State<CardPost> {
 
   @override
   Widget build(BuildContext context) {
-    final cardContent = LayoutBuilder(
-      builder: (context, constraints) {
-        final width = constraints.maxWidth;
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: widget.post.attachments.isEmpty
-                ? _buildTextOnlyPost()
-                : SizedBox(
-                    width: width,
-                    height: width * 1.2,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        _buildMediaContent(),
-                        _buildGradientOverlay(),
-                        _buildSidePanel(width, width * 1.2, -80, 80),
-                        _buildBottomInfo(),
-                      ],
-                    ),
-                  ),
-          ),
-        );
+    final cardContent = GestureDetector(
+      onTap: () {
+        if (!widget.isDetailView) {
+          Navigator.pushNamed(
+            context,
+            NamedRoutes.postDetailScreen,
+            arguments: widget.post.id,
+          );
+        }
       },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: AppColors.secondary,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+              spreadRadius: 0,
+            ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+              spreadRadius: 0,
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: widget.post.attachments.isEmpty
+              ? _buildTextOnlyPost()
+              : Stack(
+                  children: [
+                    AspectRatio(
+                      aspectRatio: 1,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          _buildMediaContent(),
+                          _buildOverlay(),
+                        ],
+                      ),
+                    ),
+                    _buildBottomBar(),
+                    _buildActionButtons(),
+                  ],
+                ),
+        ),
+      ),
     );
 
-    if (widget.isDetailView) {
-      return cardContent;
-    }
+    return cardContent;
+  }
+
+  Widget _buildActionButtons() {
+    return Positioned(
+      right: 12,
+      bottom: 12,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.1),
+                width: 0.5,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildActionButton(
+                  icon: isLiked ? Icons.favorite : Icons.favorite_border,
+                  count: likeCount,
+                  color: isLiked ? Colors.redAccent : Colors.white,
+                  onTap: _toggleLike,
+                ),
+                const SizedBox(height: 20),
+                _buildActionButton(
+                  icon: Icons.chat_bubble_outline,
+                  count: commentCount,
+                  color: Colors.white,
+                  onTap: _openComments,
+                ),
+                const SizedBox(height: 20),
+                _buildActionButton(
+                  icon: Icons.bookmark_border,
+                  count: null,
+                  color: Colors.white,
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Save feature coming soon'),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+                _buildActionButton(
+                  icon: Icons.share_outlined,
+                  count: null,
+                  color: Colors.white,
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Share feature coming soon'),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    int? count,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    final hasCount = count != null && count > 0;
 
     return GestureDetector(
-      onTap: () {
-        Navigator.pushNamed(
-          context,
-          NamedRoutes.postDetailScreen,
-          arguments: widget.post.toJson(),
-        );
-      },
-      child: cardContent,
+      onTap: onTap,
+      child: Column(
+        children: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Icon(icon, color: color, size: 24),
+              ),
+              // Badge for count
+              if (hasCount)
+                Positioned(
+                  top: -4,
+                  right: -4,
+                  child: Container(
+                    constraints: const BoxConstraints(
+                      minWidth: 18,
+                      minHeight: 18,
+                    ),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.redColor,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Text(
+                      _formatCount(count!),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
+  }
+
+  String _formatCount(int count) {
+    if (count >= 1000000) return '${(count / 1000000).toStringAsFixed(1)}M';
+    if (count >= 1000) return '${(count / 1000).toStringAsFixed(1)}K';
+    return count.toString();
   }
 
   Widget _buildTextOnlyPost() {
     return Container(
-      width: double.infinity,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.primary.withOpacity(0.08),
-            AppColors.secondary.withOpacity(0.03),
-          ],
-        ),
-        border: Border.all(
-          color: AppColors.greyTextColor.withOpacity(0.15),
-          width: 1,
-        ),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+            spreadRadius: 0,
+          ),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                if (widget.post.user.avatar.isNotEmpty)
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundImage: NetworkImage(widget.post.user.avatar),
-                    onBackgroundImageError: (_, __) {},
-                  ),
-                if (widget.post.user.avatar.isNotEmpty)
-                  const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        widget.post.user.name,
-                        style: AppTheme.blackTextStyle.copyWith(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        widget.post.time,
-                        style: AppTheme.greyTextStyle.copyWith(
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              widget.post.content,
-              style: AppTheme.blackTextStyle.copyWith(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                height: 1.4,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundImage: widget.post.user.avatar.isNotEmpty
+                    ? NetworkImage(widget.post.user.avatar)
+                    : null,
+                child: widget.post.user.avatar.isEmpty
+                    ? const Icon(Icons.person, size: 20)
+                    : null,
               ),
-              maxLines: 6,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Expanded(
-                  child: _buildTextOnlyActionButton(
-                    icon: isLiked ? Icons.favorite : Icons.favorite_border,
-                    count: likeCount,
-                    onTap: _toggleLike,
-                    isActive: isLiked,
-                    activeColor: Colors.redAccent,
-                  ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.post.user.name,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      widget.post.time,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                  ],
                 ),
-                Expanded(
-                  child: _buildTextOnlyActionButton(
-                    icon: Icons.chat_bubble_outline,
-                    count: commentCount,
-                    onTap: _openComments,
-                  ),
-                ),
-                Expanded(
-                  child: _buildTextOnlyActionButton(
-                    icon: Icons.bookmark_border,
-                    count: 0,
-                    onTap: _toggleSave,
-                  ),
-                ),
-                Expanded(
-                  child: _buildTextOnlyActionButton(
-                    icon: Icons.share_outlined,
-                    count: 0,
-                    onTap: _onShare,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            widget.post.content,
+            style: const TextStyle(fontSize: 15, height: 1.3),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _buildInlineButton(
+                icon: isLiked ? Icons.favorite : Icons.favorite_border,
+                label: likeCount > 0 ? _formatCount(likeCount) : '',
+                color: isLiked ? Colors.redAccent : Colors.grey.shade600,
+                onTap: _toggleLike,
+              ),
+              const SizedBox(width: 16),
+              _buildInlineButton(
+                icon: Icons.chat_bubble_outline,
+                label: commentCount > 0 ? _formatCount(commentCount) : '',
+                color: AppColors.blackColor,
+                onTap: _openComments,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildTextOnlyActionButton({
+  Widget _buildInlineButton({
     required IconData icon,
-    required int count,
+    required String label,
+    required Color color,
     required VoidCallback onTap,
-    bool isActive = false,
-    Color? activeColor,
   }) {
     return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        onTap();
-      },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      onTap: onTap,
+      child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isActive
-                  ? (activeColor ?? Colors.redAccent).withOpacity(0.1)
-                  : Colors.transparent,
-            ),
-            child: Icon(
-              icon,
-              size: 22,
-              color: isActive ? activeColor : AppColors.greyColor,
-            ),
-          ),
-          const SizedBox(height: 2),
-          if (count > 0)
-            Text(
-              count > 999
-                  ? '${(count / 1000).toStringAsFixed(1)}K'
-                  : count.toString(),
-              style: AppTheme.greyTextStyle.copyWith(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+          Icon(icon, size: 18, color: color),
+          if (label.isNotEmpty) ...[
+            const SizedBox(width: 4),
+            Text(label, style: TextStyle(fontSize: 14, color: color)),
+          ],
         ],
       ),
     );
@@ -335,311 +411,216 @@ class _CardPostState extends State<CardPost> {
       orElse: () => Attachment(type: '', url: ''),
     );
 
-    if (videoAttachment.url.isNotEmpty &&
-        _isVideoInitialized &&
-        _videoController != null) {
-      return Stack(
-        alignment: Alignment.center,
-        children: [
-          VideoPlayer(_videoController!),
-          Positioned.fill(
-            child: InkWell(
-              onTap: () {
-                setState(() {
-                  if (_videoController!.value.isPlaying) {
-                    _videoController!.pause();
-                  } else {
-                    _videoController!.play();
-                  }
-                });
-              },
-              child: Container(color: Colors.transparent),
-            ),
-          ),
-          if (!_videoController!.value.isPlaying)
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.5),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.play_arrow,
-                color: Colors.white,
-                size: 40,
-              ),
-            ),
-        ],
-      );
-    } else if (imageAttachment.url.isNotEmpty) {
-      return Image.network(
-        imageAttachment.url,
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        errorBuilder: (context, error, stackTrace) {
-          return Container(
-            color: AppColors.greyColor.withOpacity(0.2),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.broken_image,
-                      size: 40, color: AppColors.greyColor),
-                  const SizedBox(height: 6),
-                  Text('Failed to load image', style: AppTheme.greyTextStyle),
-                ],
+    final documentAttachment = widget.post.attachments.firstWhere(
+      (a) => a.type == 'document' || a.type == 'file' || a.type == 'pdf',
+      orElse: () => Attachment(type: '', url: ''),
+    );
+
+    // Video handling - Open full screen video viewer
+    if (videoAttachment.url.isNotEmpty) {
+      return GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => VideoViewer(
+                videoUrl: videoAttachment.url,
+                thumbnailUrl: videoAttachment.thumbnail,
+                caption:
+                    widget.post.content.isNotEmpty ? widget.post.content : null,
               ),
             ),
           );
         },
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return Container(
-            color: AppColors.greyColor.withOpacity(0.1),
-            child: const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Thumbnail preview while loading
+            if (_isVideoInitialized && _videoController != null)
+              VideoPlayer(_videoController!)
+            else if (videoAttachment.thumbnail != null &&
+                videoAttachment.thumbnail!.isNotEmpty)
+              Image.network(
+                videoAttachment.thumbnail!,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+                errorBuilder: (_, __, ___) => Container(
+                  color: Colors.grey.shade900,
+                  child: const Center(
+                    child:
+                        Icon(Icons.video_library, size: 40, color: Colors.grey),
+                  ),
+                ),
+              )
+            else
+              Container(
+                color: Colors.grey.shade900,
+                child: const Center(
+                  child:
+                      Icon(Icons.video_library, size: 40, color: Colors.grey),
+                ),
+              ),
+            // Play button overlay
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.2),
+                child: const Center(
+                  child: Icon(
+                    Icons.play_circle_filled,
+                    color: Colors.white,
+                    size: 50,
+                  ),
+                ),
+              ),
             ),
-          );
-        },
+          ],
+        ),
       );
     }
 
-    return Container(
-      color: AppColors.greyColor.withOpacity(0.2),
-      child: Center(
-        child: Text(
-          widget.post.content.isNotEmpty
-              ? widget.post.content
-              : 'No media content',
-          style: AppTheme.blackTextStyle.copyWith(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+    // Image handling - Open full screen image viewer
+    if (imageAttachment.url.isNotEmpty) {
+      return GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ImageViewer(
+                imageUrl: imageAttachment.url,
+                caption:
+                    widget.post.content.isNotEmpty ? widget.post.content : null,
+              ),
+            ),
+          );
+        },
+        child: Hero(
+          tag: 'post_image_${widget.post.id}',
+          child: Image.network(
+            imageAttachment.url,
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: double.infinity,
+            errorBuilder: (_, __, ___) => Container(
+              color: Colors.grey.shade200,
+              child: const Icon(Icons.broken_image, size: 40),
+            ),
           ),
-          textAlign: TextAlign.center,
-          maxLines: 4,
-          overflow: TextOverflow.ellipsis,
         ),
+      );
+    }
+
+    // Document handling
+    if (documentAttachment.url.isNotEmpty) {
+      return GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => DocumentViewer(
+                documentUrl: documentAttachment.url,
+                fileName: documentAttachment.url.split('/').last,
+                caption:
+                    widget.post.content.isNotEmpty ? widget.post.content : null,
+              ),
+            ),
+          );
+        },
+        child: Container(
+          color: Colors.grey.shade100,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.insert_drive_file,
+                  size: 48,
+                  color: AppColors.primary.withOpacity(0.5),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Tap to view document',
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Fallback for no media
+    return Container(
+      color: Colors.grey.shade200,
+      child: const Center(
+        child: Icon(Icons.image, size: 40, color: Colors.grey),
       ),
     );
   }
 
-  Widget _buildGradientOverlay() {
+  Widget _buildOverlay() {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          stops: const [0.0, 0.3, 0.7, 1.0],
           colors: [
             Colors.black.withOpacity(0.3),
             Colors.transparent,
             Colors.transparent,
-            Colors.black.withOpacity(0.7),
+            Colors.black.withOpacity(0.4),
           ],
+          stops: const [0.0, 0.3, 0.6, 1.0],
         ),
       ),
     );
   }
 
-  Widget _buildSidePanel(
-      double width, double height, double minScroll, double maxScroll) {
+  Widget _buildBottomBar() {
     return Positioned(
-      right: 0,
-      top: 8,
-      bottom: 20,
-      width: 85,
-      child: Stack(
-        alignment: Alignment.center,
+      left: 12,
+      right: 70,
+      bottom: 18,
+      child: Row(
         children: [
-          Transform.rotate(
-            angle: 3.14,
-            child: ClipPath(
-              clipper: ClipStatusBar(),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                child: Container(
-                  color: Colors.black.withOpacity(0.25),
+          CircleAvatar(
+            radius: 14,
+            backgroundImage: widget.post.user.avatar.isNotEmpty
+                ? NetworkImage(widget.post.user.avatar)
+                : null,
+            child: widget.post.user.avatar.isEmpty
+                ? const Icon(Icons.person, size: 12)
+                : null,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  widget.post.user.name,
+                  style: TextStyle(
+                    color: AppColors.whiteColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-            ),
-          ),
-          _buildActionButtons(),
-          _buildDraggableHandle(height, minScroll, maxScroll),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _buildActionButton(
-          icon: isLiked ? Icons.favorite : Icons.favorite_border,
-          label: 'Like',
-          onTap: _toggleLike,
-          isActive: isLiked,
-          activeColor: Colors.redAccent,
-          showCount: true,
-          count: likeCount,
-        ),
-        const SizedBox(height: 20),
-        _buildActionButton(
-          icon: Icons.chat_bubble_outline,
-          label: 'Reply',
-          onTap: _openComments,
-          showCount: true,
-          count: commentCount,
-        ),
-        const SizedBox(height: 20),
-        _buildActionButton(
-          icon: Icons.bookmark_border,
-          label: 'Save',
-          onTap: _toggleSave,
-        ),
-        const SizedBox(height: 20),
-        _buildActionButton(
-          icon: Icons.share_outlined,
-          label: 'Share',
-          onTap: _onShare,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    bool isActive = false,
-    Color? activeColor,
-    bool showCount = false,
-    int count = 0,
-  }) {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.mediumImpact();
-        onTap();
-      },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isActive
-                  ? activeColor?.withOpacity(0.8)
-                  : Colors.white.withOpacity(0.2),
-            ),
-            child: Icon(
-              icon,
-              color: isActive ? Colors.white : Colors.white.withOpacity(0.95),
-              size: 24,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            showCount && count > 0 ? _formatCount(count) : label,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.95),
-              fontSize: showCount && count > 0 ? 12 : 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatCount(int count) {
-    if (count >= 1000000) return '${(count / 1000000).toStringAsFixed(1)}M';
-    if (count >= 1000) return '${(count / 1000).toStringAsFixed(1)}K';
-    return count.toString();
-  }
-
-  Widget _buildDraggableHandle(
-      double height, double minScroll, double maxScroll) {
-    return Positioned(
-      left: 0,
-      top: (height / 2 - 35) + _handleOffset,
-      child: GestureDetector(
-        onVerticalDragUpdate: (details) {
-          setState(() {
-            _handleOffset += details.delta.dy;
-            _handleOffset = _handleOffset.clamp(minScroll, maxScroll);
-          });
-        },
-        onVerticalDragEnd: (_) {
-          setState(() => _handleOffset = 0);
-        },
-        child: Container(
-          width: 3,
-          height: 35,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.5),
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 3,
-                offset: const Offset(0, 1),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottomInfo() {
-    return Positioned(
-      left: 14,
-      right: 85,
-      bottom: 16,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              if (widget.post.user.avatar.isNotEmpty)
-                CircleAvatar(
-                  radius: 14,
-                  backgroundImage: NetworkImage(widget.post.user.avatar),
-                  onBackgroundImageError: (_, __) {},
-                ),
-              if (widget.post.user.avatar.isNotEmpty) const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      widget.post.user.name,
-                      style: TextStyle(
+                if (widget.post.content.isNotEmpty)
+                  Text(
+                    widget.post.content,
+                    style: TextStyle(
                         color: AppColors.whiteColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (widget.post.content.isNotEmpty &&
-                        widget.post.attachments.isNotEmpty)
-                      Text(
-                        widget.post.content,
-                        style: TextStyle(
-                          color: AppColors.whiteColor.withOpacity(0.9),
-                          fontSize: 15,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                  ],
-                ),
-              ),
-            ],
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
           ),
         ],
       ),

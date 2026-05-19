@@ -132,6 +132,12 @@ class FeedService {
     }
   }
 
+  Future<void> deletePost(int postId) async {
+    try {
+      await _api.delete('/api/feed/posts/$postId');
+    } on DioException {}
+  }
+
   // Get user media (for profile gallery)
   Future<UserMediaResponse> getUserMedia({
     required int userId,

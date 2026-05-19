@@ -20,6 +20,15 @@ class RefreshReels extends ReelEvent {}
 
 class LoadMoreReels extends ReelEvent {}
 
+class CreateReel extends ReelEvent {
+  final Map<String, dynamic> data;
+
+  const CreateReel({required this.data});
+
+  @override
+  List<Object?> get props => [data];
+}
+
 class LikeReel extends ReelEvent {
   final String reelId;
   final int index;

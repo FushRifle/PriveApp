@@ -117,6 +117,15 @@ class LoadMoreUserMedia extends FeedEvent {
   List<Object?> get props => [userId, type];
 }
 
+class DeleteFeedPost extends FeedEvent {
+  final int postId;
+
+  const DeleteFeedPost({required this.postId});
+
+  @override
+  List<Object?> get props => [postId];
+}
+
 // Clear errors
 class ClearFeedError extends FeedEvent {}
 

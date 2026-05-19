@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import 'package:Prive/app/configs/colors.dart';
-import 'package:Prive/data/models/reel_model.dart';
+import 'package:cirqle/app/configs/colors.dart';
+import 'package:cirqle/data/models/reel_model.dart';
 
 class ReelItem extends StatefulWidget {
   final ReelModel reel;
@@ -26,10 +26,10 @@ class ReelItem extends StatefulWidget {
 }
 
 class _ReelItemState extends State<ReelItem> {
-  late VideoPlayerController _videoController;
+  VideoPlayerController? _videoController;
   bool _isPlaying = true;
   bool _isInitialized = false;
-  bool _isLiked = false;
+  late bool _isLiked;
   bool _isFollowing = false;
 
   @override
@@ -49,6 +49,10 @@ class _ReelItemState extends State<ReelItem> {
         _pauseVideo();
       }
     }
+
+    if (widget.reel.isLiked != oldWidget.reel.isLiked) {
+      _isLiked = widget.reel.isLiked;
+    }
   }
 
   void _initVideoPlayer() {
@@ -61,20 +65,20 @@ class _ReelItemState extends State<ReelItem> {
       Uri.parse(widget.reel.videoUrl),
     );
 
-    _videoController.addListener(() {
+    _videoController!.addListener(() {
       if (mounted) {
         setState(() {});
       }
     });
 
-    _videoController.setLooping(true);
-    _videoController.initialize().then((_) {
+    _videoController!.setLooping(true);
+    _videoController!.initialize().then((_) {
       if (mounted) {
         setState(() {
           _isInitialized = true;
         });
         if (widget.isActive) {
-          _videoController.play();
+          _videoController!.play();
           _isPlaying = true;
         }
       }
@@ -89,8 +93,8 @@ class _ReelItemState extends State<ReelItem> {
   }
 
   void _playVideo() {
-    if (_isInitialized && !_isPlaying) {
-      _videoController.play();
+    if (_isInitialized && _videoController != null && !_isPlaying) {
+      _videoController!.play();
       setState(() {
         _isPlaying = true;
       });
@@ -98,8 +102,8 @@ class _ReelItemState extends State<ReelItem> {
   }
 
   void _pauseVideo() {
-    if (_isInitialized && _isPlaying) {
-      _videoController.pause();
+    if (_isInitialized && _videoController != null && _isPlaying) {
+      _videoController!.pause();
       setState(() {
         _isPlaying = false;
       });
@@ -131,8 +135,8 @@ class _ReelItemState extends State<ReelItem> {
 
   @override
   void dispose() {
-    if (_isInitialized) {
-      _videoController.dispose();
+    if (_videoController != null && _isInitialized) {
+      _videoController!.dispose();
     }
     super.dispose();
   }
@@ -144,19 +148,10 @@ class _ReelItemState extends State<ReelItem> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Video Player
           _buildVideoPlayer(),
-
-          // Play/Pause Overlay
           if (!_isPlaying && _isInitialized) _buildPlayPauseOverlay(),
-
-          // Gradients
           _buildGradients(),
-
-          // Right Actions
           _buildRightActions(),
-
-          // Bottom Info
           _buildBottomInfo(),
         ],
       ),
@@ -164,7 +159,9 @@ class _ReelItemState extends State<ReelItem> {
   }
 
   Widget _buildVideoPlayer() {
-    if (widget.reel.videoUrl.isEmpty || !_isInitialized) {
+    if (widget.reel.videoUrl.isEmpty ||
+        !_isInitialized ||
+        _videoController == null) {
       return Container(
         color: Colors.black,
         child: Center(
@@ -194,9 +191,9 @@ class _ReelItemState extends State<ReelItem> {
       child: FittedBox(
         fit: BoxFit.cover,
         child: SizedBox(
-          width: _videoController.value.size.width,
-          height: _videoController.value.size.height,
-          child: VideoPlayer(_videoController),
+          width: _videoController!.value.size.width,
+          height: _videoController!.value.size.height,
+          child: VideoPlayer(_videoController!),
         ),
       ),
     );
@@ -260,6 +257,9 @@ class _ReelItemState extends State<ReelItem> {
   }
 
   Widget _buildRightActions() {
+    final currentLikeCount =
+        _isLiked ? (widget.reel.likeCount + 1) : widget.reel.likeCount;
+
     return Positioned(
       right: 16,
       bottom: 100,
@@ -267,7 +267,7 @@ class _ReelItemState extends State<ReelItem> {
         children: [
           _buildActionButton(
             icon: _isLiked ? Icons.favorite : Icons.favorite_border,
-            label: _formatCount(widget.reel.likeCount),
+            label: _formatCount(currentLikeCount),
             onTap: _handleLike,
             color: _isLiked ? AppColors.redColor : Colors.white,
           ),
@@ -332,21 +332,16 @@ class _ReelItemState extends State<ReelItem> {
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
+        shape: BoxShape.circle,
         border: Border.all(
           color: Colors.white.withOpacity(0.3),
           width: 2,
         ),
         image: widget.reel.userProfile.isNotEmpty
-            ? (widget.reel.userProfile.startsWith('http')
-                ? DecorationImage(
-                    fit: BoxFit.cover,
-                    image: NetworkImage(widget.reel.userProfile),
-                  )
-                : DecorationImage(
-                    fit: BoxFit.cover,
-                    image: AssetImage(widget.reel.userProfile),
-                  ))
+            ? DecorationImage(
+                fit: BoxFit.cover,
+                image: NetworkImage(widget.reel.userProfile),
+              )
             : null,
       ),
       child: widget.reel.userProfile.isEmpty
@@ -388,16 +383,10 @@ class _ReelItemState extends State<ReelItem> {
                           width: 2,
                         ),
                         image: widget.reel.userProfile.isNotEmpty
-                            ? (widget.reel.userProfile.startsWith('http')
-                                ? DecorationImage(
-                                    fit: BoxFit.cover,
-                                    image:
-                                        NetworkImage(widget.reel.userProfile),
-                                  )
-                                : DecorationImage(
-                                    fit: BoxFit.cover,
-                                    image: AssetImage(widget.reel.userProfile),
-                                  ))
+                            ? DecorationImage(
+                                fit: BoxFit.cover,
+                                image: NetworkImage(widget.reel.userProfile),
+                              )
                             : null,
                       ),
                       child: widget.reel.userProfile.isEmpty
@@ -430,7 +419,6 @@ class _ReelItemState extends State<ReelItem> {
                   ],
                 ),
               ),
-              // Only show follow button if this is NOT the current user's reel
               if (!_isCurrentUser()) ...[
                 const SizedBox(width: 12),
                 GestureDetector(
@@ -438,6 +426,7 @@ class _ReelItemState extends State<ReelItem> {
                     setState(() {
                       _isFollowing = !_isFollowing;
                     });
+                    // TODO: Implement follow API call
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(

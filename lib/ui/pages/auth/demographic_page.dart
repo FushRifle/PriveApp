@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:Prive/app/configs/colors.dart';
-import 'package:Prive/app/configs/theme.dart';
-import 'package:Prive/app/resources/constant/named_routes.dart';
-import 'package:Prive/bloc/profile/profile_bloc.dart';
+import 'package:cirqle/app/configs/colors.dart';
+import 'package:cirqle/app/configs/theme.dart';
+import 'package:cirqle/app/resources/constant/named_routes.dart';
+import 'package:cirqle/bloc/profile/profile_bloc.dart';
 
 class OnboardingDemographicPage extends StatefulWidget {
   const OnboardingDemographicPage({super.key});

@@ -1,18 +1,17 @@
-import 'package:Prive/bloc/home/feed_bloc.dart';
-import 'package:Prive/bloc/status/stories_bloc.dart';
+import 'package:cirqle/bloc/home/feed_bloc.dart';
+import 'package:cirqle/bloc/status/stories_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:Prive/app/configs/colors.dart';
-import 'package:Prive/app/configs/theme.dart';
-import 'package:Prive/app/resources/constant/named_routes.dart';
-import 'package:Prive/data/models/status_model.dart';
-import 'package:Prive/ui/pages/main/status/status_view_page.dart';
-import 'package:Prive/ui/pages/settings/settings_page.dart';
-import 'package:Prive/ui/widgets/home/card_post.dart';
-import 'package:Prive/ui/widgets/status/status_widget.dart';
-import '../../../widgets/home/custom_app_bar.dart';
-import 'package:Prive/data/services/user/user_service.dart';
+import 'package:cirqle/app/configs/colors.dart';
+import 'package:cirqle/app/configs/theme.dart';
+import 'package:cirqle/app/resources/constant/named_routes.dart';
+import 'package:cirqle/data/models/status_model.dart';
+import 'package:cirqle/ui/pages/main/status/status_view_page.dart';
+import 'package:cirqle/ui/pages/settings/settings_page.dart';
+import 'package:cirqle/ui/widgets/home/card_post.dart';
+import 'package:cirqle/ui/widgets/status/status_widget.dart';
+import 'package:cirqle/data/services/user/user_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -74,30 +73,31 @@ class _HomePageState extends State<HomePage> {
       ),
     );
 
-    return SafeArea(
-      bottom: false,
-      child: Column(
+    return Scaffold(
+      body: Column(
         children: [
           _buildCustomAppBar(),
           Expanded(
             child: RefreshIndicator(
               color: AppColors.primary,
               onRefresh: _refreshAll,
-              child: Column(
-                children: [
-                  BlocBuilder<StoriesBloc, StoriesState>(
-                    builder: (context, storiesState) {
-                      return _buildStoriesSection(storiesState);
-                    },
-                  ),
-                  Expanded(
-                    child: BlocBuilder<FeedBloc, FeedState>(
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  children: [
+                    BlocBuilder<StoriesBloc, StoriesState>(
+                      builder: (context, storiesState) {
+                        return _buildStoriesSection(storiesState);
+                      },
+                    ),
+                    // Feed section
+                    BlocBuilder<FeedBloc, FeedState>(
                       builder: (context, feedState) {
                         return _buildFeedSection(feedState);
                       },
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -110,10 +110,11 @@ class _HomePageState extends State<HomePage> {
     final stories = storiesState.stories;
     final isLoading = storiesState.status == StoriesStatus.loading;
 
-    // Show loading only on first load
     if (isLoading && stories.isEmpty) {
       return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 16),
+        padding: EdgeInsets.symmetric(
+          vertical: 16,
+        ),
         child: Center(
           child: CircularProgressIndicator(color: AppColors.primary),
         ),
@@ -170,7 +171,6 @@ class _HomePageState extends State<HomePage> {
             itemCount: hasStories ? groupedStories.length + 1 : 1,
             separatorBuilder: (_, __) => const SizedBox(width: 10),
             itemBuilder: (context, index) {
-              // My Status button (always first)
               if (index == 0) {
                 return StatusWidget(
                   name: 'My Status',
@@ -196,7 +196,6 @@ class _HomePageState extends State<HomePage> {
                 hasUnviewed: group.hasUnseen,
                 onTap: () {
                   HapticFeedback.lightImpact();
-                  // Mark unseen stories as seen
                   for (final story in group.stories) {
                     if (!story.isSeen && mounted) {
                       context
@@ -240,7 +239,6 @@ class _HomePageState extends State<HomePage> {
       return _buildErrorWidget(error);
     }
 
-    // Posts section
     if (posts.isEmpty) {
       return Center(
         child: Column(
@@ -269,14 +267,15 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 130),
+    return Column(
       children: [
         for (final post in posts)
-          SizedBox(
-            width: double.infinity,
-            child: CardPost(post: post),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SizedBox(
+              width: double.infinity,
+              child: CardPost(post: post),
+            ),
           ),
         if (hasMore)
           Padding(
@@ -400,106 +399,131 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildCustomAppBar() {
-    final userName = _getUserDisplayName();
     final userAvatar = _getUserAvatar();
-    final firstLetter = userName.isNotEmpty ? userName[0].toUpperCase() : 'U';
+    final fallbackText = _getUserDisplayName().isNotEmpty
+        ? _getUserDisplayName()[0].toUpperCase()
+        : 'U';
 
-    return CustomAppBar(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Image.asset(
-                'assets/images/prive.png',
-                width: 40,
-                height: 40,
-                errorBuilder: (_, __, ___) => const SizedBox(),
-              ),
-            ),
-            const SizedBox(width: 10),
-            InkWell(
-              onTap: () {
-                HapticFeedback.lightImpact();
-                Navigator.pushNamed(context, NamedRoutes.notificationScreen);
-              },
-              child: Icon(
-                Icons.notifications_active,
-                color: AppColors.primary,
-                size: 30,
-              ),
-            ),
-            const SizedBox(width: 14),
-            InkWell(
-              onTap: () {
-                HapticFeedback.lightImpact();
-                // TODO: Navigate to search
-              },
-              child: Icon(
-                Icons.search_outlined,
-                color: AppColors.primary,
-                size: 30,
-              ),
-            ),
-            const Spacer(),
-            InkWell(
-              onTap: () {
-                HapticFeedback.lightImpact();
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SettingsPage(),
-                  ),
-                );
-              },
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 180),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(35),
-                  color: AppColors.primary,
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.2),
-                    width: 1,
-                  ),
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 40, 16, 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // User Avatar (Left)
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsPage(),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildAvatar(userAvatar,
-                        size: 32, fallbackText: firstLetter),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        userName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTheme.whiteTextStyle.copyWith(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    if (_currentUser['verified'] == true) ...[
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.verified,
-                        size: 14,
-                        color: Colors.white,
-                      ),
-                    ],
+              );
+            },
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.primary,
+                    AppColors.secondary,
                   ],
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(2),
+                child: ClipOval(
+                  child: _buildAvatar(
+                    userAvatar,
+                    size: 42,
+                    fallbackText: fallbackText,
+                  ),
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+
+          // Logo (Center)
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.primary.withOpacity(0.1),
+                  AppColors.secondary.withOpacity(0.05),
+                ],
+              ),
+            ),
+            child: Image.asset(
+              'assets/images/cirqle.png',
+              width: 32,
+              height: 32,
+              errorBuilder: (_, __, ___) => const SizedBox(),
+            ),
+          ),
+
+          // Notification Icon (Right)
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Navigator.pushNamed(context, NamedRoutes.notificationScreen);
+            },
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Stack(
+                children: [
+                  Center(
+                    child: Icon(
+                      Icons.notifications_none_outlined,
+                      color: AppColors.primary,
+                      size: 26,
+                    ),
+                  ),
+                  // Notification badge
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

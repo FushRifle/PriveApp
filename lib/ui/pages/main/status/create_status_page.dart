@@ -1,14 +1,13 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:Prive/core/cloudinary_service.dart';
+import 'package:cirqle/core/cloudinary_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:Prive/app/configs/colors.dart';
-import 'package:Prive/bloc/status/stories_bloc.dart';
-import 'package:Prive/bloc/user/user_bloc.dart';
-import 'package:Prive/data/models/status_model.dart';
+import 'package:cirqle/app/configs/colors.dart';
+import 'package:cirqle/bloc/status/stories_bloc.dart';
+import 'package:cirqle/data/models/status_model.dart';
 
 class CreateStatusPage extends StatefulWidget {
   const CreateStatusPage({super.key});
@@ -28,7 +27,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   TextAlign _textAlign = TextAlign.center;
   bool _isEditingText = false;
   bool _isSubmitting = false;
-  double _uploadProgress = 0.0;
+  final double _uploadProgress = 0.0;
   bool _showFontControls = false;
 
   static const List<Color> _backgroundColors = [

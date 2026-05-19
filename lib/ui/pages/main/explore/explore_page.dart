@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:Prive/app/configs/colors.dart';
-import 'package:Prive/app/configs/theme.dart';
-import 'package:Prive/data/models/profile_model.dart';
-import 'package:Prive/bloc/explore/explore_bloc.dart';
-import 'package:Prive/ui/widgets/explore/discover_header.dart';
-import 'package:Prive/ui/widgets/explore/no_more_profiles.dart';
-import 'package:Prive/ui/widgets/explore/swipe_cards_stack.dart';
-import 'package:Prive/ui/widgets/explore/filter_bottom_sheet.dart';
-import 'package:Prive/ui/widgets/explore/loading_shimmer.dart';
-import 'package:Prive/ui/widgets/explore/match_dialog.dart';
-import 'package:Prive/ui/widgets/explore/action_buttons.dart';
+import 'package:cirqle/app/configs/colors.dart';
+import 'package:cirqle/app/configs/theme.dart';
+import 'package:cirqle/data/models/profile_model.dart';
+import 'package:cirqle/bloc/explore/explore_bloc.dart';
+import 'package:cirqle/ui/widgets/explore/discover_header.dart';
+import 'package:cirqle/ui/widgets/explore/no_more_profiles.dart';
+import 'package:cirqle/ui/widgets/explore/swipe_cards_stack.dart';
+import 'package:cirqle/ui/widgets/explore/filter_bottom_sheet.dart';
+import 'package:cirqle/ui/widgets/explore/loading_shimmer.dart';
+import 'package:cirqle/ui/widgets/explore/match_dialog.dart';
+import 'package:cirqle/ui/widgets/explore/action_buttons.dart';
 
 enum SwipeActionType { like, pass, superLike, none }
 
@@ -251,8 +251,6 @@ class _DiscoverPageState extends State<DiscoverPage>
     }
 
     _showSwipeFeedback(actionType);
-
-    // Dispatch swipe event to BLoC
     context.read<ExploreBloc>().add(SwipeProfile(
           profileId: profile.id,
           action: action,
@@ -304,9 +302,6 @@ class _DiscoverPageState extends State<DiscoverPage>
             );
             context.read<ExploreBloc>().add(ClearExploreError());
           }
-
-          // Check for match (would need to be handled via a separate stream or callback)
-          // For now, we'll handle matches in the swipe response
         },
         builder: (context, state) {
           final remainingProfiles = state.remainingProfiles;

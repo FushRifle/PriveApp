@@ -1,7 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:Prive/data/models/profile_model.dart';
-import 'package:Prive/data/services/explore/explore_service.dart';
+import 'package:cirqle/data/models/profile_model.dart';
+import 'package:cirqle/data/services/explore/explore_service.dart';
 import 'package:flutter/foundation.dart';
 
 part 'explore_event.dart';
@@ -9,7 +9,6 @@ part 'explore_state.dart';
 
 class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
   final ExploreService _exploreService = ExploreService();
-  static const int _pageSize = 10;
 
   ExploreBloc() : super(const ExploreState()) {
     on<LoadExploreProfiles>(_onLoadExploreProfiles);

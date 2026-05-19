@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:Prive/app/configs/colors.dart';
-import 'package:Prive/app/configs/theme.dart';
-import 'package:Prive/app/resources/constant/named_routes.dart';
-import 'package:Prive/data/hooks/auth/auth_hook.dart';
+import 'package:cirqle/app/configs/colors.dart';
+import 'package:cirqle/app/configs/theme.dart';
+import 'package:cirqle/app/resources/constant/named_routes.dart';
+import 'package:cirqle/data/hooks/auth/auth_hook.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -95,7 +95,7 @@ class _RegisterPageState extends State<RegisterPage> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
                 child: Image.asset(
-                  'assets/images/prive.png',
+                  'assets/images/cirqle.png',
                   width: 80,
                   height: 80,
                   fit: BoxFit.cover,

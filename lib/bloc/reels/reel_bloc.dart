@@ -1,6 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:Prive/data/services/reel/reel_service.dart';
+import 'package:cirqle/data/services/reel/reel_service.dart';
 
 part 'reel_event.dart';
 part 'reel_state.dart';
@@ -13,6 +13,7 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     on<LoadReels>(_onLoadReels);
     on<RefreshReels>(_onRefreshReels);
     on<LoadMoreReels>(_onLoadMoreReels);
+    on<CreateReel>(_onCreateReel);
     on<LikeReel>(_onLikeReel);
     on<UnlikeReel>(_onUnlikeReel);
     on<ShareReel>(_onShareReel);
@@ -113,15 +114,27 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     }
   }
 
+  Future<void> _onCreateReel(
+    CreateReel event,
+    Emitter<ReelState> emit,
+  ) async {
+    try {
+      await _reelService.createReel(event.data);
+      // Refresh after creating
+      add(RefreshReels());
+    } catch (e) {
+      emit(state.copyWith(
+        status: ReelStatus.error,
+        error: e.toString(),
+      ));
+    }
+  }
+
   Future<void> _onLikeReel(
     LikeReel event,
     Emitter<ReelState> emit,
   ) async {
     final oldReel = state.reels[event.index];
-    final wasLiked = oldReel['isLiked'] ?? false;
-
-    // Don't allow duplicate likes
-    if (state.likedReelIndices.contains(event.index)) return;
 
     // Optimistic update
     final updatedReels = List<dynamic>.from(state.reels);
@@ -131,13 +144,7 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
       'likes': (oldReel['likes'] ?? 0) + 1,
     };
 
-    final updatedLikedIndices = Set<int>.from(state.likedReelIndices)
-      ..add(event.index);
-
-    emit(state.copyWith(
-      reels: updatedReels,
-      likedReelIndices: updatedLikedIndices,
-    ));
+    emit(state.copyWith(reels: updatedReels));
 
     try {
       await _reelService.likeReel(event.reelId);
@@ -145,14 +152,10 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
       // Rollback on error
       final rolledBackReels = List<dynamic>.from(state.reels);
       rolledBackReels[event.index] = oldReel;
-
       emit(state.copyWith(
         reels: rolledBackReels,
-        likedReelIndices: state.likedReelIndices..remove(event.index),
         error: e.toString(),
       ));
-
-      // Show error snackbar (handled in UI)
     }
   }
 
@@ -161,7 +164,6 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     Emitter<ReelState> emit,
   ) async {
     final oldReel = state.reels[event.index];
-    final wasLiked = oldReel['isLiked'] ?? false;
 
     // Optimistic update
     final updatedReels = List<dynamic>.from(state.reels);
@@ -179,7 +181,6 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
       // Rollback on error
       final rolledBackReels = List<dynamic>.from(state.reels);
       rolledBackReels[event.index] = oldReel;
-
       emit(state.copyWith(
         reels: rolledBackReels,
         error: e.toString(),
@@ -191,22 +192,10 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     ShareReel event,
     Emitter<ReelState> emit,
   ) async {
-    if (state.sharingReelIds.contains(event.reelId)) return;
-
-    final updatedSharingIds = Set<String>.from(state.sharingReelIds)
-      ..add(event.reelId);
-
-    emit(state.copyWith(sharingReelIds: updatedSharingIds));
-
     try {
       await _reelService.shareReel(event.reelId);
-      // Success - no state change needed
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
-    } finally {
-      emit(state.copyWith(
-        sharingReelIds: state.sharingReelIds..remove(event.reelId),
-      ));
     }
   }
 

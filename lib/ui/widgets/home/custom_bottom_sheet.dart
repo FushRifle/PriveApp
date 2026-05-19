@@ -1,9 +1,9 @@
-import 'package:Prive/bloc/home/feed_bloc.dart';
+import 'package:cirqle/bloc/home/feed_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:Prive/app/configs/colors.dart';
-import 'package:Prive/app/configs/theme.dart';
-import 'package:Prive/data/models/feeds_models.dart';
+import 'package:cirqle/app/configs/colors.dart';
+import 'package:cirqle/app/configs/theme.dart';
+import 'package:cirqle/data/models/feeds_models.dart';
 
 void customBottomSheetComments(BuildContext context, {required int postId}) =>
     showModalBottomSheet(

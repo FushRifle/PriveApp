@@ -1,10 +1,11 @@
+import 'package:cirqle/ui/pages/main/reels/create_reel_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:Prive/app/resources/constant/named_routes.dart';
-import 'package:Prive/bloc/reels/reel_bloc.dart';
-import 'package:Prive/data/services/user/user_service.dart';
-import 'package:Prive/ui/widgets/reels/reel_item.dart';
+import 'package:cirqle/app/resources/constant/named_routes.dart';
+import 'package:cirqle/bloc/reels/reel_bloc.dart';
+import 'package:cirqle/data/services/user/user_service.dart';
+import 'package:cirqle/ui/widgets/reels/reel_item.dart';
 
 class ReelsPage extends StatefulWidget {
   const ReelsPage({super.key});
@@ -80,7 +81,6 @@ class _ReelsPageState extends State<ReelsPage> {
             backgroundColor: Colors.black,
             body: Stack(
               children: [
-                // Show loading only on initial load with no data
                 reels.isEmpty && isLoading
                     ? const Center(
                         child: CircularProgressIndicator(
@@ -93,7 +93,6 @@ class _ReelsPageState extends State<ReelsPage> {
                         scrollDirection: Axis.vertical,
                         itemCount: reels.length + 1,
                         onPageChanged: (index) {
-                          // Load more when nearing the end
                           if (index >= reels.length - 2 &&
                               hasMore &&
                               !isLoadingMore &&
@@ -130,7 +129,6 @@ class _ReelsPageState extends State<ReelsPage> {
                           return RefreshIndicator(
                             onRefresh: () async {
                               context.read<ReelBloc>().add(RefreshReels());
-                              // Wait for refresh to complete
                               await Future.delayed(
                                   const Duration(milliseconds: 500));
                             },
@@ -173,7 +171,7 @@ class _ReelsPageState extends State<ReelsPage> {
                           );
                         },
                       ),
-                // Header - Back button and Camera
+                // Header
                 Positioned(
                   top: MediaQuery.of(context).padding.top + 10,
                   left: 16,
@@ -206,12 +204,10 @@ class _ReelsPageState extends State<ReelsPage> {
                       GestureDetector(
                         onTap: () {
                           HapticFeedback.lightImpact();
-                          // TODO: Create reel
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Create reel feature coming soon'),
-                              duration: Duration(seconds: 1),
-                            ),
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const CreateReelPage()),
                           );
                         },
                         child: Container(

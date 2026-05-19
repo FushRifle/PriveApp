@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:Prive/app/configs/colors.dart';
-import 'package:Prive/app/configs/theme.dart';
-import 'package:Prive/app/resources/constant/named_routes.dart';
-import 'package:Prive/bloc/auth/auth_bloc.dart';
+import 'package:cirqle/app/configs/colors.dart';
+import 'package:cirqle/app/configs/theme.dart';
+import 'package:cirqle/app/resources/constant/named_routes.dart';
+import 'package:cirqle/bloc/auth/auth_bloc.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -121,7 +121,7 @@ class _LoginPageState extends State<LoginPage> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
                 child: Image.asset(
-                  'assets/images/prive.png',
+                  'assets/images/cirqle.png',
                   width: 80,
                   height: 80,
                   fit: BoxFit.cover,
@@ -166,7 +166,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
-                child: Image.asset('assets/images/prive.png',
+                child: Image.asset('assets/images/cirqle.png',
                     width: 80, height: 80, fit: BoxFit.cover),
               ),
             ),

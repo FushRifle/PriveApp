@@ -1,6 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:Prive/data/services/socials/friends_service.dart';
+import 'package:cirqle/data/services/socials/friends_service.dart';
 
 part 'friends_event.dart';
 part 'friends_state.dart';

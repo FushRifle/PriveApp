@@ -1,76 +1,66 @@
 part of 'reel_bloc.dart';
 
+enum ReelStatus {
+  initial,
+  loading,
+  refreshing,
+  loadingMore,
+  success,
+  error,
+}
+
 class ReelState extends Equatable {
+  final ReelStatus status;
   final List<dynamic> reels;
   final int currentPage;
   final bool hasMore;
-  final ReelStatus status;
   final String? error;
   final bool isLoading;
-  final bool isLoadingMore;
   final bool isRefreshing;
-  final Set<int> likedReelIndices;
-  final Set<String> sharingReelIds;
+  final bool isLoadingMore;
 
   const ReelState({
+    this.status = ReelStatus.initial,
     this.reels = const [],
     this.currentPage = 1,
     this.hasMore = true,
-    this.status = ReelStatus.initial,
     this.error,
     this.isLoading = false,
-    this.isLoadingMore = false,
     this.isRefreshing = false,
-    this.likedReelIndices = const {},
-    this.sharingReelIds = const {},
+    this.isLoadingMore = false,
   });
 
   ReelState copyWith({
+    ReelStatus? status,
     List<dynamic>? reels,
     int? currentPage,
     bool? hasMore,
-    ReelStatus? status,
     String? error,
     bool? isLoading,
-    bool? isLoadingMore,
     bool? isRefreshing,
-    Set<int>? likedReelIndices,
-    Set<String>? sharingReelIds,
+    bool? isLoadingMore,
   }) {
     return ReelState(
+      status: status ?? this.status,
       reels: reels ?? this.reels,
       currentPage: currentPage ?? this.currentPage,
       hasMore: hasMore ?? this.hasMore,
-      status: status ?? this.status,
       error: error ?? this.error,
       isLoading: isLoading ?? this.isLoading,
-      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       isRefreshing: isRefreshing ?? this.isRefreshing,
-      likedReelIndices: likedReelIndices ?? this.likedReelIndices,
-      sharingReelIds: sharingReelIds ?? this.sharingReelIds,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
     );
   }
 
   @override
   List<Object?> get props => [
+        status,
         reels,
         currentPage,
         hasMore,
-        status,
         error,
         isLoading,
-        isLoadingMore,
         isRefreshing,
-        likedReelIndices,
-        sharingReelIds,
+        isLoadingMore,
       ];
-}
-
-enum ReelStatus {
-  initial,
-  loading,
-  loadingMore,
-  refreshing,
-  success,
-  error,
 }
