@@ -1,17 +1,17 @@
-import 'package:cirqle/bloc/home/feed_bloc.dart';
-import 'package:cirqle/bloc/status/stories_bloc.dart';
+import 'package:clique/bloc/home/feed_bloc.dart';
+import 'package:clique/bloc/status/stories_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:cirqle/app/configs/colors.dart';
-import 'package:cirqle/app/configs/theme.dart';
-import 'package:cirqle/app/resources/constant/named_routes.dart';
-import 'package:cirqle/data/models/status_model.dart';
-import 'package:cirqle/ui/pages/main/status/status_view_page.dart';
-import 'package:cirqle/ui/pages/settings/settings_page.dart';
-import 'package:cirqle/ui/widgets/home/card_post.dart';
-import 'package:cirqle/ui/widgets/status/status_widget.dart';
-import 'package:cirqle/data/services/user/user_service.dart';
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/configs/theme.dart';
+import 'package:clique/app/resources/constant/named_routes.dart';
+import 'package:clique/data/models/status_model.dart';
+import 'package:clique/ui/pages/main/status/status_view_page.dart';
+import 'package:clique/ui/pages/settings/settings_page.dart';
+import 'package:clique/ui/widgets/home/card_post.dart';
+import 'package:clique/ui/widgets/status/status_widget.dart';
+import 'package:clique/data/services/user/user_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -112,9 +112,7 @@ class _HomePageState extends State<HomePage> {
 
     if (isLoading && stories.isEmpty) {
       return const Padding(
-        padding: EdgeInsets.symmetric(
-          vertical: 16,
-        ),
+        padding: EdgeInsets.symmetric(vertical: 16),
         child: Center(
           child: CircularProgressIndicator(color: AppColors.primary),
         ),
@@ -127,7 +125,7 @@ class _HomePageState extends State<HomePage> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -146,7 +144,7 @@ class _HomePageState extends State<HomePage> {
                   },
                   style: TextButton.styleFrom(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
@@ -154,7 +152,7 @@ class _HomePageState extends State<HomePage> {
                     'More',
                     style: AppTheme.greyTextStyle.copyWith(
                       color: AppColors.primary,
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -162,62 +160,66 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
         ),
-        SizedBox(
-          height: 104,
-          width: double.infinity,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            itemCount: hasStories ? groupedStories.length + 1 : 1,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
-            itemBuilder: (context, index) {
-              if (index == 0) {
+        Padding(
+          padding: const EdgeInsets.only(left: 8),
+          child: SizedBox(
+            height: 100,
+            width: double.infinity,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              itemCount: hasStories ? groupedStories.length + 1 : 1,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return StatusWidget(
+                    name: 'Your Story',
+                    avatar: _getUserAvatar(),
+                    isAddStatus: true,
+                    statusCount: 0,
+                    hasUnviewed: false,
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.pushNamed(
+                          context, NamedRoutes.createStatusScreen);
+                    },
+                  );
+                }
+
+                if (!hasStories) return const SizedBox.shrink();
+
+                final group = groupedStories[index - 1];
                 return StatusWidget(
-                  name: 'My Status',
-                  avatar: _getUserAvatar(),
-                  isAddStatus: true,
-                  statusCount: 0,
-                  hasUnviewed: false,
+                  name: group.user.name,
+                  avatar: group.user.avatar,
+                  statusCount: group.stories.length,
+                  hasUnviewed: group.hasUnseen,
                   onTap: () {
                     HapticFeedback.lightImpact();
-                    Navigator.pushNamed(
-                        context, NamedRoutes.createStatusScreen);
+                    for (final story in group.stories) {
+                      if (!story.isSeen && mounted) {
+                        context
+                            .read<StoriesBloc>()
+                            .add(MarkStorySeen(storyId: story.id));
+                      }
+                    }
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => StatusViewPage(
+                          stories: group.stories,
+                          initialIndex: 0,
+                        ),
+                      ),
+                    );
                   },
                 );
-              }
-
-              if (!hasStories) return const SizedBox.shrink();
-
-              final group = groupedStories[index - 1];
-              return StatusWidget(
-                name: group.user.name,
-                avatar: group.user.avatar,
-                statusCount: group.stories.length,
-                hasUnviewed: group.hasUnseen,
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  for (final story in group.stories) {
-                    if (!story.isSeen && mounted) {
-                      context
-                          .read<StoriesBloc>()
-                          .add(MarkStorySeen(storyId: story.id));
-                    }
-                  }
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => StatusViewPage(
-                        stories: group.stories,
-                        initialIndex: 0,
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
+              },
+            ),
           ),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 12),
       ],
     );
   }
@@ -283,7 +285,7 @@ class _HomePageState extends State<HomePage> {
             child: Center(
               child: isLoadingMore
                   ? const Padding(
-                      padding: EdgeInsets.all(16),
+                      padding: EdgeInsets.all(20),
                       child: CircularProgressIndicator(
                         color: AppColors.primary,
                       ),
@@ -388,16 +390,6 @@ class _HomePageState extends State<HomePage> {
     return 'User';
   }
 
-  String _getUserAvatar() {
-    if (_isLoadingUser) return '';
-    return (_currentUser['avatar'] ??
-            _currentUser['avatarUrl'] ??
-            _currentUser['avatar_url'] ??
-            _currentUser['image'] ??
-            '')
-        .toString();
-  }
-
   Widget _buildCustomAppBar() {
     final userAvatar = _getUserAvatar();
     final fallbackText = _getUserDisplayName().isNotEmpty
@@ -405,7 +397,7 @@ class _HomePageState extends State<HomePage> {
         : 'U';
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 40, 16, 8),
+      margin: const EdgeInsets.fromLTRB(20, 60, 20, 15),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -470,7 +462,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             child: Image.asset(
-              'assets/images/cirqle.png',
+              'assets/icons/clique.png',
               width: 32,
               height: 32,
               errorBuilder: (_, __, ___) => const SizedBox(),
@@ -576,6 +568,16 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
+  }
+
+  String _getUserAvatar() {
+    if (_isLoadingUser) return '';
+    return (_currentUser['avatar'] ??
+            _currentUser['avatarUrl'] ??
+            _currentUser['avatar_url'] ??
+            _currentUser['image'] ??
+            '')
+        .toString();
   }
 }
 

@@ -1,6 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:cirqle/data/services/chat/chat_service.dart';
+import 'package:clique/data/services/chat/chat_service.dart';
 
 part 'chat_event.dart';
 part 'chat_state.dart';
@@ -35,29 +35,36 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     Emitter<ChatState> emit,
   ) async {
     if (state.conversations.isEmpty) {
-      emit(state.copyWith(
-        conversationsStatus: ChatStatus.loading,
-        isLoading: true,
-      ));
+      emit(
+        state.copyWith(
+          conversationsStatus: ChatStatus.loading,
+          isLoading: true,
+        ),
+      );
     }
 
     try {
       final conversations = await _chatService.getConversations();
-      final conversationList =
-          conversations.map((c) => Conversation.fromJson(c)).toList();
+      final conversationList = conversations
+          .map((c) => Conversation.fromJson(c))
+          .toList();
 
-      emit(state.copyWith(
-        conversations: conversationList,
-        conversationsStatus: ChatStatus.success,
-        isLoading: false,
-        error: null,
-      ));
+      emit(
+        state.copyWith(
+          conversations: conversationList,
+          conversationsStatus: ChatStatus.success,
+          isLoading: false,
+          error: null,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        conversationsStatus: ChatStatus.error,
-        isLoading: false,
-        error: e.toString(),
-      ));
+      emit(
+        state.copyWith(
+          conversationsStatus: ChatStatus.error,
+          isLoading: false,
+          error: e.toString(),
+        ),
+      );
     }
   }
 
@@ -65,25 +72,28 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     RefreshConversations event,
     Emitter<ChatState> emit,
   ) async {
-    emit(state.copyWith(
-      conversationsStatus: ChatStatus.refreshing,
-    ));
+    emit(state.copyWith(conversationsStatus: ChatStatus.refreshing));
 
     try {
       final conversations = await _chatService.getConversations();
-      final conversationList =
-          conversations.map((c) => Conversation.fromJson(c)).toList();
+      final conversationList = conversations
+          .map((c) => Conversation.fromJson(c))
+          .toList();
 
-      emit(state.copyWith(
-        conversations: conversationList,
-        conversationsStatus: ChatStatus.success,
-        error: null,
-      ));
+      emit(
+        state.copyWith(
+          conversations: conversationList,
+          conversationsStatus: ChatStatus.success,
+          error: null,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        conversationsStatus: ChatStatus.error,
-        error: e.toString(),
-      ));
+      emit(
+        state.copyWith(
+          conversationsStatus: ChatStatus.error,
+          error: e.toString(),
+        ),
+      );
     }
   }
 
@@ -95,39 +105,47 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       // Reset state for new user
       _messagePages[event.userId] = 1;
 
-      emit(state.copyWith(
-        currentUserId: event.userId,
-        currentMessages: [],
-        currentPage: 1,
-        hasMoreMessages: true,
-        messagesStatus: ChatStatus.loading,
-        isLoading: true,
-      ));
+      emit(
+        state.copyWith(
+          currentUserId: event.userId,
+          currentMessages: [],
+          currentPage: 1,
+          hasMoreMessages: true,
+          messagesStatus: ChatStatus.loading,
+          isLoading: true,
+        ),
+      );
     }
 
     try {
-      final messages =
-          await _chatService.getMessages(event.userId, page: event.page);
+      final messages = await _chatService.getMessages(
+        event.userId,
+        page: event.page,
+      );
       final messageList = messages
           .map((m) => Message.fromJson(m))
           .toList()
           .reversed
           .toList(); // Reverse for chronological order
 
-      emit(state.copyWith(
-        currentMessages: messageList,
-        hasMoreMessages: messageList.length >= 20, // Assuming 20 per page
-        currentPage: event.page,
-        messagesStatus: ChatStatus.success,
-        isLoading: false,
-        error: null,
-      ));
+      emit(
+        state.copyWith(
+          currentMessages: messageList,
+          hasMoreMessages: messageList.length >= 20, // Assuming 20 per page
+          currentPage: event.page,
+          messagesStatus: ChatStatus.success,
+          isLoading: false,
+          error: null,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        messagesStatus: ChatStatus.error,
-        isLoading: false,
-        error: e.toString(),
-      ));
+      emit(
+        state.copyWith(
+          messagesStatus: ChatStatus.error,
+          isLoading: false,
+          error: e.toString(),
+        ),
+      );
     }
   }
 
@@ -137,33 +155,44 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   ) async {
     if (!state.hasMoreMessages || state.isLoadingMore) return;
 
-    emit(state.copyWith(
-      messagesStatus: ChatStatus.loadingMore,
-      isLoadingMore: true,
-    ));
+    emit(
+      state.copyWith(
+        messagesStatus: ChatStatus.loadingMore,
+        isLoadingMore: true,
+      ),
+    );
 
     try {
       final nextPage = state.currentPage + 1;
-      final messages =
-          await _chatService.getMessages(event.userId, page: nextPage);
-      final messageList =
-          messages.map((m) => Message.fromJson(m)).toList().reversed.toList();
+      final messages = await _chatService.getMessages(
+        event.userId,
+        page: nextPage,
+      );
+      final messageList = messages
+          .map((m) => Message.fromJson(m))
+          .toList()
+          .reversed
+          .toList();
 
       final updatedMessages = [...messageList, ...state.currentMessages];
 
-      emit(state.copyWith(
-        currentMessages: updatedMessages,
-        hasMoreMessages: messageList.length >= 20,
-        currentPage: nextPage,
-        messagesStatus: ChatStatus.success,
-        isLoadingMore: false,
-      ));
+      emit(
+        state.copyWith(
+          currentMessages: updatedMessages,
+          hasMoreMessages: messageList.length >= 20,
+          currentPage: nextPage,
+          messagesStatus: ChatStatus.success,
+          isLoadingMore: false,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        messagesStatus: ChatStatus.error,
-        isLoadingMore: false,
-        error: e.toString(),
-      ));
+      emit(
+        state.copyWith(
+          messagesStatus: ChatStatus.error,
+          isLoadingMore: false,
+          error: e.toString(),
+        ),
+      );
     }
   }
 
@@ -187,10 +216,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     List<Message> updatedMessages = List.from(state.currentMessages)
       ..add(tempMessage);
 
-    emit(state.copyWith(
-      currentMessages: updatedMessages,
-      isSending: true,
-    ));
+    emit(state.copyWith(currentMessages: updatedMessages, isSending: true));
 
     try {
       final result = await _chatService.sendMessage({
@@ -203,13 +229,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
       // Replace temp message with real one
       final realMessage = Message.fromJson(result);
-      final finalMessages =
-          updatedMessages.map((m) => m.id == tempId ? realMessage : m).toList();
+      final finalMessages = updatedMessages
+          .map((m) => m.id == tempId ? realMessage : m)
+          .toList();
 
-      emit(state.copyWith(
-        currentMessages: finalMessages,
-        isSending: false,
-      ));
+      emit(state.copyWith(currentMessages: finalMessages, isSending: false));
 
       // Refresh conversations to update last message
       add(RefreshConversations());
@@ -219,11 +243,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           .map((m) => m.id == tempId ? m.copyWith(status: 'failed') : m)
           .toList();
 
-      emit(state.copyWith(
-        currentMessages: failedMessages,
-        isSending: false,
-        error: e.toString(),
-      ));
+      emit(
+        state.copyWith(
+          currentMessages: failedMessages,
+          isSending: false,
+          error: e.toString(),
+        ),
+      );
     }
   }
 
@@ -242,9 +268,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         return c;
       }).toList();
 
-      emit(state.copyWith(
-        conversations: updatedConversations,
-      ));
+      emit(state.copyWith(conversations: updatedConversations));
     } catch (e) {
       print('Error marking messages as read: $e');
     }
@@ -284,15 +308,19 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
     try {
       final prefs = await _chatService.getPreferences();
-      emit(state.copyWith(
-        preferences: ChatPreferences.fromJson(prefs),
-        preferencesStatus: ChatStatus.success,
-      ));
+      emit(
+        state.copyWith(
+          preferences: ChatPreferences.fromJson(prefs),
+          preferencesStatus: ChatStatus.success,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        preferencesStatus: ChatStatus.error,
-        error: e.toString(),
-      ));
+      emit(
+        state.copyWith(
+          preferencesStatus: ChatStatus.error,
+          error: e.toString(),
+        ),
+      );
     }
   }
 
@@ -302,13 +330,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   ) async {
     try {
       final result = await _chatService.updatePreferences(event.preferences);
-      emit(state.copyWith(
-        preferences: ChatPreferences.fromJson(result),
-      ));
+      emit(state.copyWith(preferences: ChatPreferences.fromJson(result)));
     } catch (e) {
-      emit(state.copyWith(
-        error: e.toString(),
-      ));
+      emit(state.copyWith(error: e.toString()));
     }
   }
 
@@ -316,19 +340,18 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     ClearCurrentMessages event,
     Emitter<ChatState> emit,
   ) {
-    emit(state.copyWith(
-      currentUserId: 0,
-      currentMessages: [],
-      hasMoreMessages: true,
-      currentPage: 1,
-      messagesStatus: ChatStatus.initial,
-    ));
+    emit(
+      state.copyWith(
+        currentUserId: 0,
+        currentMessages: [],
+        hasMoreMessages: true,
+        currentPage: 1,
+        messagesStatus: ChatStatus.initial,
+      ),
+    );
   }
 
-  void _onClearUnreadCount(
-    ClearUnreadCount event,
-    Emitter<ChatState> emit,
-  ) {
+  void _onClearUnreadCount(ClearUnreadCount event, Emitter<ChatState> emit) {
     final updatedConversations = state.conversations.map((c) {
       if (c.userId == event.userId) {
         return c.copyWith(unreadCount: 0);
@@ -339,17 +362,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     emit(state.copyWith(conversations: updatedConversations));
   }
 
-  void _onClearChatError(
-    ClearChatError event,
-    Emitter<ChatState> emit,
-  ) {
+  void _onClearChatError(ClearChatError event, Emitter<ChatState> emit) {
     emit(state.copyWith(error: null));
   }
 
-  void _onResetChatState(
-    ResetChatState event,
-    Emitter<ChatState> emit,
-  ) {
+  void _onResetChatState(ResetChatState event, Emitter<ChatState> emit) {
     _messagePages.clear();
     emit(const ChatState());
   }
@@ -371,8 +388,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     final updatedConversations = state.conversations.map((c) {
       if (c.userId == message.senderId) {
         // Increment unread count if not active chat
-        final unreadCount =
-            state.currentUserId == message.senderId ? 0 : c.unreadCount + 1;
+        final unreadCount = state.currentUserId == message.senderId
+            ? 0
+            : c.unreadCount + 1;
         return c.copyWith(
           lastMessage: message.content,
           lastMessageTime: message.createdAt,

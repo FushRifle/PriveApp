@@ -1,40 +1,48 @@
-import 'package:cirqle/bloc/profile/profile_bloc.dart';
-import 'package:cirqle/bloc/status/stories_bloc.dart';
-import 'package:cirqle/ui/pages/auth/success_page.dart';
+import 'package:clique/bloc/profile/profile_bloc.dart';
+import 'package:clique/bloc/status/stories_bloc.dart';
+import 'package:clique/ui/pages/auth/security/active_sessions_page.dart';
+import 'package:clique/ui/pages/auth/security/change_password_page.dart';
+import 'package:clique/ui/pages/auth/security/lock_screen_page.dart';
+import 'package:clique/ui/pages/auth/security/two_factor_page.dart';
+import 'package:clique/ui/pages/auth/success_page.dart';
+import 'package:clique/ui/pages/settings/clique/about_page.dart';
+import 'package:clique/ui/pages/settings/clique/help_page.dart';
+import 'package:clique/ui/pages/settings/clique/privacy_page.dart';
+import 'package:clique/ui/pages/settings/clique/terms_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:cirqle/app/configs/theme.dart';
-import 'package:cirqle/app/resources/constant/named_routes.dart';
-import 'package:cirqle/bloc/auth/auth_bloc.dart';
-import 'package:cirqle/ui/pages/main/home/post_detail_page.dart';
-import 'package:cirqle/ui/pages/main/notification/notification_page.dart';
-import 'package:cirqle/ui/pages/main/profile/edit_profile_page.dart';
-import 'package:cirqle/ui/pages/social/insights_page.dart';
-import 'package:cirqle/ui/pages/main/profile/profile_page.dart';
-import 'package:cirqle/ui/pages/main/home/create_post_page.dart';
-import 'package:cirqle/ui/pages/main/status/create_status_page.dart';
-import 'package:cirqle/ui/pages/main/status/status_page.dart';
-import 'package:cirqle/ui/pages/auth/login_page.dart';
-import 'package:cirqle/ui/pages/auth/register_page.dart';
-import 'package:cirqle/ui/pages/auth/demographic_page.dart';
-import 'package:cirqle/ui/pages/settings/settings_page.dart';
-import 'package:cirqle/ui/pages/settings/subscribe_page.dart';
-import 'package:cirqle/ui/pages/social/friends_list_page.dart';
-import 'package:cirqle/ui/pages/main/match/matches_page.dart';
+import 'package:clique/app/configs/theme.dart';
+import 'package:clique/app/resources/constant/named_routes.dart';
+import 'package:clique/bloc/auth/auth_bloc.dart';
+import 'package:clique/ui/pages/main/home/post_detail_page.dart';
+import 'package:clique/ui/pages/main/notification/notification_page.dart';
+import 'package:clique/ui/pages/main/profile/edit_profile_page.dart';
+import 'package:clique/ui/pages/social/insights_page.dart';
+import 'package:clique/ui/pages/main/profile/profile_page.dart';
+import 'package:clique/ui/pages/main/home/create_post_page.dart';
+import 'package:clique/ui/pages/main/status/create_status_page.dart';
+import 'package:clique/ui/pages/main/status/status_page.dart';
+import 'package:clique/ui/pages/auth/login_page.dart';
+import 'package:clique/ui/pages/auth/register_page.dart';
+import 'package:clique/ui/pages/auth/demographic_page.dart';
+import 'package:clique/ui/pages/settings/settings_page.dart';
+import 'package:clique/ui/pages/settings/subscribe_page.dart';
+import 'package:clique/ui/pages/social/friends_list_page.dart';
+import 'package:clique/ui/pages/main/match/matches_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
-import 'package:cirqle/app/configs/api_config.dart';
-import 'package:cirqle/data/providers/theme_provider.dart';
-import 'package:cirqle/bloc/home/feed_bloc.dart';
-import 'package:cirqle/bloc/user/user_bloc.dart';
-import 'package:cirqle/bloc/friends/friends_bloc.dart';
-import 'package:cirqle/bloc/explore/explore_bloc.dart';
-import 'package:cirqle/bloc/reels/reel_bloc.dart';
+import 'package:clique/app/configs/api_config.dart';
+import 'package:clique/data/providers/theme_provider.dart';
+import 'package:clique/bloc/home/feed_bloc.dart';
+import 'package:clique/bloc/user/user_bloc.dart';
+import 'package:clique/bloc/friends/friends_bloc.dart';
+import 'package:clique/bloc/explore/explore_bloc.dart';
+import 'package:clique/bloc/reels/reel_bloc.dart';
 import 'package:cloudinary_url_gen/cloudinary.dart';
 import 'package:cloudinary_flutter/cloudinary_context.dart';
-import 'package:cirqle/managers/auth_guard.dart';
+import 'package:clique/managers/auth_guard.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -122,7 +130,7 @@ class _MyAppState extends ConsumerState<MyApp> {
         BlocProvider(create: (context) => ProfileBloc()),
       ],
       child: MaterialApp(
-        title: 'cirqle',
+        title: 'clique',
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: themeMode,
@@ -242,6 +250,16 @@ class _MyAppState extends ConsumerState<MyApp> {
 
       case NamedRoutes.settingsScreen:
         return MaterialPageRoute(builder: (context) => const SettingsPage());
+      case NamedRoutes.aboutScreen:
+        return MaterialPageRoute(builder: (context) => const AboutPage());
+      case NamedRoutes.termsScreen:
+        return MaterialPageRoute(builder: (context) => const TermsPage());
+
+      case NamedRoutes.privacyScreen:
+        return MaterialPageRoute(builder: (context) => const PrivacyPage());
+
+      case NamedRoutes.helpScreen:
+        return MaterialPageRoute(builder: (context) => const HelpPage());
 
       case NamedRoutes.subscribeScreen:
         return MaterialPageRoute(builder: (context) => const SubscribePage());
@@ -250,6 +268,19 @@ class _MyAppState extends ConsumerState<MyApp> {
         return MaterialPageRoute(
             builder: (context) => const NotificationPage());
 
+      case NamedRoutes.twoFactorScreen:
+        return MaterialPageRoute(builder: (context) => const TwoFactorPage());
+
+      case NamedRoutes.changePasswordScreen:
+        return MaterialPageRoute(
+            builder: (context) => const ChangePasswordPage());
+
+      case NamedRoutes.activeSessionsScreen:
+        return MaterialPageRoute(
+            builder: (context) => const ActiveSessionsPage());
+
+      case NamedRoutes.lockScreenScreen:
+        return MaterialPageRoute(builder: (context) => const LockScreenPage());
       default:
         return MaterialPageRoute(
           builder: (context) => const AuthGuard(),

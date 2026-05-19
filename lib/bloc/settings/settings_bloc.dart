@@ -1,6 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:cirqle/data/services/settings/settings_service.dart';
+import 'package:clique/data/services/settings/settings_service.dart';
 
 part 'settings_event.dart';
 part 'settings_state.dart';

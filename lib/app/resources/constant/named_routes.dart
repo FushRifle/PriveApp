@@ -33,4 +33,14 @@ class NamedRoutes {
   static const settingsScreen = '/settings-screen';
   static const subscribeScreen = '/subscribe-screen';
   static const notificationScreen = '/notification-screen';
+  static const String aboutScreen = '/about';
+  static const String termsScreen = '/terms';
+  static const String privacyScreen = '/privacy';
+  static const String helpScreen = '/help';
+
+  // security
+  static const String twoFactorScreen = '/two-factor';
+  static const String changePasswordScreen = '/change-password';
+  static const String activeSessionsScreen = '/active-sessions';
+  static const String lockScreenScreen = '/lock-screen';
 }

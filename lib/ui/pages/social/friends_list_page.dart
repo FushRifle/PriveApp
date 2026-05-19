@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cirqle/app/configs/colors.dart';
-import 'package:cirqle/app/configs/theme.dart';
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/configs/theme.dart';
 
 class FriendsListPage extends StatefulWidget {
   final bool isFollowers;

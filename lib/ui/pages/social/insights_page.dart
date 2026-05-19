@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:cirqle/app/configs/colors.dart';
-import 'package:cirqle/app/configs/theme.dart';
-import 'package:cirqle/data/services/socials/insights_service.dart';
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/configs/theme.dart';
+import 'package:clique/data/services/socials/insights_service.dart';
 
 class InsightsPage extends StatefulWidget {
   const InsightsPage({super.key});

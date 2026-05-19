@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cirqle/app/configs/colors.dart';
+import 'package:clique/app/configs/colors.dart';
 
 class VideoViewer extends StatefulWidget {
   final String videoUrl;

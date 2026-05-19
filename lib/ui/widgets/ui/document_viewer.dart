@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:open_file/open_file.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:cirqle/app/configs/colors.dart';
+import 'package:clique/app/configs/colors.dart';
 
 class DocumentViewer extends StatefulWidget {
   final String documentUrl;

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cirqle/app/configs/colors.dart';
-import 'package:cirqle/app/resources/constant/named_routes.dart';
-import 'package:cirqle/ui/pages/main/explore/explore_page.dart';
-import 'package:cirqle/ui/pages/main/chat/inbox_page.dart';
-import 'package:cirqle/ui/pages/main/home/home_page.dart';
-import 'package:cirqle/ui/pages/main/reels/reels_page.dart';
-import 'package:cirqle/ui/widgets/home/clip_status_bar.dart';
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/resources/constant/named_routes.dart';
+import 'package:clique/ui/pages/main/explore/explore_page.dart';
+import 'package:clique/ui/pages/main/chat/inbox_page.dart';
+import 'package:clique/ui/pages/main/home/home_page.dart';
+import 'package:clique/ui/pages/main/reels/reels_page.dart';
+import 'package:clique/ui/widgets/home/clip_status_bar.dart';
 
 class MainWrapper extends StatefulWidget {
   const MainWrapper({super.key});

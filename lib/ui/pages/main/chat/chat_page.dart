@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_chat_types/flutter_chat_types.dart' as types;
 import 'package:image_picker/image_picker.dart';
-import 'package:cirqle/app/configs/colors.dart';
-import 'package:cirqle/app/configs/theme.dart';
-import 'package:cirqle/ui/pages/main/chat/chat_info_page.dart';
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/configs/theme.dart';
+import 'package:clique/ui/pages/main/chat/chat_info_page.dart';
 import 'package:uuid/uuid.dart';
 
 class ChatPage extends StatefulWidget {

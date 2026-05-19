@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cirqle/app/configs/colors.dart';
-import 'package:cirqle/app/configs/theme.dart';
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/configs/theme.dart';
 
 class SubscribePage extends StatefulWidget {
   const SubscribePage({super.key});
@@ -32,7 +32,7 @@ class _SubscribePageState extends State<SubscribePage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'cirqle Premium',
+          'clique Premium',
           style: AppTheme.blackTextStyle.copyWith(
             fontWeight: AppTheme.bold,
             fontSize: 20,

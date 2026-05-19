@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:cirqle/app/configs/colors.dart';
+import 'package:clique/app/configs/colors.dart';
 
 class AppTheme {
   // Dynamic text styles that adapt to theme
   static TextStyle get blackTextStyle =>
-      GoogleFonts.poppins(color: AppColors.dynamicText);
+      GoogleFonts.poppins(color: AppColors.text);
 
   static TextStyle get whiteTextStyle =>
       GoogleFonts.poppins(color: AppColors.white);
 
   static TextStyle get greyTextStyle =>
-      GoogleFonts.poppins(color: AppColors.dynamicTextSecondary);
+      GoogleFonts.poppins(color: AppColors.textSecondary);
 
   static FontWeight light = FontWeight.w300;
   static FontWeight regular = FontWeight.w400;
@@ -118,6 +118,7 @@ class AppTheme {
         foregroundColor: AppColors.onPrimary,
         minimumSize: const Size(double.infinity, 56),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        elevation: 0,
         textStyle: GoogleFonts.poppins(
           color: AppColors.white,
           fontSize: 18,
@@ -243,6 +244,7 @@ class AppTheme {
         foregroundColor: AppColors.onPrimary,
         minimumSize: const Size(double.infinity, 56),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        elevation: 0,
         textStyle: GoogleFonts.poppins(
           color: AppColors.white,
           fontSize: 18,
@@ -278,20 +280,22 @@ extension ThemeHelper on BuildContext {
 
   Color get primaryColor => AppColors.primary;
   Color get secondaryColor => AppColors.secondary;
+  Color get cardColor => AppColors.card;
+  Color get cardBorderColor => AppColors.cardBorder;
+  Color get shadowColor => AppColors.shadow;
+  Color get shadowElevatedColor => AppColors.shadowElevated;
+
+  Color get successColor => AppColors.success;
+  Color get warningColor => AppColors.warning;
+  Color get errorColor => AppColors.error;
+  Color get infoColor => AppColors.info;
 
   // Theme-aware colors
-  Color get cardColor => isDarkMode ? AppColors.darkCard : AppColors.lightCard;
-  Color get cardBackground =>
-      isDarkMode ? AppColors.darkCardBackground : AppColors.lightCardBackground;
-  Color get cardBorder =>
-      isDarkMode ? AppColors.darkCardBorder : AppColors.lightCardBorder;
-  Color get borderColor =>
-      isDarkMode ? AppColors.darkBorderColor : AppColors.lightBorderColor;
-  Color get dividerColor =>
-      isDarkMode ? AppColors.darkDivider : AppColors.lightDivider;
-  Color get textColor => isDarkMode ? AppColors.darkText : AppColors.lightText;
-  Color get textSecondary =>
-      isDarkMode ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
-  Color get textHint =>
-      isDarkMode ? AppColors.darkTextHint : AppColors.lightTextHint;
+  Color get backgroundColor => AppColors.background;
+  Color get textColor => AppColors.text;
+  Color get textSecondaryColor => AppColors.textSecondary;
+  Color get textHintColor => AppColors.textHint;
+  Color get borderColor => AppColors.border;
+  Color get dividerColor => AppColors.divider;
+  Color get iconColor => AppColors.icon;
 }

@@ -1,7 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:cirqle/data/models/profile_model.dart';
-import 'package:cirqle/data/services/explore/explore_service.dart';
+import 'package:clique/data/models/profile_model.dart';
+import 'package:clique/data/services/explore/explore_service.dart';
 import 'package:flutter/foundation.dart';
 
 part 'explore_event.dart';
@@ -26,11 +26,13 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
     Emitter<ExploreState> emit,
   ) async {
     if (state.profiles.isEmpty) {
-      emit(state.copyWith(
-        status: ExploreStatus.loading,
-        isLoading: true,
-        error: null,
-      ));
+      emit(
+        state.copyWith(
+          status: ExploreStatus.loading,
+          isLoading: true,
+          error: null,
+        ),
+      );
     }
 
     try {
@@ -47,23 +49,29 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
       final newProfiles = result['profiles'] as List<ProfileModel>;
       final hasMore = result['hasMore'] as bool;
 
-      emit(state.copyWith(
-        profiles:
-            event.page == 1 ? newProfiles : [...state.profiles, ...newProfiles],
-        currentIndex: event.page == 1 ? 0 : state.currentIndex,
-        hasMore: hasMore,
-        currentPage: event.page,
-        status:
-            newProfiles.isEmpty ? ExploreStatus.empty : ExploreStatus.success,
-        isLoading: false,
-        error: null,
-      ));
+      emit(
+        state.copyWith(
+          profiles: event.page == 1
+              ? newProfiles
+              : [...state.profiles, ...newProfiles],
+          currentIndex: event.page == 1 ? 0 : state.currentIndex,
+          hasMore: hasMore,
+          currentPage: event.page,
+          status: newProfiles.isEmpty
+              ? ExploreStatus.empty
+              : ExploreStatus.success,
+          isLoading: false,
+          error: null,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        status: ExploreStatus.error,
-        isLoading: false,
-        error: e.toString(),
-      ));
+      emit(
+        state.copyWith(
+          status: ExploreStatus.error,
+          isLoading: false,
+          error: e.toString(),
+        ),
+      );
     }
   }
 
@@ -71,11 +79,13 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
     RefreshExploreProfiles event,
     Emitter<ExploreState> emit,
   ) async {
-    emit(state.copyWith(
-      status: ExploreStatus.refreshing,
-      isRefreshing: true,
-      error: null,
-    ));
+    emit(
+      state.copyWith(
+        status: ExploreStatus.refreshing,
+        isRefreshing: true,
+        error: null,
+      ),
+    );
 
     try {
       final result = await _exploreService.getExploreProfiles(
@@ -91,22 +101,27 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
       final newProfiles = result['profiles'] as List<ProfileModel>;
       final hasMore = result['hasMore'] as bool;
 
-      emit(state.copyWith(
-        profiles: newProfiles,
-        currentIndex: 0,
-        hasMore: hasMore,
-        currentPage: 1,
-        status:
-            newProfiles.isEmpty ? ExploreStatus.empty : ExploreStatus.success,
-        isRefreshing: false,
-        error: null,
-      ));
+      emit(
+        state.copyWith(
+          profiles: newProfiles,
+          currentIndex: 0,
+          hasMore: hasMore,
+          currentPage: 1,
+          status: newProfiles.isEmpty
+              ? ExploreStatus.empty
+              : ExploreStatus.success,
+          isRefreshing: false,
+          error: null,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        status: ExploreStatus.error,
-        isRefreshing: false,
-        error: e.toString(),
-      ));
+      emit(
+        state.copyWith(
+          status: ExploreStatus.error,
+          isRefreshing: false,
+          error: e.toString(),
+        ),
+      );
     }
   }
 
@@ -116,10 +131,9 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
   ) async {
     if (!state.hasMore || state.isLoadingMore || state.isRefreshing) return;
 
-    emit(state.copyWith(
-      status: ExploreStatus.loadingMore,
-      isLoadingMore: true,
-    ));
+    emit(
+      state.copyWith(status: ExploreStatus.loadingMore, isLoadingMore: true),
+    );
 
     try {
       final nextPage = state.currentPage + 1;
@@ -136,19 +150,23 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
       final newProfiles = result['profiles'] as List<ProfileModel>;
       final hasMore = result['hasMore'] as bool;
 
-      emit(state.copyWith(
-        profiles: [...state.profiles, ...newProfiles],
-        hasMore: hasMore,
-        currentPage: nextPage,
-        status: ExploreStatus.success,
-        isLoadingMore: false,
-      ));
+      emit(
+        state.copyWith(
+          profiles: [...state.profiles, ...newProfiles],
+          hasMore: hasMore,
+          currentPage: nextPage,
+          status: ExploreStatus.success,
+          isLoadingMore: false,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        status: ExploreStatus.error,
-        isLoadingMore: false,
-        error: e.toString(),
-      ));
+      emit(
+        state.copyWith(
+          status: ExploreStatus.error,
+          isLoadingMore: false,
+          error: e.toString(),
+        ),
+      );
     }
   }
 
@@ -175,14 +193,18 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
         break;
     }
 
-    emit(state.copyWith(
-      swipedProfileIds: updatedSwipedIds,
-      lastSwipeAction: actionFeedback,
-    ));
+    emit(
+      state.copyWith(
+        swipedProfileIds: updatedSwipedIds,
+        lastSwipeAction: actionFeedback,
+      ),
+    );
 
     try {
-      final response =
-          await _exploreService.swipe(event.profileId, event.action);
+      final response = await _exploreService.swipe(
+        event.profileId,
+        event.action,
+      );
 
       // Update total likes if it was a like
       if (event.action == 'like') {
@@ -199,9 +221,7 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
         }
       });
 
-      emit(state.copyWith(
-        currentIndex: nextIndex,
-      ));
+      emit(state.copyWith(currentIndex: nextIndex));
 
       // Check if it's a match
       if (response['isMatch'] == true) {
@@ -210,11 +230,13 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
       }
     } catch (e) {
       // Rollback on error
-      emit(state.copyWith(
-        swipedProfileIds: state.swipedProfileIds..remove(event.profileId),
-        lastSwipeAction: null,
-        error: e.toString(),
-      ));
+      emit(
+        state.copyWith(
+          swipedProfileIds: state.swipedProfileIds..remove(event.profileId),
+          lastSwipeAction: null,
+          error: e.toString(),
+        ),
+      );
     }
   }
 
@@ -222,21 +244,25 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
     UpdateExploreFilters event,
     Emitter<ExploreState> emit,
   ) async {
-    emit(state.copyWith(
-      currentFilters: event.filters,
-      currentPage: 1,
-      profiles: [],
-      currentIndex: 0,
-    ));
-    add(LoadExploreProfiles(
-      page: 1,
-      filter: event.filters['filter'],
-      minAge: event.filters['minAge'],
-      maxAge: event.filters['maxAge'],
-      distance: event.filters['distance'],
-      verifiedOnly: event.filters['verifiedOnly'],
-      sortBy: event.filters['sortBy'],
-    ));
+    emit(
+      state.copyWith(
+        currentFilters: event.filters,
+        currentPage: 1,
+        profiles: [],
+        currentIndex: 0,
+      ),
+    );
+    add(
+      LoadExploreProfiles(
+        page: 1,
+        filter: event.filters['filter'],
+        minAge: event.filters['minAge'],
+        maxAge: event.filters['maxAge'],
+        distance: event.filters['distance'],
+        verifiedOnly: event.filters['verifiedOnly'],
+        sortBy: event.filters['sortBy'],
+      ),
+    );
   }
 
   Future<void> _onLoadExploreStats(
@@ -245,9 +271,7 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
   ) async {
     try {
       final stats = await _exploreService.getStats();
-      emit(state.copyWith(
-        totalLikes: stats['totalLikes'] ?? 0,
-      ));
+      emit(state.copyWith(totalLikes: stats['totalLikes'] ?? 0));
     } catch (e) {
       debugPrint('Error loading stats: $e');
     }

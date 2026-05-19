@@ -1,6 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:cirqle/data/services/match/match_service.dart';
+import 'package:clique/data/services/match/match_service.dart';
 
 part 'match_event.dart';
 part 'match_state.dart';

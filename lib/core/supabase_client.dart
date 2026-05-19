@@ -1,4 +1,4 @@
-import 'package:cirqle/app/configs/api_config.dart';
+import 'package:clique/app/configs/api_config.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseConfig {

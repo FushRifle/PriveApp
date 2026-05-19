@@ -4,10 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
-import 'package:cirqle/app/configs/colors.dart';
-import 'package:cirqle/app/configs/theme.dart';
-import 'package:cirqle/bloc/reels/reel_bloc.dart';
-import 'package:cirqle/core/cloudinary_service.dart';
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/bloc/reels/reel_bloc.dart';
+import 'package:clique/core/cloudinary_service.dart';
 
 class CreateReelPage extends StatefulWidget {
   const CreateReelPage({super.key});

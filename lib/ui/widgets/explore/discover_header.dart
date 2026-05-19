@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cirqle/app/configs/colors.dart';
+import 'package:clique/app/configs/colors.dart';
 
 class DiscoverHeader extends StatelessWidget {
   final int remainingCount;

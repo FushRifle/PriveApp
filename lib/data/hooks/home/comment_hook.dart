@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:cirqle/data/services/home/feed_service.dart';
+import 'package:clique/data/services/home/feed_service.dart';
 
 class CommentsHook extends ChangeNotifier {
   final FeedService _feedService = FeedService();

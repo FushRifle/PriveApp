@@ -1,16 +1,16 @@
-import 'package:cirqle/bloc/profile/gallery_profile_cubit.dart';
-import 'package:cirqle/bloc/profile/profile_bloc.dart';
-import 'package:cirqle/bloc/auth/auth_bloc.dart';
-import 'package:cirqle/ui/pages/main/profile/profile_page.dart';
+import 'package:clique/bloc/profile/gallery_profile_cubit.dart';
+import 'package:clique/bloc/profile/profile_bloc.dart';
+import 'package:clique/bloc/auth/auth_bloc.dart';
+import 'package:clique/ui/pages/main/profile/profile_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cirqle/app/configs/colors.dart';
-import 'package:cirqle/app/configs/theme.dart';
-import 'package:cirqle/app/resources/constant/named_routes.dart';
-import 'package:cirqle/ui/pages/settings/subscribe_page.dart';
-import 'package:cirqle/data/providers/theme_provider.dart';
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/configs/theme.dart';
+import 'package:clique/app/resources/constant/named_routes.dart';
+import 'package:clique/ui/pages/settings/subscribe_page.dart';
+import 'package:clique/data/providers/theme_provider.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -29,7 +29,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _isTwoFactorAuth = false;
   String _selectedLanguage = 'English';
   String _selectedVideoQuality = 'HD 1080p';
-  final String _selectedTheme = 'light';
 
   @override
   void initState() {
@@ -54,12 +53,22 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final isDarkMode = themeMode == ThemeMode.dark;
 
     return Scaffold(
+      backgroundColor:
+          isDarkMode ? AppColors.darkBackground : AppColors.lightBackground,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+          icon: Icon(Icons.arrow_back_ios_new,
+              color: isDarkMode ? Colors.white : Colors.black),
           onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Settings',
+          style: TextStyle(
+            color: isDarkMode ? Colors.white : Colors.black,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         centerTitle: true,
       ),
@@ -102,6 +111,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Icon(Icons.error_outline, size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
             Text(
               _error!,
               style: AppTheme.greyTextStyle,
@@ -131,11 +142,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Profile section
-            _buildProfileSection(userName, userAvatar),
+            _buildProfileSection(userName, userAvatar, isDarkMode),
             const SizedBox(height: 24),
 
             // Appearance
-            _buildSectionTitle('Appearance'),
+            _buildSectionTitle('Appearance', isDarkMode),
             const SizedBox(height: 8),
             _buildSettingsCard([
               _buildSwitchTile(
@@ -146,19 +157,21 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 onChanged: (value) async {
                   await ref.read(themeModeProvider.notifier).toggleTheme();
                 },
+                isDarkMode: isDarkMode,
               ),
-              _buildDivider(),
+              _buildDivider(isDarkMode),
               _buildNavigationTile(
                 icon: Icons.language,
                 title: 'Language',
                 subtitle: _selectedLanguage,
                 onTap: () => _showLanguagePicker(),
+                isDarkMode: isDarkMode,
               ),
-            ]),
+            ], isDarkMode),
             const SizedBox(height: 24),
 
             // Account Preferences
-            _buildSectionTitle('Account Preferences'),
+            _buildSectionTitle('Account Preferences', isDarkMode),
             const SizedBox(height: 8),
             _buildSettingsCard([
               _buildSwitchTile(
@@ -166,43 +179,40 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 title: 'Private Account',
                 subtitle: 'Only approved followers can see your content',
                 value: _isPrivateAccount,
-                onChanged: (value) {
-                  setState(() {
-                    _isPrivateAccount = value;
-                  });
-                },
+                onChanged: (value) => setState(() => _isPrivateAccount = value),
+                isDarkMode: isDarkMode,
               ),
-              _buildDivider(),
+              _buildDivider(isDarkMode),
               _buildSwitchTile(
                 icon: Icons.notifications_outlined,
                 title: 'Push Notifications',
                 subtitle: 'Receive push notifications',
                 value: _isNotificationsEnabled,
-                onChanged: (value) {
-                  setState(() {
-                    _isNotificationsEnabled = value;
-                  });
-                },
+                onChanged: (value) =>
+                    setState(() => _isNotificationsEnabled = value),
+                isDarkMode: isDarkMode,
               ),
-              _buildDivider(),
+              _buildDivider(isDarkMode),
               _buildNavigationTile(
                 icon: Icons.block,
                 title: 'Blocked Accounts',
                 subtitle: 'Manage blocked users',
                 onTap: () {},
+                isDarkMode: isDarkMode,
               ),
-              _buildDivider(),
+              _buildDivider(isDarkMode),
               _buildNavigationTile(
                 icon: Icons.person_remove,
                 title: 'Restricted Accounts',
                 subtitle: 'Manage restricted users',
                 onTap: () {},
+                isDarkMode: isDarkMode,
               ),
-            ]),
+            ], isDarkMode),
             const SizedBox(height: 24),
 
             // Data & Storage
-            _buildSectionTitle('Data & Storage'),
+            _buildSectionTitle('Data & Storage', isDarkMode),
             const SizedBox(height: 8),
             _buildSettingsCard([
               _buildNavigationTile(
@@ -210,26 +220,29 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 title: 'Data Usage',
                 subtitle: 'Manage data and storage settings',
                 onTap: () {},
+                isDarkMode: isDarkMode,
               ),
-              _buildDivider(),
+              _buildDivider(isDarkMode),
               _buildNavigationTile(
                 icon: Icons.high_quality,
                 title: 'Video Quality',
                 subtitle: _selectedVideoQuality,
                 onTap: () => _showVideoQualityPicker(),
+                isDarkMode: isDarkMode,
               ),
-              _buildDivider(),
+              _buildDivider(isDarkMode),
               _buildNavigationTile(
                 icon: Icons.download,
                 title: 'Downloads',
                 subtitle: 'Manage downloaded content',
                 onTap: () {},
+                isDarkMode: isDarkMode,
               ),
-            ]),
+            ], isDarkMode),
             const SizedBox(height: 24),
 
             // Security
-            _buildSectionTitle('Security'),
+            _buildSectionTitle('Security', isDarkMode),
             const SizedBox(height: 8),
             _buildSettingsCard([
               _buildSwitchTile(
@@ -238,41 +251,54 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 subtitle: 'Add an extra layer of security',
                 value: _isTwoFactorAuth,
                 onChanged: (value) {
-                  setState(() {
-                    _isTwoFactorAuth = value;
-                  });
+                  setState(() => _isTwoFactorAuth = value);
+                  if (value) {
+                    Navigator.pushNamed(context, NamedRoutes.twoFactorScreen);
+                  }
                 },
+                isDarkMode: isDarkMode,
               ),
-              _buildDivider(),
+              _buildDivider(isDarkMode),
               _buildNavigationTile(
                 icon: Icons.password,
                 title: 'Change Password',
                 subtitle: 'Update your password',
-                onTap: () {},
+                onTap: () => Navigator.pushNamed(
+                    context, NamedRoutes.changePasswordScreen),
+                isDarkMode: isDarkMode,
               ),
-              _buildDivider(),
+              _buildDivider(isDarkMode),
               _buildNavigationTile(
                 icon: Icons.devices,
                 title: 'Active Sessions',
                 subtitle: 'Manage where you\'re logged in',
-                onTap: () {},
+                onTap: () => Navigator.pushNamed(
+                    context, NamedRoutes.activeSessionsScreen),
+                isDarkMode: isDarkMode,
               ),
-            ]),
+              _buildDivider(isDarkMode),
+              _buildNavigationTile(
+                icon: Icons.fingerprint,
+                title: 'App Lock',
+                subtitle: 'Secure app with biometric or PIN',
+                onTap: () =>
+                    Navigator.pushNamed(context, NamedRoutes.lockScreenScreen),
+                isDarkMode: isDarkMode,
+              ),
+            ], isDarkMode),
             const SizedBox(height: 24),
 
             // Subscription
-            _buildSectionTitle('Subscription'),
+            _buildSectionTitle('Subscription', isDarkMode),
             const SizedBox(height: 8),
             _buildSettingsCard([
               _buildNavigationTile(
                 icon: Icons.workspace_premium,
-                title: 'cirqle Premium',
+                title: 'clique Premium',
                 subtitle: 'Unlock exclusive features',
                 trailing: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [Colors.purple, Colors.pink],
@@ -292,46 +318,62 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const SubscribePage(),
-                    ),
+                        builder: (context) => const SubscribePage()),
                   );
                 },
+                isDarkMode: isDarkMode,
               ),
-            ]),
+            ], isDarkMode),
             const SizedBox(height: 24),
 
-            // About
-            _buildSectionTitle('About'),
+            // About section
+            _buildSectionTitle('About', isDarkMode),
             const SizedBox(height: 8),
             _buildSettingsCard([
               _buildNavigationTile(
                 icon: Icons.info_outline,
-                title: 'About cirqle',
+                title: 'About Clique',
                 subtitle: 'Version 1.0.0',
-                onTap: () {},
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.pushNamed(context, NamedRoutes.aboutScreen);
+                },
+                isDarkMode: isDarkMode,
               ),
-              _buildDivider(),
+              _buildDivider(isDarkMode),
               _buildNavigationTile(
                 icon: Icons.description_outlined,
                 title: 'Terms of Service',
                 subtitle: 'Read our terms and conditions',
-                onTap: () {},
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.pushNamed(context, NamedRoutes.termsScreen);
+                },
+                isDarkMode: isDarkMode,
               ),
-              _buildDivider(),
+              _buildDivider(isDarkMode),
               _buildNavigationTile(
                 icon: Icons.privacy_tip_outlined,
                 title: 'Privacy Policy',
                 subtitle: 'How we handle your data',
-                onTap: () {},
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.pushNamed(context, NamedRoutes.privacyScreen);
+                },
+                isDarkMode: isDarkMode,
               ),
-              _buildDivider(),
+              _buildDivider(isDarkMode),
               _buildNavigationTile(
                 icon: Icons.help_outline,
                 title: 'Help Center',
                 subtitle: 'Get help and support',
-                onTap: () {},
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.pushNamed(context, NamedRoutes.helpScreen);
+                },
+                isDarkMode: isDarkMode,
               ),
-            ]),
+            ], isDarkMode),
             const SizedBox(height: 24),
 
             // Logout button
@@ -341,7 +383,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 width: double.infinity,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Colors.transparent,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: AppColors.redColor.withOpacity(0.3),
@@ -367,7 +409,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  Widget _buildProfileSection(String userName, String userAvatar) {
+  Widget _buildProfileSection(
+      String userName, String userAvatar, bool isDarkMode) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -375,16 +418,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           MaterialPageRoute(
             builder: (context) => MultiBlocProvider(
               providers: [
-                BlocProvider.value(
-                  value: context.read<ProfileBloc>(),
-                ),
-                BlocProvider(
-                  create: (context) => GalleryProfileCubit(),
-                ),
+                BlocProvider.value(value: context.read<ProfileBloc>()),
+                BlocProvider(create: (context) => GalleryProfileCubit()),
               ],
-              child: const ProfilePage(
-                isOwnProfile: true,
-              ),
+              child: const ProfilePage(isOwnProfile: true),
             ),
           ),
         );
@@ -392,7 +429,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.whiteColor,
+          color: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -404,8 +441,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ),
         child: Row(
           children: [
-            // Avatar - same as home page style
-            _buildAvatar(userAvatar, userName, size: 60),
+            _buildAvatar(userAvatar, userName,
+                size: 60, isDarkMode: isDarkMode),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -416,6 +453,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     style: AppTheme.blackTextStyle.copyWith(
                       fontWeight: AppTheme.bold,
                       fontSize: 18,
+                      color:
+                          isDarkMode ? AppColors.darkText : AppColors.lightText,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -433,7 +472,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  Widget _buildAvatar(String avatar, String name, {required double size}) {
+  Widget _buildAvatar(String avatar, String name,
+      {required double size, required bool isDarkMode}) {
     final fallbackText = name.isNotEmpty ? name[0].toUpperCase() : 'U';
 
     if (avatar.isNotEmpty && avatar.startsWith('http')) {
@@ -443,7 +483,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           width: size,
           height: size,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _avatarFallback(size, fallbackText),
+          errorBuilder: (_, __, ___) =>
+              _avatarFallback(size, fallbackText, isDarkMode),
         ),
       );
     }
@@ -455,15 +496,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           width: size,
           height: size,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _avatarFallback(size, fallbackText),
+          errorBuilder: (_, __, ___) =>
+              _avatarFallback(size, fallbackText, isDarkMode),
         ),
       );
     }
 
-    return _avatarFallback(size, fallbackText);
+    return _avatarFallback(size, fallbackText, isDarkMode);
   }
 
-  Widget _avatarFallback(double size, String fallbackText) {
+  Widget _avatarFallback(double size, String fallbackText, bool isDarkMode) {
     return Container(
       width: size,
       height: size,
@@ -488,7 +530,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, bool isDarkMode) {
     return Padding(
       padding: const EdgeInsets.only(left: 4),
       child: Text(
@@ -496,17 +538,23 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         style: AppTheme.blackTextStyle.copyWith(
           fontWeight: AppTheme.bold,
           fontSize: 16,
-          color: AppColors.blackColor,
+          color: isDarkMode ? AppColors.darkText : AppColors.lightText,
         ),
       ),
     );
   }
 
-  Widget _buildSettingsCard(List<Widget> children) {
+  Widget _buildSettingsCard(List<Widget> children, bool isDarkMode) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDarkMode
+              ? AppColors.darkBorderColor
+              : AppColors.lightBorderColor.withOpacity(0.5),
+          width: 0.5,
+        ),
       ),
       child: Column(children: children),
     );
@@ -518,13 +566,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     required String subtitle,
     required bool value,
     required ValueChanged<bool> onChanged,
+    required bool isDarkMode,
   }) {
     return SwitchListTile(
-      secondary: Icon(icon, color: AppColors.primary, size: 24),
+      secondary: Icon(icon, color: AppColors.primary, size: 22),
       title: Text(
         title,
         style: AppTheme.blackTextStyle.copyWith(
           fontWeight: AppTheme.medium,
+          color: isDarkMode ? AppColors.darkText : AppColors.lightText,
           fontSize: 15,
         ),
       ),
@@ -545,13 +595,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     required String subtitle,
     Widget? trailing,
     required VoidCallback onTap,
+    required bool isDarkMode,
   }) {
     return ListTile(
-      leading: Icon(icon, color: AppColors.primary, size: 24),
+      leading: Icon(icon, color: AppColors.primary, size: 22),
       title: Text(
         title,
         style: AppTheme.blackTextStyle.copyWith(
           fontWeight: AppTheme.medium,
+          color: isDarkMode ? AppColors.darkText : AppColors.lightText,
           fontSize: 15,
         ),
       ),
@@ -566,22 +618,21 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  Widget _buildDivider() {
+  Widget _buildDivider(bool isDarkMode) {
     return Divider(
       height: 1,
       indent: 56,
-      color: AppColors.greyColor.withOpacity(0.1),
+      color: isDarkMode ? AppColors.darkTextHint : AppColors.lightDivider,
     );
   }
 
   void _showLanguagePicker() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
+      backgroundColor: isDarkMode ? AppColors.darkCard : Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(20),
-          bottom: Radius.circular(20),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
         final languages = [
@@ -592,7 +643,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           'Portuguese',
           'Arabic',
           'Hindi',
-          'Chinese',
+          'Chinese'
         ];
         return SafeArea(
           child: Column(
@@ -601,37 +652,26 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               Container(
                 width: 40,
                 height: 4,
-                margin: const EdgeInsets.only(top: 12, bottom: 30),
+                margin: const EdgeInsets.only(top: 12),
                 decoration: BoxDecoration(
                   color: AppColors.greyColor.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              Text(
-                'Select Language',
-                style: AppTheme.blackTextStyle.copyWith(
-                  fontWeight: AppTheme.bold,
-                  fontSize: 18,
-                ),
-              ),
-              const SizedBox(height: 16),
-              ...languages.map(
-                (language) => ListTile(
-                  title: Text(
-                    language,
-                    style: AppTheme.blackTextStyle.copyWith(fontSize: 16),
-                  ),
-                  trailing: _selectedLanguage == language
-                      ? const Icon(Icons.check_circle, color: AppColors.primary)
-                      : null,
-                  onTap: () {
-                    setState(() {
-                      _selectedLanguage = language;
-                    });
-                    Navigator.pop(context);
-                  },
-                ),
-              ),
+              const SizedBox(height: 20),
+              ...languages.map((language) => ListTile(
+                    title: Text(language,
+                        style: TextStyle(
+                            color: isDarkMode ? Colors.white : Colors.black)),
+                    trailing: _selectedLanguage == language
+                        ? const Icon(Icons.check_circle,
+                            color: AppColors.primary)
+                        : null,
+                    onTap: () {
+                      setState(() => _selectedLanguage = language);
+                      Navigator.pop(context);
+                    },
+                  )),
               const SizedBox(height: 16),
             ],
           ),
@@ -641,8 +681,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   void _showVideoQualityPicker() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
+      backgroundColor: isDarkMode ? AppColors.darkCard : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -655,37 +697,26 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               Container(
                 width: 40,
                 height: 4,
-                margin: const EdgeInsets.only(top: 12, bottom: 20),
+                margin: const EdgeInsets.only(top: 12),
                 decoration: BoxDecoration(
                   color: AppColors.greyColor.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              Text(
-                'Video Quality',
-                style: AppTheme.blackTextStyle.copyWith(
-                  fontWeight: AppTheme.bold,
-                  fontSize: 18,
-                ),
-              ),
-              const SizedBox(height: 16),
-              ...qualities.map(
-                (quality) => ListTile(
-                  title: Text(
-                    quality,
-                    style: AppTheme.blackTextStyle.copyWith(fontSize: 16),
-                  ),
-                  trailing: _selectedVideoQuality == quality
-                      ? const Icon(Icons.check_circle, color: AppColors.primary)
-                      : null,
-                  onTap: () {
-                    setState(() {
-                      _selectedVideoQuality = quality;
-                    });
-                    Navigator.pop(context);
-                  },
-                ),
-              ),
+              const SizedBox(height: 20),
+              ...qualities.map((quality) => ListTile(
+                    title: Text(quality,
+                        style: TextStyle(
+                            color: isDarkMode ? Colors.white : Colors.black)),
+                    trailing: _selectedVideoQuality == quality
+                        ? const Icon(Icons.check_circle,
+                            color: AppColors.primary)
+                        : null,
+                    onTap: () {
+                      setState(() => _selectedVideoQuality = quality);
+                      Navigator.pop(context);
+                    },
+                  )),
               const SizedBox(height: 16),
             ],
           ),
@@ -695,47 +726,32 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   void _showLogoutDialog() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+      builder: (context) => AlertDialog(
+        backgroundColor: isDarkMode ? AppColors.darkCard : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Logout',
+            style: AppTheme.blackTextStyle.copyWith(fontWeight: AppTheme.bold)),
+        content: Text('Are you sure you want to log out?',
+            style: AppTheme.greyTextStyle),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: AppColors.greyColor)),
           ),
-          title: Text(
-            'Logout',
-            style: AppTheme.blackTextStyle.copyWith(fontWeight: AppTheme.bold),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.read<AuthBloc>().add(SignOutRequested());
+            },
+            child: Text('Logout',
+                style: TextStyle(
+                    color: AppColors.redColor, fontWeight: AppTheme.bold)),
           ),
-          content: Text(
-            'Are you sure you want to log out?',
-            style: AppTheme.greyTextStyle,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                'Cancel',
-                style: AppTheme.blackTextStyle.copyWith(
-                  color: AppColors.greyColor,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                context.read<AuthBloc>().add(SignOutRequested());
-              },
-              child: Text(
-                'Logout',
-                style: AppTheme.blackTextStyle.copyWith(
-                  color: AppColors.redColor,
-                  fontWeight: AppTheme.bold,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+        ],
+      ),
     );
   }
 }

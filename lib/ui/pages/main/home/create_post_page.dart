@@ -1,14 +1,14 @@
 import 'dart:io';
-import 'package:cirqle/bloc/home/feed_bloc.dart';
+import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:cirqle/app/configs/colors.dart';
-import 'package:cirqle/app/configs/theme.dart';
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/configs/theme.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:cirqle/core/cloudinary_service.dart';
-import 'package:cirqle/data/models/feeds_models.dart';
+import 'package:clique/core/cloudinary_service.dart';
+import 'package:clique/data/models/feeds_models.dart';
 import 'package:file_picker/file_picker.dart';
 
 class CreatePostPage extends StatefulWidget {
@@ -19,164 +19,198 @@ class CreatePostPage extends StatefulWidget {
 }
 
 class _CreatePostPageState extends State<CreatePostPage> {
-  final TextEditingController _captionController = TextEditingController();
-  final TextEditingController _hashtagController = TextEditingController();
-
+  final TextEditingController _textController = TextEditingController();
   final List<MediaItem> _mediaItems = [];
   final List<String> _hashtags = [];
 
-  bool _isPrivate = false;
   bool _isSubmitting = false;
+  PostCreationStep _currentStep = PostCreationStep.options;
 
   final CloudinaryService _cloudinaryService = CloudinaryService();
 
   @override
   void dispose() {
-    _captionController.dispose();
-    _hashtagController.dispose();
+    _textController.dispose();
     super.dispose();
   }
 
-  bool get _hasContent =>
-      _captionController.text.trim().isNotEmpty ||
-      _hashtags.isNotEmpty ||
-      _mediaItems.isNotEmpty;
-
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final bgColor =
-        isDarkMode ? AppColors.darkBackground : AppColors.backgroundColor;
-
     return Scaffold(
-      backgroundColor: bgColor,
-      appBar: _buildAppBar(isDarkMode),
-      body: Column(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: _buildCurrentStep(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildMediaSection(),
-                  if (_mediaItems.isNotEmpty) const SizedBox(height: 24),
-                  _buildCaptionInput(isDarkMode),
-                  const SizedBox(height: 24),
-                  _buildHashtagSection(isDarkMode),
-                  const SizedBox(height: 24),
-                  _buildOptionsSection(isDarkMode),
-                  const SizedBox(height: 32),
-                  _buildPostButton(),
-                ],
+          GestureDetector(
+            onTap: _currentStep == PostCreationStep.options
+                ? () => Navigator.pop(context)
+                : _goBack,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade800,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                _currentStep == PostCreationStep.options
+                    ? Icons.close
+                    : Icons.arrow_back,
+                color: Colors.white,
+                size: 20,
               ),
             ),
           ),
+          Text(
+            _getTitle(),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          if (_currentStep != PostCreationStep.options)
+            GestureDetector(
+              onTap: _currentStep == PostCreationStep.textInput
+                  ? _submitTextPost
+                  : (_currentStep == PostCreationStep.mediaPreview
+                      ? _submitPost
+                      : null),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'Next',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+            )
+          else
+            const SizedBox(width: 40),
         ],
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar(bool isDarkMode) {
-    return AppBar(
-      backgroundColor:
-          isDarkMode ? AppColors.darkBackground : AppColors.backgroundColor,
-      elevation: 0,
-      leading: IconButton(
-        icon:
-            Icon(Icons.close, color: isDarkMode ? Colors.white : Colors.black),
-        onPressed: () => Navigator.pop(context),
-      ),
-      title: Text(
-        'Create Post',
-        style: TextStyle(
-          color: isDarkMode ? Colors.white : Colors.black,
-          fontWeight: FontWeight.w600,
-          fontSize: 18,
-        ),
-      ),
-      centerTitle: true,
-    );
-  }
-
-  Widget _buildMediaSection() {
-    if (_mediaItems.isEmpty) {
-      return _buildMediaPickerGrid();
+  String _getTitle() {
+    switch (_currentStep) {
+      case PostCreationStep.options:
+        return 'Create Post';
+      case PostCreationStep.textInput:
+        return 'Write Caption';
+      case PostCreationStep.mediaPreview:
+        return 'Preview';
+      default:
+        return 'Create Post';
     }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          height: 200,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: _mediaItems.length + 1,
-            itemBuilder: (context, index) {
-              if (index == _mediaItems.length) {
-                return _buildAddMoreButton();
-              }
-              return _buildMediaItem(_mediaItems[index], index);
-            },
-          ),
-        ),
-      ],
-    );
   }
 
-  Widget _buildMediaPickerGrid() {
+  Widget _buildCurrentStep() {
+    switch (_currentStep) {
+      case PostCreationStep.options:
+        return _buildOptionsGrid();
+      case PostCreationStep.textInput:
+        return _buildTextInput();
+      case PostCreationStep.mediaPreview:
+        return _buildMediaPreview();
+      default:
+        return const SizedBox();
+    }
+  }
+
+  void _goBack() {
+    if (_currentStep == PostCreationStep.textInput) {
+      setState(() => _currentStep = PostCreationStep.options);
+    } else if (_currentStep == PostCreationStep.mediaPreview) {
+      setState(() => _currentStep = PostCreationStep.options);
+      _mediaItems.clear();
+    }
+  }
+
+  // ==================== OPTIONS GRID ====================
+
+  Widget _buildOptionsGrid() {
     return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 3,
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 1,
+      crossAxisCount: 2,
+      padding: const EdgeInsets.all(20),
+      mainAxisSpacing: 16,
+      crossAxisSpacing: 16,
+      childAspectRatio: 1.2,
       children: [
-        _buildMediaOption(
+        _buildOptionCard(
+          icon: Icons.text_fields,
+          title: 'Text Only',
+          subtitle: 'Share your thoughts',
+          color: Colors.orange,
+          onTap: () =>
+              setState(() => _currentStep = PostCreationStep.textInput),
+        ),
+        _buildOptionCard(
           icon: Icons.photo_library,
-          label: 'Gallery',
+          title: 'Image',
+          subtitle: 'Share a photo',
           color: Colors.purple,
           onTap: () => _pickMedia(MediaType.image, ImageSource.gallery),
         ),
-        _buildMediaOption(
+        _buildOptionCard(
           icon: Icons.camera_alt,
-          label: 'Camera',
+          title: 'Camera',
+          subtitle: 'Take a photo',
           color: Colors.blue,
           onTap: () => _pickMedia(MediaType.image, ImageSource.camera),
         ),
-        _buildMediaOption(
+        _buildOptionCard(
           icon: Icons.videocam,
-          label: 'Video',
+          title: 'Video',
+          subtitle: 'Share a video',
           color: Colors.green,
           onTap: () => _pickMedia(MediaType.video, ImageSource.gallery),
         ),
-        _buildMediaOption(
+        _buildOptionCard(
           icon: Icons.picture_as_pdf,
-          label: 'Document',
+          title: 'Document',
+          subtitle: 'Share a file',
           color: Colors.red,
           onTap: _pickDocument,
         ),
-        _buildMediaOption(
-          icon: Icons.text_fields,
-          label: 'Text Only',
-          color: Colors.orange,
-          onTap: () {},
-        ),
-        _buildMediaOption(
+        _buildOptionCard(
           icon: Icons.music_note,
-          label: 'Audio',
+          title: 'Audio',
+          subtitle: 'Coming soon',
           color: Colors.teal,
-          onTap: () {},
+          onTap: () => _showComingSoon(),
         ),
       ],
     );
   }
 
-  Widget _buildMediaOption({
+  Widget _buildOptionCard({
     required IconData icon,
-    required String label,
+    required String title,
+    required String subtitle,
     required Color color,
     required VoidCallback onTap,
   }) {
@@ -184,27 +218,36 @@ class _CreatePostPageState extends State<CreatePostPage> {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(16),
+          color: Colors.grey.shade900,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey.shade800),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withOpacity(0.15),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: color, size: 32),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Text(
-              label,
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
               style: TextStyle(
+                color: Colors.grey.shade500,
                 fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey.shade700,
               ),
             ),
           ],
@@ -213,207 +256,69 @@ class _CreatePostPageState extends State<CreatePostPage> {
     );
   }
 
-  Widget _buildMediaItem(MediaItem media, int index) {
-    return Container(
-      margin: const EdgeInsets.only(right: 12),
-      width: 180,
-      height: 200,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Stack(
-        fit: StackFit.expand,
+  // ==================== TEXT INPUT (Clean, no border/background) ====================
+
+  Widget _buildTextInput() {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: media.type == MediaType.image
-                ? _buildImagePreview(media)
-                : _buildDocumentPreview(media),
-          ),
-          Positioned(
-            top: 8,
-            right: 8,
-            child: GestureDetector(
-              onTap: () => _removeMedia(index),
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.6),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.close, color: Colors.white, size: 16),
+          Expanded(
+            child: TextField(
+              controller: _textController,
+              autofocus: true,
+              maxLines: null,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                height: 1.4,
+              ),
+              decoration: const InputDecoration(
+                hintText: "What's on your mind?",
+                hintStyle: TextStyle(color: Colors.grey, fontSize: 20),
+                border: InputBorder.none,
               ),
             ),
           ),
-          Positioned(
-            bottom: 8,
-            left: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.6),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    media.type == MediaType.image
-                        ? Icons.image
-                        : Icons.insert_drive_file,
-                    color: Colors.white,
-                    size: 12,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    media.type == MediaType.image ? 'Image' : 'Document',
-                    style: const TextStyle(color: Colors.white, fontSize: 10),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          _buildHashtagInput(),
         ],
       ),
     );
   }
 
-  Widget _buildAddMoreButton() {
-    return Container(
-      width: 180,
-      height: 200,
-      margin: const EdgeInsets.only(right: 12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: GestureDetector(
-        onTap: _showAddMediaOptions,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.add, size: 40, color: AppColors.primary),
-            const SizedBox(height: 8),
-            Text(
-              'Add More',
-              style: TextStyle(
-                  color: AppColors.primary, fontWeight: FontWeight.w500),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget _buildHashtagInput() {
+    final TextEditingController hashtagController = TextEditingController();
 
-  Widget _buildImagePreview(MediaItem media) {
-    if (kIsWeb && media.fileBytes != null) {
-      return Image.memory(media.fileBytes!, fit: BoxFit.cover);
-    }
-    if (media.file != null) {
-      return Image.file(media.file!, fit: BoxFit.cover);
-    }
-    return Container(color: Colors.grey, child: const Icon(Icons.broken_image));
-  }
-
-  Widget _buildDocumentPreview(MediaItem media) {
-    return Container(
-      color: Colors.grey.shade100,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.insert_drive_file, size: 48, color: AppColors.primary),
-            const SizedBox(height: 8),
-            Text(
-              media.fileName?.split('/').last ?? 'Document',
-              style: const TextStyle(fontSize: 12),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCaptionInput(bool isDarkMode) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Caption',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-            color: isDarkMode ? Colors.white : Colors.black,
-          ),
-        ),
-        const SizedBox(height: 8),
         TextField(
-          controller: _captionController,
-          maxLines: 4,
-          style: const TextStyle(fontSize: 15, height: 1.4),
+          controller: hashtagController,
+          style: const TextStyle(color: Colors.white, fontSize: 16),
           decoration: InputDecoration(
-            hintText: 'Write a caption...',
-            hintStyle: AppTheme.greyTextStyle,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide:
-                  BorderSide(color: AppColors.greyColor.withOpacity(0.2)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: AppColors.primary),
-            ),
-            contentPadding: const EdgeInsets.all(16),
+            hintText: 'Add hashtags (press Enter)',
+            hintStyle: const TextStyle(color: Colors.grey),
+            border: InputBorder.none,
+            prefixIcon:
+                const Icon(Icons.tag, color: AppColors.primary, size: 20),
           ),
+          onSubmitted: (tag) {
+            if (tag.isNotEmpty) {
+              setState(() {
+                _hashtags.add(tag.replaceAll('#', '').trim().toLowerCase());
+                hashtagController.clear();
+              });
+            }
+          },
         ),
-      ],
-    );
-  }
-
-  Widget _buildHashtagSection(bool isDarkMode) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Hashtags',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-            color: isDarkMode ? Colors.white : Colors.black,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _hashtagController,
-          onSubmitted: _addHashtag,
-          decoration: InputDecoration(
-            hintText: 'Add hashtags (press Enter to add)',
-            hintStyle: AppTheme.greyTextStyle,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide:
-                  BorderSide(color: AppColors.greyColor.withOpacity(0.2)),
+        if (_hashtags.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 16),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _hashtags.map((tag) => _buildHashtagChip(tag)).toList(),
             ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: AppColors.primary),
-            ),
-            contentPadding: const EdgeInsets.all(16),
           ),
-        ),
-        if (_hashtags.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _hashtags.map((tag) => _buildHashtagChip(tag)).toList(),
-          ),
-        ],
       ],
     );
   }
@@ -422,7 +327,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.1),
+        color: AppColors.primary.withOpacity(0.15),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -440,112 +345,138 @@ class _CreatePostPageState extends State<CreatePostPage> {
     );
   }
 
-  Widget _buildOptionsSection(bool isDarkMode) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDarkMode ? AppColors.darkCard : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.greyColor.withOpacity(0.1)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.lock_outline, size: 20, color: AppColors.greyColor),
-              const SizedBox(width: 12),
-              Text(
-                'Private post',
-                style: TextStyle(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 14,
-                  color: isDarkMode ? Colors.white : Colors.black,
-                ),
-              ),
-            ],
+  // ==================== MEDIA PREVIEW ====================
+
+  Widget _buildMediaPreview() {
+    if (_mediaItems.isEmpty) return const SizedBox();
+
+    final media = _mediaItems.first;
+
+    return Column(
+      children: [
+        Expanded(
+          child: Center(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: media.type == MediaType.image
+                  ? _buildImagePreview(media)
+                  : _buildDocumentPreview(media),
+            ),
           ),
-          Switch(
-            value: _isPrivate,
-            onChanged: (value) => setState(() => _isPrivate = value),
-            activeColor: AppColors.primary,
+        ),
+        const SizedBox(height: 16),
+        _buildTextInputForMedia(),
+        const SizedBox(height: 16),
+        _buildHashtagInputForMedia(),
+        const SizedBox(height: 80),
+      ],
+    );
+  }
+
+  Widget _buildImagePreview(MediaItem media) {
+    if (kIsWeb && media.fileBytes != null) {
+      return Image.memory(media.fileBytes!, height: 400, fit: BoxFit.contain);
+    }
+    if (media.file != null) {
+      return Image.file(media.file!, height: 400, fit: BoxFit.contain);
+    }
+    return Container(color: Colors.grey, height: 400);
+  }
+
+  Widget _buildDocumentPreview(MediaItem media) {
+    return Container(
+      height: 300,
+      width: 200,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade800,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.insert_drive_file, size: 64, color: AppColors.primary),
+          const SizedBox(height: 16),
+          Text(
+            media.fileName?.split('/').last ?? 'Document',
+            style: const TextStyle(color: Colors.white, fontSize: 14),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPostButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: _hasContent && !_isSubmitting ? _submitPost : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+  Widget _buildTextInputForMedia() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: TextField(
+        controller: _textController,
+        style: const TextStyle(color: Colors.white, fontSize: 16),
+        decoration: InputDecoration(
+          hintText: 'Write a caption...',
+          hintStyle: const TextStyle(color: Colors.grey),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(30),
+            borderSide: BorderSide.none,
+          ),
+          filled: true,
+          fillColor: Colors.grey.shade900,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         ),
-        child: _isSubmitting
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.white),
-              )
-            : const Text(
-                'Share Post',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildHashtagInputForMedia() {
+    final TextEditingController hashtagController = TextEditingController();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        children: [
+          TextField(
+            controller: hashtagController,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Add hashtags',
+              hintStyle: const TextStyle(color: Colors.grey),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(30),
+                borderSide: BorderSide.none,
               ),
+              filled: true,
+              fillColor: Colors.grey.shade900,
+              prefixIcon:
+                  const Icon(Icons.tag, color: AppColors.primary, size: 18),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            onSubmitted: (tag) {
+              if (tag.isNotEmpty) {
+                setState(() {
+                  _hashtags.add(tag.replaceAll('#', '').trim().toLowerCase());
+                  hashtagController.clear();
+                });
+              }
+            },
+          ),
+          if (_hashtags.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children:
+                    _hashtags.map((tag) => _buildHashtagChip(tag)).toList(),
+              ),
+            ),
+        ],
       ),
     );
   }
 
-  void _showAddMediaOptions() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                )),
-            const SizedBox(height: 16),
-            _buildBottomSheetOption(Icons.photo_library, 'Image from Gallery',
-                () => _pickMedia(MediaType.image, ImageSource.gallery)),
-            _buildBottomSheetOption(Icons.camera_alt, 'Take Photo',
-                () => _pickMedia(MediaType.image, ImageSource.camera)),
-            _buildBottomSheetOption(Icons.videocam, 'Video',
-                () => _pickMedia(MediaType.video, ImageSource.gallery)),
-            _buildBottomSheetOption(
-                Icons.picture_as_pdf, 'Document', _pickDocument),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottomSheetOption(
-      IconData icon, String title, VoidCallback onTap) {
-    return ListTile(
-      leading: Icon(icon, size: 24, color: AppColors.primary),
-      title: Text(title),
-      onTap: () {
-        Navigator.pop(context);
-        onTap();
-      },
-    );
-  }
+  // ==================== MEDIA PICKING ====================
 
   Future<void> _pickMedia(MediaType type, ImageSource source) async {
     final picker = ImagePicker();
@@ -560,10 +491,12 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
       if (pickedFile != null) {
         setState(() {
+          _mediaItems.clear();
           _mediaItems.add(MediaItem(
             file: File(pickedFile!.path),
             type: type,
           ));
+          _currentStep = PostCreationStep.mediaPreview;
         });
       }
     } catch (e) {
@@ -589,11 +522,13 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
       if (result != null) {
         setState(() {
+          _mediaItems.clear();
           _mediaItems.add(MediaItem(
             file: File(result.files.single.path!),
             type: MediaType.document,
             fileName: result.files.single.name,
           ));
+          _currentStep = PostCreationStep.mediaPreview;
         });
       }
     } catch (e) {
@@ -601,20 +536,46 @@ class _CreatePostPageState extends State<CreatePostPage> {
     }
   }
 
-  void _removeMedia(int index) {
-    setState(() => _mediaItems.removeAt(index));
+  void _showComingSoon() {
+    _showSnackBar('Audio posts coming soon!', isError: false);
   }
 
-  void _addHashtag(String tag) {
-    if (tag.isNotEmpty && !_hashtags.contains(tag)) {
-      setState(() {
-        _hashtags.add(tag.replaceAll('#', '').trim().toLowerCase());
-        _hashtagController.clear();
-      });
+  // ==================== SUBMIT ====================
+
+  Future<void> _submitTextPost() async {
+    final content = _textController.text.trim();
+    if (content.isEmpty && _hashtags.isEmpty) {
+      _showSnackBar('Please enter some text', isError: true);
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      String finalContent = content;
+      if (_hashtags.isNotEmpty) {
+        if (finalContent.isNotEmpty) finalContent += '\n\n';
+        finalContent += _hashtags.map((h) => '#$h').join(' ');
+      }
+
+      context.read<FeedBloc>().add(CreateFeedPost(
+            content: finalContent,
+            attachments: null,
+          ));
+
+      _showSnackBar('Post created successfully!');
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      _showSnackBar('Error: ${e.toString()}', isError: true);
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
   Future<void> _submitPost() async {
+    if (_mediaItems.isEmpty) return;
+
     setState(() => _isSubmitting = true);
 
     try {
@@ -646,7 +607,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
         }
       }
 
-      String content = _captionController.text.trim();
+      String content = _textController.text.trim();
       if (_hashtags.isNotEmpty) {
         if (content.isNotEmpty) content += '\n\n';
         content += _hashtags.map((h) => '#$h').join(' ');
@@ -661,7 +622,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
       _showSnackBar('Post created successfully!');
       await Future.delayed(const Duration(milliseconds: 500));
-
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       _showSnackBar('Error: ${e.toString()}', isError: true);
@@ -681,6 +641,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
     );
   }
 }
+
+enum PostCreationStep { options, textInput, mediaPreview }
 
 enum MediaType { image, video, document }
 

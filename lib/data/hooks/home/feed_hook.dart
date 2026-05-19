@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
-import 'package:cirqle/data/services/home/feed_service.dart';
-import 'package:cirqle/data/services/user/user_service.dart';
+import 'package:clique/data/services/home/feed_service.dart';
+import 'package:clique/data/services/user/user_service.dart';
 
 class FeedHook extends ChangeNotifier {
   final FeedService _feedService = FeedService();

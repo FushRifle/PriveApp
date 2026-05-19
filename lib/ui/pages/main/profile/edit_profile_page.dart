@@ -1,10 +1,13 @@
 import 'dart:io';
-import 'package:cirqle/core/cloudinary_service.dart';
+import 'package:clique/bloc/profile/profile_bloc.dart';
+import 'package:clique/bloc/user/user_bloc.dart';
+import 'package:clique/core/cloudinary_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:cirqle/app/configs/colors.dart';
-import 'package:cirqle/app/configs/theme.dart';
-import 'package:cirqle/data/services/user/user_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/configs/theme.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -14,7 +17,6 @@ class EditProfilePage extends StatefulWidget {
 }
 
 class _EditProfilePageState extends State<EditProfilePage> {
-  final UserService _userService = UserService();
   final CloudinaryService _cloudinaryService = CloudinaryService();
   final ImagePicker _imagePicker = ImagePicker();
 
@@ -29,11 +31,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final _educationController = TextEditingController();
   final _languagesController = TextEditingController();
 
-  String _avatar = '';
-  String _coverImage = '';
   File? _selectedAvatarFile;
   File? _selectedCoverFile;
-  bool _isLoading = true;
   bool _isSaving = false;
   bool _isUploadingAvatar = false;
   bool _isUploadingCover = false;
@@ -41,7 +40,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    _loadData();
   }
 
   @override
@@ -59,46 +58,34 @@ class _EditProfilePageState extends State<EditProfilePage> {
     super.dispose();
   }
 
-  Future<void> _loadUserData() async {
-    try {
-      final userData = await _userService.getCurrentUser();
+  void _loadData() {
+    context.read<ProfileBloc>().add(LoadMyProfile());
+    context.read<UserBloc>().add(LoadCurrentUser());
+  }
 
-      setState(() {
-        _avatar = userData['avatar'] ?? '';
-        _coverImage = userData['coverImage'] ?? userData['cover_image'] ?? '';
-        _nameController.text = userData['name'] ?? '';
-        _usernameController.text = userData['username'] ?? '';
-        _phoneController.text = userData['phone'] ?? '';
-        _ageController.text = userData['age']?.toString() ?? '';
-        _occupationController.text = userData['occupation'] ?? '';
-        _bioController.text = userData['bio'] ?? '';
-        _locationController.text = userData['location'] ?? '';
-        _workController.text = userData['work'] ?? '';
-        _educationController.text = userData['education'] ?? '';
+  void _populateForm(Profile? profile, Map<String, dynamic>? user) {
+    if (profile == null && user == null) return;
 
-        final languages = userData['languages'];
-        if (languages is List) {
-          _languagesController.text = languages.join(', ');
-        } else if (languages is String) {
-          _languagesController.text = languages;
-        } else {
-          _languagesController.text = '';
-        }
+    setState(() {
+      // From ProfileBloc
+      _nameController.text = profile?.displayName ?? user?['name'] ?? '';
+      _bioController.text = profile?.bio ?? '';
+      _locationController.text = profile?.location ?? '';
+      _workController.text = profile?.work ?? '';
+      _educationController.text = profile?.education ?? '';
+      _ageController.text =
+          profile?.age.toString() ?? user?['age']?.toString() ?? '';
 
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      // Languages
+      if (profile?.interests.isNotEmpty == true) {
+        _languagesController.text = profile!.interests.join(', ');
+      }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error loading user data: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+      // From UserBloc
+      _usernameController.text = user?['username'] ?? '';
+      _phoneController.text = user?['phone'] ?? '';
+      _occupationController.text = user?['occupation'] ?? '';
+    });
   }
 
   Future<void> _pickImage(ImageSource source, bool isAvatar) async {
@@ -116,14 +103,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
             _selectedCoverFile = File(pickedFile.path);
           }
         });
+
+        // Upload immediately
+        await _uploadImage(File(pickedFile.path), isAvatar);
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error picking image: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showSnackBar('Error picking image: $e', isError: true);
     }
   }
 
@@ -141,50 +126,28 @@ class _EditProfilePageState extends State<EditProfilePage> {
       final imageUrl =
           await _cloudinaryService.uploadImage(imageFile, customFolder: folder);
 
-      setState(() {
-        if (isAvatar) {
-          _avatar = imageUrl;
-          _selectedAvatarFile = null;
-        } else {
-          _coverImage = imageUrl;
-          _selectedCoverFile = null;
-        }
-      });
-
-      // Save to backend
       if (isAvatar) {
-        await _userService.updateUser(avatar: imageUrl);
+        context
+            .read<ProfileBloc>()
+            .add(UpdateProfileAvatar(avatarUrl: imageUrl));
       } else {
-        await _userService.updateUser(coverImage: imageUrl);
+        context
+            .read<ProfileBloc>()
+            .add(UpdateProfileCoverImage(coverImageUrl: imageUrl));
       }
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '${isAvatar ? 'Profile picture' : 'Cover image'} updated successfully',
-            ),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
+      _showSnackBar('${isAvatar ? 'Profile picture' : 'Cover image'} updated');
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error uploading image: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      _showSnackBar('Error uploading image: $e', isError: true);
     } finally {
       if (mounted) {
         setState(() {
           if (isAvatar) {
             _isUploadingAvatar = false;
+            _selectedAvatarFile = null;
           } else {
             _isUploadingCover = false;
+            _selectedCoverFile = null;
           }
         });
       }
@@ -194,7 +157,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   void _showImagePickerOptions(bool isAvatar) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -221,10 +184,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
               },
             ),
             ListTile(
-              leading: const Icon(
-                Icons.photo_library,
-                color: AppColors.primary,
-              ),
+              leading:
+                  const Icon(Icons.photo_library, color: AppColors.primary),
               title: const Text('Choose from gallery'),
               onTap: () {
                 Navigator.pop(context);
@@ -238,91 +199,78 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  void _changeProfilePicture() {
-    _showImagePickerOptions(true);
-  }
-
-  void _changeCoverImage() {
-    _showImagePickerOptions(false);
-  }
-
   Future<void> _saveProfile() async {
-    setState(() {
-      _isSaving = true;
-    });
+    setState(() => _isSaving = true);
 
-    try {
-      // Upload avatar if selected
-      if (_selectedAvatarFile != null) {
-        await _uploadImage(_selectedAvatarFile!, true);
-      }
+    final languages = _languagesController.text.isNotEmpty
+        ? _languagesController.text.split(',').map((e) => e.trim()).toList()
+        : null;
 
-      // Upload cover if selected
-      if (_selectedCoverFile != null) {
-        await _uploadImage(_selectedCoverFile!, false);
-      }
+    // Update via ProfileBloc
+    context.read<ProfileBloc>().add(UpdateProfile(
+          data: {
+            'displayName':
+                _nameController.text.isNotEmpty ? _nameController.text : null,
+            'bio': _bioController.text.isNotEmpty ? _bioController.text : null,
+            'location': _locationController.text.isNotEmpty
+                ? _locationController.text
+                : null,
+            'work':
+                _workController.text.isNotEmpty ? _workController.text : null,
+            'education': _educationController.text.isNotEmpty
+                ? _educationController.text
+                : null,
+            'age': _ageController.text.isNotEmpty
+                ? int.parse(_ageController.text)
+                : null,
+            'interests': languages,
+          },
+        ));
 
-      final languages = _languagesController.text.isNotEmpty
-          ? _languagesController.text.split(',').map((e) => e.trim()).toList()
-          : null;
+    // Update via UserBloc for remaining fields
+    context.read<UserBloc>().add(UpdateUser(
+          name: _nameController.text.isNotEmpty ? _nameController.text : null,
+          username: _usernameController.text.isNotEmpty
+              ? _usernameController.text
+              : null,
+          phone:
+              _phoneController.text.isNotEmpty ? _phoneController.text : null,
+          age: _ageController.text.isNotEmpty
+              ? int.parse(_ageController.text)
+              : null,
+          occupation: _occupationController.text.isNotEmpty
+              ? _occupationController.text
+              : null,
+        ));
 
-      await _userService.updateUser(
-        name: _nameController.text.isNotEmpty ? _nameController.text : null,
-        username: _usernameController.text.isNotEmpty
-            ? _usernameController.text
-            : null,
-        phone: _phoneController.text.isNotEmpty ? _phoneController.text : null,
-        age: _ageController.text.isNotEmpty
-            ? int.parse(_ageController.text)
-            : null,
-        occupation: _occupationController.text.isNotEmpty
-            ? _occupationController.text
-            : null,
-        bio: _bioController.text.isNotEmpty ? _bioController.text : null,
-        location: _locationController.text.isNotEmpty
-            ? _locationController.text
-            : null,
-        work: _workController.text.isNotEmpty ? _workController.text : null,
-        education: _educationController.text.isNotEmpty
-            ? _educationController.text
-            : null,
-        languages: languages,
-        avatar: _avatar.isNotEmpty ? _avatar : null,
-        coverImage: _coverImage.isNotEmpty ? _coverImage : null,
-      );
+    _showSnackBar('Profile updated successfully');
+    await Future.delayed(const Duration(milliseconds: 500));
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile updated successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context, true);
-      }
-    } catch (e) {
-      setState(() {
-        _isSaving = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error saving profile: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+    if (mounted) {
+      Navigator.pop(context, true);
     }
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundColor,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
+        backgroundColor: AppColors.card,
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.black),
+          icon: Icon(Icons.close, color: AppColors.text),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -339,7 +287,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 ? null
                 : _saveProfile,
             child: Text(
-              'Done',
+              'Save',
               style: AppTheme.blackTextStyle.copyWith(
                 color: AppColors.primary,
                 fontWeight: AppTheme.bold,
@@ -348,242 +296,210 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            )
-          : SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    // Cover Image
-                    _buildCoverImageSection(),
-                    const SizedBox(height: 16),
+      body: BlocListener<ProfileBloc, ProfileState>(
+        listener: (context, state) {
+          if (state.status == ProfileStatus.success ||
+              state.status == ProfileStatus.error) {
+            setState(() => _isSaving = false);
+          }
+        },
+        child: BlocBuilder<ProfileBloc, ProfileState>(
+          builder: (context, profileState) {
+            return BlocBuilder<UserBloc, UserState>(
+              builder: (context, userState) {
+                if (profileState.status == ProfileStatus.loading ||
+                    userState.status == UserStatus.loading) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  );
+                }
 
-                    // Profile picture
-                    _buildProfilePictureSection(),
-                    const SizedBox(height: 24),
+                // Populate form when data is loaded
+                if (profileState.status == ProfileStatus.success ||
+                    userState.status == UserStatus.success) {
+                  _populateForm(profileState.myProfile, userState.currentUser);
+                }
 
-                    // Name field
-                    _buildTextField(
-                      controller: _nameController,
-                      label: 'Name',
-                      hint: 'Enter your name',
-                    ),
-                    const SizedBox(height: 16),
+                final profile = profileState.myProfile;
+                final user = userState.currentUser;
 
-                    // Username field
-                    _buildTextField(
-                      controller: _usernameController,
-                      label: 'Username',
-                      hint: 'Enter username',
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Phone field
-                    _buildTextField(
-                      controller: _phoneController,
-                      label: 'Phone',
-                      hint: 'Enter phone number',
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Age field
-                    _buildTextField(
-                      controller: _ageController,
-                      label: 'Age',
-                      hint: 'Enter your age',
-                      keyboardType: TextInputType.number,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Occupation field
-                    _buildTextField(
-                      controller: _occupationController,
-                      label: 'Occupation',
-                      hint: 'What do you do?',
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Bio field
-                    _buildTextField(
-                      controller: _bioController,
-                      label: 'Bio',
-                      hint: 'Write a bio...',
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Location field
-                    _buildTextField(
-                      controller: _locationController,
-                      label: 'Location',
-                      hint: 'Where are you located?',
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Work field
-                    _buildTextField(
-                      controller: _workController,
-                      label: 'Work',
-                      hint: 'Where do you work?',
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Education field
-                    _buildTextField(
-                      controller: _educationController,
-                      label: 'Education',
-                      hint: 'Where did you study?',
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Languages field
-                    _buildTextField(
-                      controller: _languagesController,
-                      label: 'Languages',
-                      hint: 'English, French, Spanish...',
-                      maxLines: 2,
-                    ),
-                    const SizedBox(height: 32),
-                  ],
-                ),
-              ),
-            ),
+                return SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      _buildCoverImageSection(profile),
+                      const SizedBox(height: 16),
+                      _buildProfilePictureSection(profile),
+                      const SizedBox(height: 24),
+                      _buildFormFields(),
+                      const SizedBox(height: 32),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ),
     );
   }
 
-  Widget _buildCoverImageSection() {
+  Widget _buildCoverImageSection(Profile? profile) {
+    final hasCover = _selectedCoverFile != null ||
+        (profile?.coverImage != null && profile!.coverImage!.isNotEmpty);
+
     return GestureDetector(
-      onTap: _changeCoverImage,
+      onTap: () => _showImagePickerOptions(false),
       child: Container(
-        height: 150,
+        height: 180,
         width: double.infinity,
+        margin: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: AppColors.greyColor.withOpacity(0.1),
-          image: _selectedCoverFile != null
-              ? DecorationImage(
-                  image: FileImage(_selectedCoverFile!),
-                  fit: BoxFit.cover,
-                )
-              : (_coverImage.isNotEmpty
-                  ? DecorationImage(
-                      image: NetworkImage(_coverImage),
-                      fit: BoxFit.cover,
-                    )
-                  : null),
-        ),
-        child: Stack(
-          children: [
-            if (_coverImage.isEmpty && _selectedCoverFile == null)
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.add_photo_alternate_outlined,
-                      size: 40,
-                      color: AppColors.greyColor,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Add cover photo',
-                      style: AppTheme.greyTextStyle.copyWith(fontSize: 14),
-                    ),
-                  ],
-                ),
-              ),
-            Positioned(
-              bottom: 8,
-              right: 8,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: _isUploadingCover
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(
-                        Icons.camera_alt,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-              ),
+          borderRadius: BorderRadius.circular(20),
+          color: AppColors.card,
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.shadow,
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            children: [
+              if (_selectedCoverFile != null)
+                Image.file(_selectedCoverFile!,
+                    fit: BoxFit.cover, width: double.infinity)
+              else if (profile?.coverImage != null &&
+                  profile!.coverImage!.isNotEmpty)
+                CachedNetworkImage(
+                  imageUrl: profile.coverImage!,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  placeholder: (context, url) =>
+                      Container(color: AppColors.greyColor.withOpacity(0.1)),
+                  errorWidget: (context, url, error) =>
+                      _buildCoverPlaceholder(),
+                )
+              else
+                _buildCoverPlaceholder(),
+              Positioned(
+                bottom: 12,
+                right: 12,
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    shape: BoxShape.circle,
+                  ),
+                  child: _isUploadingCover
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.camera_alt,
+                          color: Colors.white, size: 20),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCoverPlaceholder() {
+    return Container(
+      color: AppColors.greyColor.withOpacity(0.1),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add_photo_alternate_outlined,
+                size: 40, color: AppColors.greyColor),
+            const SizedBox(height: 8),
+            Text('Add cover photo',
+                style: AppTheme.greyTextStyle.copyWith(fontSize: 14)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildProfilePictureSection() {
+  Widget _buildProfilePictureSection(Profile? profile) {
+    final hasAvatar = _selectedAvatarFile != null ||
+        (profile?.avatar != null && profile!.avatar!.isNotEmpty);
+    final initial = _nameController.text.isNotEmpty
+        ? _nameController.text[0].toUpperCase()
+        : 'U';
+
     return Center(
       child: Stack(
         children: [
           Container(
-            width: 100,
-            height: 100,
+            width: 110,
+            height: 110,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: AppColors.primary, width: 3),
+              gradient: LinearGradient(
+                colors: [AppColors.primary, AppColors.secondary],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.shadow,
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            child: CircleAvatar(
-              radius: 48,
-              backgroundColor: AppColors.primary.withOpacity(0.1),
-              backgroundImage: _selectedAvatarFile != null
-                  ? FileImage(_selectedAvatarFile!)
-                  : (_avatar.isNotEmpty ? NetworkImage(_avatar) : null)
-                      as ImageProvider?,
-              child: (_avatar.isEmpty && _selectedAvatarFile == null)
-                  ? Text(
-                      _getNameInitial(),
-                      style: TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
-                    )
-                  : null,
+            child: Padding(
+              padding: const EdgeInsets.all(3),
+              child: ClipOval(
+                child: _selectedAvatarFile != null
+                    ? Image.file(_selectedAvatarFile!, fit: BoxFit.cover)
+                    : (profile?.avatar != null && profile!.avatar!.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: profile.avatar!,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Container(
+                                color: AppColors.greyColor.withOpacity(0.1)),
+                            errorWidget: (context, url, error) =>
+                                _avatarFallback(initial),
+                          )
+                        : _avatarFallback(initial)),
+              ),
             ),
           ),
           Positioned(
             bottom: 0,
             right: 0,
             child: GestureDetector(
-              onTap: _changeProfilePicture,
+              onTap: () => _showImagePickerOptions(true),
               child: Container(
-                width: 32,
-                height: 32,
+                width: 34,
+                height: 34,
                 decoration: BoxDecoration(
                   color: AppColors.primary,
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.shadow,
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: _isUploadingAvatar
                     ? const SizedBox(
-                        width: 16,
-                        height: 16,
+                        width: 20,
+                        height: 20,
                         child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(
-                        Icons.camera_alt,
-                        color: Colors.white,
-                        size: 16,
-                      ),
+                            strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.camera_alt,
+                        color: Colors.white, size: 18),
               ),
             ),
           ),
@@ -592,12 +508,93 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  String _getNameInitial() {
-    final name = _nameController.text;
-    if (name.isNotEmpty) {
-      return name[0].toUpperCase();
-    }
-    return 'U';
+  Widget _avatarFallback(String initial) {
+    return Container(
+      color: AppColors.primary.withOpacity(0.1),
+      child: Center(
+        child: Text(
+          initial,
+          style: TextStyle(
+            fontSize: 40,
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFormFields() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        children: [
+          _buildTextField(
+            controller: _nameController,
+            label: 'Name',
+            hint: 'Enter your name',
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _usernameController,
+            label: 'Username',
+            hint: 'Enter username',
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _phoneController,
+            label: 'Phone',
+            hint: 'Enter phone number',
+            keyboardType: TextInputType.phone,
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _ageController,
+            label: 'Age',
+            hint: 'Enter your age',
+            keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _occupationController,
+            label: 'Occupation',
+            hint: 'What do you do?',
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _bioController,
+            label: 'Bio',
+            hint: 'Write a bio...',
+            maxLines: 3,
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _locationController,
+            label: 'Location',
+            hint: 'Where are you located?',
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _workController,
+            label: 'Work',
+            hint: 'Where do you work?',
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _educationController,
+            label: 'Education',
+            hint: 'Where did you study?',
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _languagesController,
+            label: 'Languages',
+            hint: 'English, French, Spanish...',
+            maxLines: 2,
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildTextField({
@@ -620,14 +617,22 @@ class _EditProfilePageState extends State<EditProfilePage> {
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
+            color: AppColors.card,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.shadow,
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+            ],
           ),
           child: TextField(
             controller: controller,
             maxLines: maxLines,
             keyboardType: keyboardType,
-            style: AppTheme.blackTextStyle.copyWith(fontSize: 14),
+            style: AppTheme.blackTextStyle.copyWith(fontSize: 15),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: AppTheme.greyTextStyle.copyWith(fontSize: 14),

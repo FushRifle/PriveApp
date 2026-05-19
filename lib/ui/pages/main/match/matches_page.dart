@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:cirqle/app/configs/colors.dart';
-import 'package:cirqle/app/configs/theme.dart';
-import 'package:cirqle/data/services/match/match_service.dart';
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/configs/theme.dart';
+import 'package:clique/data/services/match/match_service.dart';
 
 class MatchesPage extends StatefulWidget {
   const MatchesPage({super.key});

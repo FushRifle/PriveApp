@@ -1,15 +1,15 @@
 import 'dart:ui';
 import 'dart:async';
 
-import 'package:cirqle/bloc/home/feed_bloc.dart';
+import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:cirqle/app/configs/colors.dart';
-import 'package:cirqle/app/configs/theme.dart';
-import 'package:cirqle/data/models/feeds_models.dart';
-import 'package:cirqle/ui/widgets/home/card_post.dart';
-import 'package:cirqle/data/services/user/user_service.dart';
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/configs/theme.dart';
+import 'package:clique/data/models/feeds_models.dart';
+import 'package:clique/ui/widgets/home/card_post.dart';
+import 'package:clique/data/services/user/user_service.dart';
 
 class PostDetailPage extends StatefulWidget {
   final int postId;

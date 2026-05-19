@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:cirqle/data/models/post_model.dart';
+import 'package:clique/data/models/post_model.dart';
 
 part 'post_state.dart';
 

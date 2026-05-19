@@ -1,6 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:cirqle/data/services/auth/auth_service.dart';
+import 'package:clique/data/services/auth/auth_service.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
@@ -29,12 +29,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     SignInRequested event,
     Emitter<AuthState> emit,
   ) async {
-    emit(state.copyWith(
-      status: AuthStatus.loading,
-      isLoading: true,
-      error: null,
-      needsVerification: false,
-    ));
+    emit(
+      state.copyWith(
+        status: AuthStatus.loading,
+        isLoading: true,
+        error: null,
+        needsVerification: false,
+      ),
+    );
 
     // Save credentials if remember me is checked
     if (event.rememberMe) {
@@ -44,31 +46,37 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final result = await _authService.signIn(event.email, event.password);
 
     if (result.success && result.token != null) {
-      emit(state.copyWith(
-        status: AuthStatus.authenticated,
-        isAuthenticated: true,
-        token: result.token,
-        user: result.user,
-        isLoading: false,
-        error: null,
-        needsVerification: false,
-      ));
+      emit(
+        state.copyWith(
+          status: AuthStatus.authenticated,
+          isAuthenticated: true,
+          token: result.token,
+          user: result.user,
+          isLoading: false,
+          error: null,
+          needsVerification: false,
+        ),
+      );
     } else if (result.needsVerification) {
-      emit(state.copyWith(
-        status: AuthStatus.verificationRequired,
-        isLoading: false,
-        error: result.error,
-        needsVerification: true,
-        email: event.email,
-      ));
+      emit(
+        state.copyWith(
+          status: AuthStatus.verificationRequired,
+          isLoading: false,
+          error: result.error,
+          needsVerification: true,
+          email: event.email,
+        ),
+      );
     } else {
-      emit(state.copyWith(
-        status: AuthStatus.error,
-        isAuthenticated: false,
-        isLoading: false,
-        error: result.error ?? 'Sign in failed',
-        needsVerification: false,
-      ));
+      emit(
+        state.copyWith(
+          status: AuthStatus.error,
+          isAuthenticated: false,
+          isLoading: false,
+          error: result.error ?? 'Sign in failed',
+          needsVerification: false,
+        ),
+      );
     }
   }
 
@@ -76,12 +84,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     SignUpRequested event,
     Emitter<AuthState> emit,
   ) async {
-    emit(state.copyWith(
-      status: AuthStatus.loading,
-      isLoading: true,
-      error: null,
-      needsVerification: false,
-    ));
+    emit(
+      state.copyWith(
+        status: AuthStatus.loading,
+        isLoading: true,
+        error: null,
+        needsVerification: false,
+      ),
+    );
 
     final result = await _authService.signUp(
       email: event.email,
@@ -91,31 +101,37 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     );
 
     if (result.success && result.token != null) {
-      emit(state.copyWith(
-        status: AuthStatus.authenticated,
-        isAuthenticated: true,
-        token: result.token,
-        user: result.user,
-        isLoading: false,
-        error: null,
-        needsVerification: false,
-      ));
+      emit(
+        state.copyWith(
+          status: AuthStatus.authenticated,
+          isAuthenticated: true,
+          token: result.token,
+          user: result.user,
+          isLoading: false,
+          error: null,
+          needsVerification: false,
+        ),
+      );
     } else if (result.needsVerification) {
-      emit(state.copyWith(
-        status: AuthStatus.verificationRequired,
-        isLoading: false,
-        error: result.error,
-        needsVerification: true,
-        email: event.email,
-      ));
+      emit(
+        state.copyWith(
+          status: AuthStatus.verificationRequired,
+          isLoading: false,
+          error: result.error,
+          needsVerification: true,
+          email: event.email,
+        ),
+      );
     } else {
-      emit(state.copyWith(
-        status: AuthStatus.error,
-        isAuthenticated: false,
-        isLoading: false,
-        error: result.error ?? 'Sign up failed',
-        needsVerification: false,
-      ));
+      emit(
+        state.copyWith(
+          status: AuthStatus.error,
+          isAuthenticated: false,
+          isLoading: false,
+          error: result.error ?? 'Sign up failed',
+          needsVerification: false,
+        ),
+      );
     }
   }
 
@@ -123,18 +139,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     SignOutRequested event,
     Emitter<AuthState> emit,
   ) async {
-    emit(state.copyWith(
-      status: AuthStatus.loading,
-      isLoading: true,
-    ));
+    emit(state.copyWith(status: AuthStatus.loading, isLoading: true));
 
     await _authService.signOut();
 
-    emit(const AuthState(
-      status: AuthStatus.unauthenticated,
-      isAuthenticated: false,
-      isLoading: false,
-    ));
+    emit(
+      const AuthState(
+        status: AuthStatus.unauthenticated,
+        isAuthenticated: false,
+        isLoading: false,
+      ),
+    );
   }
 
   Future<void> _onCheckAuthStatus(
@@ -146,21 +161,25 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final user = await _authService.getCurrentUser();
 
     if (isAuthenticated && token != null) {
-      emit(state.copyWith(
-        status: AuthStatus.authenticated,
-        isAuthenticated: true,
-        token: token,
-        user: user,
-        isLoading: false,
-      ));
+      emit(
+        state.copyWith(
+          status: AuthStatus.authenticated,
+          isAuthenticated: true,
+          token: token,
+          user: user,
+          isLoading: false,
+        ),
+      );
     } else {
-      emit(state.copyWith(
-        status: AuthStatus.unauthenticated,
-        isAuthenticated: false,
-        token: null,
-        user: null,
-        isLoading: false,
-      ));
+      emit(
+        state.copyWith(
+          status: AuthStatus.unauthenticated,
+          isAuthenticated: false,
+          token: null,
+          user: null,
+          isLoading: false,
+        ),
+      );
     }
   }
 
@@ -169,9 +188,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     final credentials = await _authService.getSavedCredentials();
-    emit(state.copyWith(
-      savedCredentials: credentials,
-    ));
+    emit(state.copyWith(savedCredentials: credentials));
   }
 
   Future<void> _onSaveCredentialsRequested(
@@ -185,14 +202,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     );
   }
 
-  void _onClearAuthError(
-    ClearAuthError event,
-    Emitter<AuthState> emit,
-  ) {
-    emit(state.copyWith(
-      error: null,
-      status: AuthStatus.unauthenticated,
-    ));
+  void _onClearAuthError(ClearAuthError event, Emitter<AuthState> emit) {
+    emit(state.copyWith(error: null, status: AuthStatus.unauthenticated));
   }
 
   Future<void> _onVerifyEmailRequested(
@@ -201,10 +212,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     // In a real implementation, you would verify the code with your backend
     // For now, we'll assume verification is handled by Supabase via email link
-    emit(state.copyWith(
-      status: AuthStatus.loading,
-      isLoading: true,
-    ));
+    emit(state.copyWith(status: AuthStatus.loading, isLoading: true));
 
     // Simulate verification check
     await Future.delayed(const Duration(seconds: 1));
@@ -214,20 +222,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     if (isAuthenticated) {
       final token = await _authService.getToken();
       final user = await _authService.getCurrentUser();
-      emit(state.copyWith(
-        status: AuthStatus.authenticated,
-        isAuthenticated: true,
-        token: token,
-        user: user,
-        isLoading: false,
-        needsVerification: false,
-      ));
+      emit(
+        state.copyWith(
+          status: AuthStatus.authenticated,
+          isAuthenticated: true,
+          token: token,
+          user: user,
+          isLoading: false,
+          needsVerification: false,
+        ),
+      );
     } else {
-      emit(state.copyWith(
-        status: AuthStatus.verificationRequired,
-        isLoading: false,
-        error: 'Invalid or expired verification code',
-      ));
+      emit(
+        state.copyWith(
+          status: AuthStatus.verificationRequired,
+          isLoading: false,
+          error: 'Invalid or expired verification code',
+        ),
+      );
     }
   }
 
@@ -236,30 +248,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     if (state.email.isEmpty) {
-      emit(state.copyWith(
-        error: 'Email address not found',
-      ));
+      emit(state.copyWith(error: 'Email address not found'));
       return;
     }
 
-    emit(state.copyWith(
-      isLoading: true,
-      error: null,
-    ));
+    emit(state.copyWith(isLoading: true, error: null));
 
     final success = await _authService.resendVerification(state.email);
 
     if (success) {
-      emit(state.copyWith(
-        isLoading: false,
-        error: null,
-      ));
+      emit(state.copyWith(isLoading: false, error: null));
       // Show success message to user
     } else {
-      emit(state.copyWith(
-        isLoading: false,
-        error: 'Failed to resend verification code. Please try again.',
-      ));
+      emit(
+        state.copyWith(
+          isLoading: false,
+          error: 'Failed to resend verification code. Please try again.',
+        ),
+      );
     }
   }
 

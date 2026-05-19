@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:cirqle/bloc/auth/auth_bloc.dart';
-import 'package:cirqle/bloc/profile/profile_bloc.dart';
-import 'package:cirqle/bloc/user/user_bloc.dart';
-import 'package:cirqle/app/resources/constant/named_routes.dart';
+import 'package:clique/bloc/auth/auth_bloc.dart';
+import 'package:clique/bloc/profile/profile_bloc.dart';
+import 'package:clique/bloc/user/user_bloc.dart';
+import 'package:clique/app/resources/constant/named_routes.dart';
 import './main_wrapper.dart';
 
 class AuthGuard extends StatefulWidget {

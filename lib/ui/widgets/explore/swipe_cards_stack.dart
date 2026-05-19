@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:cirqle/data/models/profile_model.dart';
-import 'package:cirqle/ui/widgets/explore/profile_card.dart';
-import 'package:cirqle/ui/widgets/explore/swipeable_card.dart';
+import 'package:clique/data/models/profile_model.dart';
+import 'package:clique/ui/widgets/explore/profile_card.dart';
+import 'package:clique/ui/widgets/explore/swipeable_card.dart';
 
 class SwipeCardsStack extends StatelessWidget {
   final List<ProfileModel> profiles; // Changed from Map to ProfileModel

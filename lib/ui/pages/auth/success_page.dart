@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cirqle/app/configs/colors.dart';
-import 'package:cirqle/app/configs/theme.dart';
-import 'package:cirqle/app/resources/constant/named_routes.dart';
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/configs/theme.dart';
+import 'package:clique/app/resources/constant/named_routes.dart';
 
 class OnboardingSuccessPage extends StatefulWidget {
   const OnboardingSuccessPage({super.key});
@@ -117,7 +117,7 @@ class _OnboardingSuccessPageState extends State<OnboardingSuccessPage>
                     child: Column(
                       children: [
                         Text(
-                          'Welcome to cirqle!',
+                          'Welcome to clique!',
                           style: AppTheme.whiteTextStyle.copyWith(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,

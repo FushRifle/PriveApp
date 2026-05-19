@@ -1,16 +1,17 @@
 import 'dart:ui';
 
-import 'package:cirqle/bloc/home/feed_bloc.dart';
-import 'package:cirqle/ui/widgets/ui/document_viewer.dart';
-import 'package:cirqle/ui/widgets/ui/image_viewer.dart';
-import 'package:cirqle/ui/widgets/ui/video_viewer.dart';
+import 'package:clique/bloc/home/feed_bloc.dart';
+import 'package:clique/ui/widgets/ui/document_viewer.dart';
+import 'package:clique/ui/widgets/ui/image_viewer.dart';
+import 'package:clique/ui/widgets/ui/video_viewer.dart';
 import 'package:flutter/material.dart';
-import 'package:cirqle/app/configs/colors.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:cirqle/data/models/feeds_models.dart';
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/configs/theme.dart';
+import 'package:clique/data/models/feeds_models.dart';
 import 'package:video_player/video_player.dart';
-import 'package:cirqle/ui/widgets/home/custom_bottom_sheet.dart';
-import 'package:cirqle/app/resources/constant/named_routes.dart';
+import 'package:clique/ui/widgets/home/custom_bottom_sheet.dart';
+import 'package:clique/app/resources/constant/named_routes.dart';
 
 class CardPost extends StatefulWidget {
   final FeedPost post;
@@ -103,19 +104,13 @@ class _CardPostState extends State<CardPost> {
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
+          color: AppColors.cardColor,
           borderRadius: BorderRadius.circular(20),
-          color: AppColors.secondary,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: AppColors.shadow,
               blurRadius: 12,
               offset: const Offset(0, 4),
-              spreadRadius: 0,
-            ),
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
               spreadRadius: 0,
             ),
           ],
@@ -149,14 +144,14 @@ class _CardPostState extends State<CardPost> {
 
   Widget _buildActionButtons() {
     return Positioned(
-      right: 12,
-      bottom: 12,
+      right: 5,
+      bottom: 5,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(0.3),
               borderRadius: BorderRadius.circular(20),
@@ -247,31 +242,30 @@ class _CardPostState extends State<CardPost> {
                 ),
                 child: Icon(icon, color: color, size: 24),
               ),
-              // Badge for count
               if (hasCount)
                 Positioned(
-                  top: -4,
-                  right: -4,
+                  top: -1,
+                  right: 2,
                   child: Container(
                     constraints: const BoxConstraints(
-                      minWidth: 18,
-                      minHeight: 18,
+                      minWidth: 10,
+                      minHeight: 10,
                     ),
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppColors.redColor,
-                      borderRadius: BorderRadius.circular(12),
+                      color: AppColors.backgroundColorDark,
+                      borderRadius: BorderRadius.circular(18),
                       border: Border.all(
                         color: Colors.white,
-                        width: 1.5,
+                        width: 0.1,
                       ),
                     ),
                     child: Text(
                       _formatCount(count!),
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 10,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
                       textAlign: TextAlign.center,
@@ -293,89 +287,117 @@ class _CardPostState extends State<CardPost> {
 
   Widget _buildTextOnlyPost() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-            spreadRadius: 0,
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 4,
+            color: AppColors.shadow,
+            blurRadius: 10,
             offset: const Offset(0, 2),
-            spreadRadius: 0,
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundImage: widget.post.user.avatar.isNotEmpty
-                    ? NetworkImage(widget.post.user.avatar)
-                    : null,
-                child: widget.post.user.avatar.isEmpty
-                    ? const Icon(Icons.person, size: 20)
-                    : null,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: () {
+            if (!widget.isDetailView) {
+              Navigator.pushNamed(
+                context,
+                NamedRoutes.postDetailScreen,
+                arguments: widget.post.id,
+              );
+            }
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Text(
-                      widget.post.user.name,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundImage: widget.post.user.avatar.isNotEmpty
+                          ? NetworkImage(widget.post.user.avatar)
+                          : null,
+                      child: widget.post.user.avatar.isEmpty
+                          ? Icon(Icons.person, size: 18, color: Colors.grey)
+                          : null,
                     ),
-                    Text(
-                      widget.post.time,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade500,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                widget.post.user.name,
+                                style: AppTheme.blackTextStyle.copyWith(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              if (widget.post.user.verified)
+                                Icon(Icons.verified,
+                                    size: 12, color: AppColors.primary),
+                            ],
+                          ),
+                          Text(
+                            widget.post.time,
+                            style: AppTheme.greyTextStyle.copyWith(
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                Text(
+                  widget.post.content,
+                  style: AppTheme.blackTextStyle.copyWith(
+                    fontSize: 15,
+                    height: 1.4,
+                  ),
+                  maxLines: 4,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _buildInlineButton(
+                      icon: isLiked ? Icons.favorite : Icons.favorite_border,
+                      label: likeCount > 0 ? _formatCount(likeCount) : '',
+                      color: isLiked ? Colors.redAccent : AppColors.greyColor,
+                      onTap: _toggleLike,
+                    ),
+                    const SizedBox(width: 16),
+                    _buildInlineButton(
+                      icon: Icons.chat_bubble_outline,
+                      label: commentCount > 0 ? _formatCount(commentCount) : '',
+                      color: AppColors.greyColor,
+                      onTap: _openComments,
+                    ),
+                    const Spacer(),
+                    Icon(Icons.bookmark_border,
+                        size: 18, color: AppColors.greyColor),
+                    const SizedBox(width: 16),
+                    Icon(Icons.share_outlined,
+                        size: 18, color: AppColors.greyColor),
+                  ],
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            widget.post.content,
-            style: const TextStyle(fontSize: 15, height: 1.3),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _buildInlineButton(
-                icon: isLiked ? Icons.favorite : Icons.favorite_border,
-                label: likeCount > 0 ? _formatCount(likeCount) : '',
-                color: isLiked ? Colors.redAccent : Colors.grey.shade600,
-                onTap: _toggleLike,
-              ),
-              const SizedBox(width: 16),
-              _buildInlineButton(
-                icon: Icons.chat_bubble_outline,
-                label: commentCount > 0 ? _formatCount(commentCount) : '',
-                color: AppColors.blackColor,
-                onTap: _openComments,
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -389,11 +411,18 @@ class _CardPostState extends State<CardPost> {
     return GestureDetector(
       onTap: onTap,
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 18, color: color),
           if (label.isNotEmpty) ...[
             const SizedBox(width: 4),
-            Text(label, style: TextStyle(fontSize: 14, color: color)),
+            Text(
+              label,
+              style: AppTheme.greyTextStyle.copyWith(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ],
       ),
@@ -416,7 +445,6 @@ class _CardPostState extends State<CardPost> {
       orElse: () => Attachment(type: '', url: ''),
     );
 
-    // Video handling - Open full screen video viewer
     if (videoAttachment.url.isNotEmpty) {
       return GestureDetector(
         onTap: () {
@@ -435,7 +463,6 @@ class _CardPostState extends State<CardPost> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Thumbnail preview while loading
             if (_isVideoInitialized && _videoController != null)
               VideoPlayer(_videoController!)
             else if (videoAttachment.thumbnail != null &&
@@ -461,7 +488,6 @@ class _CardPostState extends State<CardPost> {
                       Icon(Icons.video_library, size: 40, color: Colors.grey),
                 ),
               ),
-            // Play button overlay
             Positioned.fill(
               child: Container(
                 color: Colors.black.withOpacity(0.2),
@@ -479,7 +505,6 @@ class _CardPostState extends State<CardPost> {
       );
     }
 
-    // Image handling - Open full screen image viewer
     if (imageAttachment.url.isNotEmpty) {
       return GestureDetector(
         onTap: () {
@@ -510,7 +535,6 @@ class _CardPostState extends State<CardPost> {
       );
     }
 
-    // Document handling
     if (documentAttachment.url.isNotEmpty) {
       return GestureDetector(
         onTap: () {
@@ -527,7 +551,7 @@ class _CardPostState extends State<CardPost> {
           );
         },
         child: Container(
-          color: Colors.grey.shade100,
+          color: AppColors.cardColor,
           child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -540,7 +564,7 @@ class _CardPostState extends State<CardPost> {
                 const SizedBox(height: 12),
                 Text(
                   'Tap to view document',
-                  style: TextStyle(
+                  style: AppTheme.blackTextStyle.copyWith(
                     color: AppColors.primary,
                     fontSize: 14,
                   ),
@@ -552,7 +576,6 @@ class _CardPostState extends State<CardPost> {
       );
     }
 
-    // Fallback for no media
     return Container(
       color: Colors.grey.shade200,
       child: const Center(
@@ -603,8 +626,7 @@ class _CardPostState extends State<CardPost> {
               children: [
                 Text(
                   widget.post.user.name,
-                  style: TextStyle(
-                    color: AppColors.whiteColor,
+                  style: AppTheme.whiteTextStyle.copyWith(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
@@ -612,10 +634,10 @@ class _CardPostState extends State<CardPost> {
                 if (widget.post.content.isNotEmpty)
                   Text(
                     widget.post.content,
-                    style: TextStyle(
-                        color: AppColors.whiteColor,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold),
+                    style: AppTheme.whiteTextStyle.copyWith(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

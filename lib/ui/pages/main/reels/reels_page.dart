@@ -1,11 +1,11 @@
-import 'package:cirqle/ui/pages/main/reels/create_reel_page.dart';
+import 'package:clique/ui/pages/main/reels/create_reel_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:cirqle/app/resources/constant/named_routes.dart';
-import 'package:cirqle/bloc/reels/reel_bloc.dart';
-import 'package:cirqle/data/services/user/user_service.dart';
-import 'package:cirqle/ui/widgets/reels/reel_item.dart';
+import 'package:clique/app/resources/constant/named_routes.dart';
+import 'package:clique/bloc/reels/reel_bloc.dart';
+import 'package:clique/data/services/user/user_service.dart';
+import 'package:clique/ui/widgets/reels/reel_item.dart';
 
 class ReelsPage extends StatefulWidget {
   const ReelsPage({super.key});

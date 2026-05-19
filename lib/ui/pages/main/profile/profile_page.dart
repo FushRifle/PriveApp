@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:cirqle/app/configs/colors.dart';
-import 'package:cirqle/app/configs/theme.dart';
-import 'package:cirqle/data/models/gallery_model.dart';
-import 'package:cirqle/bloc/profile/gallery_profile_cubit.dart';
-import 'package:cirqle/bloc/profile/profile_bloc.dart';
-import 'package:cirqle/ui/pages/main/profile/edit_profile_page.dart';
-import 'package:cirqle/ui/pages/settings/settings_page.dart';
-import 'package:cirqle/ui/pages/social/friends_list_page.dart';
-import 'package:cirqle/ui/pages/social/insights_page.dart';
-import 'package:cirqle/ui/pages/main/match/matches_page.dart';
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/configs/theme.dart';
+import 'package:clique/data/models/gallery_model.dart';
+import 'package:clique/bloc/profile/gallery_profile_cubit.dart';
+import 'package:clique/bloc/profile/profile_bloc.dart';
+import 'package:clique/ui/pages/main/profile/edit_profile_page.dart';
+import 'package:clique/ui/pages/settings/settings_page.dart';
+import 'package:clique/ui/pages/social/friends_list_page.dart';
+import 'package:clique/ui/pages/social/insights_page.dart';
+import 'package:clique/ui/pages/main/match/matches_page.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -145,8 +145,8 @@ class _ProfilePageState extends State<ProfilePage>
         controller: _tabController,
         physics: const BouncingScrollPhysics(),
         children: [
-          _buildGalleryGrid(profile.userId ?? profile.id),
-          _buildVideosTab(profile.userId ?? profile.id),
+          _buildGalleryGrid(profile.userId),
+          _buildVideosTab(profile.userId),
           _buildTaggedTab(),
         ],
       ),
@@ -155,12 +155,16 @@ class _ProfilePageState extends State<ProfilePage>
 
   Widget _buildSliverAppBar(Profile profile) {
     final hasCover =
-        profile.photos.isNotEmpty && profile.photos.first.isNotEmpty;
+        (profile.coverImage != null && profile.coverImage!.isNotEmpty) ||
+            (profile.photos.isNotEmpty && profile.photos.first.isNotEmpty);
+
+    final coverUrl = profile.coverImage ??
+        (profile.photos.isNotEmpty ? profile.photos.first : null);
 
     return SliverAppBar(
-      expandedHeight: hasCover ? 200 : 100,
+      expandedHeight: hasCover ? 220 : 120,
       pinned: true,
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.card,
       elevation: 0,
       leading: IconButton(
         onPressed: () => Navigator.pop(context),
@@ -178,8 +182,8 @@ class _ProfilePageState extends State<ProfilePage>
           ),
       ],
       flexibleSpace: FlexibleSpaceBar(
-        background: hasCover
-            ? _buildCoverImage(profile.photos.first)
+        background: hasCover && coverUrl != null
+            ? _buildCoverImage(coverUrl)
             : _buildCoverPlaceholder(),
       ),
     );
@@ -194,8 +198,12 @@ class _ProfilePageState extends State<ProfilePage>
           fit: BoxFit.cover,
           width: double.infinity,
           height: double.infinity,
-          placeholder: (context, url) =>
-              Container(color: AppColors.primary.withOpacity(0.1)),
+          placeholder: (context, url) => Container(
+            color: AppColors.primary.withOpacity(0.1),
+            child: const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ),
+          ),
           errorWidget: (context, url, error) => _buildCoverPlaceholder(),
         ),
         Positioned.fill(
@@ -204,7 +212,7 @@ class _ProfilePageState extends State<ProfilePage>
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Colors.transparent, Colors.white.withOpacity(0.95)],
+                colors: [Colors.transparent, AppColors.card.withOpacity(0.95)],
                 stops: const [0.65, 1.0],
               ),
             ),
@@ -216,19 +224,20 @@ class _ProfilePageState extends State<ProfilePage>
 
   Widget _buildCoverPlaceholder() {
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.primary.withOpacity(0.3),
-            AppColors.primary.withOpacity(0.1)
+      color: AppColors.greyColor.withOpacity(0.1),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.photo_camera_back,
+                size: 50, color: AppColors.greyColor.withOpacity(0.5)),
+            const SizedBox(height: 8),
+            Text(
+              'No cover photo',
+              style: AppTheme.greyTextStyle.copyWith(fontSize: 14),
+            ),
           ],
         ),
-      ),
-      child: Center(
-        child: Icon(Icons.photo_camera_back,
-            size: 50, color: AppColors.primary.withOpacity(0.5)),
       ),
     );
   }
@@ -264,14 +273,14 @@ class _ProfilePageState extends State<ProfilePage>
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: AppColors.shadow,
               blurRadius: 12,
               offset: const Offset(0, 4))
         ],
       ),
       child: CircleAvatar(
         radius: 65,
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.card,
         child: CircleAvatar(
           radius: 60,
           backgroundColor: AppColors.primary.withOpacity(0.1),
@@ -416,9 +425,9 @@ class _ProfilePageState extends State<ProfilePage>
         child: Container(
           height: 44,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.card,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.greyColor.withOpacity(0.2)),
+            border: Border.all(color: AppColors.border),
           ),
           child: Center(
             child: Row(
@@ -473,13 +482,13 @@ class _ProfilePageState extends State<ProfilePage>
             child: _buildActionButton(
               _isFollowing ? 'FOLLOWING' : 'FOLLOW',
               _isFollowing ? Colors.transparent : AppColors.primary,
-              _isFollowing ? Colors.black : Colors.white,
+              _isFollowing ? AppColors.text : Colors.white,
               () => setState(() => _isFollowing = !_isFollowing),
               hasBorder: _isFollowing,
             ),
           ),
           const SizedBox(width: 12),
-          _buildIconButton(Icons.mail_outline, Colors.black87, () {}),
+          _buildIconButton(Icons.mail_outline, AppColors.greyColor, () {}),
         ],
       ),
     );
@@ -498,11 +507,10 @@ class _ProfilePageState extends State<ProfilePage>
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           color: bgColor,
-          border: hasBorder
-              ? Border.all(color: AppColors.greyColor.withOpacity(0.3))
-              : null,
+          border: hasBorder ? Border.all(color: AppColors.border) : null,
           gradient: !hasBorder && bgColor == AppColors.primary
-              ? const LinearGradient(colors: [AppColors.primary, Colors.blue])
+              ? const LinearGradient(
+                  colors: [AppColors.primary, AppColors.secondary])
               : null,
         ),
         child: Center(
@@ -525,9 +533,9 @@ class _ProfilePageState extends State<ProfilePage>
         height: 50,
         width: 50,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.card,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.greyColor.withOpacity(0.3)),
+          border: Border.all(color: AppColors.border),
         ),
         child: Icon(icon, color: color),
       ),
@@ -542,8 +550,8 @@ class _ProfilePageState extends State<ProfilePage>
           controller: _tabController,
           indicatorColor: AppColors.primary,
           indicatorWeight: 3,
-          labelColor: Colors.black,
-          unselectedLabelColor: AppColors.greyColor,
+          labelColor: AppColors.text,
+          unselectedLabelColor: AppColors.textSecondary,
           labelStyle: const TextStyle(
               fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 1),
           tabs: const [
@@ -647,7 +655,7 @@ class _ProfilePageState extends State<ProfilePage>
               fit: BoxFit.cover),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: AppColors.shadow,
                 blurRadius: 10,
                 offset: const Offset(0, 5))
           ],
@@ -784,7 +792,7 @@ class _ProfilePageState extends State<ProfilePage>
               fit: BoxFit.cover),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: AppColors.shadow,
                 blurRadius: 10,
                 offset: const Offset(0, 5))
           ],

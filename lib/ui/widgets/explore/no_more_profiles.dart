@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:cirqle/app/configs/colors.dart';
-import 'package:cirqle/app/configs/theme.dart';
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/configs/theme.dart';
 
 class NoMoreProfiles extends StatelessWidget {
   final VoidCallback onRefresh;

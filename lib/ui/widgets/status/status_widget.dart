@@ -1,8 +1,8 @@
-import 'package:cirqle/data/models/status_model.dart';
+import 'package:clique/data/models/status_model.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cirqle/app/configs/colors.dart';
-import 'package:cirqle/app/configs/theme.dart';
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/configs/theme.dart';
 
 class StatusWidget extends StatelessWidget {
   final String name;
@@ -40,7 +40,7 @@ class StatusWidget extends StatelessWidget {
 
   factory StatusWidget.addStatus({required VoidCallback onTap}) {
     return StatusWidget(
-      name: 'My Status',
+      name: 'Your Story',
       avatar: '',
       onTap: onTap,
       isAddStatus: true,
@@ -53,23 +53,24 @@ class StatusWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: SizedBox(
+        width: 68,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Stack(
               alignment: Alignment.center,
               children: [
                 // Avatar Container
                 Container(
-                  width: 72,
-                  height: 72,
+                  width: 60,
+                  height: 60,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: _getAvatarGradient(),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(2.5),
+                    padding: const EdgeInsets.all(2),
                     child: ClipOval(
                       child: Container(
                         color: Colors.white,
@@ -84,15 +85,12 @@ class StatusWidget extends StatelessWidget {
                     bottom: 0,
                     right: 0,
                     child: Container(
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(
-                        minWidth: 20,
-                        minHeight: 20,
-                      ),
+                      width: 18,
+                      height: 18,
                       decoration: BoxDecoration(
                         color: AppColors.primary,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
+                        border: Border.all(color: Colors.white, width: 1.5),
                       ),
                       child: Center(
                         child: Text(
@@ -112,29 +110,29 @@ class StatusWidget extends StatelessWidget {
                     bottom: 0,
                     right: 0,
                     child: Container(
-                      width: 24,
-                      height: 24,
+                      width: 20,
+                      height: 20,
                       decoration: BoxDecoration(
                         color: AppColors.primary,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
+                        border: Border.all(color: Colors.white, width: 1.5),
                       ),
                       child: const Icon(
                         Icons.add,
                         color: Colors.white,
-                        size: 14,
+                        size: 12,
                       ),
                     ),
                   ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             // Name
             Text(
               isAddStatus ? 'Your Story' : name,
               style: AppTheme.blackTextStyle.copyWith(
-                fontSize: 12,
-                fontWeight: hasUnviewed ? FontWeight.w600 : FontWeight.w500,
+                fontSize: 11,
+                fontWeight: hasUnviewed ? FontWeight.w600 : FontWeight.w400,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -163,8 +161,8 @@ class StatusWidget extends StatelessWidget {
 
     return LinearGradient(
       colors: [
-        Colors.grey.withOpacity(0.4),
-        Colors.grey.withOpacity(0.2),
+        Colors.grey.withOpacity(0.3),
+        Colors.grey.withOpacity(0.1),
       ],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
@@ -176,12 +174,12 @@ class StatusWidget extends StatelessWidget {
 
     if (!hasValidAvatar) {
       return Container(
-        color: Colors.grey[200],
+        color: Colors.grey[100],
         child: Center(
           child: Icon(
             isAddStatus ? Icons.add_a_photo : Icons.person,
             color: Colors.grey[400],
-            size: 32,
+            size: 28,
           ),
         ),
       );
@@ -192,21 +190,21 @@ class StatusWidget extends StatelessWidget {
         imageUrl: avatar,
         fit: BoxFit.cover,
         placeholder: (context, url) => Container(
-          color: Colors.grey[200],
+          color: Colors.grey[100],
           child: const Center(
             child: SizedBox(
-              width: 24,
-              height: 24,
+              width: 20,
+              height: 20,
               child: CircularProgressIndicator(
-                strokeWidth: 2,
+                strokeWidth: 1.5,
                 color: AppColors.primary,
               ),
             ),
           ),
         ),
         errorWidget: (context, url, error) => Container(
-          color: Colors.grey[200],
-          child: Icon(Icons.person, color: Colors.grey[400], size: 32),
+          color: Colors.grey[100],
+          child: Icon(Icons.person, color: Colors.grey[400], size: 28),
         ),
       );
     }
@@ -216,8 +214,8 @@ class StatusWidget extends StatelessWidget {
         avatar,
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => Container(
-          color: Colors.grey[200],
-          child: Icon(Icons.person, color: Colors.grey[400], size: 32),
+          color: Colors.grey[100],
+          child: Icon(Icons.person, color: Colors.grey[400], size: 28),
         ),
       ),
     );

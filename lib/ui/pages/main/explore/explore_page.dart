@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:cirqle/app/configs/colors.dart';
-import 'package:cirqle/app/configs/theme.dart';
-import 'package:cirqle/data/models/profile_model.dart';
-import 'package:cirqle/bloc/explore/explore_bloc.dart';
-import 'package:cirqle/ui/widgets/explore/discover_header.dart';
-import 'package:cirqle/ui/widgets/explore/no_more_profiles.dart';
-import 'package:cirqle/ui/widgets/explore/swipe_cards_stack.dart';
-import 'package:cirqle/ui/widgets/explore/filter_bottom_sheet.dart';
-import 'package:cirqle/ui/widgets/explore/loading_shimmer.dart';
-import 'package:cirqle/ui/widgets/explore/match_dialog.dart';
-import 'package:cirqle/ui/widgets/explore/action_buttons.dart';
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/configs/theme.dart';
+import 'package:clique/data/models/profile_model.dart';
+import 'package:clique/bloc/explore/explore_bloc.dart';
+import 'package:clique/ui/widgets/explore/discover_header.dart';
+import 'package:clique/ui/widgets/explore/no_more_profiles.dart';
+import 'package:clique/ui/widgets/explore/swipe_cards_stack.dart';
+import 'package:clique/ui/widgets/explore/filter_bottom_sheet.dart';
+import 'package:clique/ui/widgets/explore/loading_shimmer.dart';
+import 'package:clique/ui/widgets/explore/match_dialog.dart';
+import 'package:clique/ui/widgets/explore/action_buttons.dart';
 
 enum SwipeActionType { like, pass, superLike, none }
 

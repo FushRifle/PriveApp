@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import '../../../core/api_service.dart';
-import 'package:cirqle/data/models/profile_model.dart';
+import 'package:clique/data/models/profile_model.dart';
 
 class ExploreService {
   final ApiService _api = ApiService();

@@ -1,7 +1,7 @@
-import 'package:cirqle/data/services/home/feed_service.dart';
+import 'package:clique/data/services/home/feed_service.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:cirqle/data/models/feeds_models.dart';
+import 'package:clique/data/models/feeds_models.dart';
 
 part 'feed_event.dart';
 part 'feed_state.dart';

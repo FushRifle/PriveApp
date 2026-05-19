@@ -1,6 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:cirqle/data/services/socials/insights_service.dart';
+import 'package:clique/data/services/socials/insights_service.dart';
 
 part 'insights_event.dart';
 part 'insights_state.dart';

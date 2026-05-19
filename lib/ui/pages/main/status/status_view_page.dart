@@ -1,10 +1,10 @@
-import 'package:cirqle/app/resources/constant/named_routes.dart';
-import 'package:cirqle/data/models/status_model.dart';
+import 'package:clique/app/resources/constant/named_routes.dart';
+import 'package:clique/data/models/status_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:cirqle/app/configs/colors.dart';
-import 'package:cirqle/bloc/status/stories_bloc.dart';
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/bloc/status/stories_bloc.dart';
 
 class StatusViewPage extends StatefulWidget {
   final List<Story> stories;

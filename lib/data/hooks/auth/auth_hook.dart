@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:cirqle/data/services/auth/auth_service.dart';
+import 'package:clique/data/services/auth/auth_service.dart';
 
 class AuthHook extends ChangeNotifier {
   final AuthService _auth = AuthService();

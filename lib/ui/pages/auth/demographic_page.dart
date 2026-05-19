@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:cirqle/app/configs/colors.dart';
-import 'package:cirqle/app/configs/theme.dart';
-import 'package:cirqle/app/resources/constant/named_routes.dart';
-import 'package:cirqle/bloc/profile/profile_bloc.dart';
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/configs/theme.dart';
+import 'package:clique/app/resources/constant/named_routes.dart';
+import 'package:clique/bloc/auth/auth_bloc.dart';
+import 'package:clique/bloc/profile/profile_bloc.dart';
+import 'package:clique/bloc/user/user_bloc.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class OnboardingDemographicPage extends StatefulWidget {
   const OnboardingDemographicPage({super.key});
@@ -14,8 +17,11 @@ class OnboardingDemographicPage extends StatefulWidget {
       _OnboardingDemographicPageState();
 }
 
-class _OnboardingDemographicPageState extends State<OnboardingDemographicPage> {
-  final PageController _pageController = PageController();
+class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
+    with TickerProviderStateMixin {
+  late final PageController _pageController;
+  late final AnimationController _fadeController;
+  late final List<Animation<double>> _slideAnimations;
 
   // Form controllers
   final TextEditingController _ageController = TextEditingController();
@@ -29,7 +35,6 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage> {
   String? _selectedAvatarUrl;
   String? _selectedCoverUrl;
 
-  // Avatar and cover image options
   final List<String> _avatarOptions = [
     'https://cdn.pixabay.com/photo/2020/07/14/13/07/avatar-5404763_640.png',
     'https://cdn.pixabay.com/photo/2016/08/08/09/17/avatar-1577909_640.png',
@@ -44,14 +49,12 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage> {
     'https://images.pexels.com/photos/167699/pexels-photo-167699.jpeg',
   ];
 
-  // Selected values
   String _selectedGender = '';
   String _selectedLookingFor = '';
   final List<String> _selectedInterests = [];
 
   int _currentPage = 0;
 
-  // Options
   final List<String> _genders = [
     'Male',
     'Female',
@@ -111,8 +114,50 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _slideAnimations = List.generate(3, (index) {
+      return Tween<double>(begin: 20, end: 0).animate(
+        CurvedAnimation(
+          parent: _fadeController,
+          curve: Interval(index * 0.1, 1.0, curve: Curves.easeOut),
+        ),
+      );
+    });
+    _fadeController.forward();
+
+    // Load existing profile data if any
+    _loadExistingData();
+  }
+
+  void _loadExistingData() {
+    final profileState = context.read<ProfileBloc>().state;
+    if (profileState.myProfile != null) {
+      final profile = profileState.myProfile!;
+      setState(() {
+        _displayNameController.text = profile.displayName ?? '';
+        _bioController.text = profile.bio ?? '';
+        _locationController.text = profile.location ?? '';
+        _workController.text = profile.work ?? '';
+        _educationController.text = profile.education ?? '';
+        _selectedGender = profile.gender ?? '';
+        _selectedLookingFor = profile.lookingFor ?? '';
+        _selectedInterests.addAll(profile.interests);
+        _selectedAvatarUrl = profile.avatar;
+        _selectedCoverUrl = profile.coverImage;
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _pageController.dispose();
+    _fadeController.dispose();
     _ageController.dispose();
     _displayNameController.dispose();
     _occupationController.dispose();
@@ -137,6 +182,9 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage> {
       body: BlocConsumer<ProfileBloc, ProfileState>(
         listener: (context, state) {
           if (state.status == ProfileStatus.success) {
+            // Also update UserBloc to mark onboarding as complete
+            context.read<UserBloc>().add(CompleteOnboarding());
+
             if (mounted) {
               Navigator.pushReplacementNamed(
                   context, NamedRoutes.onboardingSuccessScreen);
@@ -148,66 +196,70 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage> {
         },
         builder: (context, state) {
           final isLoading = state.isSaving;
+          return _buildContent(isLoading);
+        },
+      ),
+    );
+  }
 
-          return Column(
-            children: [
-              // Skip button
-              Padding(
-                padding: const EdgeInsets.only(top: 50, right: 24),
-                child: Align(
-                  alignment: Alignment.topRight,
-                  child: GestureDetector(
-                    onTap: isLoading ? null : _skipOnboarding,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(30),
-                        border: Border.all(
-                          color: AppColors.secondary,
-                          width: 1,
-                        ),
-                      ),
-                      child: Text(
-                        'Skip for now',
-                        style: AppTheme.blackTextStyle.copyWith(
-                          color: AppColors.primary,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+  Widget _buildContent(bool isLoading) {
+    return AnimatedBuilder(
+      animation: _fadeController,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, _slideAnimations[_currentPage].value),
+          child: Opacity(
+            opacity: 1 - (_slideAnimations[_currentPage].value / 40),
+            child: Column(
+              children: [
+                _buildSkipButton(isLoading),
+                _buildPageIndicator(),
+                Expanded(
+                  child: PageView(
+                    controller: _pageController,
+                    onPageChanged: (page) =>
+                        setState(() => _currentPage = page),
+                    physics: const BouncingScrollPhysics(),
+                    children: [
+                      _buildBasicInfoStep(),
+                      _buildProfileStep(),
+                      _buildInterestsStep(),
+                    ],
                   ),
                 ),
+                _buildBottomButtons(isLoading),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSkipButton(bool isLoading) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16, right: 20),
+      child: Align(
+        alignment: Alignment.topRight,
+        child: GestureDetector(
+          onTap: isLoading ? null : _skipOnboarding,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+            ),
+            child: Text(
+              'Skip',
+              style: AppTheme.blackTextStyle.copyWith(
+                color: AppColors.primary,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
               ),
-
-              // Page indicator
-              _buildPageIndicator(),
-
-              // Page view
-              Expanded(
-                child: PageView(
-                  controller: _pageController,
-                  onPageChanged: (page) {
-                    setState(() => _currentPage = page);
-                  },
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    _buildBasicInfoStep(),
-                    _buildProfileStep(),
-                    _buildInterestsStep(),
-                  ],
-                ),
-              ),
-
-              // Bottom buttons
-              _buildBottomButtons(isLoading),
-            ],
-          );
-        },
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -215,26 +267,28 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage> {
   Widget _buildPageIndicator() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(
-        3,
-        (index) => AnimatedContainer(
+      children: List.generate(3, (index) {
+        return AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           margin: const EdgeInsets.symmetric(horizontal: 6),
-          width: _currentPage == index ? 24 : 8,
+          width: _currentPage == index ? 28 : 8,
           height: 8,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(4),
-            color:
-                _currentPage == index ? AppColors.primary : AppColors.secondary,
+            color: _currentPage == index
+                ? AppColors.primary
+                : Colors.grey.shade300,
           ),
-        ),
-      ),
+        );
+      }),
     );
   }
 
+  // ==================== BASIC INFO STEP ====================
+
   Widget _buildBasicInfoStep() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -247,493 +301,259 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage> {
               height: 1.2,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
             _pageSubtitles[0],
-            style: AppTheme.greyTextStyle.copyWith(
-              fontSize: 16,
-              height: 1.4,
-            ),
+            style: AppTheme.greyTextStyle.copyWith(fontSize: 15),
           ),
-          const SizedBox(height: 48),
-
-          // Avatar Selection Card
-          _buildGlassCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.purple, Colors.pink],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child:
-                          const Icon(Icons.face, color: Colors.white, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Profile Picture',
-                      style: AppTheme.blackTextStyle.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Center(
-                  child: GestureDetector(
-                    onTap: _showAvatarPicker,
-                    child: Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.primary,
-                          width: 3,
-                        ),
-                        image: _selectedAvatarUrl != null
-                            ? DecorationImage(
-                                image: NetworkImage(_selectedAvatarUrl!),
-                                fit: BoxFit.cover,
-                              )
-                            : null,
-                        color: Colors.grey.shade100,
-                      ),
-                      child: _selectedAvatarUrl == null
-                          ? Icon(Icons.add_a_photo,
-                              color: Colors.grey.shade400, size: 40)
-                          : null,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Center(
-                  child: Text(
-                    _selectedAvatarUrl == null
-                        ? 'Tap to add profile picture'
-                        : 'Profile picture set',
-                    style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
+          const SizedBox(height: 32),
+          _buildAvatarSection(),
           const SizedBox(height: 16),
+          _buildCoverSection(),
+          const SizedBox(height: 16),
+          _buildDisplayNameField(),
+          const SizedBox(height: 16),
+          _buildDateOfBirthField(),
+          const SizedBox(height: 16),
+          _buildGenderSection(),
+          const SizedBox(height: 16),
+          _buildLookingForSection(),
+          const SizedBox(height: 16),
+          _buildLocationField(),
+          const SizedBox(height: 80),
+        ],
+      ),
+    );
+  }
 
-          // Cover Image Selection Card
-          _buildGlassCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.blue, Colors.cyan],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.photo,
-                          color: Colors.white, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Cover Photo',
-                      style: AppTheme.blackTextStyle.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+  Widget _buildAvatarSection() {
+    return _buildFormCard(
+      icon: Icons.face,
+      iconColors: [Colors.purple, Colors.pink],
+      title: 'Profile Picture',
+      child: Column(
+        children: [
+          Center(
+            child: GestureDetector(
+              onTap: _showAvatarPicker,
+              child: Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.primary, width: 2.5),
+                  image: _selectedAvatarUrl != null
+                      ? DecorationImage(
+                          image:
+                              CachedNetworkImageProvider(_selectedAvatarUrl!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                  color: Colors.grey.shade100,
                 ),
-                const SizedBox(height: 16),
-                GestureDetector(
-                  onTap: _showCoverPicker,
-                  child: Container(
-                    height: 120,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.secondary),
-                      image: _selectedCoverUrl != null
-                          ? DecorationImage(
-                              image: NetworkImage(_selectedCoverUrl!),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
-                      color: Colors.grey.shade100,
-                    ),
-                    child: _selectedCoverUrl == null
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.add_photo_alternate,
-                                    color: Colors.grey.shade400, size: 40),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Tap to add cover photo',
-                                  style: AppTheme.greyTextStyle
-                                      .copyWith(fontSize: 12),
-                                ),
-                              ],
-                            ),
-                          )
-                        : null,
-                  ),
-                ),
-              ],
+                child: _selectedAvatarUrl == null
+                    ? Icon(Icons.add_a_photo,
+                        color: Colors.grey.shade400, size: 32)
+                    : null,
+              ),
             ),
           ),
-
-          const SizedBox(height: 16),
-
-          // Display Name card
-          _buildGlassCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.teal, Colors.green],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.badge,
-                          color: Colors.white, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Display Name',
-                      style: AppTheme.blackTextStyle.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.secondary),
-                  ),
-                  child: TextField(
-                    controller: _displayNameController,
-                    style: const TextStyle(fontSize: 16),
-                    decoration: InputDecoration(
-                      hintText: 'How should we call you?',
-                      hintStyle: AppTheme.greyTextStyle.copyWith(fontSize: 14),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Date of Birth card
-          _buildGlassCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [AppColors.primary, AppColors.secondary],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child:
-                          const Icon(Icons.cake, color: Colors.white, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Date of Birth',
-                      style: AppTheme.blackTextStyle.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                GestureDetector(
-                  onTap: _selectDateOfBirth,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.secondary),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.calendar_today,
-                            color: AppColors.primary, size: 20),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            _selectedDateOfBirth != null
-                                ? '${_selectedDateOfBirth!.day}/${_selectedDateOfBirth!.month}/${_selectedDateOfBirth!.year}'
-                                : 'Select your date of birth',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: _selectedDateOfBirth != null
-                                  ? Colors.black87
-                                  : Colors.grey.shade500,
-                            ),
-                          ),
-                        ),
-                        Icon(Icons.chevron_right, color: Colors.grey.shade400),
-                      ],
-                    ),
-                  ),
-                ),
-                if (_selectedDateOfBirth != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Text(
-                      'Age: $_calculatedAge years old',
-                      style: AppTheme.greyTextStyle.copyWith(
-                        fontSize: 14,
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Gender card
-          _buildGlassCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.purple, Colors.pink],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.person,
-                          color: Colors.white, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Gender',
-                      style: AppTheme.blackTextStyle.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 12,
-                  children: _genders.map((gender) {
-                    final isSelected = _selectedGender == gender;
-                    return GestureDetector(
-                      onTap: () => setState(() => _selectedGender = gender),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppColors.primary
-                              : Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(30),
-                          border: Border.all(
-                            color: isSelected
-                                ? AppColors.primary
-                                : AppColors.secondary,
-                          ),
-                        ),
-                        child: Text(
-                          gender,
-                          style: TextStyle(
-                            color: isSelected
-                                ? Colors.white
-                                : Colors.grey.shade700,
-                            fontWeight: isSelected
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Looking for card
-          _buildGlassCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.orange, Colors.red],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.favorite,
-                          color: Colors.white, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'I am looking for',
-                      style: AppTheme.blackTextStyle.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: _lookingForOptions.map((option) {
-                    final isSelected = _selectedLookingFor == option;
-                    return GestureDetector(
-                      onTap: () => setState(() => _selectedLookingFor = option),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppColors.primary
-                              : Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(30),
-                          border: Border.all(
-                            color: isSelected
-                                ? AppColors.primary
-                                : AppColors.secondary,
-                          ),
-                        ),
-                        child: Text(
-                          option,
-                          style: TextStyle(
-                            color: isSelected
-                                ? Colors.white
-                                : Colors.grey.shade700,
-                            fontWeight: isSelected
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Location card
-          _buildGlassCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.blue, Colors.cyan],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.location_on,
-                          color: Colors.white, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Location',
-                      style: AppTheme.blackTextStyle.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.secondary),
-                  ),
-                  child: TextField(
-                    controller: _locationController,
-                    style: const TextStyle(fontSize: 16),
-                    decoration: InputDecoration(
-                      hintText: 'City, Country',
-                      hintStyle: AppTheme.greyTextStyle.copyWith(fontSize: 14),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          const SizedBox(height: 8),
+          Text(
+            _selectedAvatarUrl == null ? 'Add profile picture' : 'Picture set',
+            style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
           ),
         ],
       ),
     );
   }
 
+  Widget _buildCoverSection() {
+    return _buildFormCard(
+      icon: Icons.photo,
+      iconColors: [Colors.blue, Colors.cyan],
+      title: 'Cover Photo',
+      child: GestureDetector(
+        onTap: _showCoverPicker,
+        child: Container(
+          height: 100,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+            image: _selectedCoverUrl != null
+                ? DecorationImage(
+                    image: CachedNetworkImageProvider(_selectedCoverUrl!),
+                    fit: BoxFit.cover,
+                  )
+                : null,
+            color: Colors.grey.shade50,
+          ),
+          child: _selectedCoverUrl == null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add_photo_alternate,
+                          color: Colors.grey.shade400, size: 28),
+                      const SizedBox(height: 4),
+                      Text('Add cover photo',
+                          style: AppTheme.greyTextStyle.copyWith(fontSize: 12)),
+                    ],
+                  ),
+                )
+              : null,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDisplayNameField() {
+    return _buildFormCard(
+      icon: Icons.badge,
+      iconColors: [Colors.teal, Colors.green],
+      title: 'Display Name',
+      child: TextField(
+        controller: _displayNameController,
+        style: const TextStyle(fontSize: 16),
+        decoration: InputDecoration(
+          hintText: 'How should we call you?',
+          hintStyle: AppTheme.greyTextStyle.copyWith(fontSize: 14),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDateOfBirthField() {
+    return _buildFormCard(
+      icon: Icons.cake,
+      iconColors: [AppColors.primary, AppColors.secondary],
+      title: 'Date of Birth',
+      child: GestureDetector(
+        onTap: _selectDateOfBirth,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Row(
+            children: [
+              Icon(Icons.calendar_today, color: AppColors.primary, size: 18),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _selectedDateOfBirth != null
+                      ? '${_selectedDateOfBirth!.day}/${_selectedDateOfBirth!.month}/${_selectedDateOfBirth!.year}'
+                      : 'Select your date of birth',
+                  style: TextStyle(
+                    color: _selectedDateOfBirth != null
+                        ? Colors.black87
+                        : Colors.grey.shade500,
+                  ),
+                ),
+              ),
+              Icon(Icons.chevron_right, color: Colors.grey.shade400, size: 18),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGenderSection() {
+    return _buildFormCard(
+      icon: Icons.person,
+      iconColors: [Colors.purple, Colors.pink],
+      title: 'Gender',
+      child: Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        children: _genders.map((gender) {
+          final isSelected = _selectedGender == gender;
+          return GestureDetector(
+            onTap: () => setState(() => _selectedGender = gender),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.primary : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(
+                  color: isSelected ? AppColors.primary : Colors.grey.shade300,
+                ),
+              ),
+              child: Text(
+                gender,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.grey.shade700,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildLookingForSection() {
+    return _buildFormCard(
+      icon: Icons.favorite,
+      iconColors: [Colors.orange, Colors.red],
+      title: 'I am looking for',
+      child: Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        children: _lookingForOptions.map((option) {
+          final isSelected = _selectedLookingFor == option;
+          return GestureDetector(
+            onTap: () => setState(() => _selectedLookingFor = option),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.primary : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(
+                  color: isSelected ? AppColors.primary : Colors.grey.shade300,
+                ),
+              ),
+              child: Text(
+                option,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.grey.shade700,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildLocationField() {
+    return _buildFormCard(
+      icon: Icons.location_on,
+      iconColors: [Colors.blue, Colors.cyan],
+      title: 'Location',
+      child: TextField(
+        controller: _locationController,
+        style: const TextStyle(fontSize: 16),
+        decoration: InputDecoration(
+          hintText: 'City, Country',
+          hintStyle: AppTheme.greyTextStyle.copyWith(fontSize: 14),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        ),
+      ),
+    );
+  }
+
+  // ==================== PROFILE STEP ====================
+
   Widget _buildProfileStep() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -746,16 +566,16 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage> {
               height: 1.2,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
             _pageSubtitles[1],
-            style: AppTheme.greyTextStyle.copyWith(
-              fontSize: 16,
-              height: 1.4,
-            ),
+            style: AppTheme.greyTextStyle.copyWith(fontSize: 15),
           ),
-          const SizedBox(height: 48),
-          _buildGlassCard(
+          const SizedBox(height: 32),
+          _buildFormCard(
+            icon: Icons.work_outline,
+            iconColors: [AppColors.primary, AppColors.secondary],
+            title: 'Professional Info',
             child: Column(
               children: [
                 _buildProfileField(
@@ -764,21 +584,21 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage> {
                   hint: 'What do you do?',
                   icon: Icons.work_outline,
                 ),
-                const Divider(height: 24),
+                const Divider(height: 1),
                 _buildProfileField(
                   controller: _workController,
-                  label: 'Work',
+                  label: 'Workplace',
                   hint: 'Where do you work?',
                   icon: Icons.business_center_outlined,
                 ),
-                const Divider(height: 24),
+                const Divider(height: 1),
                 _buildProfileField(
                   controller: _educationController,
                   label: 'Education',
                   hint: 'Where did you study?',
                   icon: Icons.school_outlined,
                 ),
-                const Divider(height: 24),
+                const Divider(height: 1),
                 _buildProfileField(
                   controller: _bioController,
                   label: 'Bio',
@@ -789,14 +609,59 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage> {
               ],
             ),
           ),
+          const SizedBox(height: 80),
         ],
       ),
     );
   }
 
+  Widget _buildProfileField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    int maxLines = 1,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: AppColors.primary, size: 18),
+              const SizedBox(width: 10),
+              Text(
+                label,
+                style: AppTheme.blackTextStyle.copyWith(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: controller,
+            maxLines: maxLines,
+            style: const TextStyle(fontSize: 15),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: AppTheme.greyTextStyle.copyWith(fontSize: 13),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ==================== INTERESTS STEP ====================
+
   Widget _buildInterestsStep() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -809,74 +674,61 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage> {
               height: 1.2,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
             _pageSubtitles[2],
-            style: AppTheme.greyTextStyle.copyWith(
-              fontSize: 16,
-              height: 1.4,
-            ),
+            style: AppTheme.greyTextStyle.copyWith(fontSize: 15),
           ),
-          const SizedBox(height: 32),
-
-          // Selected count indicator
+          const SizedBox(height: 24),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: AppColors.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(30),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.check_circle, color: AppColors.primary, size: 20),
+                Icon(Icons.check_circle, color: AppColors.primary, size: 18),
                 const SizedBox(width: 8),
                 Text(
                   '${_selectedInterests.length} interests selected',
                   style: TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13),
                 ),
               ],
             ),
           ),
-
-          const SizedBox(height: 32),
-
-          // Interests grid
+          const SizedBox(height: 24),
           Wrap(
             spacing: 12,
             runSpacing: 12,
             children: _interestsList.map((interest) {
               final isSelected = _selectedInterests.contains(interest);
               return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    if (isSelected) {
-                      _selectedInterests.remove(interest);
-                    } else {
-                      _selectedInterests.add(interest);
-                    }
-                  });
-                },
+                onTap: () => setState(() {
+                  if (isSelected) {
+                    _selectedInterests.remove(interest);
+                  } else {
+                    _selectedInterests.add(interest);
+                  }
+                }),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(
                     gradient: isSelected
                         ? LinearGradient(
-                            colors: [AppColors.primary, AppColors.secondary],
-                          )
+                            colors: [AppColors.primary, AppColors.secondary])
                         : null,
-                    color: isSelected ? null : Colors.grey.shade50,
+                    color: isSelected ? null : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(30),
                     border: Border.all(
                       color:
-                          isSelected ? AppColors.primary : AppColors.secondary,
+                          isSelected ? AppColors.primary : Colors.grey.shade300,
                     ),
                   ),
                   child: Text(
@@ -884,125 +736,107 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage> {
                     style: TextStyle(
                       color: isSelected ? Colors.white : Colors.grey.shade700,
                       fontWeight:
-                          isSelected ? FontWeight.w600 : FontWeight.normal,
+                          isSelected ? FontWeight.w600 : FontWeight.w400,
+                      fontSize: 13,
                     ),
                   ),
                 ),
               );
             }).toList(),
           ),
-
           if (_selectedInterests.length < 3)
             Padding(
-              padding: const EdgeInsets.only(top: 32),
+              padding: const EdgeInsets.only(top: 24),
               child: Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.amber.shade50,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.amber.shade200),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, color: Colors.amber.shade700),
-                    const SizedBox(width: 12),
+                    Icon(Icons.info_outline,
+                        color: Colors.amber.shade700, size: 18),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         'Select at least 3 interests to help us find your perfect match',
                         style: TextStyle(
-                            color: Colors.amber.shade800, fontSize: 14),
+                            color: Colors.amber.shade800, fontSize: 12),
                       ),
                     ),
                   ],
                 ),
               ),
             ),
+          const SizedBox(height: 80),
         ],
       ),
     );
   }
 
-  Widget _buildGlassCard({required Widget child}) {
+  // ==================== HELPER WIDGETS ====================
+
+  Widget _buildFormCard({
+    required IconData icon,
+    required List<Color> iconColors,
+    required String title,
+    required Widget child,
+  }) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.grey.shade100),
         boxShadow: [
           BoxShadow(
             color: Colors.grey.shade100,
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: child,
-    );
-  }
-
-  Widget _buildProfileField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-    int maxLines = 1,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, color: AppColors.primary, size: 20),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              style: AppTheme.blackTextStyle.copyWith(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: iconColors),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: Colors.white, size: 18),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: controller,
-          maxLines: maxLines,
-          style: const TextStyle(fontSize: 16),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: AppTheme.greyTextStyle.copyWith(fontSize: 14),
-            border: InputBorder.none,
-            filled: true,
-            fillColor: Colors.grey.shade50,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.secondary),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.primary, width: 2),
-            ),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: AppTheme.blackTextStyle.copyWith(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
-        ),
-      ],
+          const SizedBox(height: 16),
+          child,
+        ],
+      ),
     );
   }
 
   Widget _buildBottomButtons(bool isLoading) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
             color: Colors.grey.shade100,
-            blurRadius: 20,
+            blurRadius: 16,
             offset: const Offset(0, -4),
           ),
         ],
@@ -1012,58 +846,50 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage> {
           if (_currentPage > 0)
             Expanded(
               child: GestureDetector(
-                onTap: isLoading
-                    ? null
-                    : () {
-                        setState(() => _currentPage--);
-                        _pageController.previousPage(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      },
+                onTap: isLoading ? null : _goBack,
                 child: Container(
-                  height: 56,
+                  height: 50,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(28),
-                    border: Border.all(color: AppColors.secondary),
+                    borderRadius: BorderRadius.circular(25),
+                    border: Border.all(color: Colors.grey.shade300),
                   ),
                   child: Center(
                     child: Text(
                       'Back',
                       style: AppTheme.blackTextStyle.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-          if (_currentPage > 0) const SizedBox(width: 16),
+          if (_currentPage > 0) const SizedBox(width: 12),
           Expanded(
+            flex: _currentPage == 0 ? 1 : 2,
             child: GestureDetector(
               onTap: isLoading ? null : _goToNextPage,
               child: Container(
-                height: 56,
+                height: 50,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [AppColors.primary, AppColors.secondary],
-                  ),
-                  borderRadius: BorderRadius.circular(28),
+                      colors: [AppColors.primary, AppColors.secondary]),
+                  borderRadius: BorderRadius.circular(25),
                   boxShadow: [
                     BoxShadow(
                       color: AppColors.primary.withOpacity(0.3),
-                      blurRadius: 15,
-                      offset: const Offset(0, 5),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
                 child: Center(
                   child: isLoading
                       ? const SizedBox(
-                          width: 24,
-                          height: 24,
+                          width: 22,
+                          height: 22,
                           child: CircularProgressIndicator(
                             color: Colors.white,
                             strokeWidth: 2,
@@ -1072,7 +898,7 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage> {
                       : Text(
                           _currentPage == 2 ? 'Complete' : 'Continue',
                           style: AppTheme.whiteTextStyle.copyWith(
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -1085,34 +911,14 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage> {
     );
   }
 
-  Future<void> _selectDateOfBirth() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDateOfBirth ??
-          DateTime.now().subtract(const Duration(days: 365 * 25)),
-      firstDate: DateTime.now().subtract(const Duration(days: 365 * 100)),
-      lastDate: DateTime.now().subtract(const Duration(days: 365 * 18)),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: AppColors.primary,
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Colors.black87,
-            ),
-            dialogTheme: DialogThemeData(backgroundColor: Colors.white),
-          ),
-          child: child!,
-        );
-      },
-    );
+  // ==================== ACTIONS ====================
 
-    if (picked != null && picked != _selectedDateOfBirth) {
-      setState(() {
-        _selectedDateOfBirth = picked;
-      });
-    }
+  void _goBack() {
+    setState(() => _currentPage--);
+    _pageController.previousPage(
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   void _goToNextPage() {
@@ -1137,14 +943,12 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage> {
 
     setState(() => _currentPage++);
     _pageController.nextPage(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutCubic,
     );
   }
 
-  void _skipOnboarding() {
-    _saveDemographicInfo();
-  }
+  void _skipOnboarding() => _saveDemographicInfo();
 
   Future<void> _saveDemographicInfo() async {
     context.read<ProfileBloc>().add(UpdateProfile(
@@ -1174,71 +978,69 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage> {
         ));
   }
 
-  void _showSnack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppColors.redColor,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+  Future<void> _selectDateOfBirth() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDateOfBirth ??
+          DateTime.now().subtract(const Duration(days: 365 * 25)),
+      firstDate: DateTime.now().subtract(const Duration(days: 365 * 100)),
+      lastDate: DateTime.now().subtract(const Duration(days: 365 * 18)),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: AppColors.primary,
+            onPrimary: Colors.white,
+            surface: Colors.white,
+          ),
+        ),
+        child: child!,
       ),
     );
+    if (picked != null) setState(() => _selectedDateOfBirth = picked);
   }
 
   void _showAvatarPicker() {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Choose Profile Picture',
+                style: AppTheme.blackTextStyle
+                    .copyWith(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 100,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: _avatarOptions.length,
+                itemBuilder: (_, i) => GestureDetector(
+                  onTap: () => setState(() {
+                    _selectedAvatarUrl = _avatarOptions[i];
+                    Navigator.pop(context);
+                  }),
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 12),
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      image: DecorationImage(
+                          image: CachedNetworkImageProvider(_avatarOptions[i]),
+                          fit: BoxFit.cover),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Choose Profile Picture',
-                style: AppTheme.blackTextStyle.copyWith(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 100,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _avatarOptions.length,
-                  itemBuilder: (context, index) {
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedAvatarUrl = _avatarOptions[index];
-                        });
-                        Navigator.pop(context);
-                      },
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 12),
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          image: DecorationImage(
-                            image: NetworkImage(_avatarOptions[index]),
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 
@@ -1246,56 +1048,55 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage> {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Choose Cover Photo',
+                style: AppTheme.blackTextStyle
+                    .copyWith(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 120,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: _coverOptions.length,
+                itemBuilder: (_, i) => GestureDetector(
+                  onTap: () => setState(() {
+                    _selectedCoverUrl = _coverOptions[i];
+                    Navigator.pop(context);
+                  }),
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 12),
+                    width: 160,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      image: DecorationImage(
+                          image: CachedNetworkImageProvider(_coverOptions[i]),
+                          fit: BoxFit.cover),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Choose Cover Photo',
-                style: AppTheme.blackTextStyle.copyWith(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 120,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _coverOptions.length,
-                  itemBuilder: (context, index) {
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedCoverUrl = _coverOptions[index];
-                        });
-                        Navigator.pop(context);
-                      },
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 12),
-                        width: 160,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          image: DecorationImage(
-                            image: NetworkImage(_coverOptions[index]),
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+    );
+  }
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.redColor,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
     );
   }
 }

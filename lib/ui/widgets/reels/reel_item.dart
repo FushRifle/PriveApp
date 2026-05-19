@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import 'package:cirqle/app/configs/colors.dart';
-import 'package:cirqle/data/models/reel_model.dart';
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/data/models/reel_model.dart';
 
 class ReelItem extends StatefulWidget {
   final ReelModel reel;

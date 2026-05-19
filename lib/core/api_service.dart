@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
-import 'package:cirqle/app/configs/api_config.dart';
-import 'package:cirqle/core/supabase_client.dart';
+import 'package:clique/app/configs/api_config.dart';
+import 'package:clique/core/supabase_client.dart';
 import './retrofit_client.dart';
 
 class ApiService {
@@ -18,9 +18,9 @@ class ApiService {
     dio = Dio(
       BaseOptions(
         baseUrl: ApiConfig.baseUrl,
-        connectTimeout: const Duration(seconds: 30),
-        receiveTimeout: const Duration(seconds: 30),
-        sendTimeout: const Duration(seconds: 30),
+        connectTimeout: const Duration(seconds: 50),
+        receiveTimeout: const Duration(seconds: 50),
+        sendTimeout: const Duration(seconds: 50),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',

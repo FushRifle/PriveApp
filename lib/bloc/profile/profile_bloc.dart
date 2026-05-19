@@ -1,12 +1,14 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:cirqle/data/services/profile/profile_service.dart';
+import 'package:clique/data/services/profile/profile_service.dart';
+import 'package:clique/data/services/user/user_service.dart';
 
 part 'profile_event.dart';
 part 'profile_state.dart';
 
 class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   final ProfileService _profileService = ProfileService();
+  final UserService _userService = UserService();
 
   ProfileBloc() : super(const ProfileState()) {
     on<LoadMyProfile>(_onLoadMyProfile);
@@ -14,8 +16,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     on<LoadProfileByUserId>(_onLoadProfileByUserId);
     on<UpdateProfile>(_onUpdateProfile);
     on<UpdateProfileAvatar>(_onUpdateProfileAvatar);
-    on<UpdateProfileCoverImage>(_onUpdateProfileCoverImage); // Added
-    on<UpdateProfileDisplayName>(_onUpdateProfileDisplayName); // Added
+    on<UpdateProfileCoverImage>(_onUpdateProfileCoverImage);
+    on<UpdateProfileDisplayName>(_onUpdateProfileDisplayName);
     on<UpdateProfileBio>(_onUpdateProfileBio);
     on<UpdateProfileInterests>(_onUpdateProfileInterests);
     on<UpdateProfilePhotos>(_onUpdateProfilePhotos);
@@ -26,10 +28,12 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
 
   void setAuthToken(String token) {
     _profileService.setAuthToken(token);
+    _userService.setAuthToken(token);
   }
 
   void clearAuthToken() {
     _profileService.clearAuthToken();
+    _userService.clearAuthToken();
   }
 
   Future<void> _onLoadMyProfile(
@@ -45,8 +49,26 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     }
 
     try {
-      final profileData = await _profileService.getMyProfile();
-      final profile = Profile.fromJson(profileData);
+      // Fetch both profile and user data in parallel
+      final results = await Future.wait([
+        _profileService.getMyProfile(),
+        _userService.getCurrentUser(),
+      ]);
+
+      final profileData = results[0];
+      final userData = results[1];
+
+      // Merge user data into profile
+      final mergedProfile = {
+        ...profileData,
+        'avatar': userData['avatar'] ?? profileData['avatar'],
+        'name': userData['name'] ?? profileData['displayName'],
+        'email': userData['email'],
+        'username': userData['username'],
+        'verified': userData['verified'] ?? false,
+      };
+
+      final profile = Profile.fromJson(mergedProfile);
 
       emit(state.copyWith(
         myProfile: profile,
@@ -75,8 +97,24 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     ));
 
     try {
-      final profileData = await _profileService.getMyProfile();
-      final profile = Profile.fromJson(profileData);
+      final results = await Future.wait([
+        _profileService.getMyProfile(),
+        _userService.getCurrentUser(),
+      ]);
+
+      final profileData = results[0];
+      final userData = results[1];
+
+      final mergedProfile = {
+        ...profileData,
+        'avatar': userData['avatar'] ?? profileData['avatar'],
+        'name': userData['name'] ?? profileData['displayName'],
+        'email': userData['email'],
+        'username': userData['username'],
+        'verified': userData['verified'] ?? false,
+      };
+
+      final profile = Profile.fromJson(mergedProfile);
 
       emit(state.copyWith(
         myProfile: profile,
@@ -105,9 +143,23 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     ));
 
     try {
-      final profileData =
-          await _profileService.getProfileByUserId(event.userId);
-      final profile = Profile.fromJson(profileData);
+      final results = await Future.wait([
+        _profileService.getProfileByUserId(event.userId),
+        _userService.getUserById(event.userId),
+      ]);
+
+      final profileData = results[0];
+      final userData = results[1];
+
+      final mergedProfile = {
+        ...profileData,
+        'avatar': userData['avatar'] ?? profileData['avatar'],
+        'name': userData['name'] ?? profileData['displayName'],
+        'username': userData['username'],
+        'verified': userData['verified'] ?? false,
+      };
+
+      final profile = Profile.fromJson(mergedProfile);
 
       emit(state.copyWith(
         viewedProfile: profile,
@@ -144,8 +196,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
               currentProfile.displayName,
           bio: event.data['bio'] ?? currentProfile.bio,
           avatar: event.data['avatar'] ?? currentProfile.avatar,
-          coverImage:
-              event.data['coverImage'] ?? currentProfile.coverImage, // Added
+          coverImage: event.data['coverImage'] ?? currentProfile.coverImage,
           interests: event.data['interests'] ?? currentProfile.interests,
           gender: event.data['gender'] ?? currentProfile.gender,
           lookingFor: event.data['lookingFor'] ?? currentProfile.lookingFor,
@@ -161,6 +212,14 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       // Send update to API
       final result = await _profileService.updateMyProfile(event.data);
       final updatedProfile = Profile.fromJson(result);
+
+      // Also update user data if needed
+      if (event.data['avatar'] != null || event.data['displayName'] != null) {
+        await _userService.updateUser(
+          name: event.data['displayName'],
+          avatar: event.data['avatar'],
+        );
+      }
 
       emit(state.copyWith(
         myProfile: updatedProfile,

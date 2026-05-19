@@ -1,7 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cirqle/app/configs/colors.dart';
+import 'package:clique/app/configs/colors.dart';
 
 class ImageViewer extends StatelessWidget {
   final String imageUrl;
