@@ -68,12 +68,12 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
     context.read<ChatBloc>().add(BlockUser(userId: _conversationId));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('User blocked'),
-        backgroundColor: Colors.red,
-      ),
+          content: Text('User blocked'), backgroundColor: Colors.red),
     );
     Navigator.pop(context);
   }
+
+  bool get _isBot => widget.userName.toLowerCase() == 'clique';
 
   @override
   Widget build(BuildContext context) {
@@ -179,10 +179,9 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2)),
         ],
       ),
       child: Column(
@@ -191,10 +190,8 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
           const SizedBox(height: 16),
           Text(
             widget.userName,
-            style: AppTheme.blackTextStyle.copyWith(
-              fontWeight: FontWeight.bold,
-              fontSize: 22,
-            ),
+            style: AppTheme.blackTextStyle
+                .copyWith(fontWeight: FontWeight.bold, fontSize: 22),
           ),
           const SizedBox(height: 4),
           Text(
@@ -228,26 +225,25 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              if (!_isBot) ...[
+                _buildActionChip(
+                    icon: Icons.call,
+                    label: 'Audio',
+                    color: AppColors.primary,
+                    onTap: () {}),
+                const SizedBox(width: 16),
+                _buildActionChip(
+                    icon: Icons.videocam,
+                    label: 'Video',
+                    color: AppColors.primary,
+                    onTap: () {}),
+                const SizedBox(width: 16),
+              ],
               _buildActionChip(
-                icon: Icons.call,
-                label: 'Audio',
-                color: AppColors.primary,
-                onTap: () {},
-              ),
-              const SizedBox(width: 16),
-              _buildActionChip(
-                icon: Icons.videocam,
-                label: 'Video',
-                color: AppColors.primary,
-                onTap: () {},
-              ),
-              const SizedBox(width: 16),
-              _buildActionChip(
-                icon: Icons.person_outline,
-                label: 'Profile',
-                color: AppColors.primary,
-                onTap: () {},
-              ),
+                  icon: Icons.person_outline,
+                  label: 'Profile',
+                  color: AppColors.primary,
+                  onTap: () {}),
             ],
           ),
         ],
@@ -263,10 +259,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
       height: 80,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(
-          color: AppColors.primary,
-          width: 3,
-        ),
+        border: Border.all(color: AppColors.primary, width: 3),
       ),
       child: ClipOval(
         child: avatar.isNotEmpty && avatar.startsWith('http')
@@ -275,9 +268,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                 fit: BoxFit.cover,
                 placeholder: (context, url) => Container(
                   color: AppColors.primary.withOpacity(0.1),
-                  child: const Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                  child: const Center(child: CircularProgressIndicator()),
                 ),
                 errorWidget: (context, url, error) => Container(
                   color: AppColors.primary.withOpacity(0.1),
@@ -285,10 +276,9 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                     child: Text(
                       fallbackText,
                       style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary),
                     ),
                   ),
                 ),
@@ -299,10 +289,9 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                   child: Text(
                     fallbackText,
                     style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
-                    ),
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary),
                   ),
                 ),
               ),
@@ -324,25 +313,22 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
             width: 52,
             height: 52,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
-            ),
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16)),
             child: Icon(icon, color: color, size: 24),
           ),
           const SizedBox(height: 8),
-          Text(
-            label,
-            style: AppTheme.blackTextStyle.copyWith(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          Text(label,
+              style: AppTheme.blackTextStyle
+                  .copyWith(fontSize: 12, fontWeight: FontWeight.w500)),
         ],
       ),
     );
   }
 
   Widget _buildMediaSection() {
+    if (_isBot) return const SizedBox.shrink();
+
     return BlocBuilder<ChatGalleryCubit, ChatGalleryState>(
       builder: (context, state) {
         return Container(
@@ -352,10 +338,9 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2)),
             ],
           ),
           child: Column(
@@ -364,19 +349,14 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Shared Media',
-                    style: AppTheme.blackTextStyle.copyWith(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
+                  Text('Shared Media',
+                      style: AppTheme.blackTextStyle
+                          .copyWith(fontWeight: FontWeight.bold, fontSize: 16)),
                   if (state is ChatGalleryLoaded && state.images.isNotEmpty)
                     TextButton(
                       onPressed: () => _showAllMedia(context, state.images),
                       style: TextButton.styleFrom(
-                        foregroundColor: AppColors.primary,
-                      ),
+                          foregroundColor: AppColors.primary),
                       child: const Text('See all'),
                     ),
                 ],
@@ -394,21 +374,8 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
     if (state is ChatGalleryLoading) {
       return const Center(
         child: Padding(
-          padding: EdgeInsets.all(20),
-          child: CircularProgressIndicator(color: AppColors.primary),
-        ),
-      );
-    }
-
-    if (state is ChatGalleryError) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Text(
-            'Failed to load media',
-            style: AppTheme.greyTextStyle,
-          ),
-        ),
+            padding: EdgeInsets.all(20),
+            child: CircularProgressIndicator(color: AppColors.primary)),
       );
     }
 
@@ -416,17 +383,13 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(20),
-          child: Text(
-            'No shared media yet',
-            style: AppTheme.greyTextStyle,
-          ),
+          child: Text('No shared media yet', style: AppTheme.greyTextStyle),
         ),
       );
     }
 
     if (state is ChatGalleryLoaded) {
       final images = state.images.take(4).toList();
-
       return Row(
         children: List.generate(images.length, (index) {
           return Expanded(
@@ -438,9 +401,8 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   image: DecorationImage(
-                    image: CachedNetworkImageProvider(images[index].url),
-                    fit: BoxFit.cover,
-                  ),
+                      image: CachedNetworkImageProvider(images[index].url),
+                      fit: BoxFit.cover),
                 ),
               ),
             ),
@@ -453,6 +415,8 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
   }
 
   Widget _buildSharedFilesSection() {
+    if (_isBot) return const SizedBox.shrink();
+
     return BlocBuilder<ChatGalleryCubit, ChatGalleryState>(
       builder: (context, state) {
         if (state is ChatGalleryLoaded && state.documents.isEmpty) {
@@ -466,30 +430,24 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2)),
             ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Shared Files',
-                style: AppTheme.blackTextStyle.copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
+              Text('Shared Files',
+                  style: AppTheme.blackTextStyle
+                      .copyWith(fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 16),
               if (state is ChatGalleryLoading)
                 const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  ),
-                ),
+                    child: Padding(
+                        padding: EdgeInsets.all(20),
+                        child: CircularProgressIndicator(
+                            color: AppColors.primary))),
               if (state is ChatGalleryLoaded)
                 ...state.documents.take(3).map((doc) => Column(
                       children: [
@@ -524,9 +482,8 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12)),
           child: Icon(icon, color: color, size: 24),
         ),
         const SizedBox(width: 12),
@@ -534,26 +491,18 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                name,
-                style: AppTheme.blackTextStyle.copyWith(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 14,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              Text(
-                size,
-                style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
-              ),
+              Text(name,
+                  style: AppTheme.blackTextStyle
+                      .copyWith(fontWeight: FontWeight.w500, fontSize: 14),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis),
+              Text(size, style: AppTheme.greyTextStyle.copyWith(fontSize: 12)),
             ],
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.download, color: AppColors.primary),
-          onPressed: onTap,
-        ),
+            icon: const Icon(Icons.download, color: AppColors.primary),
+            onPressed: onTap),
       ],
     );
   }
@@ -568,10 +517,9 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2)),
         ],
       ),
       child: Column(
@@ -583,22 +531,24 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
             subtitle: isMuted ? 'Currently muted' : 'Currently unmuted',
             onTap: _toggleMute,
           ),
-          const Divider(height: 1, indent: 56),
-          _buildInfoTile(
-            icon: Icons.block_outlined,
-            title: 'Block User',
-            subtitle: 'Block $username',
-            titleColor: AppColors.redColor,
-            onTap: () => _showBlockDialog(context),
-          ),
-          const Divider(height: 1, indent: 56),
-          _buildInfoTile(
-            icon: Icons.report_outlined,
-            title: 'Report User',
-            subtitle: 'Report inappropriate content',
-            titleColor: AppColors.redColor,
-            onTap: () => _showReportDialog(context),
-          ),
+          if (!_isBot) ...[
+            const Divider(height: 1, indent: 56),
+            _buildInfoTile(
+              icon: Icons.block_outlined,
+              title: 'Block User',
+              subtitle: 'Block $username',
+              titleColor: AppColors.redColor,
+              onTap: () => _showBlockDialog(context),
+            ),
+            const Divider(height: 1, indent: 56),
+            _buildInfoTile(
+              icon: Icons.report_outlined,
+              title: 'Report User',
+              subtitle: 'Report inappropriate content',
+              titleColor: AppColors.redColor,
+              onTap: () => _showReportDialog(context),
+            ),
+          ],
         ],
       ),
     );
@@ -613,18 +563,11 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
   }) {
     return ListTile(
       leading: Icon(icon, color: titleColor ?? AppColors.blackColor, size: 24),
-      title: Text(
-        title,
-        style: AppTheme.blackTextStyle.copyWith(
-          fontWeight: FontWeight.w600,
-          fontSize: 15,
-          color: titleColor,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
-      ),
+      title: Text(title,
+          style: AppTheme.blackTextStyle.copyWith(
+              fontWeight: FontWeight.w600, fontSize: 15, color: titleColor)),
+      subtitle:
+          Text(subtitle, style: AppTheme.greyTextStyle.copyWith(fontSize: 12)),
       trailing: Icon(Icons.chevron_right, color: AppColors.greyColor, size: 20),
       onTap: onTap,
       contentPadding: EdgeInsets.zero,
@@ -639,9 +582,8 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.8,
         decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
         child: Column(
           children: [
             Container(
@@ -649,17 +591,14 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
               height: 4,
               margin: const EdgeInsets.only(top: 12),
               decoration: BoxDecoration(
-                color: AppColors.greyColor.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
+                  color: AppColors.greyColor.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2)),
             ),
             const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text(
-                'All Media',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ),
+                padding: EdgeInsets.all(16),
+                child: Text('All Media',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
             Expanded(
               child: GridView.builder(
                 padding: const EdgeInsets.all(8),
@@ -670,15 +609,11 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                   childAspectRatio: 1,
                 ),
                 itemCount: images.length,
-                itemBuilder: (context, index) {
-                  return GestureDetector(
-                    onTap: () => _showImageViewer(images[index].url),
-                    child: CachedNetworkImage(
-                      imageUrl: images[index].url,
-                      fit: BoxFit.cover,
-                    ),
-                  );
-                },
+                itemBuilder: (context, index) => GestureDetector(
+                  onTap: () => _showImageViewer(images[index].url),
+                  child: CachedNetworkImage(
+                      imageUrl: images[index].url, fit: BoxFit.cover),
+                ),
               ),
             ),
           ],
@@ -696,18 +631,15 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
           body: Stack(
             children: [
               Center(
-                child: InteractiveViewer(
-                  child: CachedNetworkImage(imageUrl: url),
-                ),
-              ),
+                  child: InteractiveViewer(
+                      child: CachedNetworkImage(imageUrl: url))),
               Positioned(
-                top: 40,
-                right: 16,
-                child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ),
+                  top: 40,
+                  right: 16,
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  )),
             ],
           ),
         ),
@@ -716,10 +648,8 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
   }
 
   void _openDocument(String url) {
-    // TODO: Implement document viewer
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Document viewer coming soon')),
-    );
+        const SnackBar(content: Text('Document viewer coming soon')));
   }
 
   IconData _getFileIcon(String filename) {
@@ -783,29 +713,23 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Block ${widget.userName}?',
-          style: AppTheme.blackTextStyle.copyWith(fontWeight: FontWeight.bold),
-        ),
-        content: Text(
-          'They won\'t be able to message you or see your posts.',
-          style: AppTheme.greyTextStyle,
-        ),
+        title: Text('Block ${widget.userName}?',
+            style:
+                AppTheme.blackTextStyle.copyWith(fontWeight: FontWeight.bold)),
+        content: Text('They won\'t be able to message you or see your posts.',
+            style: AppTheme.greyTextStyle),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text('Cancel', style: AppTheme.greyTextStyle),
-          ),
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text('Cancel', style: AppTheme.greyTextStyle)),
           TextButton(
             onPressed: () {
               Navigator.pop(dialogContext);
               _blockUser();
             },
-            child: Text(
-              'Block',
-              style:
-                  AppTheme.blackTextStyle.copyWith(color: AppColors.redColor),
-            ),
+            child: Text('Block',
+                style: AppTheme.blackTextStyle
+                    .copyWith(color: AppColors.redColor)),
           ),
         ],
       ),
@@ -817,17 +741,13 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Report ${widget.userName}',
-          style: AppTheme.blackTextStyle.copyWith(fontWeight: FontWeight.bold),
-        ),
+        title: Text('Report ${widget.userName}',
+            style:
+                AppTheme.blackTextStyle.copyWith(fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              'What is the issue?',
-              style: AppTheme.blackTextStyle,
-            ),
+            Text('What is the issue?', style: AppTheme.blackTextStyle),
             const SizedBox(height: 16),
             ...['Spam', 'Harassment', 'Inappropriate content', 'Fake account']
                 .map((reason) => RadioListTile<String>(
@@ -841,21 +761,17 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text('Cancel', style: AppTheme.greyTextStyle),
-          ),
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text('Cancel', style: AppTheme.greyTextStyle)),
           TextButton(
             onPressed: () {
               Navigator.pop(dialogContext);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Report submitted')),
-              );
+                  const SnackBar(content: Text('Report submitted')));
             },
-            child: Text(
-              'Report',
-              style:
-                  AppTheme.blackTextStyle.copyWith(color: AppColors.redColor),
-            ),
+            child: Text('Report',
+                style: AppTheme.blackTextStyle
+                    .copyWith(color: AppColors.redColor)),
           ),
         ],
       ),

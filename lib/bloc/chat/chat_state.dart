@@ -19,7 +19,7 @@ class ConversationModel {
   final bool isPinned;
   final bool isMuted;
   final DateTime? muteUntil;
-
+  final bool isVerified;
   final String wallpaper;
   final String chatColor;
   final String notificationSound;
@@ -41,6 +41,7 @@ class ConversationModel {
     required this.isPinned,
     required this.isMuted,
     required this.muteUntil,
+    this.isVerified = false,
     this.wallpaper = 'default',
     this.chatColor = 'default',
     this.notificationSound = 'default',
@@ -66,6 +67,7 @@ class ConversationModel {
       muteUntil: json['muteUntil'] != null
           ? DateTime.tryParse(json['muteUntil'])
           : null,
+      isVerified: json['verified'] == true || json['isVerified'] == true,
     );
   }
 

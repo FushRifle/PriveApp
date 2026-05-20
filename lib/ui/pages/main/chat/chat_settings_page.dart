@@ -27,7 +27,6 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
   String _chatColor = 'default';
   String _notificationSound = 'default';
   String _muteDuration = '8 hours';
-  DateTime? _muteUntil;
 
   @override
   void initState() {
@@ -81,20 +80,15 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
     context.read<ChatBloc>().add(ClearChat(conversationId: _conversationId));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Chat cleared successfully'),
-        backgroundColor: Colors.green,
-      ),
+          content: Text('Chat cleared'), backgroundColor: Colors.green),
     );
     Navigator.pop(context);
   }
 
   void _archiveChat() {
-    // TODO: Implement archive when endpoint is ready
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Chat archived'),
-        backgroundColor: Colors.green,
-      ),
+          content: Text('Chat archived'), backgroundColor: Colors.green),
     );
     Navigator.pop(context);
   }
@@ -103,12 +97,12 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
     context.read<ChatBloc>().add(BlockUser(userId: _conversationId));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('User blocked'),
-        backgroundColor: Colors.red,
-      ),
+          content: Text('User blocked'), backgroundColor: Colors.red),
     );
     Navigator.pop(context);
   }
+
+  bool get _isBot => widget.userName.toLowerCase() == 'clique';
 
   @override
   Widget build(BuildContext context) {
@@ -130,10 +124,8 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
         ),
         title: Text(
           'Chat Settings',
-          style: AppTheme.blackTextStyle.copyWith(
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
-          ),
+          style: AppTheme.blackTextStyle
+              .copyWith(fontWeight: FontWeight.w600, fontSize: 18),
         ),
         centerTitle: true,
       ),
@@ -148,12 +140,10 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
               _notificationSound = state.chatSettings!.notificationSound;
             });
           }
-          if (state.error != null) {
+          if (state.error != null && !_isBot) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.error!),
-                backgroundColor: Colors.red,
-              ),
+                  content: Text(state.error!), backgroundColor: Colors.red),
             );
             context.read<ChatBloc>().add(ClearChatError());
           }
@@ -165,7 +155,6 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Chat customization
                   _buildSectionTitle('Chat Customization'),
                   const SizedBox(height: 12),
                   _buildSettingsCard([
@@ -182,37 +171,29 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
                       subtitle: _capitalize(_chatColor),
                       onTap: () => _showColorPicker(),
                     ),
-                    _buildDivider(),
-                    _buildNavigationTile(
-                      icon: Icons.volume_up,
-                      title: 'Notification Sound',
-                      subtitle: _capitalize(_notificationSound),
-                      onTap: () => _showSoundPicker(),
-                    ),
+                    if (!_isBot) ...[
+                      _buildDivider(),
+                      _buildNavigationTile(
+                        icon: Icons.volume_up,
+                        title: 'Notification Sound',
+                        subtitle: _capitalize(_notificationSound),
+                        onTap: () => _showSoundPicker(),
+                      ),
+                    ],
                   ]),
                   const SizedBox(height: 24),
-
-                  // Notifications
                   _buildSectionTitle('Notifications'),
                   const SizedBox(height: 12),
                   _buildSettingsCard([
                     SwitchListTile(
-                      secondary: const Icon(
-                        Icons.notifications_off,
-                        color: AppColors.primary,
-                        size: 24,
-                      ),
-                      title: Text(
-                        'Mute Notifications',
-                        style: AppTheme.blackTextStyle.copyWith(
-                          fontWeight: FontWeight.w500,
-                          fontSize: 15,
-                        ),
-                      ),
+                      secondary: const Icon(Icons.notifications_off,
+                          color: AppColors.primary, size: 24),
+                      title: Text('Mute Notifications',
+                          style: AppTheme.blackTextStyle.copyWith(
+                              fontWeight: FontWeight.w500, fontSize: 15)),
                       subtitle: Text(
-                        _isMuted ? 'Muted for $_muteDuration' : 'Unmuted',
-                        style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
-                      ),
+                          _isMuted ? 'Muted for $_muteDuration' : 'Unmuted',
+                          style: AppTheme.greyTextStyle.copyWith(fontSize: 12)),
                       value: _isMuted,
                       onChanged: (value) {
                         setState(() => _isMuted = value);
@@ -233,28 +214,17 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
                     ],
                   ]),
                   const SizedBox(height: 24),
-
-                  // Chat actions
                   _buildSectionTitle('Chat Actions'),
                   const SizedBox(height: 12),
                   _buildSettingsCard([
                     SwitchListTile(
-                      secondary: const Icon(
-                        Icons.push_pin,
-                        color: AppColors.primary,
-                        size: 24,
-                      ),
-                      title: Text(
-                        'Pin Chat',
-                        style: AppTheme.blackTextStyle.copyWith(
-                          fontWeight: FontWeight.w500,
-                          fontSize: 15,
-                        ),
-                      ),
-                      subtitle: Text(
-                        _isPinned ? 'Pinned to top' : 'Not pinned',
-                        style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
-                      ),
+                      secondary: const Icon(Icons.push_pin,
+                          color: AppColors.primary, size: 24),
+                      title: Text('Pin Chat',
+                          style: AppTheme.blackTextStyle.copyWith(
+                              fontWeight: FontWeight.w500, fontSize: 15)),
+                      subtitle: Text(_isPinned ? 'Pinned to top' : 'Not pinned',
+                          style: AppTheme.greyTextStyle.copyWith(fontSize: 12)),
                       value: _isPinned,
                       onChanged: (value) {
                         setState(() => _isPinned = value);
@@ -278,32 +248,31 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
                       subtitle: 'Find messages in this chat',
                       onTap: () {
                         HapticFeedback.lightImpact();
-                        // TODO: Navigate to search in chat
                       },
                     ),
                   ]),
                   const SizedBox(height: 24),
-
-                  // Danger zone
-                  _buildSectionTitle('Danger Zone'),
-                  const SizedBox(height: 12),
-                  _buildSettingsCard([
-                    _buildNavigationTile(
-                      icon: Icons.delete_outline,
-                      title: 'Clear Chat',
-                      subtitle: 'Delete all messages',
-                      titleColor: AppColors.redColor,
-                      onTap: _showClearChatDialog,
-                    ),
-                    _buildDivider(),
-                    _buildNavigationTile(
-                      icon: Icons.block,
-                      title: 'Block ${widget.userName}',
-                      subtitle: 'Block this user',
-                      titleColor: AppColors.redColor,
-                      onTap: _showBlockDialog,
-                    ),
-                  ]),
+                  if (!_isBot) ...[
+                    _buildSectionTitle('Danger Zone'),
+                    const SizedBox(height: 12),
+                    _buildSettingsCard([
+                      _buildNavigationTile(
+                        icon: Icons.delete_outline,
+                        title: 'Clear Chat',
+                        subtitle: 'Delete all messages',
+                        titleColor: AppColors.redColor,
+                        onTap: _showClearChatDialog,
+                      ),
+                      _buildDivider(),
+                      _buildNavigationTile(
+                        icon: Icons.block,
+                        title: 'Block ${widget.userName}',
+                        subtitle: 'Block this user',
+                        titleColor: AppColors.redColor,
+                        onTap: _showBlockDialog,
+                      ),
+                    ]),
+                  ],
                   const SizedBox(height: 32),
                 ],
               ),
@@ -341,15 +310,12 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2)),
         ],
       ),
-      child: Column(
-        children: children,
-      ),
+      child: Column(children: children),
     );
   }
 
@@ -366,18 +332,11 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
   }) {
     return ListTile(
       leading: Icon(icon, color: titleColor ?? AppColors.primary, size: 24),
-      title: Text(
-        title,
-        style: AppTheme.blackTextStyle.copyWith(
-          fontWeight: FontWeight.w500,
-          fontSize: 15,
-          color: titleColor,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
-      ),
+      title: Text(title,
+          style: AppTheme.blackTextStyle.copyWith(
+              fontWeight: FontWeight.w500, fontSize: 15, color: titleColor)),
+      subtitle:
+          Text(subtitle, style: AppTheme.greyTextStyle.copyWith(fontSize: 12)),
       trailing:
           const Icon(Icons.chevron_right, color: AppColors.primary, size: 20),
       onTap: onTap,
@@ -388,10 +347,10 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
   void _showWallpaperPicker() {
     final wallpapers = [
       'default',
-      'dark',
-      'ocean',
+      'palms',
+      'modern',
       'sunset',
-      'forest',
+      'sky',
       'galaxy'
     ];
     _showPicker(
@@ -461,8 +420,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -470,28 +428,22 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
             Container(
               width: 40,
               height: 4,
-              margin: const EdgeInsets.only(top: 12, bottom: 20),
+              margin: const EdgeInsets.only(top: 12),
               decoration: BoxDecoration(
-                color: AppColors.greyColor.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
+                  color: AppColors.greyColor.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2)),
             ),
+            const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                title,
-                style: AppTheme.blackTextStyle.copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
+              child: Text(title,
+                  style: AppTheme.blackTextStyle
+                      .copyWith(fontWeight: FontWeight.bold, fontSize: 18)),
             ),
             const SizedBox(height: 16),
             ...items.map((item) => ListTile(
-                  title: Text(
-                    _capitalize(item),
-                    style: AppTheme.blackTextStyle.copyWith(fontSize: 16),
-                  ),
+                  title: Text(_capitalize(item),
+                      style: AppTheme.blackTextStyle.copyWith(fontSize: 16)),
                   trailing: selectedValue == item
                       ? const Icon(Icons.check_circle, color: AppColors.primary)
                       : null,
@@ -512,30 +464,23 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Clear Chat',
-          style: AppTheme.blackTextStyle.copyWith(fontWeight: FontWeight.bold),
-        ),
-        content: Text(
-          'Are you sure you want to delete all messages?\nThis action cannot be undone.',
-          style: AppTheme.greyTextStyle,
-        ),
+        title: Text('Clear Chat',
+            style:
+                AppTheme.blackTextStyle.copyWith(fontWeight: FontWeight.bold)),
+        content: Text('Delete all messages? This cannot be undone.',
+            style: AppTheme.greyTextStyle),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: AppTheme.greyTextStyle),
-          ),
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: AppTheme.greyTextStyle)),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _clearChat();
-            },
-            child: Text(
-              'Clear',
-              style:
-                  AppTheme.blackTextStyle.copyWith(color: AppColors.redColor),
-            ),
-          ),
+              onPressed: () {
+                Navigator.pop(context);
+                _clearChat();
+              },
+              child: Text('Clear',
+                  style: AppTheme.blackTextStyle
+                      .copyWith(color: AppColors.redColor))),
         ],
       ),
     );
@@ -546,29 +491,23 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Archive Chat',
-          style: AppTheme.blackTextStyle.copyWith(fontWeight: FontWeight.bold),
-        ),
-        content: Text(
-          'Archive this chat? You can unarchive it later.',
-          style: AppTheme.greyTextStyle,
-        ),
+        title: Text('Archive Chat',
+            style:
+                AppTheme.blackTextStyle.copyWith(fontWeight: FontWeight.bold)),
+        content: Text('Move this chat to archive? You can unarchive it later.',
+            style: AppTheme.greyTextStyle),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: AppTheme.greyTextStyle),
-          ),
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: AppTheme.greyTextStyle)),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _archiveChat();
-            },
-            child: Text(
-              'Archive',
-              style: AppTheme.blackTextStyle.copyWith(color: AppColors.primary),
-            ),
-          ),
+              onPressed: () {
+                Navigator.pop(context);
+                _archiveChat();
+              },
+              child: Text('Archive',
+                  style: AppTheme.blackTextStyle
+                      .copyWith(color: AppColors.primary))),
         ],
       ),
     );
@@ -579,30 +518,23 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Block ${widget.userName}?',
-          style: AppTheme.blackTextStyle.copyWith(fontWeight: FontWeight.bold),
-        ),
-        content: Text(
-          'They won\'t be able to message you or see your posts.',
-          style: AppTheme.greyTextStyle,
-        ),
+        title: Text('Block ${widget.userName}?',
+            style:
+                AppTheme.blackTextStyle.copyWith(fontWeight: FontWeight.bold)),
+        content: Text('They won\'t be able to message you or see your posts.',
+            style: AppTheme.greyTextStyle),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: AppTheme.greyTextStyle),
-          ),
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: AppTheme.greyTextStyle)),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _blockUser();
-            },
-            child: Text(
-              'Block',
-              style:
-                  AppTheme.blackTextStyle.copyWith(color: AppColors.redColor),
-            ),
-          ),
+              onPressed: () {
+                Navigator.pop(context);
+                _blockUser();
+              },
+              child: Text('Block',
+                  style: AppTheme.blackTextStyle
+                      .copyWith(color: AppColors.redColor))),
         ],
       ),
     );

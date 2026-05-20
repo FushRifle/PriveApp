@@ -6,7 +6,7 @@ class Profile {
   final String? displayName;
   final String? bio;
   final String? avatar;
-  final String? coverImage; // Added cover image
+  final String? coverImage;
   final List<String> photos;
   final List<String> interests;
   final int age;
@@ -30,7 +30,7 @@ class Profile {
     this.displayName,
     this.bio,
     this.avatar,
-    this.coverImage, // Added cover image
+    this.coverImage,
     this.photos = const [],
     this.interests = const [],
     required this.age,

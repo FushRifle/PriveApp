@@ -1,14 +1,55 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class ChatSettingsService {
   static final ChatSettingsService _instance = ChatSettingsService._internal();
   factory ChatSettingsService() => _instance;
   ChatSettingsService._internal();
 
-  // Play notification sound - disabled for now
-  void playNotificationSound(String soundName) {
-    // TODO: Implement sound playback later
-    return;
+  final FlutterLocalNotificationsPlugin _notifications =
+      FlutterLocalNotificationsPlugin();
+
+  Future<void> initialize() async {
+    const AndroidInitializationSettings androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    const DarwinInitializationSettings iosSettings =
+        DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
+
+    const InitializationSettings settings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
+
+    await _notifications.initialize(settings: settings);
+  }
+
+  // Play notification sound using local notifications
+  Future<void> playNotificationSound(String soundName) async {
+    if (soundName == 'default' || soundName.isEmpty) return;
+
+    final AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      'chat_channel',
+      'Chat Notifications',
+      channelDescription: 'Notifications for chat messages',
+      importance: Importance.high,
+      priority: Priority.high,
+      sound: RawResourceAndroidNotificationSound('sounds_$soundName'),
+    );
+
+    final DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+      sound: '$soundName.caf',
+    );
+
+    final NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
   }
 
   // Get wallpaper asset path

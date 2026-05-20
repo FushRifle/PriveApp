@@ -104,6 +104,7 @@ class _InboxPageState extends State<InboxPage> {
           ElevatedButton(
             onPressed: _loadConversations,
             style: ElevatedButton.styleFrom(
+              minimumSize: const Size(120, 48),
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
@@ -119,8 +120,6 @@ class _InboxPageState extends State<InboxPage> {
 
   List<_ChatMessage> _getDisplayConversations(ChatState state) {
     final conversations = <_ChatMessage>[];
-
-    // Sort conversations: pinned first, then by timestamp
     final sortedConversations = List.of(state.conversations);
     sortedConversations.sort((a, b) {
       if (a.isPinned && !b.isPinned) return -1;
@@ -252,6 +251,7 @@ class _InboxPageState extends State<InboxPage> {
   Widget _buildMessageItem(BuildContext context, _ChatMessage message) {
     final firstLetter =
         message.name.isNotEmpty ? message.name[0].toUpperCase() : 'U';
+    final isBot = message.name.toLowerCase() == 'clique';
 
     return Dismissible(
       key: Key(message.id),
@@ -287,7 +287,6 @@ class _InboxPageState extends State<InboxPage> {
         );
       },
       onDismissed: (direction) {
-        // TODO: Delete conversation via ChatBloc
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Conversation with ${message.name} deleted'),
@@ -373,17 +372,25 @@ class _InboxPageState extends State<InboxPage> {
                   children: [
                     Row(
                       children: [
-                        Expanded(
-                          child: Text(
-                            message.name,
-                            style: AppTheme.blackTextStyle.copyWith(
-                              fontWeight: message.isUnread
-                                  ? FontWeight.w700
-                                  : FontWeight.w600,
-                              fontSize: 16,
-                            ),
+                        Text(
+                          message.name,
+                          style: AppTheme.blackTextStyle.copyWith(
+                            fontWeight: message.isUnread
+                                ? FontWeight.w700
+                                : FontWeight.w600,
+                            fontSize: 16,
                           ),
                         ),
+                        if (isBot) ...[
+                          const SizedBox(width: 5),
+                          Icon(
+                            Icons.verified,
+                            size: 15,
+                            opticalSize: 4,
+                            color: AppColors.secondary,
+                          ),
+                        ],
+                        const Spacer(),
                         Text(
                           message.time,
                           style: AppTheme.blackTextStyle.copyWith(
