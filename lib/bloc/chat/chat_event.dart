@@ -7,142 +7,209 @@ abstract class ChatEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-// Load conversations
+// Conversation events
 class LoadConversations extends ChatEvent {}
 
-// Refresh conversations
 class RefreshConversations extends ChatEvent {}
 
-// Load messages for a specific user
+class LoadConversationInfo extends ChatEvent {
+  final int conversationId;
+  const LoadConversationInfo({required this.conversationId});
+
+  @override
+  List<Object?> get props => [conversationId];
+}
+
+// Message events
 class LoadMessages extends ChatEvent {
-  final int userId;
+  final int conversationId;
   final int page;
-  final bool isInitialLoad;
-
-  const LoadMessages({
-    required this.userId,
-    this.page = 1,
-    this.isInitialLoad = true,
-  });
+  const LoadMessages({required this.conversationId, this.page = 1});
 
   @override
-  List<Object?> get props => [userId, page, isInitialLoad];
+  List<Object?> get props => [conversationId, page];
 }
 
-// Load more messages (pagination)
 class LoadMoreMessages extends ChatEvent {
-  final int userId;
-
-  const LoadMoreMessages({required this.userId});
+  final int conversationId;
+  const LoadMoreMessages({required this.conversationId});
 
   @override
-  List<Object?> get props => [userId];
+  List<Object?> get props => [conversationId];
 }
 
-// Send a new message
 class SendMessage extends ChatEvent {
-  final int userId;
-  final String content;
-  final String? attachmentUrl;
-  final String? attachmentType;
-
+  final int receiverId;
+  final String message;
+  final String messageType;
+  final String? mediaUrl;
   const SendMessage({
-    required this.userId,
-    required this.content,
-    this.attachmentUrl,
-    this.attachmentType,
+    required this.receiverId,
+    required this.message,
+    this.messageType = 'text',
+    this.mediaUrl,
   });
 
   @override
-  List<Object?> get props => [userId, content, attachmentUrl, attachmentType];
+  List<Object?> get props => [receiverId, message, messageType, mediaUrl];
 }
 
-// Mark messages as read
 class MarkMessagesAsRead extends ChatEvent {
-  final int userId;
-
-  const MarkMessagesAsRead({required this.userId});
-
-  @override
-  List<Object?> get props => [userId];
-}
-
-// Update online status
-class UpdateOnlineStatus extends ChatEvent {
-  final bool isOnline;
-
-  const UpdateOnlineStatus({required this.isOnline});
+  final int conversationId;
+  const MarkMessagesAsRead({required this.conversationId});
 
   @override
-  List<Object?> get props => [isOnline];
+  List<Object?> get props => [conversationId];
 }
 
-// Update typing status
-class UpdateTypingStatus extends ChatEvent {
-  final int userId;
+// Typing events
+class SetTyping extends ChatEvent {
+  final int conversationId;
   final bool isTyping;
+  const SetTyping({required this.conversationId, required this.isTyping});
 
-  const UpdateTypingStatus({
-    required this.userId,
-    required this.isTyping,
+  @override
+  List<Object?> get props => [conversationId, isTyping];
+}
+
+// Chat settings events
+class LoadChatSettings extends ChatEvent {
+  final int conversationId;
+  const LoadChatSettings({required this.conversationId});
+
+  @override
+  List<Object?> get props => [conversationId];
+}
+
+class UpdateChatSettings extends ChatEvent {
+  final int conversationId;
+  final bool? isPinned;
+  final bool? isMuted;
+  final DateTime? muteUntil;
+  final String? wallpaper;
+  final String? chatColor;
+  final String? notificationSound;
+  const UpdateChatSettings({
+    required this.conversationId,
+    this.isPinned,
+    this.isMuted,
+    this.muteUntil,
+    this.wallpaper,
+    this.chatColor,
+    this.notificationSound,
   });
 
   @override
-  List<Object?> get props => [userId, isTyping];
+  List<Object?> get props => [
+        conversationId,
+        isPinned,
+        isMuted,
+        muteUntil,
+        wallpaper,
+        chatColor,
+        notificationSound
+      ];
 }
 
-// Load chat preferences
-class LoadChatPreferences extends ChatEvent {}
+// User preferences events
+class LoadUserPreferences extends ChatEvent {}
 
-// Update chat preferences
-class UpdateChatPreferences extends ChatEvent {
-  final Map<String, dynamic> preferences;
-
-  const UpdateChatPreferences({required this.preferences});
+class UpdateUserPreferences extends ChatEvent {
+  final String? wallpaper;
+  final String? chatColor;
+  final String? notificationSound;
+  final int? fontSize;
+  final bool? enterToSend;
+  final bool? readReceipts;
+  final bool? typingIndicators;
+  final bool? messagePreview;
+  final String? autoDownloadMedia;
+  const UpdateUserPreferences({
+    this.wallpaper,
+    this.chatColor,
+    this.notificationSound,
+    this.fontSize,
+    this.enterToSend,
+    this.readReceipts,
+    this.typingIndicators,
+    this.messagePreview,
+    this.autoDownloadMedia,
+  });
 
   @override
-  List<Object?> get props => [preferences];
+  List<Object?> get props => [
+        wallpaper,
+        chatColor,
+        notificationSound,
+        fontSize,
+        enterToSend,
+        readReceipts,
+        typingIndicators,
+        messagePreview,
+        autoDownloadMedia
+      ];
 }
 
-// Clear current messages (when leaving chat)
-class ClearCurrentMessages extends ChatEvent {}
-
-// Clear unread count for a conversation
-class ClearUnreadCount extends ChatEvent {
+// Block/Unblock events
+class BlockUser extends ChatEvent {
   final int userId;
-
-  const ClearUnreadCount({required this.userId});
+  const BlockUser({required this.userId});
 
   @override
   List<Object?> get props => [userId];
 }
 
-// Clear chat error
+class UnblockUser extends ChatEvent {
+  final int userId;
+  const UnblockUser({required this.userId});
+
+  @override
+  List<Object?> get props => [userId];
+}
+
+// Clear chat
+class ClearChat extends ChatEvent {
+  final int conversationId;
+  const ClearChat({required this.conversationId});
+
+  @override
+  List<Object?> get props => [conversationId];
+}
+
+// Error handling
 class ClearChatError extends ChatEvent {}
 
-// Reset chat state
 class ResetChatState extends ChatEvent {}
 
-// New message received (from WebSocket/push)
+// Real-time events (for SSE/WebSocket)
 class NewMessageReceived extends ChatEvent {
   final Map<String, dynamic> message;
-
   const NewMessageReceived({required this.message});
 
   @override
   List<Object?> get props => [message];
 }
 
-// New message status update
-class MessageStatusUpdated extends ChatEvent {
-  final int messageId;
-  final String status; // 'sent', 'delivered', 'read'
+class MessageReadReceived extends ChatEvent {
+  final int conversationId;
+  final int readByUserId;
+  const MessageReadReceived(
+      {required this.conversationId, required this.readByUserId});
 
-  const MessageStatusUpdated({
-    required this.messageId,
-    required this.status,
+  @override
+  List<Object?> get props => [conversationId, readByUserId];
+}
+
+class TypingStatusReceived extends ChatEvent {
+  final int conversationId;
+  final int userId;
+  final bool isTyping;
+  const TypingStatusReceived({
+    required this.conversationId,
+    required this.userId,
+    required this.isTyping,
   });
 
   @override
-  List<Object?> get props => [messageId, status];
+  List<Object?> get props => [conversationId, userId, isTyping];
 }

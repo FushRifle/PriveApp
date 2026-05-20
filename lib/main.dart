@@ -1,3 +1,7 @@
+import 'package:clique/bloc/chat/chat_bloc.dart';
+import 'package:clique/bloc/chat/gallery/chat_gallery_cubit.dart';
+import 'package:clique/bloc/insights/insights_bloc.dart';
+import 'package:clique/bloc/match/match_bloc.dart';
 import 'package:clique/bloc/profile/profile_bloc.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
 import 'package:clique/ui/pages/auth/security/active_sessions_page.dart';
@@ -115,6 +119,12 @@ class _MyAppState extends ConsumerState<MyApp> {
         BlocProvider<FriendsBloc>(
           create: (context) => FriendsBloc(),
         ),
+        BlocProvider<InsightsBloc>(
+          create: (context) => InsightsBloc(),
+        ),
+        BlocProvider<MatchBloc>(
+          create: (context) => MatchBloc(),
+        ),
         BlocProvider<FeedBloc>(
           create: (context) => FeedBloc(),
         ),
@@ -127,10 +137,16 @@ class _MyAppState extends ConsumerState<MyApp> {
         BlocProvider<ReelBloc>(
           create: (context) => ReelBloc(),
         ),
+        BlocProvider<ChatBloc>(
+          create: (context) => ChatBloc(),
+        ),
+        BlocProvider<ChatGalleryCubit>(
+          create: (context) => ChatGalleryCubit(),
+        ),
         BlocProvider(create: (context) => ProfileBloc()),
       ],
       child: MaterialApp(
-        title: 'clique',
+        title: 'Clique',
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: themeMode,

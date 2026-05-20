@@ -262,7 +262,7 @@ class _CardPostState extends State<CardPost> {
                       ),
                     ),
                     child: Text(
-                      _formatCount(count!),
+                      _formatCount(count),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 12,

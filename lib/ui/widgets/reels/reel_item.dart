@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:video_player/video_player.dart';
 import 'package:clique/app/configs/colors.dart';
-import 'package:clique/data/models/reel_model.dart';
+import 'package:clique/bloc/reels/reel_bloc.dart';
 
 class ReelItem extends StatefulWidget {
-  final ReelModel reel;
+  final Map<String, dynamic> reel;
   final VoidCallback onNextReel;
   final bool isActive;
-  final VoidCallback? onLike;
-  final VoidCallback? onShare;
+  final int index;
   final int currentUserId;
 
   const ReelItem({
@@ -16,8 +16,7 @@ class ReelItem extends StatefulWidget {
     required this.reel,
     required this.onNextReel,
     this.isActive = true,
-    this.onLike,
-    this.onShare,
+    required this.index,
     required this.currentUserId,
   });
 
@@ -35,7 +34,7 @@ class _ReelItemState extends State<ReelItem> {
   @override
   void initState() {
     super.initState();
-    _isLiked = widget.reel.isLiked;
+    _isLiked = widget.reel['isLiked'] ?? false;
     _initVideoPlayer();
   }
 
@@ -50,19 +49,20 @@ class _ReelItemState extends State<ReelItem> {
       }
     }
 
-    if (widget.reel.isLiked != oldWidget.reel.isLiked) {
-      _isLiked = widget.reel.isLiked;
+    if (widget.reel['isLiked'] != oldWidget.reel['isLiked']) {
+      _isLiked = widget.reel['isLiked'] ?? false;
     }
   }
 
   void _initVideoPlayer() {
-    if (widget.reel.videoUrl.isEmpty) {
+    final videoUrl = widget.reel['videoUrl'] ?? widget.reel['url'] ?? '';
+    if (videoUrl.isEmpty) {
       _isInitialized = false;
       return;
     }
 
     _videoController = VideoPlayerController.networkUrl(
-      Uri.parse(widget.reel.videoUrl),
+      Uri.parse(videoUrl),
     );
 
     _videoController!.addListener(() {
@@ -119,18 +119,28 @@ class _ReelItemState extends State<ReelItem> {
   }
 
   void _handleLike() {
-    setState(() {
-      _isLiked = !_isLiked;
-    });
-    widget.onLike?.call();
+    if (_isLiked) {
+      context.read<ReelBloc>().add(UnlikeReel(
+            reelId: widget.reel['id'].toString(),
+            index: widget.index,
+          ));
+    } else {
+      context.read<ReelBloc>().add(LikeReel(
+            reelId: widget.reel['id'].toString(),
+            index: widget.index,
+          ));
+    }
   }
 
   void _handleShare() {
-    widget.onShare?.call();
+    context.read<ReelBloc>().add(ShareReel(
+          reelId: widget.reel['id'].toString(),
+          index: widget.index,
+        ));
   }
 
   bool _isCurrentUser() {
-    return widget.reel.userId == widget.currentUserId;
+    return widget.reel['userId'] == widget.currentUserId;
   }
 
   @override
@@ -159,9 +169,9 @@ class _ReelItemState extends State<ReelItem> {
   }
 
   Widget _buildVideoPlayer() {
-    if (widget.reel.videoUrl.isEmpty ||
-        !_isInitialized ||
-        _videoController == null) {
+    final videoUrl = widget.reel['videoUrl'] ?? widget.reel['url'] ?? '';
+
+    if (videoUrl.isEmpty || !_isInitialized || _videoController == null) {
       return Container(
         color: Colors.black,
         child: Center(
@@ -223,7 +233,6 @@ class _ReelItemState extends State<ReelItem> {
   Widget _buildGradients() {
     return Column(
       children: [
-        // Top gradient
         Container(
           height: 100,
           decoration: BoxDecoration(
@@ -238,7 +247,6 @@ class _ReelItemState extends State<ReelItem> {
           ),
         ),
         const Spacer(),
-        // Bottom gradient
         Container(
           height: 200,
           decoration: BoxDecoration(
@@ -257,8 +265,11 @@ class _ReelItemState extends State<ReelItem> {
   }
 
   Widget _buildRightActions() {
-    final currentLikeCount =
-        _isLiked ? (widget.reel.likeCount + 1) : widget.reel.likeCount;
+    final likeCount = widget.reel['likes'] ?? 0;
+    final commentCount =
+        widget.reel['commentCount'] ?? widget.reel['comments'] ?? 0;
+    final shareCount = widget.reel['shareCount'] ?? widget.reel['shares'] ?? 0;
+    final currentLikeCount = _isLiked ? likeCount + 1 : likeCount;
 
     return Positioned(
       right: 16,
@@ -274,24 +285,20 @@ class _ReelItemState extends State<ReelItem> {
           const SizedBox(height: 20),
           _buildActionButton(
             icon: Icons.comment,
-            label: _formatCount(widget.reel.commentCount),
-            onTap: () {
-              // TODO: Open comments
-            },
+            label: _formatCount(commentCount),
+            onTap: () {},
           ),
           const SizedBox(height: 20),
           _buildActionButton(
             icon: Icons.send,
-            label: _formatCount(widget.reel.shareCount),
+            label: _formatCount(shareCount),
             onTap: _handleShare,
           ),
           const SizedBox(height: 20),
           _buildActionButton(
             icon: Icons.more_horiz,
             label: '',
-            onTap: () {
-              // TODO: More options
-            },
+            onTap: () {},
           ),
           const SizedBox(height: 20),
           _buildAudioIcon(),
@@ -328,6 +335,11 @@ class _ReelItemState extends State<ReelItem> {
   }
 
   Widget _buildAudioIcon() {
+    final userProfile = widget.reel['userProfile'] ??
+        widget.reel['avatar'] ??
+        widget.reel['user']['avatar'] ??
+        '';
+
     return Container(
       width: 44,
       height: 44,
@@ -337,14 +349,14 @@ class _ReelItemState extends State<ReelItem> {
           color: Colors.white.withOpacity(0.3),
           width: 2,
         ),
-        image: widget.reel.userProfile.isNotEmpty
+        image: userProfile.isNotEmpty
             ? DecorationImage(
                 fit: BoxFit.cover,
-                image: NetworkImage(widget.reel.userProfile),
+                image: NetworkImage(userProfile),
               )
             : null,
       ),
-      child: widget.reel.userProfile.isEmpty
+      child: userProfile.isEmpty
           ? Center(
               child: Icon(
                 Icons.music_note,
@@ -357,6 +369,25 @@ class _ReelItemState extends State<ReelItem> {
   }
 
   Widget _buildBottomInfo() {
+    final username = widget.reel['username'] ??
+        widget.reel['user']['username'] ??
+        widget.reel['user']['name'] ??
+        'User';
+    final userProfile = widget.reel['userProfile'] ??
+        widget.reel['avatar'] ??
+        widget.reel['user']['avatar'] ??
+        '';
+    final isVerified =
+        widget.reel['isVerified'] ?? widget.reel['user']['verified'] ?? false;
+    final caption = widget.reel['caption'] ?? '';
+    final hashtags = widget.reel['hashtags'] != null
+        ? List<String>.from(widget.reel['hashtags'])
+        : <String>[];
+    final audio =
+        widget.reel['audio'] ?? widget.reel['music'] ?? 'Original Sound';
+    final audioArtist =
+        widget.reel['audioArtist'] ?? widget.reel['user']['name'] ?? '';
+
     return Positioned(
       bottom: 20,
       left: 16,
@@ -364,13 +395,10 @@ class _ReelItemState extends State<ReelItem> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // User info
           Row(
             children: [
               GestureDetector(
-                onTap: () {
-                  // TODO: Navigate to profile
-                },
+                onTap: () {},
                 child: Row(
                   children: [
                     Container(
@@ -382,14 +410,14 @@ class _ReelItemState extends State<ReelItem> {
                           color: Colors.white,
                           width: 2,
                         ),
-                        image: widget.reel.userProfile.isNotEmpty
+                        image: userProfile.isNotEmpty
                             ? DecorationImage(
                                 fit: BoxFit.cover,
-                                image: NetworkImage(widget.reel.userProfile),
+                                image: NetworkImage(userProfile),
                               )
                             : null,
                       ),
-                      child: widget.reel.userProfile.isEmpty
+                      child: userProfile.isEmpty
                           ? Center(
                               child: Icon(
                                 Icons.person,
@@ -401,14 +429,14 @@ class _ReelItemState extends State<ReelItem> {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      widget.reel.username,
+                      username,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    if (widget.reel.isVerified) ...[
+                    if (isVerified) ...[
                       const SizedBox(width: 4),
                       const Icon(
                         Icons.verified,
@@ -426,7 +454,6 @@ class _ReelItemState extends State<ReelItem> {
                     setState(() {
                       _isFollowing = !_isFollowing;
                     });
-                    // TODO: Implement follow API call
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -461,10 +488,9 @@ class _ReelItemState extends State<ReelItem> {
             ],
           ),
           const SizedBox(height: 12),
-          // Caption
-          if (widget.reel.caption.isNotEmpty)
+          if (caption.isNotEmpty)
             Text(
-              widget.reel.caption,
+              caption,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 14,
@@ -473,11 +499,10 @@ class _ReelItemState extends State<ReelItem> {
               overflow: TextOverflow.ellipsis,
             ),
           const SizedBox(height: 8),
-          // Hashtags
-          if (widget.reel.hashtags.isNotEmpty)
+          if (hashtags.isNotEmpty)
             Wrap(
               spacing: 4,
-              children: widget.reel.hashtags
+              children: hashtags
                   .map((tag) => Text(
                         '#$tag',
                         style: const TextStyle(
@@ -489,7 +514,6 @@ class _ReelItemState extends State<ReelItem> {
                   .toList(),
             ),
           const SizedBox(height: 12),
-          // Audio
           Row(
             children: [
               const Icon(
@@ -500,7 +524,7 @@ class _ReelItemState extends State<ReelItem> {
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  '${widget.reel.audio} · ${widget.reel.audioArtist}',
+                  '$audio · $audioArtist',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,

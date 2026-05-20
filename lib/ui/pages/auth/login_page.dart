@@ -121,7 +121,7 @@ class _LoginPageState extends State<LoginPage> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
                 child: Image.asset(
-                  'assets/images/clique.png',
+                  'assets/icons/clique.png',
                   width: 80,
                   height: 80,
                   fit: BoxFit.cover,

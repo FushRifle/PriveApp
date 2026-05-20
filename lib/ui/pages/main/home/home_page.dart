@@ -1,5 +1,6 @@
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
+import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -11,7 +12,6 @@ import 'package:clique/ui/pages/main/status/status_view_page.dart';
 import 'package:clique/ui/pages/settings/settings_page.dart';
 import 'package:clique/ui/widgets/home/card_post.dart';
 import 'package:clique/ui/widgets/status/status_widget.dart';
-import 'package:clique/data/services/user/user_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -21,14 +21,20 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final UserService _userService = UserService();
-  Map<String, dynamic> _currentUser = {};
-  bool _isLoadingUser = true;
+  bool _isInitialLoad = true;
 
   @override
   void initState() {
     super.initState();
     _loadCurrentUser();
+    _loadInitialData();
+  }
+
+  void _loadCurrentUser() {
+    context.read<UserBloc>().add(LoadCurrentUser());
+  }
+
+  void _loadInitialData() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         context.read<FeedBloc>().add(GetFeedPosts());
@@ -37,31 +43,10 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  Future<void> _loadCurrentUser() async {
-    try {
-      final user = await _userService.getCurrentUser();
-      if (mounted) {
-        setState(() {
-          _currentUser = user;
-          _isLoadingUser = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error loading user: $e');
-      if (mounted) {
-        setState(() {
-          _isLoadingUser = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _refreshAll() async {
-    await _loadCurrentUser();
-    if (mounted) {
-      context.read<FeedBloc>().add(RefreshFeed());
-      context.read<StoriesBloc>().add(GetStories());
-    }
+  void _silentRefresh() {
+    context.read<FeedBloc>().add(RefreshFeed());
+    context.read<StoriesBloc>().add(GetStories());
+    context.read<UserBloc>().add(RefreshCurrentUser());
   }
 
   @override
@@ -78,13 +63,19 @@ class _HomePageState extends State<HomePage> {
         children: [
           _buildCustomAppBar(),
           Expanded(
-            child: RefreshIndicator(
-              color: AppColors.primary,
-              onRefresh: _refreshAll,
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (scrollInfo) {
+                if (scrollInfo.metrics.pixels <= 0 &&
+                    scrollInfo.metrics.axisDirection == AxisDirection.down) {
+                  _silentRefresh();
+                }
+                return false;
+              },
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
                   children: [
+                    // Stories section
                     BlocBuilder<StoriesBloc, StoriesState>(
                       builder: (context, storiesState) {
                         return _buildStoriesSection(storiesState);
@@ -110,13 +101,19 @@ class _HomePageState extends State<HomePage> {
     final stories = storiesState.stories;
     final isLoading = storiesState.status == StoriesStatus.loading;
 
-    if (isLoading && stories.isEmpty) {
+    if (isLoading && _isInitialLoad && stories.isEmpty) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 16),
         child: Center(
           child: CircularProgressIndicator(color: AppColors.primary),
         ),
       );
+    }
+
+    if (stories.isNotEmpty && _isInitialLoad) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _isInitialLoad = false;
+      });
     }
 
     final groupedStories = _groupStoriesByUser(stories);
@@ -173,16 +170,21 @@ class _HomePageState extends State<HomePage> {
               separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 if (index == 0) {
-                  return StatusWidget(
-                    name: 'Your Story',
-                    avatar: _getUserAvatar(),
-                    isAddStatus: true,
-                    statusCount: 0,
-                    hasUnviewed: false,
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      Navigator.pushNamed(
-                          context, NamedRoutes.createStatusScreen);
+                  return BlocBuilder<UserBloc, UserState>(
+                    builder: (context, userState) {
+                      final userAvatar = userState.currentUser?['avatar'] ?? '';
+                      return StatusWidget(
+                        name: 'Your Story',
+                        avatar: userAvatar,
+                        isAddStatus: true,
+                        statusCount: 0,
+                        hasUnviewed: false,
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          Navigator.pushNamed(
+                              context, NamedRoutes.createStatusScreen);
+                        },
+                      );
                     },
                   );
                 }
@@ -231,7 +233,7 @@ class _HomePageState extends State<HomePage> {
     final hasMore = feedState.hasMorePosts;
     final error = feedState.postsError;
 
-    if (isLoading && posts.isEmpty) {
+    if (isLoading && _isInitialLoad && posts.isEmpty) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primary),
       );
@@ -241,7 +243,7 @@ class _HomePageState extends State<HomePage> {
       return _buildErrorWidget(error);
     }
 
-    if (posts.isEmpty) {
+    if (posts.isEmpty && !_isInitialLoad) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -330,7 +332,7 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 12),
           ElevatedButton(
             onPressed: () {
-              context.read<FeedBloc>().add(GetFeedPosts());
+              _silentRefresh();
             },
             style: ElevatedButton.styleFrom(
               minimumSize: const Size(120, 48),
@@ -378,23 +380,27 @@ class _HomePageState extends State<HomePage> {
   }
 
   String _getUserDisplayName() {
-    if (_isLoadingUser) return 'User';
-    final name = _currentUser['name'];
-    if (name != null && name.toString().trim().isNotEmpty) {
-      return name.toString().trim();
-    }
-    final username = _currentUser['username'];
-    if (username != null && username.toString().trim().isNotEmpty) {
-      return username.toString().trim();
+    final userState = context.read<UserBloc>().state;
+    final user = userState.currentUser;
+    if (user != null) {
+      final name = user['name'];
+      if (name != null && name.toString().trim().isNotEmpty) {
+        return name.toString().trim();
+      }
+      final username = user['username'];
+      if (username != null && username.toString().trim().isNotEmpty) {
+        return username.toString().trim();
+      }
     }
     return 'User';
   }
 
   Widget _buildCustomAppBar() {
-    final userAvatar = _getUserAvatar();
-    final fallbackText = _getUserDisplayName().isNotEmpty
-        ? _getUserDisplayName()[0].toUpperCase()
-        : 'U';
+    final userState = context.watch<UserBloc>().state;
+    final userAvatar = userState.currentUser?['avatar'] ?? '';
+    final displayName = _getUserDisplayName();
+    final fallbackText =
+        displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
 
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 60, 20, 15),
@@ -450,19 +456,11 @@ class _HomePageState extends State<HomePage> {
           Container(
             width: 48,
             height: 48,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.primary.withOpacity(0.1),
-                  AppColors.secondary.withOpacity(0.05),
-                ],
-              ),
             ),
             child: Image.asset(
-              'assets/icons/clique.png',
+              'assets/images/clique_logo.png',
               width: 32,
               height: 32,
               errorBuilder: (_, __, ___) => const SizedBox(),
@@ -498,7 +496,6 @@ class _HomePageState extends State<HomePage> {
                       size: 26,
                     ),
                   ),
-                  // Notification badge
                   Positioned(
                     top: 12,
                     right: 12,
@@ -568,16 +565,6 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
-  }
-
-  String _getUserAvatar() {
-    if (_isLoadingUser) return '';
-    return (_currentUser['avatar'] ??
-            _currentUser['avatarUrl'] ??
-            _currentUser['avatar_url'] ??
-            _currentUser['image'] ??
-            '')
-        .toString();
   }
 }
 

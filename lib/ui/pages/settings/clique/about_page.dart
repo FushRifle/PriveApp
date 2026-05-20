@@ -1,6 +1,5 @@
 import 'package:clique/app/resources/constant/named_routes.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
@@ -46,11 +45,12 @@ class AboutPage extends StatelessWidget {
             _buildSocialCard(context, isDarkMode),
             const SizedBox(height: 32),
             Text(
-              'Made with ❤️ in Lagos, Nigeria',
+              'Fush Inc.',
               style: AppTheme.greyTextStyle.copyWith(
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-              ),
+                  fontSize: 14,
+                  color: AppColors.blackTextColor,
+                  fontStyle: FontStyle.normal,
+                  fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
           ],
@@ -81,13 +81,11 @@ class AboutPage extends StatelessWidget {
             ],
           ),
           child: Center(
-            child: Text(
-              'C',
-              style: TextStyle(
-                fontSize: 48,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+            child: Image.asset(
+              'assets/images/clique.png',
+              width: 32,
+              height: 32,
+              errorBuilder: (_, __, ___) => const SizedBox(),
             ),
           ),
         ),
@@ -179,7 +177,10 @@ class AboutPage extends StatelessWidget {
             },
             isDarkMode: isDarkMode,
           ),
-          const Divider(height: 1),
+          Divider(
+            height: 1,
+            color: AppColors.greyTextColor,
+          ),
           _buildLinkTile(
             icon: Icons.privacy_tip_outlined,
             title: 'Privacy Policy',
@@ -188,7 +189,10 @@ class AboutPage extends StatelessWidget {
             },
             isDarkMode: isDarkMode,
           ),
-          const Divider(height: 1),
+          Divider(
+            height: 1,
+            color: AppColors.greyTextColor,
+          ),
           _buildLinkTile(
             icon: Icons.help_outline,
             title: 'Help Center',
@@ -276,8 +280,8 @@ class AboutPage extends StatelessWidget {
                 isDarkMode: isDarkMode,
               ),
               _buildSocialButton(
-                icon: Icons.one_x_mobiledata_outlined,
-                label: 'X',
+                icon: Icons.reddit,
+                label: 'Reddit',
                 onTap: () async {
                   final Uri url = Uri.parse('https://instagram.com/clique');
                   if (await canLaunchUrl(url)) {
@@ -318,7 +322,7 @@ class AboutPage extends StatelessWidget {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withOpacity(0.2),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: AppColors.primary, size: 24),
@@ -326,7 +330,8 @@ class AboutPage extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             label,
-            style: AppTheme.greyTextStyle.copyWith(fontSize: 11),
+            style: AppTheme.greyTextStyle
+                .copyWith(fontSize: 12, fontWeight: FontWeight.bold),
           ),
         ],
       ),

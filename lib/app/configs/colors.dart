@@ -75,9 +75,7 @@ class AppColors {
   // Internal dark mode flag
   static bool _isDarkMode = false;
 
-  // ==================== THEME-AWARE GETTERS ====================
-  // These automatically return the correct color based on current mode
-
+  // ============= THEME-AWARE GETTERS ======
   static Color get background => _isDarkMode ? darkBackground : lightBackground;
   static Color get card => _isDarkMode ? darkCard : lightCard;
   static Color get cardBorder => _isDarkMode ? darkCardBorder : lightCardBorder;

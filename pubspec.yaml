@@ -71,6 +71,7 @@ dependencies:
   open_file: ^3.5.11
   file_picker: ^3.0.4
   url_launcher: ^6.3.2
+  audioplayers: ^6.6.0
 
 dev_dependencies:
   flutter_test:
@@ -88,9 +89,10 @@ flutter_launcher_icons:
   android: true
   ios: true
   remove_alpha_ios: true
-  image_path: "assets/icons/clique.png"
+  image_path: "assets/images/download.png"
   adaptive_icon_background: "#000000"
-  adaptive_icon_foreground: "assets/icons/clique.png"
+  adaptive_icon_padding: false
+  adaptive_icon_foreground: "assets/images/download.png"
 
   assets:
     - assets/images/
@@ -98,3 +100,5 @@ flutter_launcher_icons:
     - assets/profiles/
     - assets/animations/
     - assets/icons/
+    - assets/wallpapers/
+    - assets/sounds/

@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/app/resources/constant/named_routes.dart';
-import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/bloc/profile/profile_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -130,8 +129,6 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
       );
     });
     _fadeController.forward();
-
-    // Load existing profile data if any
     _loadExistingData();
   }
 
@@ -182,7 +179,6 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
       body: BlocConsumer<ProfileBloc, ProfileState>(
         listener: (context, state) {
           if (state.status == ProfileStatus.success) {
-            // Also update UserBloc to mark onboarding as complete
             context.read<UserBloc>().add(CompleteOnboarding());
 
             if (mounted) {
@@ -238,7 +234,7 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
 
   Widget _buildSkipButton(bool isLoading) {
     return Padding(
-      padding: const EdgeInsets.only(top: 16, right: 20),
+      padding: const EdgeInsets.only(top: 50, right: 20),
       child: Align(
         alignment: Alignment.topRight,
         child: GestureDetector(
@@ -255,7 +251,7 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
               style: AppTheme.blackTextStyle.copyWith(
                 color: AppColors.primary,
                 fontSize: 13,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),

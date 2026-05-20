@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
@@ -177,7 +176,7 @@ class HelpPage extends StatelessWidget {
         Text(
           'Contact Support',
           style: AppTheme.blackTextStyle.copyWith(
-            fontSize: 20,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -236,7 +235,7 @@ class HelpPage extends StatelessWidget {
         Text(
           'Report a Problem',
           style: AppTheme.blackTextStyle.copyWith(
-            fontSize: 20,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),

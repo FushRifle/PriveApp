@@ -630,7 +630,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
-      backgroundColor: isDarkMode ? AppColors.darkCard : Colors.white,
+      backgroundColor: isDarkMode ? AppColors.darkCard : AppColors.cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -641,8 +641,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           'French',
           'German',
           'Portuguese',
-          'Arabic',
-          'Hindi',
           'Chinese'
         ];
         return SafeArea(
@@ -658,11 +656,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 30),
               ...languages.map((language) => ListTile(
-                    title: Text(language,
-                        style: TextStyle(
-                            color: isDarkMode ? Colors.white : Colors.black)),
+                    title: Text(
+                      language,
+                      style: TextStyle(
+                          color: isDarkMode ? Colors.white : Colors.black),
+                    ),
                     trailing: _selectedLanguage == language
                         ? const Icon(Icons.check_circle,
                             color: AppColors.primary)
@@ -672,7 +672,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       Navigator.pop(context);
                     },
                   )),
-              const SizedBox(height: 16),
+              const SizedBox(
+                height: 30,
+              ),
             ],
           ),
         );

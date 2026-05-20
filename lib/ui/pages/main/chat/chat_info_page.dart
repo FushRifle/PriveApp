@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
+import 'package:clique/bloc/chat/chat_bloc.dart';
+import 'package:clique/bloc/chat/gallery/chat_gallery_cubit.dart';
 import 'package:clique/ui/pages/main/chat/chat_settings_page.dart';
 
-class ChatInfoPage extends StatelessWidget {
+class ChatInfoPage extends StatefulWidget {
   final String userName;
   final String userAvatar;
   final String userId;
@@ -15,6 +19,61 @@ class ChatInfoPage extends StatelessWidget {
     required this.userAvatar,
     required this.userId,
   });
+
+  @override
+  State<ChatInfoPage> createState() => _ChatInfoPageState();
+}
+
+class _ChatInfoPageState extends State<ChatInfoPage> {
+  late int _conversationId;
+  bool _isMuted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _conversationId = int.tryParse(widget.userId) ?? 0;
+    if (_conversationId != 0) {
+      context.read<ChatGalleryCubit>().loadSharedMedia(_conversationId);
+      _loadChatSettings();
+    }
+  }
+
+  void _loadChatSettings() {
+    context
+        .read<ChatBloc>()
+        .add(LoadChatSettings(conversationId: _conversationId));
+  }
+
+  void _toggleMute() async {
+    setState(() => _isMuted = !_isMuted);
+
+    context.read<ChatBloc>().add(UpdateChatSettings(
+          conversationId: _conversationId,
+          isMuted: _isMuted,
+          muteUntil:
+              _isMuted ? DateTime.now().add(const Duration(days: 365)) : null,
+        ));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content:
+            Text(_isMuted ? 'Notifications muted' : 'Notifications unmuted'),
+        backgroundColor: AppColors.greenColor,
+        duration: const Duration(seconds: 1),
+      ),
+    );
+  }
+
+  void _blockUser() async {
+    context.read<ChatBloc>().add(BlockUser(userId: _conversationId));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('User blocked'),
+        backgroundColor: Colors.red,
+      ),
+    );
+    Navigator.pop(context);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,8 +110,8 @@ class ChatInfoPage extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) => ChatSettingsPage(
-                    userName: userName,
-                    userId: userId,
+                    userName: widget.userName,
+                    userId: widget.userId,
                   ),
                 ),
               );
@@ -60,35 +119,58 @@ class ChatInfoPage extends StatelessWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // Profile section
-              _buildProfileSection(),
-              const SizedBox(height: 16),
+      body: BlocBuilder<ChatBloc, ChatState>(
+        builder: (context, chatState) {
+          final conversation = chatState.conversations.firstWhere(
+            (c) => c.userId.toString() == widget.userId,
+            orElse: () => ConversationModel(
+              id: 0,
+              userId: 0,
+              name: '',
+              avatar: '',
+              age: 0,
+              verified: false,
+              lastMessage: '',
+              lastMessageType: 'text',
+              timestamp: '',
+              unreadCount: 0,
+              isOnline: false,
+              isTyping: false,
+              isPinned: false,
+              isMuted: false,
+              muteUntil: null,
+              username: '',
+            ),
+          );
 
-              // Media section
-              _buildMediaSection(),
-              const SizedBox(height: 16),
+          _isMuted = conversation.isMuted;
 
-              // Shared files
-              _buildSharedFilesSection(),
-              const SizedBox(height: 16),
-
-              // Privacy & Support
-              _buildPrivacySection(context),
-              const SizedBox(height: 32),
-            ],
-          ),
-        ),
+          return SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  _buildProfileSection(conversation),
+                  const SizedBox(height: 16),
+                  _buildMediaSection(),
+                  const SizedBox(height: 16),
+                  _buildSharedFilesSection(),
+                  const SizedBox(height: 16),
+                  _buildPrivacySection(context, conversation.isMuted),
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildProfileSection() {
-    final firstLetter = userName.isNotEmpty ? userName[0].toUpperCase() : 'U';
+  Widget _buildProfileSection(ConversationModel conversation) {
+    final firstLetter =
+        widget.userName.isNotEmpty ? widget.userName[0].toUpperCase() : 'U';
+    final isOnline = conversation.isOnline;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -108,7 +190,7 @@ class ChatInfoPage extends StatelessWidget {
           _buildAvatar(firstLetter),
           const SizedBox(height: 16),
           Text(
-            userName,
+            widget.userName,
             style: AppTheme.blackTextStyle.copyWith(
               fontWeight: FontWeight.bold,
               fontSize: 22,
@@ -116,7 +198,7 @@ class ChatInfoPage extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '@${userName.toLowerCase().replaceAll(' ', '_')}',
+            '@${widget.userName.toLowerCase().replaceAll(' ', '_')}',
             style: AppTheme.greyTextStyle.copyWith(fontSize: 14),
           ),
           const SizedBox(height: 8),
@@ -128,15 +210,15 @@ class ChatInfoPage extends StatelessWidget {
                 height: 8,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.greenColor,
+                  color: isOnline ? AppColors.greenColor : Colors.grey,
                 ),
               ),
               const SizedBox(width: 6),
               Text(
-                'Active now',
+                isOnline ? 'Active now' : 'Offline',
                 style: AppTheme.greyTextStyle.copyWith(
                   fontSize: 13,
-                  color: AppColors.greenColor,
+                  color: isOnline ? AppColors.greenColor : Colors.grey,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -150,30 +232,21 @@ class ChatInfoPage extends StatelessWidget {
                 icon: Icons.call,
                 label: 'Audio',
                 color: AppColors.primary,
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  // TODO: Make audio call
-                },
+                onTap: () {},
               ),
               const SizedBox(width: 16),
               _buildActionChip(
                 icon: Icons.videocam,
                 label: 'Video',
                 color: AppColors.primary,
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  // TODO: Make video call
-                },
+                onTap: () {},
               ),
               const SizedBox(width: 16),
               _buildActionChip(
                 icon: Icons.person_outline,
                 label: 'Profile',
                 color: AppColors.primary,
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  // TODO: View profile
-                },
+                onTap: () {},
               ),
             ],
           ),
@@ -183,7 +256,7 @@ class ChatInfoPage extends StatelessWidget {
   }
 
   Widget _buildAvatar(String fallbackText) {
-    final avatar = userAvatar;
+    final avatar = widget.userAvatar;
 
     return Container(
       width: 80,
@@ -196,10 +269,30 @@ class ChatInfoPage extends StatelessWidget {
         ),
       ),
       child: ClipOval(
-        child: avatar.isNotEmpty
-            ? (avatar.startsWith('http')
-                ? Image.network(avatar, fit: BoxFit.cover)
-                : Image.asset(avatar, fit: BoxFit.cover))
+        child: avatar.isNotEmpty && avatar.startsWith('http')
+            ? CachedNetworkImage(
+                imageUrl: avatar,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(
+                  color: AppColors.primary.withOpacity(0.1),
+                  child: const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+                errorWidget: (context, url, error) => Container(
+                  color: AppColors.primary.withOpacity(0.1),
+                  child: Center(
+                    child: Text(
+                      fallbackText,
+                      style: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ),
+              )
             : Container(
                 color: AppColors.primary.withOpacity(0.1),
                 child: Center(
@@ -250,120 +343,171 @@ class ChatInfoPage extends StatelessWidget {
   }
 
   Widget _buildMediaSection() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+    return BlocBuilder<ChatGalleryCubit, ChatGalleryState>(
+      builder: (context, state) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Shared Media',
+                    style: AppTheme.blackTextStyle.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  if (state is ChatGalleryLoaded && state.images.isNotEmpty)
+                    TextButton(
+                      onPressed: () => _showAllMedia(context, state.images),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                      ),
+                      child: const Text('See all'),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildMediaGrid(state),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMediaGrid(ChatGalleryState state) {
+    if (state is ChatGalleryLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+
+    if (state is ChatGalleryError) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Text(
+            'Failed to load media',
+            style: AppTheme.greyTextStyle,
+          ),
+        ),
+      );
+    }
+
+    if (state is ChatGalleryLoaded && state.images.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Text(
+            'No shared media yet',
+            style: AppTheme.greyTextStyle,
+          ),
+        ),
+      );
+    }
+
+    if (state is ChatGalleryLoaded) {
+      final images = state.images.take(4).toList();
+
+      return Row(
+        children: List.generate(images.length, (index) {
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => _showImageViewer(images[index].url),
+              child: Container(
+                height: 80,
+                margin: EdgeInsets.only(right: index < 3 ? 8 : 0),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  image: DecorationImage(
+                    image: CachedNetworkImageProvider(images[index].url),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildSharedFilesSection() {
+    return BlocBuilder<ChatGalleryCubit, ChatGalleryState>(
+      builder: (context, state) {
+        if (state is ChatGalleryLoaded && state.documents.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Shared Media',
+                'Shared Files',
                 style: AppTheme.blackTextStyle.copyWith(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),
               ),
-              TextButton(
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  // TODO: Show all media
-                },
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.primary,
+              const SizedBox(height: 16),
+              if (state is ChatGalleryLoading)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  ),
                 ),
-                child: const Text('See all'),
-              ),
+              if (state is ChatGalleryLoaded)
+                ...state.documents.take(3).map((doc) => Column(
+                      children: [
+                        _buildFileItem(
+                          icon: _getFileIcon(doc.name),
+                          name: doc.name,
+                          size: doc.size,
+                          color: _getFileColor(doc.name),
+                          onTap: () => _openDocument(doc.url),
+                        ),
+                        if (doc != state.documents.last)
+                          const SizedBox(height: 12),
+                      ],
+                    )),
             ],
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: List.generate(4, (index) {
-              return Expanded(
-                child: Container(
-                  height: 80,
-                  margin: EdgeInsets.only(
-                    right: index < 3 ? 8 : 0,
-                  ),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: AppColors.primary.withOpacity(0.05),
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.image,
-                      color: AppColors.primary.withOpacity(0.3),
-                      size: 30,
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSharedFilesSection() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Shared Files',
-            style: AppTheme.blackTextStyle.copyWith(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildFileItem(
-            icon: Icons.picture_as_pdf,
-            name: 'Project_brief.pdf',
-            size: '2.4 MB',
-            color: Colors.red,
-          ),
-          const SizedBox(height: 12),
-          _buildFileItem(
-            icon: Icons.image,
-            name: 'Screenshot_2024.png',
-            size: '1.1 MB',
-            color: Colors.blue,
-          ),
-          const SizedBox(height: 12),
-          _buildFileItem(
-            icon: Icons.video_file,
-            name: 'Tutorial.mp4',
-            size: '45.8 MB',
-            color: Colors.purple,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -372,6 +516,7 @@ class ChatInfoPage extends StatelessWidget {
     required String name,
     required String size,
     required Color color,
+    required VoidCallback onTap,
   }) {
     return Row(
       children: [
@@ -395,6 +540,8 @@ class ChatInfoPage extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                   fontSize: 14,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               Text(
                 size,
@@ -405,18 +552,14 @@ class ChatInfoPage extends StatelessWidget {
         ),
         IconButton(
           icon: const Icon(Icons.download, color: AppColors.primary),
-          onPressed: () {
-            HapticFeedback.lightImpact();
-            // TODO: Download file
-          },
+          onPressed: onTap,
         ),
       ],
     );
   }
 
-  Widget _buildPrivacySection(BuildContext context) {
-    // Add context parameter
-    final username = '@${userName.toLowerCase().replaceAll(' ', '_')}';
+  Widget _buildPrivacySection(BuildContext context, bool isMuted) {
+    final username = '@${widget.userName.toLowerCase().replaceAll(' ', '_')}';
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -434,13 +577,11 @@ class ChatInfoPage extends StatelessWidget {
       child: Column(
         children: [
           _buildInfoTile(
-            icon: Icons.notifications_off_outlined,
-            title: 'Mute Notifications',
-            subtitle: 'Currently unmuted',
-            onTap: () {
-              HapticFeedback.lightImpact();
-              // TODO: Mute notifications
-            },
+            icon:
+                isMuted ? Icons.notifications_off : Icons.notifications_active,
+            title: isMuted ? 'Unmute Notifications' : 'Mute Notifications',
+            subtitle: isMuted ? 'Currently muted' : 'Currently unmuted',
+            onTap: _toggleMute,
           ),
           const Divider(height: 1, indent: 56),
           _buildInfoTile(
@@ -448,7 +589,7 @@ class ChatInfoPage extends StatelessWidget {
             title: 'Block User',
             subtitle: 'Block $username',
             titleColor: AppColors.redColor,
-            onTap: () => _showBlockDialog(context), // Pass context
+            onTap: () => _showBlockDialog(context),
           ),
           const Divider(height: 1, indent: 56),
           _buildInfoTile(
@@ -456,7 +597,7 @@ class ChatInfoPage extends StatelessWidget {
             title: 'Report User',
             subtitle: 'Report inappropriate content',
             titleColor: AppColors.redColor,
-            onTap: () => _showReportDialog(context), // Pass context
+            onTap: () => _showReportDialog(context),
           ),
         ],
       ),
@@ -490,13 +631,160 @@ class ChatInfoPage extends StatelessWidget {
     );
   }
 
+  void _showAllMedia(BuildContext context, List<SharedMedia> images) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(top: 12),
+              decoration: BoxDecoration(
+                color: AppColors.greyColor.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'All Media',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+            Expanded(
+              child: GridView.builder(
+                padding: const EdgeInsets.all(8),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 4,
+                  mainAxisSpacing: 4,
+                  childAspectRatio: 1,
+                ),
+                itemCount: images.length,
+                itemBuilder: (context, index) {
+                  return GestureDetector(
+                    onTap: () => _showImageViewer(images[index].url),
+                    child: CachedNetworkImage(
+                      imageUrl: images[index].url,
+                      fit: BoxFit.cover,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showImageViewer(String url) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          body: Stack(
+            children: [
+              Center(
+                child: InteractiveViewer(
+                  child: CachedNetworkImage(imageUrl: url),
+                ),
+              ),
+              Positioned(
+                top: 40,
+                right: 16,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openDocument(String url) {
+    // TODO: Implement document viewer
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Document viewer coming soon')),
+    );
+  }
+
+  IconData _getFileIcon(String filename) {
+    final ext = filename.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'pdf':
+        return Icons.picture_as_pdf;
+      case 'doc':
+      case 'docx':
+        return Icons.description;
+      case 'xls':
+      case 'xlsx':
+        return Icons.table_chart;
+      case 'ppt':
+      case 'pptx':
+        return Icons.slideshow;
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+      case 'gif':
+        return Icons.image;
+      case 'mp4':
+      case 'mov':
+      case 'avi':
+        return Icons.video_file;
+      default:
+        return Icons.insert_drive_file;
+    }
+  }
+
+  Color _getFileColor(String filename) {
+    final ext = filename.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'pdf':
+        return Colors.red;
+      case 'doc':
+      case 'docx':
+        return Colors.blue;
+      case 'xls':
+      case 'xlsx':
+        return Colors.green;
+      case 'ppt':
+      case 'pptx':
+        return Colors.orange;
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+      case 'gif':
+        return Colors.purple;
+      case 'mp4':
+      case 'mov':
+      case 'avi':
+        return Colors.teal;
+      default:
+        return AppColors.primary;
+    }
+  }
+
   void _showBlockDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
-          'Block $userName?', // Use userName directly, not widget.userName
+          'Block ${widget.userName}?',
           style: AppTheme.blackTextStyle.copyWith(fontWeight: FontWeight.bold),
         ),
         content: Text(
@@ -511,7 +799,7 @@ class ChatInfoPage extends StatelessWidget {
           TextButton(
             onPressed: () {
               Navigator.pop(dialogContext);
-              // TODO: Block user
+              _blockUser();
             },
             child: Text(
               'Block',
@@ -530,7 +818,7 @@ class ChatInfoPage extends StatelessWidget {
       builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
-          'Report $userName', // Use userName directly, not widget.userName
+          'Report ${widget.userName}',
           style: AppTheme.blackTextStyle.copyWith(fontWeight: FontWeight.bold),
         ),
         content: Column(
@@ -559,7 +847,9 @@ class ChatInfoPage extends StatelessWidget {
           TextButton(
             onPressed: () {
               Navigator.pop(dialogContext);
-              // TODO: Report user
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Report submitted')),
+              );
             },
             child: Text(
               'Report',

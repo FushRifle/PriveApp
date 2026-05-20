@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clique/app/resources/constant/named_routes.dart';
 import 'package:clique/bloc/reels/reel_bloc.dart';
-import 'package:clique/data/services/user/user_service.dart';
+import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/ui/widgets/reels/reel_item.dart';
 
 class ReelsPage extends StatefulWidget {
@@ -16,29 +16,16 @@ class ReelsPage extends StatefulWidget {
 
 class _ReelsPageState extends State<ReelsPage> {
   late PageController _pageController;
-  final UserService _userService = UserService();
-  int _currentUserId = 0;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
-    _getCurrentUserId();
+    _loadCurrentUser();
   }
 
-  Future<void> _getCurrentUserId() async {
-    try {
-      final userData = await _userService.getCurrentUser();
-      final userId = userData['id'];
-      setState(() {
-        _currentUserId = userId != null ? int.parse(userId.toString()) : 0;
-      });
-    } catch (e) {
-      debugPrint('Error getting current user: $e');
-      setState(() {
-        _currentUserId = 0;
-      });
-    }
+  void _loadCurrentUser() {
+    context.read<UserBloc>().add(LoadCurrentUser());
   }
 
   @override
@@ -56,8 +43,12 @@ class _ReelsPageState extends State<ReelsPage> {
       ),
     );
 
-    return BlocProvider(
-      create: (context) => ReelBloc()..add(const LoadReels()),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (context) => ReelBloc()..add(const LoadReels()),
+        ),
+      ],
       child: BlocConsumer<ReelBloc, ReelState>(
         listener: (context, state) {
           if (state.error != null) {
@@ -77,158 +68,145 @@ class _ReelsPageState extends State<ReelsPage> {
           final hasMore = state.hasMore;
           final isRefreshing = state.isRefreshing;
 
-          return Scaffold(
-            backgroundColor: Colors.black,
-            body: Stack(
-              children: [
-                reels.isEmpty && isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : PageView.builder(
-                        controller: _pageController,
-                        scrollDirection: Axis.vertical,
-                        itemCount: reels.length + 1,
-                        onPageChanged: (index) {
-                          if (index >= reels.length - 2 &&
-                              hasMore &&
-                              !isLoadingMore &&
-                              !isRefreshing) {
-                            context.read<ReelBloc>().add(LoadMoreReels());
-                          }
-                        },
-                        itemBuilder: (context, index) {
-                          if (index == reels.length) {
-                            if (hasMore) {
-                              return const Center(
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              );
-                            } else if (reels.isEmpty) {
-                              return const Center(
-                                child: Text(
-                                  'No reels available',
-                                  style: TextStyle(color: Colors.white54),
-                                ),
-                              );
-                            } else {
-                              return const Center(
-                                child: Text(
-                                  'No more reels',
-                                  style: TextStyle(color: Colors.white54),
-                                ),
-                              );
-                            }
-                          }
+          return BlocBuilder<UserBloc, UserState>(
+            builder: (context, userState) {
+              final currentUserId = userState.currentUser?['id'] ?? 0;
 
-                          return RefreshIndicator(
-                            onRefresh: () async {
-                              context.read<ReelBloc>().add(RefreshReels());
-                              await Future.delayed(
-                                  const Duration(milliseconds: 500));
+              return Scaffold(
+                backgroundColor: Colors.black,
+                body: Stack(
+                  children: [
+                    reels.isEmpty && isLoading
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : PageView.builder(
+                            controller: _pageController,
+                            scrollDirection: Axis.vertical,
+                            itemCount: reels.length + 1,
+                            onPageChanged: (index) {
+                              if (index >= reels.length - 2 &&
+                                  hasMore &&
+                                  !isLoadingMore &&
+                                  !isRefreshing) {
+                                context.read<ReelBloc>().add(LoadMoreReels());
+                              }
                             },
-                            color: Colors.white,
-                            child: ReelItem(
-                              reel: reels[index],
-                              isActive: true,
-                              onNextReel: () {
-                                if (index < reels.length - 1) {
-                                  _pageController.nextPage(
-                                    duration: const Duration(milliseconds: 300),
-                                    curve: Curves.easeInOut,
+                            itemBuilder: (context, index) {
+                              if (index == reels.length) {
+                                if (hasMore) {
+                                  return const Center(
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  );
+                                } else if (reels.isEmpty) {
+                                  return const Center(
+                                    child: Text(
+                                      'No reels available',
+                                      style: TextStyle(color: Colors.white54),
+                                    ),
+                                  );
+                                } else {
+                                  return const Center(
+                                    child: Text(
+                                      'No more reels',
+                                      style: TextStyle(color: Colors.white54),
+                                    ),
                                   );
                                 }
-                              },
-                              onLike: () {
-                                final reelId = reels[index]['id'].toString();
-                                final isLiked =
-                                    reels[index]['isLiked'] ?? false;
+                              }
 
-                                if (isLiked) {
-                                  context.read<ReelBloc>().add(
-                                        UnlikeReel(
-                                            reelId: reelId, index: index),
+                              return RefreshIndicator(
+                                onRefresh: () async {
+                                  context.read<ReelBloc>().add(RefreshReels());
+                                  await Future.delayed(
+                                      const Duration(milliseconds: 500));
+                                },
+                                color: Colors.white,
+                                child: ReelItem(
+                                  reel: reels[index],
+                                  isActive: true,
+                                  onNextReel: () {
+                                    if (index < reels.length - 1) {
+                                      _pageController.nextPage(
+                                        duration:
+                                            const Duration(milliseconds: 300),
+                                        curve: Curves.easeInOut,
                                       );
-                                } else {
-                                  context.read<ReelBloc>().add(
-                                        LikeReel(reelId: reelId, index: index),
-                                      );
-                                }
-                              },
-                              onShare: () {
-                                final reelId = reels[index]['id'].toString();
-                                context.read<ReelBloc>().add(
-                                      ShareReel(reelId: reelId, index: index),
-                                    );
-                              },
-                              currentUserId: _currentUserId,
+                                    }
+                                  },
+                                  index: index,
+                                  currentUserId: currentUserId,
+                                ),
+                              );
+                            },
+                          ),
+                    // Header
+                    Positioned(
+                      top: MediaQuery.of(context).padding.top + 10,
+                      left: 16,
+                      right: 16,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              Navigator.pushReplacementNamed(
+                                context,
+                                NamedRoutes.homeScreen,
+                              );
+                            },
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: Colors.blueGrey.withOpacity(0.3),
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                              child: const Icon(
+                                Icons.arrow_back_ios_new,
+                                color: Colors.white,
+                                size: 20,
+                              ),
                             ),
-                          );
-                        },
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const CreateReelPage(),
+                                ),
+                              );
+                            },
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: Colors.blueGrey.withOpacity(0.3),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: const Icon(
+                                Icons.add,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                // Header
-                Positioned(
-                  top: MediaQuery.of(context).padding.top + 10,
-                  left: 16,
-                  right: 16,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          Navigator.pushReplacementNamed(
-                            context,
-                            NamedRoutes.homeScreen,
-                          );
-                        },
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.3),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.arrow_back_ios_new,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => const CreateReelPage()),
-                          );
-                        },
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.3),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.add,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           );
         },
       ),

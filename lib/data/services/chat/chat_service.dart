@@ -4,90 +4,209 @@ import '../../../core/api_service.dart';
 class ChatService {
   final ApiService _api = ApiService();
 
-  // Get conversations
-  Future<List<dynamic>> getConversations() async {
+  void setAuthToken(String token) {
+    _api.setAuthToken(token);
+  }
+
+  void clearAuthToken() {
+    _api.clearAuthToken();
+  }
+
+  // Get all conversations
+  Future<List<Map<String, dynamic>>> getConversations() async {
     try {
-      final response = await _api.get('/chat/conversations');
-      return response.data is List ? response.data : [];
+      final response = await _api.get('/api/chat/conversations');
+      return response.data is List
+          ? List<Map<String, dynamic>>.from(response.data)
+          : [];
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to get conversations';
+      throw _handleError(e, 'Failed to load conversations');
     }
   }
 
-  // Get messages with a specific user
-  Future<List<dynamic>> getMessages(int userId, {int page = 1}) async {
+  // Get conversation info
+  Future<Map<String, dynamic>> getConversationInfo(int conversationId) async {
     try {
       final response =
-          await _api.get('/chat/messages/$userId', queryParameters: {
-        'page': page,
-      });
-      return response.data is List ? response.data : [];
+          await _api.get('/api/chat/conversations/$conversationId');
+      return response.data;
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to get messages';
+      throw _handleError(e, 'Failed to load conversation info');
     }
   }
 
-  // Send message
-  Future<Map<String, dynamic>> sendMessage(Map<String, dynamic> data) async {
+  // Get messages for a conversation
+  Future<List<Map<String, dynamic>>> getMessages(int conversationId,
+      {int page = 1}) async {
     try {
-      final response = await _api.post('/chat/messages', data: data);
-      return response.data;
+      final response = await _api
+          .get('/api/chat/messages/$conversationId', queryParameters: {
+        'page': page,
+      });
+      return response.data is List
+          ? List<Map<String, dynamic>>.from(response.data)
+          : [];
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to send message';
+      throw _handleError(e, 'Failed to load messages');
+    }
+  }
+
+  // Send a message
+  Future<void> sendMessage({
+    required int receiverId,
+    required String message,
+    String messageType = 'text',
+    String? mediaUrl,
+  }) async {
+    try {
+      final data = {
+        'receiverId': receiverId,
+        'message': message,
+        'messageType': messageType,
+        if (mediaUrl != null) 'mediaUrl': mediaUrl,
+      };
+      await _api.post('/api/chat/messages', data: data);
+    } on DioException catch (e) {
+      throw _handleError(e, 'Failed to send message');
     }
   }
 
   // Mark messages as read
-  Future<Map<String, dynamic>> markMessagesAsRead(int userId) async {
+  Future<void> markAsRead(int conversationId) async {
     try {
-      final response = await _api.post('/chat/messages/$userId/read');
-      return response.data;
+      await _api.post('/api/chat/messages/$conversationId/read');
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to mark as read';
+      throw _handleError(e, 'Failed to mark as read');
     }
   }
 
-  // Get chat preferences
-  Future<Map<String, dynamic>> getPreferences() async {
+  // Get chat settings for a conversation
+  Future<Map<String, dynamic>> getChatSettings(int conversationId) async {
     try {
-      final response = await _api.get('/chat/preferences');
+      final response = await _api.get('/api/chat/settings/$conversationId');
       return response.data;
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to get preferences';
+      throw _handleError(e, 'Failed to load chat settings');
     }
   }
 
-  // Update chat preferences
-  Future<Map<String, dynamic>> updatePreferences(
-      Map<String, dynamic> data) async {
+  // Update chat settings
+  Future<void> updateChatSettings(
+    int conversationId, {
+    bool? isPinned,
+    bool? isMuted,
+    DateTime? muteUntil,
+    String? wallpaper,
+    String? chatColor,
+    String? notificationSound,
+  }) async {
     try {
-      final response = await _api.put('/chat/preferences', data: data);
-      return response.data;
+      final data = <String, dynamic>{};
+      if (isPinned != null) data['isPinned'] = isPinned;
+      if (isMuted != null) data['isMuted'] = isMuted;
+      if (muteUntil != null) data['muteUntil'] = muteUntil.toIso8601String();
+      if (wallpaper != null) data['wallpaper'] = wallpaper;
+      if (chatColor != null) data['chatColor'] = chatColor;
+      if (notificationSound != null) {
+        data['notificationSound'] = notificationSound;
+      }
+
+      await _api.put('/api/chat/settings/$conversationId', data: data);
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to update preferences';
+      throw _handleError(e, 'Failed to update chat settings');
     }
   }
 
-  // Set online status
-  Future<Map<String, dynamic>> setOnlineStatus(bool isOnline) async {
+  // Get user preferences
+  Future<Map<String, dynamic>> getUserPreferences() async {
     try {
-      final response = await _api.post('/chat/status/online', data: {
-        'isOnline': isOnline,
-      });
+      final response = await _api.get('/api/chat/preferences');
       return response.data;
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to update online status';
+      throw _handleError(e, 'Failed to load preferences');
+    }
+  }
+
+  // Update user preferences
+  Future<void> updateUserPreferences({
+    String? wallpaper,
+    String? chatColor,
+    String? notificationSound,
+    int? fontSize,
+    bool? enterToSend,
+    bool? readReceipts,
+    bool? typingIndicators,
+    bool? messagePreview,
+    String? autoDownloadMedia,
+  }) async {
+    try {
+      final data = <String, dynamic>{};
+      if (wallpaper != null) data['wallpaper'] = wallpaper;
+      if (chatColor != null) data['chatColor'] = chatColor;
+      if (notificationSound != null) {
+        data['notificationSound'] = notificationSound;
+      }
+      if (fontSize != null) data['fontSize'] = fontSize;
+      if (enterToSend != null) data['enterToSend'] = enterToSend;
+      if (readReceipts != null) data['readReceipts'] = readReceipts;
+      if (typingIndicators != null) data['typingIndicators'] = typingIndicators;
+      if (messagePreview != null) data['messagePreview'] = messagePreview;
+      if (autoDownloadMedia != null) {
+        data['autoDownloadMedia'] = autoDownloadMedia;
+      }
+
+      await _api.put('/api/chat/preferences', data: data);
+    } on DioException catch (e) {
+      throw _handleError(e, 'Failed to update preferences');
     }
   }
 
   // Set typing status
-  Future<Map<String, dynamic>> setTypingStatus(
-      Map<String, dynamic> data) async {
+  Future<void> setTyping(int conversationId, bool isTyping) async {
     try {
-      final response = await _api.post('/chat/status/typing', data: data);
-      return response.data;
+      await _api.post('/api/chat/typing', data: {
+        'conversationId': conversationId,
+        'isTyping': isTyping,
+      });
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to update typing status';
+      // Silently fail - typing status is non-critical
+      print('Failed to set typing status: $e');
     }
+  }
+
+  // Block user
+  Future<void> blockUser(int userId) async {
+    try {
+      await _api.post('/api/chat/block', data: {'userIdToBlock': userId});
+    } on DioException catch (e) {
+      throw _handleError(e, 'Failed to block user');
+    }
+  }
+
+  // Unblock user
+  Future<void> unblockUser(int userId) async {
+    try {
+      await _api.delete('/api/chat/block/$userId');
+    } on DioException catch (e) {
+      throw _handleError(e, 'Failed to unblock user');
+    }
+  }
+
+  // Clear chat
+  Future<void> clearChat(int conversationId) async {
+    try {
+      await _api.delete('/api/chat/clear/$conversationId');
+    } on DioException catch (e) {
+      throw _handleError(e, 'Failed to clear chat');
+    }
+  }
+
+  String _handleError(DioException e, String fallback) {
+    final data = e.response?.data;
+    if (data is Map) {
+      final message = data['message'] ?? data['error'];
+      if (message != null) return message.toString();
+    }
+    return fallback;
   }
 }

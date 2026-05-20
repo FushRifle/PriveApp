@@ -1,16 +1,12 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:clique/data/services/socials/insights_service.dart';
+import 'package:clique/data/services/insights/insights_service.dart';
 
 part 'insights_event.dart';
 part 'insights_state.dart';
 
 class InsightsBloc extends Bloc<InsightsEvent, InsightsState> {
-  final InsightsService _insightsService = InsightsService();
-
-  // Debounce tracking to avoid too many requests
-  final Map<String, DateTime> _lastTrackedEvents = {};
-  static const _trackingDebounce = Duration(seconds: 2);
+  final InsightsService _service = InsightsService();
 
   InsightsBloc() : super(const InsightsState()) {
     on<LoadInsights>(_onLoadInsights);
@@ -18,21 +14,6 @@ class InsightsBloc extends Bloc<InsightsEvent, InsightsState> {
     on<ChangeInsightsPeriod>(_onChangeInsightsPeriod);
     on<LoadRealtimeStats>(_onLoadRealtimeStats);
     on<RefreshRealtimeStats>(_onRefreshRealtimeStats);
-
-    // Tracking events (fire and forget - don't await)
-    on<TrackEvent>(_onTrackEvent);
-    on<TrackPostView>(_onTrackPostView);
-    on<TrackPostLike>(_onTrackPostLike);
-    on<TrackPostComment>(_onTrackPostComment);
-    on<TrackPostShare>(_onTrackPostShare);
-    on<TrackReelView>(_onTrackReelView);
-    on<TrackReelLike>(_onTrackReelLike);
-    on<TrackReelShare>(_onTrackReelShare);
-    on<TrackProfileView>(_onTrackProfileView);
-    on<TrackFollow>(_onTrackFollow);
-    on<TrackStoryView>(_onTrackStoryView);
-    on<TrackSearch>(_onTrackSearch);
-
     on<ClearInsightsError>(_onClearInsightsError);
     on<ResetInsightsState>(_onResetInsightsState);
   }
@@ -42,29 +23,22 @@ class InsightsBloc extends Bloc<InsightsEvent, InsightsState> {
     Emitter<InsightsState> emit,
   ) async {
     if (state.insights == null) {
-      emit(state.copyWith(
-        status: InsightsStatus.loading,
-        isLoading: true,
-        error: null,
-      ));
+      emit(state.copyWith(status: InsightsStatus.loading, error: null));
     }
 
     try {
-      final insightsData = await _insightsService.getInsights(days: event.days);
-      final insights = InsightsData.fromJson(insightsData);
+      final data = await _service.getInsights(days: event.days);
+      final insights = _parseInsightsData(data);
 
       emit(state.copyWith(
         insights: insights,
         currentPeriodDays: event.days,
         status: InsightsStatus.success,
-        isLoading: false,
         error: null,
-        lastUpdated: DateTime.now(),
       ));
     } catch (e) {
       emit(state.copyWith(
         status: InsightsStatus.error,
-        isLoading: false,
         error: e.toString(),
       ));
     }
@@ -74,28 +48,21 @@ class InsightsBloc extends Bloc<InsightsEvent, InsightsState> {
     RefreshInsights event,
     Emitter<InsightsState> emit,
   ) async {
-    emit(state.copyWith(
-      status: InsightsStatus.refreshing,
-      isRefreshing: true,
-      error: null,
-    ));
+    emit(state.copyWith(status: InsightsStatus.refreshing, error: null));
 
     try {
-      final insightsData = await _insightsService.getInsights(days: event.days);
-      final insights = InsightsData.fromJson(insightsData);
+      final data = await _service.getInsights(days: event.days);
+      final insights = _parseInsightsData(data);
 
       emit(state.copyWith(
         insights: insights,
         currentPeriodDays: event.days,
         status: InsightsStatus.success,
-        isRefreshing: false,
         error: null,
-        lastUpdated: DateTime.now(),
       ));
     } catch (e) {
       emit(state.copyWith(
         status: InsightsStatus.error,
-        isRefreshing: false,
         error: e.toString(),
       ));
     }
@@ -112,25 +79,17 @@ class InsightsBloc extends Bloc<InsightsEvent, InsightsState> {
     LoadRealtimeStats event,
     Emitter<InsightsState> emit,
   ) async {
-    if (state.realtimeStats == null) {
-      emit(state.copyWith(
-        realtimeStatus: InsightsStatus.loading,
-      ));
-    }
-
     try {
-      final statsData = await _insightsService.getRealtimeStats();
-      final stats = RealtimeStats.fromJson(statsData);
+      final data = await _service.getRealtimeStats();
+      final stats = RealtimeStats(
+        onlineViewers: data['onlineViewers'] ?? data['viewers'] ?? 0,
+        activeSessions: data['activeSessions'] ?? data['sessions'] ?? 0,
+      );
 
-      emit(state.copyWith(
-        realtimeStats: stats,
-        realtimeStatus: InsightsStatus.success,
-      ));
+      emit(state.copyWith(realtimeStats: stats));
     } catch (e) {
-      emit(state.copyWith(
-        realtimeStatus: InsightsStatus.error,
-        error: e.toString(),
-      ));
+      // Silently fail - realtime stats are non-critical
+      print('Failed to load realtime stats: $e');
     }
   }
 
@@ -138,192 +97,7 @@ class InsightsBloc extends Bloc<InsightsEvent, InsightsState> {
     RefreshRealtimeStats event,
     Emitter<InsightsState> emit,
   ) async {
-    try {
-      final statsData = await _insightsService.getRealtimeStats();
-      final stats = RealtimeStats.fromJson(statsData);
-
-      emit(state.copyWith(
-        realtimeStats: stats,
-        realtimeStatus: InsightsStatus.success,
-      ));
-    } catch (e) {
-      emit(state.copyWith(
-        realtimeStatus: InsightsStatus.error,
-        error: e.toString(),
-      ));
-    }
-  }
-
-  // Tracking events - fire and forget with debounce
-  Future<void> _onTrackEvent(
-    TrackEvent event,
-    Emitter<InsightsState> emit,
-  ) async {
-    final key = '${event.eventType}_${event.objectType}_${event.objectId}';
-
-    // Debounce to avoid duplicate tracking in quick succession
-    final lastTracked = _lastTrackedEvents[key];
-    if (lastTracked != null &&
-        DateTime.now().difference(lastTracked) < _trackingDebounce) {
-      return;
-    }
-
-    _lastTrackedEvents[key] = DateTime.now();
-
-    try {
-      // Don't await - fire and forget
-      _insightsService.trackEvent(
-        eventType: event.eventType,
-        objectType: event.objectType,
-        objectId: event.objectId,
-        section: event.section,
-        source: event.source,
-      );
-    } catch (e) {
-      // Silently fail - tracking shouldn't break user experience
-      print('Failed to track event: $e');
-    }
-  }
-
-  Future<void> _onTrackPostView(
-    TrackPostView event,
-    Emitter<InsightsState> emit,
-  ) async {
-    add(TrackEvent(
-      eventType: 'view',
-      objectType: 'post',
-      objectId: event.postId,
-      section: event.section,
-    ));
-  }
-
-  Future<void> _onTrackPostLike(
-    TrackPostLike event,
-    Emitter<InsightsState> emit,
-  ) async {
-    add(TrackEvent(
-      eventType: 'like',
-      objectType: 'post',
-      objectId: event.postId,
-      section: event.section,
-    ));
-  }
-
-  Future<void> _onTrackPostComment(
-    TrackPostComment event,
-    Emitter<InsightsState> emit,
-  ) async {
-    add(TrackEvent(
-      eventType: 'comment',
-      objectType: 'post',
-      objectId: event.postId,
-      section: event.section,
-    ));
-  }
-
-  Future<void> _onTrackPostShare(
-    TrackPostShare event,
-    Emitter<InsightsState> emit,
-  ) async {
-    add(TrackEvent(
-      eventType: 'share',
-      objectType: 'post',
-      objectId: event.postId,
-      section: event.section,
-    ));
-  }
-
-  Future<void> _onTrackReelView(
-    TrackReelView event,
-    Emitter<InsightsState> emit,
-  ) async {
-    add(TrackEvent(
-      eventType: 'view',
-      objectType: 'reel',
-      objectId: event.reelId,
-      section: event.section,
-    ));
-  }
-
-  Future<void> _onTrackReelLike(
-    TrackReelLike event,
-    Emitter<InsightsState> emit,
-  ) async {
-    add(TrackEvent(
-      eventType: 'like',
-      objectType: 'reel',
-      objectId: event.reelId,
-      section: event.section,
-    ));
-  }
-
-  Future<void> _onTrackReelShare(
-    TrackReelShare event,
-    Emitter<InsightsState> emit,
-  ) async {
-    add(TrackEvent(
-      eventType: 'share',
-      objectType: 'reel',
-      objectId: event.reelId,
-      section: event.section,
-    ));
-  }
-
-  Future<void> _onTrackProfileView(
-    TrackProfileView event,
-    Emitter<InsightsState> emit,
-  ) async {
-    add(TrackEvent(
-      eventType: 'view',
-      objectType: 'profile',
-      objectId: event.userId,
-      section: event.section,
-    ));
-  }
-
-  Future<void> _onTrackFollow(
-    TrackFollow event,
-    Emitter<InsightsState> emit,
-  ) async {
-    add(TrackEvent(
-      eventType: 'follow',
-      objectType: 'user',
-      objectId: event.userId,
-      section: event.section,
-    ));
-  }
-
-  Future<void> _onTrackStoryView(
-    TrackStoryView event,
-    Emitter<InsightsState> emit,
-  ) async {
-    add(TrackEvent(
-      eventType: 'view',
-      objectType: 'story',
-      objectId: event.storyId,
-      section: event.section,
-    ));
-  }
-
-  Future<void> _onTrackSearch(
-    TrackSearch event,
-    Emitter<InsightsState> emit,
-  ) async {
-    final key = 'search_${event.query}';
-
-    final lastTracked = _lastTrackedEvents[key];
-    if (lastTracked != null &&
-        DateTime.now().difference(lastTracked) < _trackingDebounce) {
-      return;
-    }
-
-    _lastTrackedEvents[key] = DateTime.now();
-
-    try {
-      await _insightsService.trackSearch(event.query, section: event.section);
-    } catch (e) {
-      print('Failed to track search: $e');
-    }
+    add(LoadRealtimeStats());
   }
 
   void _onClearInsightsError(
@@ -337,7 +111,100 @@ class InsightsBloc extends Bloc<InsightsEvent, InsightsState> {
     ResetInsightsState event,
     Emitter<InsightsState> emit,
   ) {
-    _lastTrackedEvents.clear();
     emit(const InsightsState());
+  }
+
+  InsightsData _parseInsightsData(Map<String, dynamic> data) {
+    final overview = data['overview'] as Map<String, dynamic>? ?? {};
+    final previousOverview =
+        data['previousOverview'] as Map<String, dynamic>? ?? {};
+
+    final demographicsData =
+        data['demographics'] as Map<String, dynamic>? ?? {};
+    final locationsData = data['topLocations'] as List? ?? [];
+    final ageRangesData = data['ageRanges'] as List? ?? [];
+    final chartDataMap = data['chartData'] as Map<String, dynamic>? ?? {};
+
+    return InsightsData(
+      totalViews: overview['totalViews'] ?? 0,
+      totalViewsChange: _getChangePercentage(
+        overview['totalViews'],
+        previousOverview['totalViews'],
+      ),
+      totalEngagement: overview['totalEngagement'] ?? 0,
+      totalEngagementChange: _getChangePercentage(
+        overview['totalEngagement'],
+        previousOverview['totalEngagement'],
+      ),
+      newFollowers: overview['newFollowers'] ?? 0,
+      newFollowersChange: _getChangePercentage(
+        overview['newFollowers'],
+        previousOverview['newFollowers'],
+      ),
+      totalReach: overview['totalReach'] ?? 0,
+      totalReachChange: _getChangePercentage(
+        overview['totalReach'],
+        previousOverview['totalReach'],
+      ),
+      engagementRate: (data['engagementRate'] as num?)?.toDouble() ?? 0,
+      previousEngagementRate:
+          (data['previousEngagementRate'] as num?)?.toDouble() ?? 0,
+      demographics: Demographics(
+        male: demographicsData['male'] ?? 0,
+        female: demographicsData['female'] ?? 0,
+        other: demographicsData['other'] ?? 0,
+      ),
+      topLocations: (locationsData)
+          .map((item) => TopLocation(
+                location: item['location'] ?? '',
+                percentage: (item['percentage'] as num?)?.toDouble() ?? 0,
+              ))
+          .toList(),
+      ageRanges: (ageRangesData)
+          .map((item) => AgeRange(
+                range: item['range'] ?? '',
+                count: item['count'] ?? 0,
+              ))
+          .toList(),
+      chartData: _parseChartData(chartDataMap),
+    );
+  }
+
+  double _getChangePercentage(dynamic current, dynamic previous) {
+    if (current == null || previous == null || previous == 0) return 0;
+    return ((current - previous) / previous) * 100;
+  }
+
+  Map<String, List<ChartDataPoint>> _parseChartData(Map<String, dynamic> data) {
+    final result = <String, List<ChartDataPoint>>{};
+
+    if (data['views'] is List) {
+      result['views'] = (data['views'] as List)
+          .map((item) => ChartDataPoint(
+                label: item['day']?.toString() ?? '',
+                value: (item['value'] as num?)?.toDouble() ?? 0,
+              ))
+          .toList();
+    }
+
+    if (data['engagement'] is List) {
+      result['engagement'] = (data['engagement'] as List)
+          .map((item) => ChartDataPoint(
+                label: item['day']?.toString() ?? '',
+                value: (item['value'] as num?)?.toDouble() ?? 0,
+              ))
+          .toList();
+    }
+
+    if (data['reach'] is List) {
+      result['reach'] = (data['reach'] as List)
+          .map((item) => ChartDataPoint(
+                label: item['day']?.toString() ?? '',
+                value: (item['value'] as num?)?.toDouble() ?? 0,
+              ))
+          .toList();
+    }
+
+    return result;
   }
 }

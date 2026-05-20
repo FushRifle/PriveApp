@@ -1,33 +1,61 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:clique/data/services/chat/chat_service.dart';
+import 'package:clique/data/services/user/user_service.dart';
 
 part 'chat_event.dart';
 part 'chat_state.dart';
 
 class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final ChatService _chatService = ChatService();
+  final UserService _userService = UserService();
 
-  // Cache for pagination
-  final Map<int, int> _messagePages = {};
+  int? _currentUserId;
 
   ChatBloc() : super(const ChatState()) {
     on<LoadConversations>(_onLoadConversations);
     on<RefreshConversations>(_onRefreshConversations);
+    on<LoadConversationInfo>(_onLoadConversationInfo);
     on<LoadMessages>(_onLoadMessages);
     on<LoadMoreMessages>(_onLoadMoreMessages);
     on<SendMessage>(_onSendMessage);
     on<MarkMessagesAsRead>(_onMarkMessagesAsRead);
-    on<UpdateOnlineStatus>(_onUpdateOnlineStatus);
-    on<UpdateTypingStatus>(_onUpdateTypingStatus);
-    on<LoadChatPreferences>(_onLoadChatPreferences);
-    on<UpdateChatPreferences>(_onUpdateChatPreferences);
-    on<ClearCurrentMessages>(_onClearCurrentMessages);
-    on<ClearUnreadCount>(_onClearUnreadCount);
+    on<SetTyping>(_onSetTyping);
+    on<LoadChatSettings>(_onLoadChatSettings);
+    on<UpdateChatSettings>(_onUpdateChatSettings);
+    on<LoadUserPreferences>(_onLoadUserPreferences);
+    on<UpdateUserPreferences>(_onUpdateUserPreferences);
+    on<BlockUser>(_onBlockUser);
+    on<UnblockUser>(_onUnblockUser);
+    on<ClearChat>(_onClearChat);
     on<ClearChatError>(_onClearChatError);
     on<ResetChatState>(_onResetChatState);
+
+    // Real-time events
     on<NewMessageReceived>(_onNewMessageReceived);
-    on<MessageStatusUpdated>(_onMessageStatusUpdated);
+    on<MessageReadReceived>(_onMessageReadReceived);
+    on<TypingStatusReceived>(_onTypingStatusReceived);
+  }
+
+  void setAuthToken(String token) {
+    _chatService.setAuthToken(token);
+    _userService.setAuthToken(token);
+  }
+
+  void clearAuthToken() {
+    _chatService.clearAuthToken();
+    _userService.clearAuthToken();
+  }
+
+  Future<void> _loadCurrentUserId() async {
+    if (_currentUserId == null) {
+      try {
+        final user = await _userService.getCurrentUser();
+        _currentUserId = user['id'];
+      } catch (e) {
+        print('Failed to load current user ID: $e');
+      }
+    }
   }
 
   Future<void> _onLoadConversations(
@@ -35,36 +63,24 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     Emitter<ChatState> emit,
   ) async {
     if (state.conversations.isEmpty) {
-      emit(
-        state.copyWith(
-          conversationsStatus: ChatStatus.loading,
-          isLoading: true,
-        ),
-      );
+      emit(state.copyWith(conversationsStatus: ChatStatus.loading));
     }
 
     try {
-      final conversations = await _chatService.getConversations();
-      final conversationList = conversations
-          .map((c) => Conversation.fromJson(c))
-          .toList();
+      final data = await _chatService.getConversations();
+      final conversations =
+          data.map((json) => ConversationModel.fromJson(json)).toList();
 
-      emit(
-        state.copyWith(
-          conversations: conversationList,
-          conversationsStatus: ChatStatus.success,
-          isLoading: false,
-          error: null,
-        ),
-      );
+      emit(state.copyWith(
+        conversations: conversations,
+        conversationsStatus: ChatStatus.success,
+        error: null,
+      ));
     } catch (e) {
-      emit(
-        state.copyWith(
-          conversationsStatus: ChatStatus.error,
-          isLoading: false,
-          error: e.toString(),
-        ),
-      );
+      emit(state.copyWith(
+        conversationsStatus: ChatStatus.error,
+        error: e.toString(),
+      ));
     }
   }
 
@@ -75,25 +91,34 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     emit(state.copyWith(conversationsStatus: ChatStatus.refreshing));
 
     try {
-      final conversations = await _chatService.getConversations();
-      final conversationList = conversations
-          .map((c) => Conversation.fromJson(c))
-          .toList();
+      final data = await _chatService.getConversations();
+      final conversations =
+          data.map((json) => ConversationModel.fromJson(json)).toList();
 
-      emit(
-        state.copyWith(
-          conversations: conversationList,
-          conversationsStatus: ChatStatus.success,
-          error: null,
-        ),
-      );
+      emit(state.copyWith(
+        conversations: conversations,
+        conversationsStatus: ChatStatus.success,
+        error: null,
+      ));
     } catch (e) {
-      emit(
-        state.copyWith(
-          conversationsStatus: ChatStatus.error,
-          error: e.toString(),
-        ),
-      );
+      emit(state.copyWith(
+        conversationsStatus: ChatStatus.error,
+        error: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onLoadConversationInfo(
+    LoadConversationInfo event,
+    Emitter<ChatState> emit,
+  ) async {
+    try {
+      final data = await _chatService.getConversationInfo(event.conversationId);
+      final info = ConversationInfoModel.fromJson(data);
+
+      emit(state.copyWith(conversationInfo: info, error: null));
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
     }
   }
 
@@ -101,51 +126,51 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     LoadMessages event,
     Emitter<ChatState> emit,
   ) async {
-    if (event.isInitialLoad) {
-      // Reset state for new user
-      _messagePages[event.userId] = 1;
+    await _loadCurrentUserId();
 
-      emit(
-        state.copyWith(
-          currentUserId: event.userId,
-          currentMessages: [],
-          currentPage: 1,
-          hasMoreMessages: true,
-          messagesStatus: ChatStatus.loading,
-          isLoading: true,
-        ),
-      );
+    if (event.page == 1) {
+      emit(state.copyWith(
+        messagesStatus: ChatStatus.loading,
+        messages: [],
+        currentPage: 1,
+        hasMoreMessages: true,
+      ));
     }
 
     try {
-      final messages = await _chatService.getMessages(
-        event.userId,
-        page: event.page,
-      );
-      final messageList = messages
-          .map((m) => Message.fromJson(m))
-          .toList()
-          .reversed
-          .toList(); // Reverse for chronological order
+      final data = await _chatService.getMessages(event.conversationId,
+          page: event.page);
+      final messages = data.map((json) {
+        final message = MessageModel.fromJson(json);
+        // Set isOwn based on current user ID
+        return MessageModel(
+          id: message.id,
+          senderId: message.senderId,
+          receiverId: message.receiverId,
+          message: message.message,
+          messageType: message.messageType,
+          mediaUrl: message.mediaUrl,
+          isRead: message.isRead,
+          isOwn: message.senderId == _currentUserId,
+          createdAt: message.createdAt,
+        );
+      }).toList();
 
-      emit(
-        state.copyWith(
-          currentMessages: messageList,
-          hasMoreMessages: messageList.length >= 20, // Assuming 20 per page
-          currentPage: event.page,
-          messagesStatus: ChatStatus.success,
-          isLoading: false,
-          error: null,
-        ),
-      );
+      final newMessages =
+          event.page == 1 ? messages : [...state.messages, ...messages];
+
+      emit(state.copyWith(
+        messages: newMessages,
+        currentPage: event.page,
+        hasMoreMessages: messages.length >= 50,
+        messagesStatus: ChatStatus.success,
+        error: null,
+      ));
     } catch (e) {
-      emit(
-        state.copyWith(
-          messagesStatus: ChatStatus.error,
-          isLoading: false,
-          error: e.toString(),
-        ),
-      );
+      emit(state.copyWith(
+        messagesStatus: ChatStatus.error,
+        error: e.toString(),
+      ));
     }
   }
 
@@ -153,103 +178,31 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     LoadMoreMessages event,
     Emitter<ChatState> emit,
   ) async {
-    if (!state.hasMoreMessages || state.isLoadingMore) return;
-
-    emit(
-      state.copyWith(
-        messagesStatus: ChatStatus.loadingMore,
-        isLoadingMore: true,
-      ),
-    );
-
-    try {
-      final nextPage = state.currentPage + 1;
-      final messages = await _chatService.getMessages(
-        event.userId,
-        page: nextPage,
-      );
-      final messageList = messages
-          .map((m) => Message.fromJson(m))
-          .toList()
-          .reversed
-          .toList();
-
-      final updatedMessages = [...messageList, ...state.currentMessages];
-
-      emit(
-        state.copyWith(
-          currentMessages: updatedMessages,
-          hasMoreMessages: messageList.length >= 20,
-          currentPage: nextPage,
-          messagesStatus: ChatStatus.success,
-          isLoadingMore: false,
-        ),
-      );
-    } catch (e) {
-      emit(
-        state.copyWith(
-          messagesStatus: ChatStatus.error,
-          isLoadingMore: false,
-          error: e.toString(),
-        ),
-      );
+    if (!state.hasMoreMessages || state.messagesStatus == ChatStatus.loading) {
+      return;
     }
+
+    final nextPage = state.currentPage + 1;
+    add(LoadMessages(conversationId: event.conversationId, page: nextPage));
   }
 
   Future<void> _onSendMessage(
     SendMessage event,
     Emitter<ChatState> emit,
   ) async {
-    final tempId = DateTime.now().millisecondsSinceEpoch;
-    final tempMessage = Message(
-      id: tempId,
-      senderId: 0, // Will be replaced by server
-      receiverId: event.userId,
-      content: event.content,
-      attachmentUrl: event.attachmentUrl,
-      attachmentType: event.attachmentType,
-      createdAt: DateTime.now(),
-      status: 'sending',
-    );
-
-    // Optimistic update
-    List<Message> updatedMessages = List.from(state.currentMessages)
-      ..add(tempMessage);
-
-    emit(state.copyWith(currentMessages: updatedMessages, isSending: true));
+    await _loadCurrentUserId();
 
     try {
-      final result = await _chatService.sendMessage({
-        'receiverId': event.userId,
-        'content': event.content,
-        if (event.attachmentUrl != null) 'attachmentUrl': event.attachmentUrl,
-        if (event.attachmentType != null)
-          'attachmentType': event.attachmentType,
-      });
-
-      // Replace temp message with real one
-      final realMessage = Message.fromJson(result);
-      final finalMessages = updatedMessages
-          .map((m) => m.id == tempId ? realMessage : m)
-          .toList();
-
-      emit(state.copyWith(currentMessages: finalMessages, isSending: false));
-
-      // Refresh conversations to update last message
-      add(RefreshConversations());
-    } catch (e) {
-      // Update failed message status
-      final failedMessages = updatedMessages
-          .map((m) => m.id == tempId ? m.copyWith(status: 'failed') : m)
-          .toList();
-
-      emit(
-        state.copyWith(
-          currentMessages: failedMessages,
-          isSending: false,
-          error: e.toString(),
-        ),
+      await _chatService.sendMessage(
+        receiverId: event.receiverId,
+        message: event.message,
+        messageType: event.messageType,
+        mediaUrl: event.mediaUrl,
       );
+      add(RefreshConversations());
+      add(LoadMessages(conversationId: event.receiverId, page: 1));
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
     }
   }
 
@@ -258,162 +211,340 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     Emitter<ChatState> emit,
   ) async {
     try {
-      await _chatService.markMessagesAsRead(event.userId);
+      await _chatService.markAsRead(event.conversationId);
 
-      // Update unread count in conversations
-      final updatedConversations = state.conversations.map((c) {
-        if (c.userId == event.userId) {
-          return c.copyWith(unreadCount: 0);
+      // Update unread count locally
+      final updatedConversations = state.conversations.map((conv) {
+        if (conv.id == event.conversationId) {
+          return ConversationModel(
+            id: conv.id,
+            userId: conv.userId,
+            name: conv.name,
+            avatar: conv.avatar,
+            age: conv.age,
+            verified: conv.verified,
+            lastMessage: conv.lastMessage,
+            lastMessageType: conv.lastMessageType,
+            timestamp: conv.timestamp,
+            unreadCount: 0,
+            isOnline: conv.isOnline,
+            isTyping: conv.isTyping,
+            isPinned: conv.isPinned,
+            isMuted: conv.isMuted,
+            muteUntil: conv.muteUntil,
+            username: '',
+          );
         }
-        return c;
+        return conv;
       }).toList();
 
       emit(state.copyWith(conversations: updatedConversations));
     } catch (e) {
-      print('Error marking messages as read: $e');
+      print('Failed to mark as read: $e');
     }
   }
 
-  Future<void> _onUpdateOnlineStatus(
-    UpdateOnlineStatus event,
+  Future<void> _onSetTyping(
+    SetTyping event,
     Emitter<ChatState> emit,
   ) async {
+    emit(state.copyWith(isTyping: event.isTyping));
+    await _chatService.setTyping(event.conversationId, event.isTyping);
+  }
+
+  Future<void> _onLoadChatSettings(
+    LoadChatSettings event,
+    Emitter<ChatState> emit,
+  ) async {
+    emit(state.copyWith(settingsStatus: ChatStatus.loading));
+
     try {
-      await _chatService.setOnlineStatus(event.isOnline);
-      emit(state.copyWith(isOnline: event.isOnline));
+      final data = await _chatService.getChatSettings(event.conversationId);
+      final settings = ChatSettingsModel.fromJson(data);
+
+      emit(state.copyWith(
+        chatSettings: settings,
+        settingsStatus: ChatStatus.success,
+        error: null,
+      ));
     } catch (e) {
-      print('Error updating online status: $e');
+      emit(state.copyWith(
+        settingsStatus: ChatStatus.error,
+        error: e.toString(),
+      ));
     }
   }
 
-  Future<void> _onUpdateTypingStatus(
-    UpdateTypingStatus event,
+  Future<void> _onUpdateChatSettings(
+    UpdateChatSettings event,
     Emitter<ChatState> emit,
   ) async {
     try {
-      await _chatService.setTypingStatus({
-        'receiverId': event.userId,
-        'isTyping': event.isTyping,
-      });
-    } catch (e) {
-      print('Error updating typing status: $e');
-    }
-  }
-
-  Future<void> _onLoadChatPreferences(
-    LoadChatPreferences event,
-    Emitter<ChatState> emit,
-  ) async {
-    emit(state.copyWith(preferencesStatus: ChatStatus.loading));
-
-    try {
-      final prefs = await _chatService.getPreferences();
-      emit(
-        state.copyWith(
-          preferences: ChatPreferences.fromJson(prefs),
-          preferencesStatus: ChatStatus.success,
-        ),
+      await _chatService.updateChatSettings(
+        event.conversationId,
+        isPinned: event.isPinned,
+        isMuted: event.isMuted,
+        muteUntil: event.muteUntil,
+        wallpaper: event.wallpaper,
+        chatColor: event.chatColor,
+        notificationSound: event.notificationSound,
       );
-    } catch (e) {
-      emit(
-        state.copyWith(
-          preferencesStatus: ChatStatus.error,
-          error: e.toString(),
-        ),
-      );
-    }
-  }
 
-  Future<void> _onUpdateChatPreferences(
-    UpdateChatPreferences event,
-    Emitter<ChatState> emit,
-  ) async {
-    try {
-      final result = await _chatService.updatePreferences(event.preferences);
-      emit(state.copyWith(preferences: ChatPreferences.fromJson(result)));
+      if (state.chatSettings != null) {
+        final updatedSettings = ChatSettingsModel(
+          id: state.chatSettings!.id,
+          isPinned: event.isPinned ?? state.chatSettings!.isPinned,
+          isMuted: event.isMuted ?? state.chatSettings!.isMuted,
+          muteUntil: event.muteUntil ?? state.chatSettings!.muteUntil,
+          wallpaper: event.wallpaper ?? state.chatSettings!.wallpaper,
+          chatColor: event.chatColor ?? state.chatSettings!.chatColor,
+          notificationSound:
+              event.notificationSound ?? state.chatSettings!.notificationSound,
+        );
+        emit(state.copyWith(chatSettings: updatedSettings));
+      }
+
+      add(RefreshConversations());
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }
   }
 
-  void _onClearCurrentMessages(
-    ClearCurrentMessages event,
+  Future<void> _onLoadUserPreferences(
+    LoadUserPreferences event,
+    Emitter<ChatState> emit,
+  ) async {
+    emit(state.copyWith(preferencesStatus: ChatStatus.loading));
+
+    try {
+      final data = await _chatService.getUserPreferences();
+      final preferences = UserPreferencesModel.fromJson(data);
+
+      emit(state.copyWith(
+        userPreferences: preferences,
+        preferencesStatus: ChatStatus.success,
+        error: null,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        preferencesStatus: ChatStatus.error,
+        error: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onUpdateUserPreferences(
+    UpdateUserPreferences event,
+    Emitter<ChatState> emit,
+  ) async {
+    try {
+      await _chatService.updateUserPreferences(
+        wallpaper: event.wallpaper,
+        chatColor: event.chatColor,
+        notificationSound: event.notificationSound,
+        fontSize: event.fontSize,
+        enterToSend: event.enterToSend,
+        readReceipts: event.readReceipts,
+        typingIndicators: event.typingIndicators,
+        messagePreview: event.messagePreview,
+        autoDownloadMedia: event.autoDownloadMedia,
+      );
+
+      if (state.userPreferences != null) {
+        final updatedPreferences = UserPreferencesModel(
+          wallpaper: event.wallpaper ?? state.userPreferences!.wallpaper,
+          chatColor: event.chatColor ?? state.userPreferences!.chatColor,
+          notificationSound: event.notificationSound ??
+              state.userPreferences!.notificationSound,
+          fontSize: event.fontSize ?? state.userPreferences!.fontSize,
+          enterToSend: event.enterToSend ?? state.userPreferences!.enterToSend,
+          readReceipts:
+              event.readReceipts ?? state.userPreferences!.readReceipts,
+          typingIndicators:
+              event.typingIndicators ?? state.userPreferences!.typingIndicators,
+          messagePreview:
+              event.messagePreview ?? state.userPreferences!.messagePreview,
+          autoDownloadMedia: event.autoDownloadMedia ??
+              state.userPreferences!.autoDownloadMedia,
+        );
+        emit(state.copyWith(userPreferences: updatedPreferences));
+      } else {
+        add(LoadUserPreferences());
+      }
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
+    }
+  }
+
+  Future<void> _onBlockUser(
+    BlockUser event,
+    Emitter<ChatState> emit,
+  ) async {
+    try {
+      await _chatService.blockUser(event.userId);
+      emit(state.copyWith(error: null));
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
+    }
+  }
+
+  Future<void> _onUnblockUser(
+    UnblockUser event,
+    Emitter<ChatState> emit,
+  ) async {
+    try {
+      await _chatService.unblockUser(event.userId);
+
+      if (state.conversationInfo != null &&
+          state.conversationInfo!.participantId == event.userId) {
+        add(LoadConversationInfo(
+            conversationId: state.conversationInfo!.participantId));
+      }
+      emit(state.copyWith(error: null));
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
+    }
+  }
+
+  Future<void> _onClearChat(
+    ClearChat event,
+    Emitter<ChatState> emit,
+  ) async {
+    try {
+      await _chatService.clearChat(event.conversationId);
+      add(LoadMessages(conversationId: event.conversationId, page: 1));
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
+    }
+  }
+
+  void _onClearChatError(
+    ClearChatError event,
     Emitter<ChatState> emit,
   ) {
-    emit(
-      state.copyWith(
-        currentUserId: 0,
-        currentMessages: [],
-        hasMoreMessages: true,
-        currentPage: 1,
-        messagesStatus: ChatStatus.initial,
-      ),
-    );
-  }
-
-  void _onClearUnreadCount(ClearUnreadCount event, Emitter<ChatState> emit) {
-    final updatedConversations = state.conversations.map((c) {
-      if (c.userId == event.userId) {
-        return c.copyWith(unreadCount: 0);
-      }
-      return c;
-    }).toList();
-
-    emit(state.copyWith(conversations: updatedConversations));
-  }
-
-  void _onClearChatError(ClearChatError event, Emitter<ChatState> emit) {
     emit(state.copyWith(error: null));
   }
 
-  void _onResetChatState(ResetChatState event, Emitter<ChatState> emit) {
-    _messagePages.clear();
+  void _onResetChatState(
+    ResetChatState event,
+    Emitter<ChatState> emit,
+  ) {
+    _currentUserId = null;
     emit(const ChatState());
   }
 
   void _onNewMessageReceived(
     NewMessageReceived event,
     Emitter<ChatState> emit,
-  ) {
-    final message = Message.fromJson(event.message);
+  ) async {
+    await _loadCurrentUserId();
 
-    // Update current messages if this is the active chat
-    List<Message> updatedMessages = List.from(state.currentMessages);
-    if (state.currentUserId == message.senderId) {
-      updatedMessages.add(message);
-      emit(state.copyWith(currentMessages: updatedMessages));
-    }
+    final newMessage = MessageModel.fromJson(event.message);
 
-    // Update conversation list
-    final updatedConversations = state.conversations.map((c) {
-      if (c.userId == message.senderId) {
-        // Increment unread count if not active chat
-        final unreadCount = state.currentUserId == message.senderId
-            ? 0
-            : c.unreadCount + 1;
-        return c.copyWith(
-          lastMessage: message.content,
-          lastMessageTime: message.createdAt,
-          unreadCount: unreadCount,
+    // Set isOwn based on current user ID
+    final processedMessage = MessageModel(
+      id: newMessage.id,
+      senderId: newMessage.senderId,
+      receiverId: newMessage.receiverId,
+      message: newMessage.message,
+      messageType: newMessage.messageType,
+      mediaUrl: newMessage.mediaUrl,
+      isRead: newMessage.isRead,
+      isOwn: newMessage.senderId == _currentUserId,
+      createdAt: newMessage.createdAt,
+    );
+
+    final updatedMessages = state.messagesStatus == ChatStatus.success &&
+            state.conversationInfo != null &&
+            processedMessage.senderId == state.conversationInfo!.participantId
+        ? [processedMessage, ...state.messages]
+        : state.messages;
+
+    final updatedConversations = state.conversations.map((conv) {
+      if (conv.userId == processedMessage.senderId ||
+          conv.userId == processedMessage.receiverId) {
+        return ConversationModel(
+          id: conv.id,
+          userId: conv.userId,
+          name: conv.name,
+          avatar: conv.avatar,
+          age: conv.age,
+          verified: conv.verified,
+          lastMessage: processedMessage.message,
+          lastMessageType: processedMessage.messageType,
+          timestamp: 'just now',
+          unreadCount:
+              processedMessage.isOwn ? conv.unreadCount : conv.unreadCount + 1,
+          isOnline: conv.isOnline,
+          isTyping: false,
+          isPinned: conv.isPinned,
+          isMuted: conv.isMuted,
+          muteUntil: conv.muteUntil,
+          username: '',
         );
       }
-      return c;
+      return conv;
     }).toList();
 
-    emit(state.copyWith(conversations: updatedConversations));
+    emit(state.copyWith(
+      messages: updatedMessages,
+      conversations: updatedConversations,
+    ));
   }
 
-  void _onMessageStatusUpdated(
-    MessageStatusUpdated event,
+  void _onMessageReadReceived(
+    MessageReadReceived event,
     Emitter<ChatState> emit,
   ) {
-    final updatedMessages = state.currentMessages.map((m) {
-      if (m.id == event.messageId) {
-        return m.copyWith(status: event.status);
-      }
-      return m;
-    }).toList();
+    if (state.conversationInfo != null &&
+        state.conversationInfo!.participantId == event.readByUserId) {
+      final updatedMessages = state.messages.map((msg) {
+        if (!msg.isOwn && !msg.isRead) {
+          return MessageModel(
+            id: msg.id,
+            senderId: msg.senderId,
+            receiverId: msg.receiverId,
+            message: msg.message,
+            messageType: msg.messageType,
+            mediaUrl: msg.mediaUrl,
+            isRead: true,
+            isOwn: msg.isOwn,
+            createdAt: msg.createdAt,
+          );
+        }
+        return msg;
+      }).toList();
+      emit(state.copyWith(messages: updatedMessages));
+    }
+  }
 
-    emit(state.copyWith(currentMessages: updatedMessages));
+  void _onTypingStatusReceived(
+    TypingStatusReceived event,
+    Emitter<ChatState> emit,
+  ) {
+    final updatedConversations = state.conversations.map((conv) {
+      if (conv.id == event.conversationId) {
+        return ConversationModel(
+          id: conv.id,
+          userId: conv.userId,
+          name: conv.name,
+          avatar: conv.avatar,
+          age: conv.age,
+          verified: conv.verified,
+          lastMessage: conv.lastMessage,
+          lastMessageType: conv.lastMessageType,
+          timestamp: conv.timestamp,
+          unreadCount: conv.unreadCount,
+          isOnline: conv.isOnline,
+          isTyping: event.isTyping && event.userId != _currentUserId,
+          isPinned: conv.isPinned,
+          isMuted: conv.isMuted,
+          muteUntil: conv.muteUntil,
+          username: '',
+        );
+      }
+      return conv;
+    }).toList();
+    emit(state.copyWith(conversations: updatedConversations));
   }
 }

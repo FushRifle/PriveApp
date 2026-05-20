@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 
@@ -11,7 +10,7 @@ class ActiveSessionsPage extends StatefulWidget {
 }
 
 class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
-  bool _isLoading = false;
+  final bool _isLoading = false;
 
   final List<Map<String, dynamic>> _sessions = [
     {
@@ -137,9 +136,10 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
             child: Text(
               'Logout All',
               style: TextStyle(
-                color: _sessions.length > 1 ? Colors.red : AppColors.greyColor,
-                fontWeight: FontWeight.w500,
-              ),
+                  color:
+                      _sessions.length > 1 ? Colors.red : AppColors.greyColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12),
             ),
           ),
         ],

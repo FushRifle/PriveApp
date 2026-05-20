@@ -5,7 +5,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clique/app/configs/colors.dart';
-import 'package:clique/app/configs/theme.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:clique/core/cloudinary_service.dart';
 import 'package:clique/data/models/feeds_models.dart';

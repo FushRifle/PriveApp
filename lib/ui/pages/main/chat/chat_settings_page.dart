@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
+import 'package:clique/bloc/chat/chat_bloc.dart';
 
 class ChatSettingsPage extends StatefulWidget {
   final String userName;
@@ -18,11 +20,95 @@ class ChatSettingsPage extends StatefulWidget {
 }
 
 class _ChatSettingsPageState extends State<ChatSettingsPage> {
+  late int _conversationId;
   bool _isMuted = false;
   bool _isPinned = false;
-  String _wallpaper = 'Default';
-  String _theme = 'Light';
+  String _wallpaper = 'default';
+  String _chatColor = 'default';
+  String _notificationSound = 'default';
   String _muteDuration = '8 hours';
+  DateTime? _muteUntil;
+
+  @override
+  void initState() {
+    super.initState();
+    _conversationId = int.tryParse(widget.userId) ?? 0;
+    if (_conversationId != 0) {
+      _loadSettings();
+    }
+  }
+
+  void _loadSettings() {
+    context
+        .read<ChatBloc>()
+        .add(LoadChatSettings(conversationId: _conversationId));
+  }
+
+  void _updateSettings() {
+    DateTime? muteUntil;
+    if (_isMuted) {
+      switch (_muteDuration) {
+        case '1 hour':
+          muteUntil = DateTime.now().add(const Duration(hours: 1));
+          break;
+        case '8 hours':
+          muteUntil = DateTime.now().add(const Duration(hours: 8));
+          break;
+        case '24 hours':
+          muteUntil = DateTime.now().add(const Duration(days: 1));
+          break;
+        case '7 days':
+          muteUntil = DateTime.now().add(const Duration(days: 7));
+          break;
+        case 'Forever':
+          muteUntil = null;
+          break;
+      }
+    }
+
+    context.read<ChatBloc>().add(UpdateChatSettings(
+          conversationId: _conversationId,
+          isPinned: _isPinned,
+          isMuted: _isMuted,
+          muteUntil: muteUntil,
+          wallpaper: _wallpaper,
+          chatColor: _chatColor,
+          notificationSound: _notificationSound,
+        ));
+  }
+
+  void _clearChat() {
+    context.read<ChatBloc>().add(ClearChat(conversationId: _conversationId));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Chat cleared successfully'),
+        backgroundColor: Colors.green,
+      ),
+    );
+    Navigator.pop(context);
+  }
+
+  void _archiveChat() {
+    // TODO: Implement archive when endpoint is ready
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Chat archived'),
+        backgroundColor: Colors.green,
+      ),
+    );
+    Navigator.pop(context);
+  }
+
+  void _blockUser() {
+    context.read<ChatBloc>().add(BlockUser(userId: _conversationId));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('User blocked'),
+        backgroundColor: Colors.red,
+      ),
+    );
+    Navigator.pop(context);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,167 +137,186 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
         ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Chat customization
-              _buildSectionTitle('Chat Customization'),
-              const SizedBox(height: 12),
-              _buildSettingsCard([
-                _buildNavigationTile(
-                  icon: Icons.wallpaper,
-                  title: 'Wallpaper',
-                  subtitle: _wallpaper,
-                  onTap: () => _showWallpaperPicker(),
-                ),
-                _buildDivider(),
-                _buildNavigationTile(
-                  icon: Icons.palette,
-                  title: 'Theme',
-                  subtitle: _theme,
-                  onTap: () => _showThemePicker(),
-                ),
-                _buildDivider(),
-                _buildNavigationTile(
-                  icon: Icons.text_fields,
-                  title: 'Text Size',
-                  subtitle: 'Normal',
-                  onTap: () => _showTextSizePicker(),
-                ),
-                _buildDivider(),
-                _buildNavigationTile(
-                  icon: Icons.emoji_emotions,
-                  title: 'Emoji',
-                  subtitle: 'Default',
-                  onTap: () => _showEmojiPicker(),
-                ),
-              ]),
-              const SizedBox(height: 24),
-
-              // Notifications
-              _buildSectionTitle('Notifications'),
-              const SizedBox(height: 12),
-              _buildSettingsCard([
-                SwitchListTile(
-                  secondary: const Icon(
-                    Icons.notifications_off,
-                    color: AppColors.primary,
-                    size: 24,
-                  ),
-                  title: Text(
-                    'Mute Notifications',
-                    style: AppTheme.blackTextStyle.copyWith(
-                      fontWeight: FontWeight.w500,
-                      fontSize: 15,
+      body: BlocConsumer<ChatBloc, ChatState>(
+        listener: (context, state) {
+          if (state.chatSettings != null) {
+            setState(() {
+              _isPinned = state.chatSettings!.isPinned;
+              _isMuted = state.chatSettings!.isMuted;
+              _wallpaper = state.chatSettings!.wallpaper;
+              _chatColor = state.chatSettings!.chatColor;
+              _notificationSound = state.chatSettings!.notificationSound;
+            });
+          }
+          if (state.error != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.error!),
+                backgroundColor: Colors.red,
+              ),
+            );
+            context.read<ChatBloc>().add(ClearChatError());
+          }
+        },
+        builder: (context, state) {
+          return SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Chat customization
+                  _buildSectionTitle('Chat Customization'),
+                  const SizedBox(height: 12),
+                  _buildSettingsCard([
+                    _buildNavigationTile(
+                      icon: Icons.wallpaper,
+                      title: 'Wallpaper',
+                      subtitle: _capitalize(_wallpaper),
+                      onTap: () => _showWallpaperPicker(),
                     ),
-                  ),
-                  subtitle: Text(
-                    _isMuted ? 'Muted for $_muteDuration' : 'Unmuted',
-                    style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
-                  ),
-                  value: _isMuted,
-                  onChanged: (value) {
-                    setState(() => _isMuted = value);
-                  },
-                  activeThumbColor: AppColors.primary,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                ),
-                if (_isMuted) ...[
-                  _buildDivider(),
-                  _buildNavigationTile(
-                    icon: Icons.timer,
-                    title: 'Mute Duration',
-                    subtitle: _muteDuration,
-                    onTap: () => _showMuteDurationPicker(),
-                  ),
+                    _buildDivider(),
+                    _buildNavigationTile(
+                      icon: Icons.palette,
+                      title: 'Chat Color',
+                      subtitle: _capitalize(_chatColor),
+                      onTap: () => _showColorPicker(),
+                    ),
+                    _buildDivider(),
+                    _buildNavigationTile(
+                      icon: Icons.volume_up,
+                      title: 'Notification Sound',
+                      subtitle: _capitalize(_notificationSound),
+                      onTap: () => _showSoundPicker(),
+                    ),
+                  ]),
+                  const SizedBox(height: 24),
+
+                  // Notifications
+                  _buildSectionTitle('Notifications'),
+                  const SizedBox(height: 12),
+                  _buildSettingsCard([
+                    SwitchListTile(
+                      secondary: const Icon(
+                        Icons.notifications_off,
+                        color: AppColors.primary,
+                        size: 24,
+                      ),
+                      title: Text(
+                        'Mute Notifications',
+                        style: AppTheme.blackTextStyle.copyWith(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 15,
+                        ),
+                      ),
+                      subtitle: Text(
+                        _isMuted ? 'Muted for $_muteDuration' : 'Unmuted',
+                        style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
+                      ),
+                      value: _isMuted,
+                      onChanged: (value) {
+                        setState(() => _isMuted = value);
+                        _updateSettings();
+                      },
+                      activeThumbColor: AppColors.primary,
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 16),
+                    ),
+                    if (_isMuted) ...[
+                      _buildDivider(),
+                      _buildNavigationTile(
+                        icon: Icons.timer,
+                        title: 'Mute Duration',
+                        subtitle: _muteDuration,
+                        onTap: () => _showMuteDurationPicker(),
+                      ),
+                    ],
+                  ]),
+                  const SizedBox(height: 24),
+
+                  // Chat actions
+                  _buildSectionTitle('Chat Actions'),
+                  const SizedBox(height: 12),
+                  _buildSettingsCard([
+                    SwitchListTile(
+                      secondary: const Icon(
+                        Icons.push_pin,
+                        color: AppColors.primary,
+                        size: 24,
+                      ),
+                      title: Text(
+                        'Pin Chat',
+                        style: AppTheme.blackTextStyle.copyWith(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 15,
+                        ),
+                      ),
+                      subtitle: Text(
+                        _isPinned ? 'Pinned to top' : 'Not pinned',
+                        style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
+                      ),
+                      value: _isPinned,
+                      onChanged: (value) {
+                        setState(() => _isPinned = value);
+                        _updateSettings();
+                      },
+                      activeThumbColor: AppColors.primary,
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 16),
+                    ),
+                    _buildDivider(),
+                    _buildNavigationTile(
+                      icon: Icons.archive,
+                      title: 'Archive Chat',
+                      subtitle: 'Move chat to archive',
+                      onTap: _showArchiveDialog,
+                    ),
+                    _buildDivider(),
+                    _buildNavigationTile(
+                      icon: Icons.search,
+                      title: 'Search in Conversation',
+                      subtitle: 'Find messages in this chat',
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        // TODO: Navigate to search in chat
+                      },
+                    ),
+                  ]),
+                  const SizedBox(height: 24),
+
+                  // Danger zone
+                  _buildSectionTitle('Danger Zone'),
+                  const SizedBox(height: 12),
+                  _buildSettingsCard([
+                    _buildNavigationTile(
+                      icon: Icons.delete_outline,
+                      title: 'Clear Chat',
+                      subtitle: 'Delete all messages',
+                      titleColor: AppColors.redColor,
+                      onTap: _showClearChatDialog,
+                    ),
+                    _buildDivider(),
+                    _buildNavigationTile(
+                      icon: Icons.block,
+                      title: 'Block ${widget.userName}',
+                      subtitle: 'Block this user',
+                      titleColor: AppColors.redColor,
+                      onTap: _showBlockDialog,
+                    ),
+                  ]),
+                  const SizedBox(height: 32),
                 ],
-              ]),
-              const SizedBox(height: 24),
-
-              // Chat actions
-              _buildSectionTitle('Chat Actions'),
-              const SizedBox(height: 12),
-              _buildSettingsCard([
-                SwitchListTile(
-                  secondary: const Icon(
-                    Icons.push_pin,
-                    color: AppColors.primary,
-                    size: 24,
-                  ),
-                  title: Text(
-                    'Pin Chat',
-                    style: AppTheme.blackTextStyle.copyWith(
-                      fontWeight: FontWeight.w500,
-                      fontSize: 15,
-                    ),
-                  ),
-                  subtitle: Text(
-                    _isPinned ? 'Pinned to top' : 'Not pinned',
-                    style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
-                  ),
-                  value: _isPinned,
-                  onChanged: (value) {
-                    setState(() => _isPinned = value);
-                  },
-                  activeThumbColor: AppColors.primary,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                ),
-                _buildDivider(),
-                _buildNavigationTile(
-                  icon: Icons.archive,
-                  title: 'Archive Chat',
-                  subtitle: 'Move chat to archive',
-                  onTap: () => _showArchiveDialog(),
-                ),
-                _buildDivider(),
-                _buildNavigationTile(
-                  icon: Icons.download,
-                  title: 'Export Chat',
-                  subtitle: 'Download chat history',
-                  onTap: () => _showExportDialog(),
-                ),
-                _buildDivider(),
-                _buildNavigationTile(
-                  icon: Icons.search,
-                  title: 'Search in Conversation',
-                  subtitle: 'Find messages in this chat',
-                  onTap: () {
-                    HapticFeedback.lightImpact();
-                    // TODO: Navigate to search
-                  },
-                ),
-              ]),
-              const SizedBox(height: 24),
-
-              // Danger zone
-              _buildSectionTitle('Danger Zone'),
-              const SizedBox(height: 12),
-              _buildSettingsCard([
-                _buildNavigationTile(
-                  icon: Icons.delete_outline,
-                  title: 'Clear Chat',
-                  subtitle: 'Delete all messages',
-                  titleColor: AppColors.redColor,
-                  onTap: () => _showClearChatDialog(),
-                ),
-                _buildDivider(),
-                _buildNavigationTile(
-                  icon: Icons.block,
-                  title: 'Block ${widget.userName}',
-                  subtitle: 'Block this user',
-                  titleColor: AppColors.redColor,
-                  onTap: () => _showBlockDialog(),
-                ),
-              ]),
-              const SizedBox(height: 32),
-            ],
-          ),
-        ),
+              ),
+            ),
+          );
+        },
       ),
     );
+  }
+
+  String _capitalize(String str) {
+    if (str.isEmpty) return str;
+    return str[0].toUpperCase() + str.substring(1);
   }
 
   Widget _buildSectionTitle(String title) {
@@ -281,277 +386,124 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
   }
 
   void _showWallpaperPicker() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        final wallpapers = [
-          'Default',
-          'Dark',
-          'Ocean',
-          'Sunset',
-          'Forest',
-          'Galaxy'
-        ];
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(top: 12, bottom: 20),
-                decoration: BoxDecoration(
-                  color: AppColors.greyColor.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  'Choose Wallpaper',
-                  style: AppTheme.blackTextStyle.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              ...wallpapers.map((w) => ListTile(
-                    title: Text(w,
-                        style: AppTheme.blackTextStyle.copyWith(fontSize: 16)),
-                    trailing: _wallpaper == w
-                        ? const Icon(Icons.check_circle,
-                            color: AppColors.primary)
-                        : null,
-                    onTap: () {
-                      setState(() => _wallpaper = w);
-                      Navigator.pop(context);
-                    },
-                  )),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
+    final wallpapers = [
+      'default',
+      'dark',
+      'ocean',
+      'sunset',
+      'forest',
+      'galaxy'
+    ];
+    _showPicker(
+      title: 'Choose Wallpaper',
+      items: wallpapers,
+      selectedValue: _wallpaper,
+      onSelected: (value) {
+        setState(() => _wallpaper = value);
+        _updateSettings();
       },
     );
   }
 
-  void _showThemePicker() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        final themes = ['Light', 'Dark', 'System'];
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(top: 12, bottom: 20),
-                decoration: BoxDecoration(
-                  color: AppColors.greyColor.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  'Choose Theme',
-                  style: AppTheme.blackTextStyle.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              ...themes.map((t) => ListTile(
-                    title: Text(t,
-                        style: AppTheme.blackTextStyle.copyWith(fontSize: 16)),
-                    trailing: _theme == t
-                        ? const Icon(Icons.check_circle,
-                            color: AppColors.primary)
-                        : null,
-                    onTap: () {
-                      setState(() => _theme = t);
-                      Navigator.pop(context);
-                    },
-                  )),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
+  void _showColorPicker() {
+    final colors = [
+      'default',
+      'primary',
+      'blue',
+      'green',
+      'purple',
+      'pink',
+      'orange'
+    ];
+    _showPicker(
+      title: 'Choose Chat Color',
+      items: colors,
+      selectedValue: _chatColor,
+      onSelected: (value) {
+        setState(() => _chatColor = value);
+        _updateSettings();
       },
     );
   }
 
-  void _showTextSizePicker() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        final sizes = ['Small', 'Normal', 'Large', 'Extra Large'];
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(top: 12, bottom: 20),
-                decoration: BoxDecoration(
-                  color: AppColors.greyColor.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  'Choose Text Size',
-                  style: AppTheme.blackTextStyle.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              ...sizes.map((s) => ListTile(
-                    title: Text(s,
-                        style: AppTheme.blackTextStyle.copyWith(fontSize: 16)),
-                    trailing:
-                        Icon(Icons.chevron_right, color: AppColors.greyColor),
-                    onTap: () {
-                      Navigator.pop(context);
-                      // TODO: Change text size
-                    },
-                  )),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showEmojiPicker() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(top: 12, bottom: 20),
-                decoration: BoxDecoration(
-                  color: AppColors.greyColor.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  'Choose Emoji Style',
-                  style: AppTheme.blackTextStyle.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                leading: const Text('😊', style: TextStyle(fontSize: 24)),
-                title: const Text('Default'),
-                trailing:
-                    const Icon(Icons.check_circle, color: AppColors.primary),
-                onTap: () => Navigator.pop(context),
-              ),
-              ListTile(
-                leading: const Text('😍', style: TextStyle(fontSize: 24)),
-                title: const Text('Cute'),
-                onTap: () => Navigator.pop(context),
-              ),
-              ListTile(
-                leading: const Text('🔥', style: TextStyle(fontSize: 24)),
-                title: const Text('Cool'),
-                onTap: () => Navigator.pop(context),
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
+  void _showSoundPicker() {
+    final sounds = ['default', 'classic', 'gentle', 'pop', 'ping'];
+    _showPicker(
+      title: 'Choose Notification Sound',
+      items: sounds,
+      selectedValue: _notificationSound,
+      onSelected: (value) {
+        setState(() => _notificationSound = value);
+        _updateSettings();
       },
     );
   }
 
   void _showMuteDurationPicker() {
+    final durations = ['1 hour', '8 hours', '24 hours', '7 days', 'Forever'];
+    _showPicker(
+      title: 'Mute Duration',
+      items: durations,
+      selectedValue: _muteDuration,
+      onSelected: (value) {
+        setState(() => _muteDuration = value);
+        _updateSettings();
+      },
+    );
+  }
+
+  void _showPicker({
+    required String title,
+    required List<String> items,
+    required String selectedValue,
+    required ValueChanged<String> onSelected,
+  }) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) {
-        final durations = [
-          '1 hour',
-          '8 hours',
-          '24 hours',
-          '7 days',
-          'Forever'
-        ];
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(top: 12, bottom: 20),
-                decoration: BoxDecoration(
-                  color: AppColors.greyColor.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(2),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(top: 12, bottom: 20),
+              decoration: BoxDecoration(
+                color: AppColors.greyColor.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                title,
+                style: AppTheme.blackTextStyle.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  'Mute Duration',
-                  style: AppTheme.blackTextStyle.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
+            ),
+            const SizedBox(height: 16),
+            ...items.map((item) => ListTile(
+                  title: Text(
+                    _capitalize(item),
+                    style: AppTheme.blackTextStyle.copyWith(fontSize: 16),
                   ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              ...durations.map((d) => ListTile(
-                    title: Text(d,
-                        style: AppTheme.blackTextStyle.copyWith(fontSize: 16)),
-                    trailing: _muteDuration == d
-                        ? const Icon(Icons.check_circle,
-                            color: AppColors.primary)
-                        : null,
-                    onTap: () {
-                      setState(() => _muteDuration = d);
-                      Navigator.pop(context);
-                    },
-                  )),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
+                  trailing: selectedValue == item
+                      ? const Icon(Icons.check_circle, color: AppColors.primary)
+                      : null,
+                  onTap: () {
+                    Navigator.pop(context);
+                    onSelected(item);
+                  },
+                )),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
     );
   }
 
@@ -576,13 +528,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: Clear chat
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Chat cleared successfully'),
-                  backgroundColor: Colors.green,
-                ),
-              );
+              _clearChat();
             },
             child: Text(
               'Clear',
@@ -616,13 +562,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: Archive chat
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Chat archived'),
-                  backgroundColor: Colors.green,
-                ),
-              );
+              _archiveChat();
             },
             child: Text(
               'Archive',
@@ -630,84 +570,6 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  void _showExportDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Export Chat',
-          style: AppTheme.blackTextStyle.copyWith(fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Export chat history as:',
-              style: AppTheme.blackTextStyle,
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildExportOption('Text', Icons.description),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildExportOption('PDF', Icons.picture_as_pdf),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildExportOption('JSON', Icons.code),
-                ),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: AppTheme.greyTextStyle),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildExportOption(String format, IconData icon) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.pop(context);
-        // TODO: Export chat in selected format
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Exporting chat as $format...'),
-            backgroundColor: AppColors.primary,
-          ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: AppColors.primary, size: 32),
-            const SizedBox(height: 8),
-            Text(
-              format,
-              style: AppTheme.blackTextStyle.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -733,13 +595,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: Block user
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('User blocked successfully'),
-                  backgroundColor: Colors.red,
-                ),
-              );
+              _blockUser();
             },
             child: Text(
               'Block',

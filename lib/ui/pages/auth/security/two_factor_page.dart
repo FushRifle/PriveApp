@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 
@@ -12,7 +11,7 @@ class TwoFactorPage extends StatefulWidget {
 
 class _TwoFactorPageState extends State<TwoFactorPage> {
   bool _isEnabled = false;
-  bool _isLoading = false;
+  final bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -146,7 +145,7 @@ class _TwoFactorPageState extends State<TwoFactorPage> {
                               child: Row(
                                 children: [
                                   Text(
-                                    '${i.toString().padLeft(2, '0')}',
+                                    i.toString().padLeft(2, '0'),
                                     style: AppTheme.greyTextStyle
                                         .copyWith(fontSize: 14),
                                   ),
