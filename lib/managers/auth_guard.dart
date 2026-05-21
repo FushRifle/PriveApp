@@ -1,3 +1,4 @@
+import 'package:clique/app/configs/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clique/bloc/auth/auth_bloc.dart';
@@ -6,115 +7,168 @@ import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/app/resources/constant/named_routes.dart';
 import './main_wrapper.dart';
 
-class AuthGuard extends StatefulWidget {
+class AuthGuard extends StatelessWidget {
   const AuthGuard({super.key});
 
   @override
-  State<AuthGuard> createState() => _AuthGuardState();
+  Widget build(BuildContext context) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, authState) {
+        if (!authState.isAuthenticated || authState.token == null) {
+          return const _Redirector(route: NamedRoutes.loginScreen);
+        }
+
+        return _AuthenticatedGuard(token: authState.token!);
+      },
+    );
+  }
 }
 
-class _AuthGuardState extends State<AuthGuard> {
-  bool _isChecking = true;
-  String? _redirectRoute;
-  bool _hasChecked = false;
+class _AuthenticatedGuard extends StatelessWidget {
+  final String token;
+
+  const _AuthenticatedGuard({required this.token});
 
   @override
-  void initState() {
-    super.initState();
-    _checkAuthAndOnboarding();
-  }
-
-  Future<void> _checkAuthAndOnboarding() async {
-    if (_hasChecked) return;
-    _hasChecked = true;
-
-    final authBloc = context.read<AuthBloc>();
-    final authState = authBloc.state;
-
-    // Check 1: Valid token?
-    if (!authState.isAuthenticated || authState.token == null) {
-      if (mounted) {
-        setState(() {
-          _redirectRoute = NamedRoutes.loginScreen;
-          _isChecking = false;
-        });
-      }
-      return;
-    }
-
-    final token = authState.token!;
-
-    // Initialize all blocs with the auth token
+  Widget build(BuildContext context) {
     final profileBloc = context.read<ProfileBloc>();
     final userBloc = context.read<UserBloc>();
 
+    // Set tokens immediately
     profileBloc.setAuthToken(token);
     userBloc.setAuthToken(token);
 
-    // Load profile if not loaded yet
-    if (profileBloc.state.myProfile == null) {
-      profileBloc.add(LoadMyProfile());
-      await for (final state in profileBloc.stream) {
-        if (state.status == ProfileStatus.success ||
-            state.status == ProfileStatus.error) {
-          break;
-        }
-      }
+    // Check if profile is already loaded
+    final hasProfile = profileBloc.state.myProfile != null &&
+        profileBloc.state.myProfile!.userId > 0;
+    final hasUser = userBloc.state.currentUser != null;
+
+    if (hasProfile && hasUser) {
+      return const MainWrapper();
     }
 
-    // Load user if not loaded yet
-    if (userBloc.state.currentUser == null) {
-      userBloc.add(LoadCurrentUser());
-      await for (final state in userBloc.stream) {
-        if (state.status == UserStatus.success ||
-            state.status == UserStatus.error) {
-          break;
-        }
-      }
+    return _ProfileLoader(
+      token: token,
+      hasProfile: hasProfile,
+      hasUser: hasUser,
+    );
+  }
+}
+
+class _ProfileLoader extends StatefulWidget {
+  final String token;
+  final bool hasProfile;
+  final bool hasUser;
+
+  const _ProfileLoader({
+    required this.token,
+    required this.hasProfile,
+    required this.hasUser,
+  });
+
+  @override
+  State<_ProfileLoader> createState() => _ProfileLoaderState();
+}
+
+class _ProfileLoaderState extends State<_ProfileLoader> {
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final profileBloc = context.read<ProfileBloc>();
+    final userBloc = context.read<UserBloc>();
+
+    final futures = <Future>[];
+
+    if (!widget.hasProfile) {
+      profileBloc.add(LoadMyProfile());
+      futures.add(profileBloc.stream.firstWhere(
+        (state) =>
+            state.status == ProfileStatus.success ||
+            state.status == ProfileStatus.error,
+      ));
     }
+
+    if (!widget.hasUser) {
+      userBloc.add(LoadCurrentUser());
+      futures.add(userBloc.stream.firstWhere(
+        (state) =>
+            state.status == UserStatus.success ||
+            state.status == UserStatus.error,
+      ));
+    }
+
+    if (futures.isNotEmpty) {
+      await Future.wait(futures);
+    }
+
+    if (!mounted) return;
 
     final profile = profileBloc.state.myProfile;
-    if (profile != null && profile.userId > 0) {
-      if (mounted) {
-        setState(() {
-          _redirectRoute = null;
-          _isChecking = false;
-        });
-      }
-      return;
-    }
+    final hasValidProfile = profile != null && profile.userId > 0;
 
-    if (mounted) {
-      setState(() {
-        _redirectRoute = NamedRoutes.demographicScreen;
-        _isChecking = false;
-      });
+    if (!hasValidProfile) {
+      Navigator.pushReplacementNamed(context, NamedRoutes.demographicScreen);
+    } else {
+      Navigator.pushReplacementNamed(context, '/');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isChecking) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              'assets/images/clique.png',
+              width: 120,
+              height: 120,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(height: 24),
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
         ),
-      );
-    }
+      ),
+    );
+  }
+}
 
-    if (_redirectRoute != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, _redirectRoute!);
-        }
-      });
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
+class _Redirector extends StatelessWidget {
+  final String route;
+
+  const _Redirector({required this.route});
+
+  @override
+  Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (context.mounted) {
+        Navigator.pushReplacementNamed(context, route);
+      }
+    });
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: Image.asset(
+          'assets/icons/clique.png',
+          width: 120,
+          height: 120,
+          fit: BoxFit.contain,
         ),
-      );
-    }
-
-    return const MainWrapper();
+      ),
+    );
   }
 }

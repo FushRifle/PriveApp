@@ -17,8 +17,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<RefreshConversations>(_onRefreshConversations);
     on<LoadConversationInfo>(_onLoadConversationInfo);
     on<LoadMessages>(_onLoadMessages);
-    on<LoadMoreMessages>(_onLoadMoreMessages);
     on<SendMessage>(_onSendMessage);
+    on<DeleteMessage>(_onDeleteMessage);
+    on<ReportMessage>(_onReportMessage);
     on<MarkMessagesAsRead>(_onMarkMessagesAsRead);
     on<SetTyping>(_onSetTyping);
     on<LoadChatSettings>(_onLoadChatSettings);
@@ -59,9 +60,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   }
 
   Future<void> _onLoadConversations(
-    LoadConversations event,
-    Emitter<ChatState> emit,
-  ) async {
+      LoadConversations event, Emitter<ChatState> emit) async {
     if (state.conversations.isEmpty) {
       emit(state.copyWith(conversationsStatus: ChatStatus.loading));
     }
@@ -70,7 +69,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       final data = await _chatService.getConversations();
       final conversations =
           data.map((json) => ConversationModel.fromJson(json)).toList();
-
       emit(state.copyWith(
         conversations: conversations,
         conversationsStatus: ChatStatus.success,
@@ -85,16 +83,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   }
 
   Future<void> _onRefreshConversations(
-    RefreshConversations event,
-    Emitter<ChatState> emit,
-  ) async {
+      RefreshConversations event, Emitter<ChatState> emit) async {
     emit(state.copyWith(conversationsStatus: ChatStatus.refreshing));
-
     try {
       final data = await _chatService.getConversations();
       final conversations =
           data.map((json) => ConversationModel.fromJson(json)).toList();
-
       emit(state.copyWith(
         conversations: conversations,
         conversationsStatus: ChatStatus.success,
@@ -109,13 +103,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   }
 
   Future<void> _onLoadConversationInfo(
-    LoadConversationInfo event,
-    Emitter<ChatState> emit,
-  ) async {
+      LoadConversationInfo event, Emitter<ChatState> emit) async {
     try {
       final data = await _chatService.getConversationInfo(event.conversationId);
       final info = ConversationInfoModel.fromJson(data);
-
       emit(state.copyWith(conversationInfo: info, error: null));
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
@@ -123,9 +114,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   }
 
   Future<void> _onLoadMessages(
-    LoadMessages event,
-    Emitter<ChatState> emit,
-  ) async {
+      LoadMessages event, Emitter<ChatState> emit) async {
     await _loadCurrentUserId();
 
     if (event.page == 1) {
@@ -142,7 +131,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           page: event.page);
       final messages = data.map((json) {
         final message = MessageModel.fromJson(json);
-        // Set isOwn based on current user ID
         return MessageModel(
           id: message.id,
           senderId: message.senderId,
@@ -150,6 +138,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           message: message.message,
           messageType: message.messageType,
           mediaUrl: message.mediaUrl,
+          replyToId: message.replyToId,
+          replyToMessage: message.replyToMessage,
+          replyToSender: message.replyToSender,
           isRead: message.isRead,
           isOwn: message.senderId == _currentUserId,
           createdAt: message.createdAt,
@@ -174,52 +165,94 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
   }
 
-  Future<void> _onLoadMoreMessages(
-    LoadMoreMessages event,
-    Emitter<ChatState> emit,
-  ) async {
-    if (!state.hasMoreMessages || state.messagesStatus == ChatStatus.loading) {
-      return;
-    }
-
-    final nextPage = state.currentPage + 1;
-    add(LoadMessages(conversationId: event.conversationId, page: nextPage));
-  }
-
   Future<void> _onSendMessage(
     SendMessage event,
     Emitter<ChatState> emit,
   ) async {
     await _loadCurrentUserId();
+    print('=== SENDING MESSAGE ===');
+    print('Current user ID: $_currentUserId');
+    print('Receiver ID: ${event.receiverId}');
+    print('Message: ${event.message}');
+    print('Message type: ${event.messageType}');
+
+    // Optimistic update
+    final tempMessage = MessageModel(
+      id: DateTime.now().millisecondsSinceEpoch,
+      senderId: _currentUserId!,
+      receiverId: event.receiverId,
+      message: event.message,
+      messageType: event.messageType,
+      mediaUrl: event.mediaUrl,
+      replyToId: event.replyToId,
+      replyToMessage: event.replyToMessage,
+      replyToSender: event.replyToSender,
+      isRead: false,
+      isOwn: true,
+      createdAt: DateTime.now(),
+    );
+
+    print('Adding temp message to UI: ${tempMessage.id}');
+    emit(state.copyWith(messages: [tempMessage, ...state.messages]));
 
     try {
+      print('Calling chat service to send message...');
       await _chatService.sendMessage(
         receiverId: event.receiverId,
         message: event.message,
         messageType: event.messageType,
         mediaUrl: event.mediaUrl,
+        replyToId: event.replyToId,
       );
+      print('Message sent successfully!');
       add(RefreshConversations());
       add(LoadMessages(conversationId: event.receiverId, page: 1));
+    } catch (e) {
+      print('ERROR sending message: $e');
+      print('Removing temp message from UI');
+      emit(state.copyWith(
+        messages: state.messages.where((m) => m.id != tempMessage.id).toList(),
+        error: e.toString(),
+      ));
+
+      // Show error to user
+      // You can add a snackbar here
+    }
+  }
+
+  Future<void> _onDeleteMessage(
+      DeleteMessage event, Emitter<ChatState> emit) async {
+    try {
+      await _chatService.deleteMessage(event.messageId);
+      emit(state.copyWith(
+        messages: state.messages.where((m) => m.id != event.messageId).toList(),
+      ));
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
+    }
+  }
+
+  Future<void> _onReportMessage(
+      ReportMessage event, Emitter<ChatState> emit) async {
+    try {
+      await _chatService.reportMessage(event.messageId, event.reason);
+      emit(state.copyWith(error: null));
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }
   }
 
   Future<void> _onMarkMessagesAsRead(
-    MarkMessagesAsRead event,
-    Emitter<ChatState> emit,
-  ) async {
+      MarkMessagesAsRead event, Emitter<ChatState> emit) async {
     try {
       await _chatService.markAsRead(event.conversationId);
-
-      // Update unread count locally
       final updatedConversations = state.conversations.map((conv) {
         if (conv.id == event.conversationId) {
           return ConversationModel(
             id: conv.id,
             userId: conv.userId,
             name: conv.name,
+            username: conv.username,
             avatar: conv.avatar,
             age: conv.age,
             verified: conv.verified,
@@ -232,36 +265,26 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             isPinned: conv.isPinned,
             isMuted: conv.isMuted,
             muteUntil: conv.muteUntil,
-            username: '',
           );
         }
         return conv;
       }).toList();
-
       emit(state.copyWith(conversations: updatedConversations));
     } catch (e) {
       print('Failed to mark as read: $e');
     }
   }
 
-  Future<void> _onSetTyping(
-    SetTyping event,
-    Emitter<ChatState> emit,
-  ) async {
-    emit(state.copyWith(isTyping: event.isTyping));
+  Future<void> _onSetTyping(SetTyping event, Emitter<ChatState> emit) async {
     await _chatService.setTyping(event.conversationId, event.isTyping);
   }
 
   Future<void> _onLoadChatSettings(
-    LoadChatSettings event,
-    Emitter<ChatState> emit,
-  ) async {
+      LoadChatSettings event, Emitter<ChatState> emit) async {
     emit(state.copyWith(settingsStatus: ChatStatus.loading));
-
     try {
       final data = await _chatService.getChatSettings(event.conversationId);
       final settings = ChatSettingsModel.fromJson(data);
-
       emit(state.copyWith(
         chatSettings: settings,
         settingsStatus: ChatStatus.success,
@@ -276,9 +299,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   }
 
   Future<void> _onUpdateChatSettings(
-    UpdateChatSettings event,
-    Emitter<ChatState> emit,
-  ) async {
+      UpdateChatSettings event, Emitter<ChatState> emit) async {
     try {
       await _chatService.updateChatSettings(
         event.conversationId,
@@ -289,37 +310,19 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         chatColor: event.chatColor,
         notificationSound: event.notificationSound,
       );
-
-      if (state.chatSettings != null) {
-        final updatedSettings = ChatSettingsModel(
-          id: state.chatSettings!.id,
-          isPinned: event.isPinned ?? state.chatSettings!.isPinned,
-          isMuted: event.isMuted ?? state.chatSettings!.isMuted,
-          muteUntil: event.muteUntil ?? state.chatSettings!.muteUntil,
-          wallpaper: event.wallpaper ?? state.chatSettings!.wallpaper,
-          chatColor: event.chatColor ?? state.chatSettings!.chatColor,
-          notificationSound:
-              event.notificationSound ?? state.chatSettings!.notificationSound,
-        );
-        emit(state.copyWith(chatSettings: updatedSettings));
-      }
-
       add(RefreshConversations());
+      add(LoadChatSettings(conversationId: event.conversationId));
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }
   }
 
   Future<void> _onLoadUserPreferences(
-    LoadUserPreferences event,
-    Emitter<ChatState> emit,
-  ) async {
+      LoadUserPreferences event, Emitter<ChatState> emit) async {
     emit(state.copyWith(preferencesStatus: ChatStatus.loading));
-
     try {
       final data = await _chatService.getUserPreferences();
       final preferences = UserPreferencesModel.fromJson(data);
-
       emit(state.copyWith(
         userPreferences: preferences,
         preferencesStatus: ChatStatus.success,
@@ -334,9 +337,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   }
 
   Future<void> _onUpdateUserPreferences(
-    UpdateUserPreferences event,
-    Emitter<ChatState> emit,
-  ) async {
+      UpdateUserPreferences event, Emitter<ChatState> emit) async {
     try {
       await _chatService.updateUserPreferences(
         wallpaper: event.wallpaper,
@@ -349,37 +350,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         messagePreview: event.messagePreview,
         autoDownloadMedia: event.autoDownloadMedia,
       );
-
-      if (state.userPreferences != null) {
-        final updatedPreferences = UserPreferencesModel(
-          wallpaper: event.wallpaper ?? state.userPreferences!.wallpaper,
-          chatColor: event.chatColor ?? state.userPreferences!.chatColor,
-          notificationSound: event.notificationSound ??
-              state.userPreferences!.notificationSound,
-          fontSize: event.fontSize ?? state.userPreferences!.fontSize,
-          enterToSend: event.enterToSend ?? state.userPreferences!.enterToSend,
-          readReceipts:
-              event.readReceipts ?? state.userPreferences!.readReceipts,
-          typingIndicators:
-              event.typingIndicators ?? state.userPreferences!.typingIndicators,
-          messagePreview:
-              event.messagePreview ?? state.userPreferences!.messagePreview,
-          autoDownloadMedia: event.autoDownloadMedia ??
-              state.userPreferences!.autoDownloadMedia,
-        );
-        emit(state.copyWith(userPreferences: updatedPreferences));
-      } else {
-        add(LoadUserPreferences());
-      }
+      add(LoadUserPreferences());
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }
   }
 
-  Future<void> _onBlockUser(
-    BlockUser event,
-    Emitter<ChatState> emit,
-  ) async {
+  Future<void> _onBlockUser(BlockUser event, Emitter<ChatState> emit) async {
     try {
       await _chatService.blockUser(event.userId);
       emit(state.copyWith(error: null));
@@ -389,27 +366,16 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   }
 
   Future<void> _onUnblockUser(
-    UnblockUser event,
-    Emitter<ChatState> emit,
-  ) async {
+      UnblockUser event, Emitter<ChatState> emit) async {
     try {
       await _chatService.unblockUser(event.userId);
-
-      if (state.conversationInfo != null &&
-          state.conversationInfo!.participantId == event.userId) {
-        add(LoadConversationInfo(
-            conversationId: state.conversationInfo!.participantId));
-      }
       emit(state.copyWith(error: null));
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }
   }
 
-  Future<void> _onClearChat(
-    ClearChat event,
-    Emitter<ChatState> emit,
-  ) async {
+  Future<void> _onClearChat(ClearChat event, Emitter<ChatState> emit) async {
     try {
       await _chatService.clearChat(event.conversationId);
       add(LoadMessages(conversationId: event.conversationId, page: 1));
@@ -418,30 +384,19 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
   }
 
-  void _onClearChatError(
-    ClearChatError event,
-    Emitter<ChatState> emit,
-  ) {
+  void _onClearChatError(ClearChatError event, Emitter<ChatState> emit) {
     emit(state.copyWith(error: null));
   }
 
-  void _onResetChatState(
-    ResetChatState event,
-    Emitter<ChatState> emit,
-  ) {
+  void _onResetChatState(ResetChatState event, Emitter<ChatState> emit) {
     _currentUserId = null;
     emit(const ChatState());
   }
 
   void _onNewMessageReceived(
-    NewMessageReceived event,
-    Emitter<ChatState> emit,
-  ) async {
+      NewMessageReceived event, Emitter<ChatState> emit) async {
     await _loadCurrentUserId();
-
     final newMessage = MessageModel.fromJson(event.message);
-
-    // Set isOwn based on current user ID
     final processedMessage = MessageModel(
       id: newMessage.id,
       senderId: newMessage.senderId,
@@ -449,85 +404,54 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       message: newMessage.message,
       messageType: newMessage.messageType,
       mediaUrl: newMessage.mediaUrl,
+      replyToId: newMessage.replyToId,
+      replyToMessage: newMessage.replyToMessage,
+      replyToSender: newMessage.replyToSender,
       isRead: newMessage.isRead,
       isOwn: newMessage.senderId == _currentUserId,
       createdAt: newMessage.createdAt,
     );
 
-    final updatedMessages = state.messagesStatus == ChatStatus.success &&
-            state.conversationInfo != null &&
-            processedMessage.senderId == state.conversationInfo!.participantId
+    final updatedMessages = state.messagesStatus == ChatStatus.success
         ? [processedMessage, ...state.messages]
         : state.messages;
 
-    final updatedConversations = state.conversations.map((conv) {
-      if (conv.userId == processedMessage.senderId ||
-          conv.userId == processedMessage.receiverId) {
-        return ConversationModel(
-          id: conv.id,
-          userId: conv.userId,
-          name: conv.name,
-          avatar: conv.avatar,
-          age: conv.age,
-          verified: conv.verified,
-          lastMessage: processedMessage.message,
-          lastMessageType: processedMessage.messageType,
-          timestamp: 'just now',
-          unreadCount:
-              processedMessage.isOwn ? conv.unreadCount : conv.unreadCount + 1,
-          isOnline: conv.isOnline,
-          isTyping: false,
-          isPinned: conv.isPinned,
-          isMuted: conv.isMuted,
-          muteUntil: conv.muteUntil,
-          username: '',
-        );
-      }
-      return conv;
-    }).toList();
-
-    emit(state.copyWith(
-      messages: updatedMessages,
-      conversations: updatedConversations,
-    ));
+    emit(state.copyWith(messages: updatedMessages));
   }
 
   void _onMessageReadReceived(
-    MessageReadReceived event,
-    Emitter<ChatState> emit,
-  ) {
-    if (state.conversationInfo != null &&
-        state.conversationInfo!.participantId == event.readByUserId) {
-      final updatedMessages = state.messages.map((msg) {
-        if (!msg.isOwn && !msg.isRead) {
-          return MessageModel(
-            id: msg.id,
-            senderId: msg.senderId,
-            receiverId: msg.receiverId,
-            message: msg.message,
-            messageType: msg.messageType,
-            mediaUrl: msg.mediaUrl,
-            isRead: true,
-            isOwn: msg.isOwn,
-            createdAt: msg.createdAt,
-          );
-        }
-        return msg;
-      }).toList();
-      emit(state.copyWith(messages: updatedMessages));
-    }
+      MessageReadReceived event, Emitter<ChatState> emit) {
+    final updatedMessages = state.messages.map((msg) {
+      if (!msg.isOwn && !msg.isRead) {
+        return MessageModel(
+          id: msg.id,
+          senderId: msg.senderId,
+          receiverId: msg.receiverId,
+          message: msg.message,
+          messageType: msg.messageType,
+          mediaUrl: msg.mediaUrl,
+          replyToId: msg.replyToId,
+          replyToMessage: msg.replyToMessage,
+          replyToSender: msg.replyToSender,
+          isRead: true,
+          isOwn: msg.isOwn,
+          createdAt: msg.createdAt,
+        );
+      }
+      return msg;
+    }).toList();
+    emit(state.copyWith(messages: updatedMessages));
   }
 
   void _onTypingStatusReceived(
-    TypingStatusReceived event,
-    Emitter<ChatState> emit,
-  ) {
+      TypingStatusReceived event, Emitter<ChatState> emit) {
     final updatedConversations = state.conversations.map((conv) {
-      if (conv.id == event.conversationId) {
+      if (conv.id == event.conversationId && conv.userId == event.userId) {
         return ConversationModel(
           id: conv.id,
           userId: conv.userId,
           name: conv.name,
+          username: conv.username,
           avatar: conv.avatar,
           age: conv.age,
           verified: conv.verified,
@@ -536,11 +460,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           timestamp: conv.timestamp,
           unreadCount: conv.unreadCount,
           isOnline: conv.isOnline,
-          isTyping: event.isTyping && event.userId != _currentUserId,
+          isTyping: event.isTyping,
           isPinned: conv.isPinned,
           isMuted: conv.isMuted,
           muteUntil: conv.muteUntil,
-          username: '',
         );
       }
       return conv;

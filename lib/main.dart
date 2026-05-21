@@ -1,5 +1,6 @@
 import 'package:clique/bloc/chat/chat_bloc.dart';
 import 'package:clique/bloc/chat/gallery/chat_gallery_cubit.dart';
+import 'package:clique/bloc/cloudinary/cloudinary_cubit.dart';
 import 'package:clique/bloc/insights/insights_bloc.dart';
 import 'package:clique/bloc/match/match_bloc.dart';
 import 'package:clique/bloc/profile/profile_bloc.dart';
@@ -66,7 +67,7 @@ Future<void> main() async {
   await Supabase.initialize(
     url: ApiConfig.supabaseUrl,
     anonKey: ApiConfig.supabaseAnonKey,
-    debug: true,
+    debug: false, // Disable debug in production
   );
 
   CloudinaryContext.cloudinary =
@@ -88,12 +89,12 @@ class MyApp extends ConsumerStatefulWidget {
 
 class _MyAppState extends ConsumerState<MyApp> {
   late final AuthBloc _authBloc;
-  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
-      GlobalKey<ScaffoldMessengerState>();
+  late final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey;
 
   @override
   void initState() {
     super.initState();
+    _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
     _authBloc = AuthBloc();
     _authBloc.add(CheckAuthStatus());
   }
@@ -110,21 +111,33 @@ class _MyAppState extends ConsumerState<MyApp> {
 
     return MultiBlocProvider(
       providers: [
-        BlocProvider<AuthBloc>.value(
-          value: _authBloc,
+        // Auth providers
+        BlocProvider<AuthBloc>.value(value: _authBloc),
+
+        // Core providers
+        BlocProvider<CloudinaryCubit>(
+          create: (context) => CloudinaryCubit(),
+          lazy: false, // Initialize immediately
         ),
         BlocProvider<UserBloc>(
           create: (context) => UserBloc(),
         ),
+        BlocProvider<ProfileBloc>(
+          create: (context) => ProfileBloc(),
+        ),
+
+        // Social providers
         BlocProvider<FriendsBloc>(
           create: (context) => FriendsBloc(),
-        ),
-        BlocProvider<InsightsBloc>(
-          create: (context) => InsightsBloc(),
         ),
         BlocProvider<MatchBloc>(
           create: (context) => MatchBloc(),
         ),
+        BlocProvider<InsightsBloc>(
+          create: (context) => InsightsBloc(),
+        ),
+
+        // Content providers
         BlocProvider<FeedBloc>(
           create: (context) => FeedBloc(),
         ),
@@ -137,13 +150,14 @@ class _MyAppState extends ConsumerState<MyApp> {
         BlocProvider<ReelBloc>(
           create: (context) => ReelBloc(),
         ),
+
+        // Chat providers
         BlocProvider<ChatBloc>(
           create: (context) => ChatBloc(),
         ),
         BlocProvider<ChatGalleryCubit>(
           create: (context) => ChatGalleryCubit(),
         ),
-        BlocProvider(create: (context) => ProfileBloc()),
       ],
       child: MaterialApp(
         title: 'Clique',
@@ -157,41 +171,60 @@ class _MyAppState extends ConsumerState<MyApp> {
         onGenerateRoute: _generateRoute,
         builder: (context, child) {
           if (child == null) return const SizedBox.shrink();
-          MediaQuery.of(context);
+
           return MultiBlocListener(
             listeners: [
+              // Auth listener - critical errors only
               BlocListener<AuthBloc, AuthState>(
+                listenWhen: (previous, current) {
+                  // Only show errors for auth-related critical issues
+                  return current.status == AuthStatus.error &&
+                      current.error != null &&
+                      _isCriticalAuthError(current.error!);
+                },
                 listener: (context, state) {
-                  if (state.status == AuthStatus.error &&
-                      state.error?.contains('token') == true) {
+                  if (state.error?.contains('token') == true ||
+                      state.error?.contains('session') == true ||
+                      state.error?.contains('unauthorized') == true) {
                     _authBloc.add(SignOutRequested());
                   }
                 },
               ),
+
+              // Profile listener - success only
               BlocListener<ProfileBloc, ProfileState>(
+                listenWhen: (previous, current) {
+                  return current.status == ProfileStatus.success &&
+                      previous.status != ProfileStatus.success;
+                },
                 listener: (context, state) {
-                  if (state.status == ProfileStatus.success && mounted) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) {
-                        Navigator.pushReplacementNamed(
-                            context, NamedRoutes.onboardingSuccessScreen);
-                      }
-                    });
+                  if (mounted) {
+                    Navigator.pushReplacementNamed(
+                        context, NamedRoutes.onboardingSuccessScreen);
                   }
-                  if (state.status == ProfileStatus.error &&
-                      state.error != null &&
-                      mounted) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) {
-                        _scaffoldMessengerKey.currentState?.showSnackBar(
-                          SnackBar(
-                            content: Text(state.error!),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
-                    });
-                  }
+                },
+              ),
+
+              // Cloudinary listener - silent errors
+              BlocListener<CloudinaryCubit, CloudinaryState>(
+                listenWhen: (previous, current) {
+                  return current.status == UploadStatus.error &&
+                      current.errorMessage != null &&
+                      _shouldShowUploadError(current.errorMessage!);
+                },
+                listener: (context, state) {
+                  debugPrint('Upload error: ${state.errorMessage}');
+                },
+              ),
+
+              // Chat listener - silent errors
+              BlocListener<ChatBloc, ChatState>(
+                listenWhen: (previous, current) {
+                  return current.error != null &&
+                      _isCriticalChatError(current.error!);
+                },
+                listener: (context, state) {
+                  debugPrint('Chat error: ${state.error}');
                 },
               ),
             ],
@@ -200,6 +233,40 @@ class _MyAppState extends ConsumerState<MyApp> {
         },
       ),
     );
+  }
+
+  bool _isCriticalAuthError(String error) {
+    final criticalErrors = [
+      'token',
+      'session',
+      'unauthorized',
+      'forbidden',
+      'blocked',
+      'suspended',
+      'invalid credentials'
+    ];
+    return criticalErrors
+        .any((keyword) => error.toLowerCase().contains(keyword));
+  }
+
+  bool _shouldShowUploadError(String error) {
+    final silentErrors = [
+      '401',
+      '500',
+      '503',
+      'network',
+      'timeout',
+      'connection',
+      'internet'
+    ];
+    return !silentErrors
+        .any((keyword) => error.toLowerCase().contains(keyword));
+  }
+
+  bool _isCriticalChatError(String error) {
+    final criticalErrors = ['blocked', 'banned', 'restricted', 'unauthorized'];
+    return criticalErrors
+        .any((keyword) => error.toLowerCase().contains(keyword));
   }
 
   Route<dynamic>? _generateRoute(RouteSettings settings) {
@@ -225,18 +292,14 @@ class _MyAppState extends ConsumerState<MyApp> {
       case NamedRoutes.demographicScreen:
         return MaterialPageRoute(
             builder: (context) => const OnboardingDemographicPage());
+
       case NamedRoutes.onboardingSuccessScreen:
         return MaterialPageRoute(
             builder: (context) => const OnboardingSuccessPage());
 
-      case NamedRoutes.homeScreen:
-        return MaterialPageRoute(builder: (context) => const AuthGuard());
-
       case NamedRoutes.profileScreen:
         return MaterialPageRoute(
-            builder: (context) => const ProfilePage(
-                  isOwnProfile: true,
-                ));
+            builder: (context) => const ProfilePage(isOwnProfile: true));
 
       case NamedRoutes.editProfileScreen:
         return MaterialPageRoute(builder: (context) => const EditProfilePage());
@@ -259,15 +322,14 @@ class _MyAppState extends ConsumerState<MyApp> {
 
       case NamedRoutes.statusScreen:
         return MaterialPageRoute(
-          builder: (context) => const StatusPage(
-            stories: [],
-          ),
-        );
+            builder: (context) => const StatusPage(stories: []));
 
       case NamedRoutes.settingsScreen:
         return MaterialPageRoute(builder: (context) => const SettingsPage());
+
       case NamedRoutes.aboutScreen:
         return MaterialPageRoute(builder: (context) => const AboutPage());
+
       case NamedRoutes.termsScreen:
         return MaterialPageRoute(builder: (context) => const TermsPage());
 
@@ -297,6 +359,7 @@ class _MyAppState extends ConsumerState<MyApp> {
 
       case NamedRoutes.lockScreenScreen:
         return MaterialPageRoute(builder: (context) => const LockScreenPage());
+
       default:
         return MaterialPageRoute(
           builder: (context) => const AuthGuard(),

@@ -15,6 +15,7 @@ class InboxPage extends StatefulWidget {
 }
 
 class _InboxPageState extends State<InboxPage> {
+  // ignore: non_constant_identifier_names
   final RefreshIndicatorKey = GlobalKey<RefreshIndicatorState>();
 
   @override
@@ -132,7 +133,8 @@ class _InboxPageState extends State<InboxPage> {
           conv.username.toLowerCase() == 'clique';
 
       conversations.add(_ChatMessage(
-        id: conv.userId.toString(),
+        id: conv.id.toString(),
+        userId: conv.userId,
         name: conv.name,
         message: conv.lastMessage.isNotEmpty
             ? conv.lastMessage
@@ -297,15 +299,16 @@ class _InboxPageState extends State<InboxPage> {
       child: GestureDetector(
         onTap: () {
           HapticFeedback.lightImpact();
-          final userId = int.tryParse(message.id);
-          if (userId != null) {
+          final conversationId = int.tryParse(message.id);
+          if (conversationId != null) {
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => ChatPage(
+                  conversationId: conversationId,
                   userName: message.name,
                   userAvatar: message.avatar,
-                  userId: userId.toString(),
+                  userId: message.userId,
                 ),
               ),
             );
@@ -530,6 +533,7 @@ class _InboxPageState extends State<InboxPage> {
 
 class _ChatMessage {
   final String id;
+  final int userId;
   final String name;
   final String message;
   final String time;
@@ -542,6 +546,7 @@ class _ChatMessage {
 
   _ChatMessage({
     required this.id,
+    required this.userId,
     required this.name,
     required this.message,
     required this.time,

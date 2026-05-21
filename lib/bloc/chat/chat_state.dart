@@ -19,12 +19,8 @@ class ConversationModel {
   final bool isPinned;
   final bool isMuted;
   final DateTime? muteUntil;
-  final bool isVerified;
-  final String wallpaper;
-  final String chatColor;
-  final String notificationSound;
 
-  ConversationModel({
+  const ConversationModel({
     required this.id,
     required this.userId,
     required this.name,
@@ -40,11 +36,7 @@ class ConversationModel {
     required this.isTyping,
     required this.isPinned,
     required this.isMuted,
-    required this.muteUntil,
-    this.isVerified = false,
-    this.wallpaper = 'default',
-    this.chatColor = 'default',
-    this.notificationSound = 'default',
+    this.muteUntil,
   });
 
   factory ConversationModel.fromJson(Map<String, dynamic> json) {
@@ -52,7 +44,7 @@ class ConversationModel {
       id: json['id'] ?? 0,
       userId: json['userId'] ?? 0,
       name: json['name'] ?? 'User',
-      username: json['username'] ?? 'User',
+      username: json['username'] ?? '',
       avatar: json['avatar'] ?? '',
       age: json['age'] ?? 0,
       verified: json['verified'] ?? false,
@@ -67,13 +59,8 @@ class ConversationModel {
       muteUntil: json['muteUntil'] != null
           ? DateTime.tryParse(json['muteUntil'])
           : null,
-      isVerified: json['verified'] == true || json['isVerified'] == true,
     );
   }
-
-  bool get isMutedForever => isMuted && muteUntil == null;
-  bool get isMutedTemporarily =>
-      isMuted && muteUntil != null && muteUntil!.isAfter(DateTime.now());
 }
 
 class MessageModel {
@@ -83,17 +70,23 @@ class MessageModel {
   final String message;
   final String messageType;
   final String? mediaUrl;
+  final int? replyToId;
+  final String? replyToMessage;
+  final String? replyToSender;
   final bool isRead;
   final bool isOwn;
   final DateTime createdAt;
 
-  MessageModel({
+  const MessageModel({
     required this.id,
     required this.senderId,
     required this.receiverId,
     required this.message,
     required this.messageType,
     this.mediaUrl,
+    this.replyToId,
+    this.replyToMessage,
+    this.replyToSender,
     required this.isRead,
     required this.isOwn,
     required this.createdAt,
@@ -107,6 +100,9 @@ class MessageModel {
       message: json['message'] ?? '',
       messageType: json['messageType'] ?? 'text',
       mediaUrl: json['mediaUrl'],
+      replyToId: json['replyToId'],
+      replyToMessage: json['replyToMessage'],
+      replyToSender: json['replyToSender'],
       isRead: json['isRead'] ?? false,
       isOwn: json['isOwn'] ?? false,
       createdAt: DateTime.parse(json['createdAt']),
@@ -123,7 +119,7 @@ class ConversationInfoModel {
   final DateTime memberSince;
   final bool isBlocked;
 
-  ConversationInfoModel({
+  const ConversationInfoModel({
     required this.participantId,
     required this.participantName,
     required this.participantAge,
@@ -155,7 +151,7 @@ class ChatSettingsModel {
   final String chatColor;
   final String notificationSound;
 
-  ChatSettingsModel({
+  const ChatSettingsModel({
     required this.id,
     required this.isPinned,
     required this.isMuted,
@@ -191,7 +187,7 @@ class UserPreferencesModel {
   final bool messagePreview;
   final String autoDownloadMedia;
 
-  UserPreferencesModel({
+  const UserPreferencesModel({
     required this.wallpaper,
     required this.chatColor,
     required this.notificationSound,
@@ -232,7 +228,6 @@ class ChatState extends Equatable {
 
   final int currentPage;
   final bool hasMoreMessages;
-  final bool isTyping;
   final String? error;
 
   const ChatState({
@@ -247,7 +242,6 @@ class ChatState extends Equatable {
     this.userPreferences,
     this.currentPage = 1,
     this.hasMoreMessages = true,
-    this.isTyping = false,
     this.error,
   });
 
@@ -263,7 +257,6 @@ class ChatState extends Equatable {
     UserPreferencesModel? userPreferences,
     int? currentPage,
     bool? hasMoreMessages,
-    bool? isTyping,
     String? error,
   }) {
     return ChatState(
@@ -278,7 +271,6 @@ class ChatState extends Equatable {
       userPreferences: userPreferences ?? this.userPreferences,
       currentPage: currentPage ?? this.currentPage,
       hasMoreMessages: hasMoreMessages ?? this.hasMoreMessages,
-      isTyping: isTyping ?? this.isTyping,
       error: error ?? this.error,
     );
   }
@@ -296,7 +288,6 @@ class ChatState extends Equatable {
         userPreferences,
         currentPage,
         hasMoreMessages,
-        isTyping,
-        error
+        error,
       ];
 }

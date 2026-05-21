@@ -11,7 +11,7 @@ import 'package:clique/ui/pages/main/chat/chat_settings_page.dart';
 class ChatInfoPage extends StatefulWidget {
   final String userName;
   final String userAvatar;
-  final String userId;
+  final int userId;
 
   const ChatInfoPage({
     super.key,
@@ -31,7 +31,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
   @override
   void initState() {
     super.initState();
-    _conversationId = int.tryParse(widget.userId) ?? 0;
+    _conversationId = (widget.userId);
     if (_conversationId != 0) {
       context.read<ChatGalleryCubit>().loadSharedMedia(_conversationId);
       _loadChatSettings();
@@ -94,7 +94,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Chat Info',
+          widget.userName,
           style: AppTheme.blackTextStyle.copyWith(
             fontWeight: FontWeight.w600,
             fontSize: 18,
@@ -189,14 +189,9 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
           _buildAvatar(firstLetter),
           const SizedBox(height: 16),
           Text(
-            widget.userName,
+            '@${widget.userName.toLowerCase().replaceAll(' ', '_')}',
             style: AppTheme.blackTextStyle
                 .copyWith(fontWeight: FontWeight.bold, fontSize: 22),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '@${widget.userName.toLowerCase().replaceAll(' ', '_')}',
-            style: AppTheme.greyTextStyle.copyWith(fontSize: 14),
           ),
           const SizedBox(height: 8),
           Row(
