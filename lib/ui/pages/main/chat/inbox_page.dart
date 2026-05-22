@@ -15,7 +15,6 @@ class InboxPage extends StatefulWidget {
 }
 
 class _InboxPageState extends State<InboxPage> {
-  // ignore: non_constant_identifier_names
   final RefreshIndicatorKey = GlobalKey<RefreshIndicatorState>();
 
   @override
@@ -194,7 +193,6 @@ class _InboxPageState extends State<InboxPage> {
             IconButton(
               onPressed: () {
                 HapticFeedback.lightImpact();
-                // TODO: Navigate to search users
                 debugPrint('Search tapped');
               },
               icon: const Icon(

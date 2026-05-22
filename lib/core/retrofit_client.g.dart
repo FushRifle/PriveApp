@@ -21,14 +21,17 @@ class _RetrofitClient implements RetrofitClient {
 
   @override
   Future<HttpResponse<dynamic>> getRequest(
-    String path,
+    String path, {
     Map<String, dynamic>? queries,
-  ) async {
+    CancelToken? cancelToken,
+    String? authorization,
+  }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     queryParameters.addAll(queries ?? <String, dynamic>{});
     queryParameters.removeWhere((k, v) => v == null);
-    final _headers = <String, dynamic>{};
+    final _headers = <String, dynamic>{r'Authorization': authorization};
+    _headers.removeWhere((k, v) => v == null);
     const Map<String, dynamic>? _data = null;
     final _options = _setStreamType<HttpResponse<dynamic>>(
       Options(method: 'GET', headers: _headers, extra: _extra)
@@ -37,6 +40,7 @@ class _RetrofitClient implements RetrofitClient {
             '${path}',
             queryParameters: queryParameters,
             data: _data,
+            cancelToken: cancelToken,
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
@@ -47,10 +51,17 @@ class _RetrofitClient implements RetrofitClient {
   }
 
   @override
-  Future<HttpResponse<dynamic>> postRequest(String path, dynamic data) async {
+  Future<HttpResponse<dynamic>> postRequest(
+    String path, {
+    dynamic data,
+    CancelToken? cancelToken,
+    String? authorization,
+  }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
-    final _headers = <String, dynamic>{};
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{r'Authorization': authorization};
+    _headers.removeWhere((k, v) => v == null);
     final _data = data;
     final _options = _setStreamType<HttpResponse<dynamic>>(
       Options(method: 'POST', headers: _headers, extra: _extra)
@@ -59,6 +70,7 @@ class _RetrofitClient implements RetrofitClient {
             '${path}',
             queryParameters: queryParameters,
             data: _data,
+            cancelToken: cancelToken,
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
@@ -69,10 +81,17 @@ class _RetrofitClient implements RetrofitClient {
   }
 
   @override
-  Future<HttpResponse<dynamic>> putRequest(String path, dynamic data) async {
+  Future<HttpResponse<dynamic>> putRequest(
+    String path, {
+    dynamic data,
+    CancelToken? cancelToken,
+    String? authorization,
+  }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
-    final _headers = <String, dynamic>{};
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{r'Authorization': authorization};
+    _headers.removeWhere((k, v) => v == null);
     final _data = data;
     final _options = _setStreamType<HttpResponse<dynamic>>(
       Options(method: 'PUT', headers: _headers, extra: _extra)
@@ -81,6 +100,7 @@ class _RetrofitClient implements RetrofitClient {
             '${path}',
             queryParameters: queryParameters,
             data: _data,
+            cancelToken: cancelToken,
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
@@ -91,10 +111,17 @@ class _RetrofitClient implements RetrofitClient {
   }
 
   @override
-  Future<HttpResponse<dynamic>> patchRequest(String path, dynamic data) async {
+  Future<HttpResponse<dynamic>> patchRequest(
+    String path, {
+    dynamic data,
+    CancelToken? cancelToken,
+    String? authorization,
+  }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
-    final _headers = <String, dynamic>{};
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{r'Authorization': authorization};
+    _headers.removeWhere((k, v) => v == null);
     final _data = data;
     final _options = _setStreamType<HttpResponse<dynamic>>(
       Options(method: 'PATCH', headers: _headers, extra: _extra)
@@ -103,6 +130,7 @@ class _RetrofitClient implements RetrofitClient {
             '${path}',
             queryParameters: queryParameters,
             data: _data,
+            cancelToken: cancelToken,
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
@@ -113,10 +141,16 @@ class _RetrofitClient implements RetrofitClient {
   }
 
   @override
-  Future<HttpResponse<dynamic>> deleteRequest(String path) async {
+  Future<HttpResponse<dynamic>> deleteRequest(
+    String path, {
+    CancelToken? cancelToken,
+    String? authorization,
+  }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
-    final _headers = <String, dynamic>{};
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{r'Authorization': authorization};
+    _headers.removeWhere((k, v) => v == null);
     const Map<String, dynamic>? _data = null;
     final _options = _setStreamType<HttpResponse<dynamic>>(
       Options(method: 'DELETE', headers: _headers, extra: _extra)
@@ -125,6 +159,7 @@ class _RetrofitClient implements RetrofitClient {
             '${path}',
             queryParameters: queryParameters,
             data: _data,
+            cancelToken: cancelToken,
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );

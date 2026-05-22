@@ -1,83 +1,107 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
+
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
+
+import 'package:cloudinary_flutter/cloudinary_context.dart';
+import 'package:cloudinary_url_gen/cloudinary.dart';
+
+import 'package:clique/app/configs/api_config.dart';
+import 'package:clique/app/configs/theme.dart';
+
+import 'package:clique/data/providers/theme_provider.dart';
+
+import 'package:clique/app/resources/constant/named_routes.dart';
+
+import 'package:clique/managers/auth_guard.dart';
+
+import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
 import 'package:clique/bloc/chat/gallery/chat_gallery_cubit.dart';
 import 'package:clique/bloc/cloudinary/cloudinary_cubit.dart';
+import 'package:clique/bloc/explore/explore_bloc.dart';
+import 'package:clique/bloc/friends/friends_bloc.dart';
+import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/bloc/insights/insights_bloc.dart';
 import 'package:clique/bloc/match/match_bloc.dart';
 import 'package:clique/bloc/profile/profile_bloc.dart';
+import 'package:clique/bloc/reels/reel_bloc.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
+import 'package:clique/bloc/user/user_bloc.dart';
+
+import 'package:clique/ui/pages/auth/demographic_page.dart';
+import 'package:clique/ui/pages/auth/login_page.dart';
+import 'package:clique/ui/pages/auth/register_page.dart';
 import 'package:clique/ui/pages/auth/security/active_sessions_page.dart';
 import 'package:clique/ui/pages/auth/security/change_password_page.dart';
 import 'package:clique/ui/pages/auth/security/lock_screen_page.dart';
 import 'package:clique/ui/pages/auth/security/two_factor_page.dart';
 import 'package:clique/ui/pages/auth/success_page.dart';
+
+import 'package:clique/ui/pages/main/home/create_post_page.dart';
+import 'package:clique/ui/pages/main/home/post_detail_page.dart';
+
+import 'package:clique/ui/pages/main/notification/notification_page.dart';
+
+import 'package:clique/ui/pages/main/profile/edit_profile_page.dart';
+import 'package:clique/ui/pages/main/profile/profile_page.dart';
+
+import 'package:clique/ui/pages/main/status/create_status_page.dart';
+import 'package:clique/ui/pages/main/status/status_page.dart';
+
+import 'package:clique/ui/pages/settings/settings_page.dart';
+import 'package:clique/ui/pages/settings/subscribe_page.dart';
+
 import 'package:clique/ui/pages/settings/clique/about_page.dart';
 import 'package:clique/ui/pages/settings/clique/help_page.dart';
 import 'package:clique/ui/pages/settings/clique/privacy_page.dart';
 import 'package:clique/ui/pages/settings/clique/terms_page.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:clique/app/configs/theme.dart';
-import 'package:clique/app/resources/constant/named_routes.dart';
-import 'package:clique/bloc/auth/auth_bloc.dart';
-import 'package:clique/ui/pages/main/home/post_detail_page.dart';
-import 'package:clique/ui/pages/main/notification/notification_page.dart';
-import 'package:clique/ui/pages/main/profile/edit_profile_page.dart';
-import 'package:clique/ui/pages/social/insights_page.dart';
-import 'package:clique/ui/pages/main/profile/profile_page.dart';
-import 'package:clique/ui/pages/main/home/create_post_page.dart';
-import 'package:clique/ui/pages/main/status/create_status_page.dart';
-import 'package:clique/ui/pages/main/status/status_page.dart';
-import 'package:clique/ui/pages/auth/login_page.dart';
-import 'package:clique/ui/pages/auth/register_page.dart';
-import 'package:clique/ui/pages/auth/demographic_page.dart';
-import 'package:clique/ui/pages/settings/settings_page.dart';
-import 'package:clique/ui/pages/settings/subscribe_page.dart';
+
 import 'package:clique/ui/pages/social/friends_list_page.dart';
+import 'package:clique/ui/pages/social/insights_page.dart';
+
 import 'package:clique/ui/pages/main/match/matches_page.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
-import 'package:clique/app/configs/api_config.dart';
-import 'package:clique/data/providers/theme_provider.dart';
-import 'package:clique/bloc/home/feed_bloc.dart';
-import 'package:clique/bloc/user/user_bloc.dart';
-import 'package:clique/bloc/friends/friends_bloc.dart';
-import 'package:clique/bloc/explore/explore_bloc.dart';
-import 'package:clique/bloc/reels/reel_bloc.dart';
-import 'package:cloudinary_url_gen/cloudinary.dart';
-import 'package:cloudinary_flutter/cloudinary_context.dart';
-import 'package:clique/managers/auth_guard.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (kIsWeb) {
-    await SystemChrome.setEnabledSystemUIMode(
-      SystemUiMode.manual,
-      overlays: [],
-    );
-
-    await SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
-  }
-
-  await Supabase.initialize(
-    url: ApiConfig.supabaseUrl,
-    anonKey: ApiConfig.supabaseAnonKey,
-    debug: false, // Disable debug in production
-  );
-
-  CloudinaryContext.cloudinary =
-      Cloudinary.fromCloudName(cloudName: 'dug6225go');
+  await _initializeApp();
 
   runApp(
     const ProviderScope(
       child: MyApp(),
     ),
   );
+}
+
+Future<void> _initializeApp() async {
+  if (!kIsWeb) {
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+    ]);
+  }
+
+  await SystemChrome.setEnabledSystemUIMode(
+    SystemUiMode.edgeToEdge,
+  );
+
+  await Supabase.initialize(
+    url: ApiConfig.supabaseUrl,
+    anonKey: ApiConfig.supabaseAnonKey,
+    debug: false,
+  );
+
+  CloudinaryContext.cloudinary = Cloudinary.fromCloudName(
+    cloudName: 'dug6225go',
+  );
+
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+  };
 }
 
 class MyApp extends ConsumerStatefulWidget {
@@ -87,22 +111,38 @@ class MyApp extends ConsumerStatefulWidget {
   ConsumerState<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends ConsumerState<MyApp> {
+class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   late final AuthBloc _authBloc;
+
   late final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey;
 
   @override
   void initState() {
     super.initState();
+
+    WidgetsBinding.instance.addObserver(this);
+
     _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
-    _authBloc = AuthBloc();
-    _authBloc.add(CheckAuthStatus());
+
+    _authBloc = AuthBloc()..add(CheckAuthStatus());
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+
     _authBloc.close();
+
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(
+    AppLifecycleState state,
+  ) {
+    if (state == AppLifecycleState.resumed) {
+      _authBloc.add(CheckAuthStatus());
+    }
   }
 
   @override
@@ -111,260 +151,249 @@ class _MyAppState extends ConsumerState<MyApp> {
 
     return MultiBlocProvider(
       providers: [
-        // Auth providers
-        BlocProvider<AuthBloc>.value(value: _authBloc),
-
-        // Core providers
-        BlocProvider<CloudinaryCubit>(
-          create: (context) => CloudinaryCubit(),
-          lazy: false, // Initialize immediately
+        BlocProvider<AuthBloc>.value(
+          value: _authBloc,
         ),
-        BlocProvider<UserBloc>(
-          create: (context) => UserBloc(),
+        BlocProvider(
+          create: (_) => CloudinaryCubit(),
         ),
-        BlocProvider<ProfileBloc>(
-          create: (context) => ProfileBloc(),
+        BlocProvider(
+          create: (_) => UserBloc(),
         ),
-
-        // Social providers
-        BlocProvider<FriendsBloc>(
-          create: (context) => FriendsBloc(),
+        BlocProvider(
+          create: (_) => ProfileBloc(),
         ),
-        BlocProvider<MatchBloc>(
-          create: (context) => MatchBloc(),
+        BlocProvider(
+          create: (_) => FeedBloc(),
         ),
-        BlocProvider<InsightsBloc>(
-          create: (context) => InsightsBloc(),
+        BlocProvider(
+          create: (_) => FriendsBloc(),
         ),
-
-        // Content providers
-        BlocProvider<FeedBloc>(
-          create: (context) => FeedBloc(),
+        BlocProvider(
+          create: (_) => MatchBloc(),
         ),
-        BlocProvider<StoriesBloc>(
-          create: (context) => StoriesBloc(),
+        BlocProvider(
+          create: (_) => InsightsBloc(),
         ),
-        BlocProvider<ExploreBloc>(
-          create: (context) => ExploreBloc(),
+        BlocProvider(
+          create: (_) => StoriesBloc(),
         ),
-        BlocProvider<ReelBloc>(
-          create: (context) => ReelBloc(),
+        BlocProvider(
+          create: (_) => ExploreBloc(),
         ),
-
-        // Chat providers
-        BlocProvider<ChatBloc>(
-          create: (context) => ChatBloc(),
+        BlocProvider(
+          create: (_) => ReelBloc(),
         ),
-        BlocProvider<ChatGalleryCubit>(
-          create: (context) => ChatGalleryCubit(),
+        BlocProvider(
+          create: (_) => ChatBloc(),
+        ),
+        BlocProvider(
+          create: (_) => ChatGalleryCubit(),
         ),
       ],
-      child: MaterialApp(
-        title: 'Clique',
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: themeMode,
-        debugShowCheckedModeBanner: false,
-        scrollBehavior: const CustomScrollBehavior(),
-        scaffoldMessengerKey: _scaffoldMessengerKey,
-        home: const AuthGuard(),
-        onGenerateRoute: _generateRoute,
-        builder: (context, child) {
-          if (child == null) return const SizedBox.shrink();
+      child: MultiBlocListener(
+        listeners: [
+          BlocListener<AuthBloc, AuthState>(
+            listenWhen: (previous, current) =>
+                previous.status != current.status ||
+                previous.error != current.error,
+            listener: (context, state) {
+              final error = state.error?.toLowerCase() ?? '';
 
-          return MultiBlocListener(
-            listeners: [
-              // Auth listener - critical errors only
-              BlocListener<AuthBloc, AuthState>(
-                listenWhen: (previous, current) {
-                  // Only show errors for auth-related critical issues
-                  return current.status == AuthStatus.error &&
-                      current.error != null &&
-                      _isCriticalAuthError(current.error!);
-                },
-                listener: (context, state) {
-                  if (state.error?.contains('token') == true ||
-                      state.error?.contains('session') == true ||
-                      state.error?.contains('unauthorized') == true) {
-                    _authBloc.add(SignOutRequested());
-                  }
-                },
-              ),
-
-              // Profile listener - success only
-              BlocListener<ProfileBloc, ProfileState>(
-                listenWhen: (previous, current) {
-                  return current.status == ProfileStatus.success &&
-                      previous.status != ProfileStatus.success;
-                },
-                listener: (context, state) {
-                  if (mounted) {
-                    Navigator.pushReplacementNamed(
-                        context, NamedRoutes.onboardingSuccessScreen);
-                  }
-                },
-              ),
-
-              // Cloudinary listener - silent errors
-              BlocListener<CloudinaryCubit, CloudinaryState>(
-                listenWhen: (previous, current) {
-                  return current.status == UploadStatus.error &&
-                      current.errorMessage != null &&
-                      _shouldShowUploadError(current.errorMessage!);
-                },
-                listener: (context, state) {
-                  debugPrint('Upload error: ${state.errorMessage}');
-                },
-              ),
-
-              // Chat listener - silent errors
-              BlocListener<ChatBloc, ChatState>(
-                listenWhen: (previous, current) {
-                  return current.error != null &&
-                      _isCriticalChatError(current.error!);
-                },
-                listener: (context, state) {
-                  debugPrint('Chat error: ${state.error}');
-                },
-              ),
-            ],
-            child: child,
-          );
-        },
+              if (_isCriticalAuthError(error)) {
+                context.read<AuthBloc>().add(SignOutRequested());
+              }
+            },
+          ),
+        ],
+        child: MaterialApp(
+          title: 'Clique',
+          debugShowCheckedModeBanner: false,
+          scaffoldMessengerKey: _scaffoldMessengerKey,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: themeMode,
+          scrollBehavior: const CustomScrollBehavior(),
+          home: const AuthGuard(),
+          onGenerateRoute: AppRouter.generateRoute,
+        ),
       ),
     );
   }
 
   bool _isCriticalAuthError(String error) {
-    final criticalErrors = [
+    const criticalErrors = [
       'token',
       'session',
       'unauthorized',
       'forbidden',
       'blocked',
       'suspended',
-      'invalid credentials'
+      'invalid credentials',
     ];
-    return criticalErrors
-        .any((keyword) => error.toLowerCase().contains(keyword));
-  }
 
-  bool _shouldShowUploadError(String error) {
-    final silentErrors = [
-      '401',
-      '500',
-      '503',
-      'network',
-      'timeout',
-      'connection',
-      'internet'
-    ];
-    return !silentErrors
-        .any((keyword) => error.toLowerCase().contains(keyword));
+    return criticalErrors.any(
+      (e) => error.contains(e),
+    );
   }
+}
 
-  bool _isCriticalChatError(String error) {
-    final criticalErrors = ['blocked', 'banned', 'restricted', 'unauthorized'];
-    return criticalErrors
-        .any((keyword) => error.toLowerCase().contains(keyword));
-  }
-
-  Route<dynamic>? _generateRoute(RouteSettings settings) {
+class AppRouter {
+  static Route<dynamic> generateRoute(
+    RouteSettings settings,
+  ) {
     switch (settings.name) {
       case NamedRoutes.postDetailScreen:
-        final args = settings.arguments;
-        if (args == null || args is! int) {
-          return MaterialPageRoute(
-            builder: (context) => const Scaffold(
-              body: Center(child: Text('Invalid post data')),
-            ),
+        final postId = settings.arguments;
+
+        if (postId is! int) {
+          return _errorRoute(
+            'Invalid post ID',
           );
         }
+
         return MaterialPageRoute(
-            builder: (context) => PostDetailPage(postId: args));
+          builder: (_) => PostDetailPage(
+            postId: postId,
+          ),
+        );
 
       case NamedRoutes.loginScreen:
-        return MaterialPageRoute(builder: (context) => const LoginPage());
+        return MaterialPageRoute(
+          builder: (_) => const LoginPage(),
+        );
 
       case NamedRoutes.registerScreen:
-        return MaterialPageRoute(builder: (context) => const RegisterPage());
+        return MaterialPageRoute(
+          builder: (_) => const RegisterPage(),
+        );
 
       case NamedRoutes.demographicScreen:
         return MaterialPageRoute(
-            builder: (context) => const OnboardingDemographicPage());
+          builder: (_) => const OnboardingDemographicPage(),
+        );
 
       case NamedRoutes.onboardingSuccessScreen:
         return MaterialPageRoute(
-            builder: (context) => const OnboardingSuccessPage());
+          builder: (_) => const OnboardingSuccessPage(),
+        );
 
       case NamedRoutes.profileScreen:
         return MaterialPageRoute(
-            builder: (context) => const ProfilePage(isOwnProfile: true));
+          builder: (_) => const ProfilePage(
+            isOwnProfile: true,
+          ),
+        );
 
       case NamedRoutes.editProfileScreen:
-        return MaterialPageRoute(builder: (context) => const EditProfilePage());
+        return MaterialPageRoute(
+          builder: (_) => const EditProfilePage(),
+        );
 
       case NamedRoutes.friendListScreen:
-        return MaterialPageRoute(builder: (context) => const FriendsListPage());
+        return MaterialPageRoute(
+          builder: (_) => const FriendsListPage(),
+        );
 
       case NamedRoutes.insightsScreen:
-        return MaterialPageRoute(builder: (context) => const InsightsPage());
+        return MaterialPageRoute(
+          builder: (_) => const InsightsPage(),
+        );
 
       case NamedRoutes.matchScreen:
-        return MaterialPageRoute(builder: (context) => const MatchesPage());
+        return MaterialPageRoute(
+          builder: (_) => const MatchesPage(),
+        );
 
       case NamedRoutes.createPostScreen:
-        return MaterialPageRoute(builder: (context) => const CreatePostPage());
+        return MaterialPageRoute(
+          builder: (_) => const CreatePostPage(),
+        );
 
       case NamedRoutes.createStatusScreen:
         return MaterialPageRoute(
-            builder: (context) => const CreateStatusPage());
+          builder: (_) => const CreateStatusPage(),
+        );
 
       case NamedRoutes.statusScreen:
         return MaterialPageRoute(
-            builder: (context) => const StatusPage(stories: []));
+          builder: (_) => const StatusPage(
+            stories: [],
+          ),
+        );
 
       case NamedRoutes.settingsScreen:
-        return MaterialPageRoute(builder: (context) => const SettingsPage());
+        return MaterialPageRoute(
+          builder: (_) => const SettingsPage(),
+        );
 
       case NamedRoutes.aboutScreen:
-        return MaterialPageRoute(builder: (context) => const AboutPage());
+        return MaterialPageRoute(
+          builder: (_) => const AboutPage(),
+        );
 
       case NamedRoutes.termsScreen:
-        return MaterialPageRoute(builder: (context) => const TermsPage());
+        return MaterialPageRoute(
+          builder: (_) => const TermsPage(),
+        );
 
       case NamedRoutes.privacyScreen:
-        return MaterialPageRoute(builder: (context) => const PrivacyPage());
+        return MaterialPageRoute(
+          builder: (_) => const PrivacyPage(),
+        );
 
       case NamedRoutes.helpScreen:
-        return MaterialPageRoute(builder: (context) => const HelpPage());
+        return MaterialPageRoute(
+          builder: (_) => const HelpPage(),
+        );
 
       case NamedRoutes.subscribeScreen:
-        return MaterialPageRoute(builder: (context) => const SubscribePage());
+        return MaterialPageRoute(
+          builder: (_) => const SubscribePage(),
+        );
 
       case NamedRoutes.notificationScreen:
         return MaterialPageRoute(
-            builder: (context) => const NotificationPage());
+          builder: (_) => const NotificationPage(),
+        );
 
       case NamedRoutes.twoFactorScreen:
-        return MaterialPageRoute(builder: (context) => const TwoFactorPage());
+        return MaterialPageRoute(
+          builder: (_) => const TwoFactorPage(),
+        );
 
       case NamedRoutes.changePasswordScreen:
         return MaterialPageRoute(
-            builder: (context) => const ChangePasswordPage());
+          builder: (_) => const ChangePasswordPage(),
+        );
 
       case NamedRoutes.activeSessionsScreen:
         return MaterialPageRoute(
-            builder: (context) => const ActiveSessionsPage());
+          builder: (_) => const ActiveSessionsPage(),
+        );
 
       case NamedRoutes.lockScreenScreen:
-        return MaterialPageRoute(builder: (context) => const LockScreenPage());
+        return MaterialPageRoute(
+          builder: (_) => const LockScreenPage(),
+        );
 
       default:
         return MaterialPageRoute(
-          builder: (context) => const AuthGuard(),
+          builder: (_) => const AuthGuard(),
         );
     }
+  }
+
+  static Route<dynamic> _errorRoute(
+    String message,
+  ) {
+    return MaterialPageRoute(
+      builder: (_) => Scaffold(
+        body: Center(
+          child: Text(message),
+        ),
+      ),
+    );
   }
 }
 
@@ -372,7 +401,9 @@ class CustomScrollBehavior extends ScrollBehavior {
   const CustomScrollBehavior();
 
   @override
-  ScrollPhysics getScrollPhysics(BuildContext context) {
+  ScrollPhysics getScrollPhysics(
+    BuildContext context,
+  ) {
     return const BouncingScrollPhysics();
   }
 }

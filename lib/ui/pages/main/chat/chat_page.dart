@@ -45,6 +45,7 @@ class _ChatPageState extends State<ChatPage>
   bool _isLoadingMore = false;
   bool _isRecording = false;
   bool _hasInitialMessages = false;
+  bool _isSending = false;
 
   Timer? _typingTimer;
   bool _isTyping = false;
@@ -55,15 +56,16 @@ class _ChatPageState extends State<ChatPage>
   @override
   void initState() {
     super.initState();
+    _setupAuth();
+    _loadInitialData();
+    _setupScrollListener();
+  }
 
-    final authBloc = context.read<AuthBloc>();
-    final authState = authBloc.state;
+  void _setupAuth() {
+    final authState = context.read<AuthBloc>().state;
     if (authState.isAuthenticated && authState.token != null) {
       context.read<ChatBloc>().setAuthToken(authState.token!);
     }
-
-    _loadInitialData();
-    _setupScrollListener();
   }
 
   @override
@@ -84,37 +86,50 @@ class _ChatPageState extends State<ChatPage>
     });
   }
 
-  void _sendTyping(bool isTyping) {
-    if (_isTyping == isTyping) return;
-    _isTyping = isTyping;
+  void _sendTyping(bool typing) {
+    if (_isTyping == typing) return;
 
-    context.read<ChatBloc>().add(SetTyping(
-          conversationId: widget.conversationId,
-          isTyping: isTyping,
-        ));
+    _isTyping = typing;
+
+    context.read<ChatBloc>().add(
+          SetTyping(
+            conversationId: widget.conversationId,
+            isTyping: typing,
+          ),
+        );
+
+    _typingTimer?.cancel();
+
+    if (typing) {
+      _typingTimer = Timer(
+        const Duration(seconds: 2),
+        () {
+          if (mounted) {
+            _isTyping = false;
+
+            context.read<ChatBloc>().add(
+                  SetTyping(
+                    conversationId: widget.conversationId,
+                    isTyping: false,
+                  ),
+                );
+          }
+        },
+      );
+    }
   }
 
   void _loadInitialData() {
     final chatBloc = context.read<ChatBloc>();
-    chatBloc.add(LoadMessages(
-      conversationId: widget.conversationId,
-      page: 1,
-    ));
-    chatBloc.add(LoadConversationInfo(
-      conversationId: widget.conversationId,
-    ));
-    chatBloc.add(LoadChatSettings(
-      conversationId: widget.conversationId,
-    ));
-    chatBloc.add(MarkMessagesAsRead(
-      conversationId: widget.conversationId,
-    ));
+    chatBloc.add(LoadMessages(conversationId: widget.conversationId, page: 1));
+    chatBloc.add(LoadConversationInfo(conversationId: widget.conversationId));
+    chatBloc.add(LoadChatSettings(conversationId: widget.conversationId));
+    chatBloc.add(MarkMessagesAsRead(conversationId: widget.conversationId));
   }
 
   Future<void> _loadMoreMessages() async {
     if (_isLoadingMore) return;
     setState(() => _isLoadingMore = true);
-
     final currentPage = context.read<ChatBloc>().state.currentPage;
     context.read<ChatBloc>().add(LoadMessages(
           conversationId: widget.conversationId,
@@ -123,20 +138,25 @@ class _ChatPageState extends State<ChatPage>
   }
 
   void _sendMessage(String text) {
-    if (text.trim().isEmpty) return;
+    if (text.trim().isEmpty || _isSending) return;
 
-    print('Sending message to user ID: ${widget.userId}'); // Debug
+    _sendTyping(false);
 
-    context.read<ChatBloc>().add(SendMessage(
-          receiverId: widget.userId, // FIXED: Use userId, not conversationId
-          message: text.trim(),
-          messageType: 'text',
-          replyToId: _replyingTo?.id,
-          replyToMessage: _replyingTo?.message,
-          replyToSender: _replyingTo?.isOwn == true ? 'You' : widget.userName,
-        ));
+    context.read<ChatBloc>().add(
+          SendMessage(
+            receiverId: widget.userId,
+            message: text.trim(),
+            messageType: 'text',
+            replyToId: _replyingTo?.id,
+            replyToMessage: _replyingTo?.message,
+            replyToSender: _replyingTo?.isOwn == true ? 'You' : widget.userName,
+          ),
+        );
 
-    setState(() => _replyingTo = null);
+    setState(() {
+      _replyingTo = null;
+    });
+
     _scrollToBottom();
   }
 
@@ -146,22 +166,12 @@ class _ChatPageState extends State<ChatPage>
   }
 
   void _sendMedia(File file, UploadType type) {
-    context.read<CloudinaryCubit>().uploadFile(
-          type: type,
-          file: file,
-        );
+    context.read<CloudinaryCubit>().uploadFile(type: type, file: file);
   }
 
   Future<void> _startRecording() async {
     final hasPermission = await _audioRecorder.hasPermission();
-    if (!hasPermission) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Microphone permission required')),
-        );
-      }
-      return;
-    }
+    if (!hasPermission) return;
     setState(() => _isRecording = true);
     await _audioRecorder.startRecording();
   }
@@ -180,11 +190,7 @@ class _ChatPageState extends State<ChatPage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients &&
           _scrollController.position.maxScrollExtent > 0) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        );
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
       }
     });
   }
@@ -199,39 +205,39 @@ class _ChatPageState extends State<ChatPage>
       body: MultiBlocListener(
         listeners: [
           BlocListener<CloudinaryCubit, CloudinaryState>(
+            listenWhen: (previous, current) =>
+                current.status == UploadStatus.success &&
+                current.uploadedUrl != null,
             listener: (context, state) {
-              if (state.status == UploadStatus.success &&
-                  state.uploadedUrl != null) {
-                String messageText = '';
-                switch (state.uploadType) {
-                  case UploadType.image:
-                    messageText = 'Sent an image';
-                    break;
-                  case UploadType.video:
-                    messageText = 'Sent a video';
-                    break;
-                  case UploadType.audio:
-                    messageText = 'Sent an audio message';
-                    break;
-                  case UploadType.document:
-                    messageText = 'Sent a document';
-                    break;
-                  default:
-                    messageText = 'Sent a file';
-                }
-
-                // FIXED: Use userId, not conversationId
-                context.read<ChatBloc>().add(SendMessage(
-                      receiverId: widget.userId,
-                      message: messageText,
-                      messageType: state.uploadType!.name,
-                      mediaUrl: state.uploadedUrl,
-                    ));
-                _scrollToBottom();
+              String messageText = '';
+              switch (state.uploadType) {
+                case UploadType.image:
+                  messageText = 'Sent an image';
+                  break;
+                case UploadType.video:
+                  messageText = 'Sent a video';
+                  break;
+                case UploadType.audio:
+                  messageText = 'Sent an audio message';
+                  break;
+                case UploadType.document:
+                  messageText = 'Sent a document';
+                  break;
+                default:
+                  messageText = 'Sent a file';
               }
+              context.read<ChatBloc>().add(SendMessage(
+                    receiverId: widget.userId,
+                    message: messageText,
+                    messageType: state.uploadType!.name,
+                    mediaUrl: state.uploadedUrl,
+                  ));
+              _scrollToBottom();
             },
           ),
           BlocListener<ChatBloc, ChatState>(
+            listenWhen: (previous, current) =>
+                previous.messages.length != current.messages.length,
             listener: (context, state) {
               if (state.chatSettings != null) {
                 final settings = state.chatSettings!;
@@ -243,23 +249,16 @@ class _ChatPageState extends State<ChatPage>
                   });
                 }
               }
-
               if (state.messages.isNotEmpty && !_hasInitialMessages) {
                 _hasInitialMessages = true;
                 _scrollToBottom();
               }
-
               if (_isLoadingMore &&
                   state.messagesStatus != ChatStatus.loading) {
                 setState(() => _isLoadingMore = false);
               }
-
-              // Show error if any
-              if (state.error != null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content: Text(state.error!), backgroundColor: Colors.red),
-                );
+              if (_isSending && state.messages.isNotEmpty) {
+                _isSending = false;
               }
             },
           ),
@@ -314,7 +313,7 @@ class _ChatPageState extends State<ChatPage>
                             ),
                 ),
                 if (isUploading) _buildUploadProgress(),
-                _buildTypingIndicator(state),
+                if (_buildTypingIndicator(state)) _buildTypingIndicatorWidget(),
                 ChatInputBar(
                   onSendMessage: _sendMessage,
                   onTyping: _sendTyping,
@@ -337,9 +336,7 @@ class _ChatPageState extends State<ChatPage>
   }
 
   Widget _buildLoadingState() {
-    return const Center(
-      child: CircularProgressIndicator(strokeWidth: 2),
-    );
+    return const Center(child: CircularProgressIndicator(strokeWidth: 2));
   }
 
   Widget _buildUploadProgress() {
@@ -354,44 +351,20 @@ class _ChatPageState extends State<ChatPage>
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 4,
-                offset: const Offset(0, -2),
-              ),
-            ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Row(
-                children: [
-                  const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Uploading ${state.uploadType?.name ?? 'file'}...',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ),
-                  Text(
-                    '${(state.progress * 100).toInt()}%',
-                    style: const TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              LinearProgressIndicator(
-                value: state.progress,
-                backgroundColor: Colors.grey.shade200,
-                color: _getChatColor(),
-              ),
+              const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2)),
+              const SizedBox(width: 12),
+              Expanded(
+                  child: Text('Uploading...',
+                      style: const TextStyle(fontSize: 12))),
+              Text('${(state.progress * 100).toInt()}%',
+                  style: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.bold)),
             ],
           ),
         );
@@ -425,13 +398,9 @@ class _ChatPageState extends State<ChatPage>
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  widget.userName,
-                  style: AppTheme.blackTextStyle.copyWith(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                  ),
-                ),
+                Text(widget.userName,
+                    style: AppTheme.blackTextStyle
+                        .copyWith(fontWeight: FontWeight.w600, fontSize: 16)),
                 BlocBuilder<ChatBloc, ChatState>(
                   builder: (context, state) {
                     final conv = state.conversations.firstWhere(
@@ -456,11 +425,9 @@ class _ChatPageState extends State<ChatPage>
                       ),
                     );
                     String status = 'Offline';
-                    if (conv.isTyping) {
+                    if (conv.isTyping)
                       status = 'Typing...';
-                    } else if (conv.isOnline) {
-                      status = 'Online';
-                    }
+                    else if (conv.isOnline) status = 'Online';
 
                     return Row(
                       children: [
@@ -489,13 +456,11 @@ class _ChatPageState extends State<ChatPage>
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.call_outlined, color: Colors.black),
-          onPressed: () {},
-        ),
+            icon: const Icon(Icons.call_outlined, color: Colors.black),
+            onPressed: () {}),
         IconButton(
-          icon: const Icon(Icons.videocam_outlined, color: Colors.black),
-          onPressed: () {},
-        ),
+            icon: const Icon(Icons.videocam_outlined, color: Colors.black),
+            onPressed: () {}),
       ],
     );
   }
@@ -505,9 +470,8 @@ class _ChatPageState extends State<ChatPage>
         widget.userName.isNotEmpty ? widget.userName[0].toUpperCase() : 'U';
     if (widget.userAvatar.isNotEmpty && widget.userAvatar.startsWith('http')) {
       return CircleAvatar(
-        radius: 18,
-        backgroundImage: CachedNetworkImageProvider(widget.userAvatar),
-      );
+          radius: 18,
+          backgroundImage: CachedNetworkImageProvider(widget.userAvatar));
     }
     return CircleAvatar(
       radius: 18,
@@ -539,7 +503,7 @@ class _ChatPageState extends State<ChatPage>
     );
   }
 
-  Widget _buildTypingIndicator(ChatState state) {
+  bool _buildTypingIndicator(ChatState state) {
     final conv = state.conversations.firstWhere(
       (c) => c.userId == widget.userId,
       orElse: () => ConversationModel(
@@ -561,9 +525,10 @@ class _ChatPageState extends State<ChatPage>
         muteUntil: null,
       ),
     );
+    return conv.isTyping;
+  }
 
-    if (!conv.isTyping) return const SizedBox.shrink();
-
+  Widget _buildTypingIndicatorWidget() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
@@ -578,8 +543,7 @@ class _ChatPageState extends State<ChatPage>
               children: [
                 ...List.generate(
                     3,
-                    (i) => AnimatedContainer(
-                          duration: const Duration(milliseconds: 500),
+                    (i) => Container(
                           margin: const EdgeInsets.symmetric(horizontal: 2),
                           width: 4,
                           height: 4 + (i == 1 ? 4 : 0),

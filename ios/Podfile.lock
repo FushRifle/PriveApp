@@ -1,19 +1,25 @@
 PODS:
+  - audio_waveforms (0.0.1):
+    - Flutter
   - Flutter (1.0.0)
   - open_file_ios (1.0.3):
     - Flutter
 
 DEPENDENCIES:
+  - audio_waveforms (from `.symlinks/plugins/audio_waveforms/ios`)
   - Flutter (from `Flutter`)
   - open_file_ios (from `.symlinks/plugins/open_file_ios/ios`)
 
 EXTERNAL SOURCES:
+  audio_waveforms:
+    :path: ".symlinks/plugins/audio_waveforms/ios"
   Flutter:
     :path: Flutter
   open_file_ios:
     :path: ".symlinks/plugins/open_file_ios/ios"
 
 SPEC CHECKSUMS:
+  audio_waveforms: a6dde7fe7c0ea05f06ffbdb0f7c1b2b2ba6cedcf
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   open_file_ios: 46184d802ee7959203f6392abcfa0dd49fdb5be0
 

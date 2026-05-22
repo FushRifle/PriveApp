@@ -61,10 +61,32 @@ class ConversationModel {
           : null,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'userId': userId,
+      'name': name,
+      'username': username,
+      'avatar': avatar,
+      'age': age,
+      'verified': verified,
+      'lastMessage': lastMessage,
+      'lastMessageType': lastMessageType,
+      'timestamp': timestamp,
+      'unreadCount': unreadCount,
+      'isOnline': isOnline,
+      'isTyping': isTyping,
+      'isPinned': isPinned,
+      'isMuted': isMuted,
+      'muteUntil': muteUntil?.toIso8601String(),
+    };
+  }
 }
 
 class MessageModel {
   final int id;
+  final int conversationId; // ADD THIS
   final int senderId;
   final int receiverId;
   final String message;
@@ -79,6 +101,7 @@ class MessageModel {
 
   const MessageModel({
     required this.id,
+    required this.conversationId, // ADD THIS
     required this.senderId,
     required this.receiverId,
     required this.message,
@@ -95,6 +118,7 @@ class MessageModel {
   factory MessageModel.fromJson(Map<String, dynamic> json) {
     return MessageModel(
       id: json['id'] ?? 0,
+      conversationId: json['conversationId'] ?? json['conversation_id'] ?? 0,
       senderId: json['senderId'] ?? 0,
       receiverId: json['receiverId'] ?? 0,
       message: json['message'] ?? '',
@@ -107,6 +131,24 @@ class MessageModel {
       isOwn: json['isOwn'] ?? false,
       createdAt: DateTime.parse(json['createdAt']),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'conversationId': conversationId, // ADD THIS
+      'senderId': senderId,
+      'receiverId': receiverId,
+      'message': message,
+      'messageType': messageType,
+      'mediaUrl': mediaUrl,
+      'replyToId': replyToId,
+      'replyToMessage': replyToMessage,
+      'replyToSender': replyToSender,
+      'isRead': isRead,
+      'isOwn': isOwn,
+      'createdAt': createdAt.toIso8601String(),
+    };
   }
 }
 

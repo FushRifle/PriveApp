@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
 class ChatSettingsPage extends StatefulWidget {
   final String userName;

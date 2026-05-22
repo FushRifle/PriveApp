@@ -3,6 +3,8 @@ import '../../../core/api_service.dart';
 
 class ChatService {
   final ApiService _api = ApiService();
+  final Map<int, List<Map<String, dynamic>>> _messagesCache = {};
+  final Map<String, CancelToken> _cancelTokens = {};
 
   void setAuthToken(String token) {
     _api.setAuthToken(token);
@@ -10,12 +12,38 @@ class ChatService {
 
   void clearAuthToken() {
     _api.clearAuthToken();
+    _messagesCache.clear();
+    _cancelTokens.clear();
   }
 
+  CancelToken _createCancelToken(String key) {
+    _cancelTokens[key]?.cancel();
+
+    final token = CancelToken();
+
+    _cancelTokens[key] = token;
+
+    return token;
+  }
+
+  void clearMessagesCache(int conversationId) {
+    _messagesCache.remove(conversationId);
+  }
+
+  void clearAllCache() {
+    _messagesCache.clear();
+  }
+
+  // =========================
   // Conversations
+  // =========================
+
   Future<List<Map<String, dynamic>>> getConversations() async {
     try {
-      final response = await _api.get('/api/chat/conversations');
+      final response = await _api.get(
+        '/api/chat/conversations',
+      );
+
       return response.data is List
           ? List<Map<String, dynamic>>.from(response.data)
           : [];
@@ -24,33 +52,65 @@ class ChatService {
     }
   }
 
-  Future<Map<String, dynamic>> getConversationInfo(int conversationId) async {
-    try {
-      final response =
-          await _api.get('/api/chat/conversations/$conversationId');
-      return response.data;
-    } on DioException catch (e) {
-      throw _handleError(e);
-    }
-  }
-
-  // Messages
-  Future<List<Map<String, dynamic>>> getMessages(int conversationId,
-      {int page = 1}) async {
+  Future<Map<String, dynamic>> getConversationInfo(
+    int conversationId,
+  ) async {
     try {
       final response = await _api.get(
-        '/api/chat/messages/$conversationId',
-        queryParameters: {'page': page},
+        '/api/chat/conversations/$conversationId',
       );
-      return response.data is List
-          ? List<Map<String, dynamic>>.from(response.data)
-          : [];
+
+      return Map<String, dynamic>.from(response.data);
     } on DioException catch (e) {
       throw _handleError(e);
     }
   }
 
-  Future<void> sendMessage({
+  // =========================
+  // Messages
+  // =========================
+
+  Future<List<Map<String, dynamic>>> getMessages(
+    int conversationId, {
+    int page = 1,
+    bool forceRefresh = false,
+  }) async {
+    try {
+      if (!forceRefresh &&
+          page == 1 &&
+          _messagesCache.containsKey(conversationId)) {
+        return _messagesCache[conversationId]!;
+      }
+
+      final response = await _api.get(
+        '/api/chat/messages/$conversationId',
+        queryParameters: {
+          'page': page,
+        },
+        cancelToken: _createCancelToken(
+          'messages_$conversationId',
+        ),
+      );
+
+      final messages = response.data is List
+          ? List<Map<String, dynamic>>.from(response.data)
+          : <Map<String, dynamic>>[];
+
+      if (page == 1) {
+        _messagesCache[conversationId] = messages;
+      }
+
+      return messages;
+    } on DioException catch (e) {
+      if (CancelToken.isCancel(e)) {
+        return [];
+      }
+
+      throw _handleError(e);
+    }
+  }
+
+  Future<Map<String, dynamic>?> sendMessage({
     required int receiverId,
     required String message,
     String messageType = 'text',
@@ -65,7 +125,17 @@ class ChatService {
         if (mediaUrl != null) 'mediaUrl': mediaUrl,
         if (replyToId != null) 'replyToId': replyToId,
       };
-      await _api.post('/api/chat/messages', data: data);
+
+      final response = await _api.post(
+        '/api/chat/messages',
+        data: data,
+      );
+
+      if (response.data is Map<String, dynamic>) {
+        return Map<String, dynamic>.from(response.data);
+      }
+
+      return null;
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -73,18 +143,26 @@ class ChatService {
 
   Future<void> deleteMessage(int messageId) async {
     try {
-      await _api.delete('/api/chat/messages/$messageId');
+      await _api.delete(
+        '/api/chat/messages/$messageId',
+      );
     } on DioException catch (e) {
       throw _handleError(e);
     }
   }
 
-  Future<void> reportMessage(int messageId, String reason) async {
+  Future<void> reportMessage(
+    int messageId,
+    String reason,
+  ) async {
     try {
-      await _api.post('/api/chat/messages/report', data: {
-        'messageId': messageId,
-        'reason': reason,
-      });
+      await _api.post(
+        '/api/chat/messages/report',
+        data: {
+          'messageId': messageId,
+          'reason': reason,
+        },
+      );
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -92,31 +170,47 @@ class ChatService {
 
   Future<void> markAsRead(int conversationId) async {
     try {
-      await _api.post('/api/chat/messages/$conversationId/read');
-    } on DioException catch (e) {
-      // Silently fail - non-critical
-      print('Mark as read error: $e');
-    }
+      await _api.post(
+        '/api/chat/messages/$conversationId/read',
+      );
+    } catch (_) {}
   }
 
-  // Typing indicator
-  Future<void> setTyping(int conversationId, bool isTyping) async {
+  // =========================
+  // Typing
+  // =========================
+
+  Future<void> setTyping(
+    int conversationId,
+    bool isTyping,
+  ) async {
     try {
-      await _api.post('/api/chat/typing', data: {
-        'conversationId': conversationId,
-        'isTyping': isTyping,
-      });
-    } on DioException catch (e) {
-      // Silently fail - non-critical
-      print('Typing error: $e');
-    }
+      await _api.post(
+        '/api/chat/typing',
+        data: {
+          'conversationId': conversationId,
+          'isTyping': isTyping,
+        },
+        cancelToken: _createCancelToken(
+          'typing_$conversationId',
+        ),
+      );
+    } catch (_) {}
   }
 
+  // =========================
   // Settings
-  Future<Map<String, dynamic>> getChatSettings(int conversationId) async {
+  // =========================
+
+  Future<Map<String, dynamic>> getChatSettings(
+    int conversationId,
+  ) async {
     try {
-      final response = await _api.get('/api/chat/settings/$conversationId');
-      return response.data;
+      final response = await _api.get(
+        '/api/chat/settings/$conversationId',
+      );
+
+      return Map<String, dynamic>.from(response.data);
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -133,23 +227,41 @@ class ChatService {
   }) async {
     try {
       final data = <String, dynamic>{};
+
       if (isPinned != null) data['isPinned'] = isPinned;
       if (isMuted != null) data['isMuted'] = isMuted;
-      if (muteUntil != null) data['muteUntil'] = muteUntil.toIso8601String();
+
+      if (muteUntil != null) {
+        data['muteUntil'] = muteUntil.toIso8601String();
+      }
+
       if (wallpaper != null) data['wallpaper'] = wallpaper;
       if (chatColor != null) data['chatColor'] = chatColor;
-      if (notificationSound != null)
+
+      if (notificationSound != null) {
         data['notificationSound'] = notificationSound;
-      await _api.put('/api/chat/settings/$conversationId', data: data);
+      }
+
+      await _api.put(
+        '/api/chat/settings/$conversationId',
+        data: data,
+      );
     } on DioException catch (e) {
       throw _handleError(e);
     }
   }
 
+  // =========================
+  // Preferences
+  // =========================
+
   Future<Map<String, dynamic>> getUserPreferences() async {
     try {
-      final response = await _api.get('/api/chat/preferences');
-      return response.data;
+      final response = await _api.get(
+        '/api/chat/preferences',
+      );
+
+      return Map<String, dynamic>.from(response.data);
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -168,27 +280,57 @@ class ChatService {
   }) async {
     try {
       final data = <String, dynamic>{};
+
       if (wallpaper != null) data['wallpaper'] = wallpaper;
       if (chatColor != null) data['chatColor'] = chatColor;
-      if (notificationSound != null)
+
+      if (notificationSound != null) {
         data['notificationSound'] = notificationSound;
+      }
+
       if (fontSize != null) data['fontSize'] = fontSize;
-      if (enterToSend != null) data['enterToSend'] = enterToSend;
-      if (readReceipts != null) data['readReceipts'] = readReceipts;
-      if (typingIndicators != null) data['typingIndicators'] = typingIndicators;
-      if (messagePreview != null) data['messagePreview'] = messagePreview;
-      if (autoDownloadMedia != null)
+
+      if (enterToSend != null) {
+        data['enterToSend'] = enterToSend;
+      }
+
+      if (readReceipts != null) {
+        data['readReceipts'] = readReceipts;
+      }
+
+      if (typingIndicators != null) {
+        data['typingIndicators'] = typingIndicators;
+      }
+
+      if (messagePreview != null) {
+        data['messagePreview'] = messagePreview;
+      }
+
+      if (autoDownloadMedia != null) {
         data['autoDownloadMedia'] = autoDownloadMedia;
-      await _api.put('/api/chat/preferences', data: data);
+      }
+
+      await _api.put(
+        '/api/chat/preferences',
+        data: data,
+      );
     } on DioException catch (e) {
       throw _handleError(e);
     }
   }
 
-  // User actions
+  // =========================
+  // User Actions
+  // =========================
+
   Future<void> blockUser(int userId) async {
     try {
-      await _api.post('/api/chat/block', data: {'userIdToBlock': userId});
+      await _api.post(
+        '/api/chat/block',
+        data: {
+          'userIdToBlock': userId,
+        },
+      );
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -196,7 +338,9 @@ class ChatService {
 
   Future<void> unblockUser(int userId) async {
     try {
-      await _api.delete('/api/chat/block/$userId');
+      await _api.delete(
+        '/api/chat/block/$userId',
+      );
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -204,36 +348,67 @@ class ChatService {
 
   Future<void> clearChat(int conversationId) async {
     try {
-      await _api.delete('/api/chat/clear/$conversationId');
+      await _api.delete(
+        '/api/chat/clear/$conversationId',
+      );
+
+      clearMessagesCache(conversationId);
     } on DioException catch (e) {
       throw _handleError(e);
     }
   }
 
+  // =========================
+  // Errors
+  // =========================
+
   String _handleError(DioException e) {
     final data = e.response?.data;
 
-    // Remove these prints in production
-    // print('ERROR DETAILS:');
-    // print('  Status: ${e.response?.statusCode}');
-    // print('  Data: $data');
-
     if (data is Map) {
       final message = data['message'] ?? data['error'];
-      if (message != null) return message.toString();
+
+      if (message != null) {
+        return message.toString();
+      }
     }
 
-    if (e.response?.statusCode == 401) {
-      return 'Authentication failed. Please login again.';
+    switch (e.response?.statusCode) {
+      case 400:
+        return 'Invalid request';
+
+      case 401:
+        return 'Authentication failed';
+
+      case 403:
+        return 'Access denied';
+
+      case 404:
+        return 'Not found';
+
+      case 422:
+        return 'Validation failed';
+
+      case 500:
+        return 'Server error';
+
+      case 502:
+        return 'Server unavailable';
+
+      default:
+        break;
     }
-    if (e.response?.statusCode == 403) {
-      return 'You are blocked from sending messages.';
+
+    if (e.type == DioExceptionType.connectionTimeout) {
+      return 'Connection timeout';
     }
-    if (e.response?.statusCode == 404) {
-      return 'Conversation not found.';
+
+    if (e.type == DioExceptionType.receiveTimeout) {
+      return 'Receive timeout';
     }
-    if (e.response?.statusCode == 500) {
-      return 'Server error. Please try again later.';
+
+    if (e.type == DioExceptionType.connectionError) {
+      return 'No internet connection';
     }
 
     return 'Something went wrong';

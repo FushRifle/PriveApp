@@ -70,7 +70,6 @@ dependencies:
   open_file: ^3.5.11
   file_picker: ^8.1.2
   url_launcher: ^6.3.2
-  flutter_local_notifications: ^21.0.0
   record: ^6.2.0
   audio_waveforms: ^2.0.2
   just_audio: ^0.10.5
@@ -87,15 +86,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-flutter_launcher_icons:
-  android: true
-  ios: true
-  remove_alpha_ios: true
-  image_path: "assets/icons/clique.png"
-  adaptive_icon_background: "#000000"
-  adaptive_icon_padding: false
-  adaptive_icon_foreground: "assets/icons/clique.png"
-
   assets:
     - assets/images/
     - assets/json/
@@ -104,3 +94,12 @@ flutter_launcher_icons:
     - assets/icons/
     - assets/wallpapers/
     - assets/sounds/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  image_path: "assets/icons/clique.png"
+  adaptive_icon_background: "#000000"
+  adaptive_icon_padding: false
+  adaptive_icon_foreground: "assets/icons/clique.png"

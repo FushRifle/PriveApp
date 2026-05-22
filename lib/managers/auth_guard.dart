@@ -1,121 +1,188 @@
-import 'package:clique/app/configs/colors.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/resources/constant/named_routes.dart';
+
 import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/bloc/profile/profile_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
-import 'package:clique/app/resources/constant/named_routes.dart';
+
 import './main_wrapper.dart';
 
-class AuthGuard extends StatelessWidget {
+class AuthGuard extends StatefulWidget {
   const AuthGuard({super.key});
+
+  @override
+  State<AuthGuard> createState() => _AuthGuardState();
+}
+
+class _AuthGuardState extends State<AuthGuard> {
+  bool _initialized = false;
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
+      buildWhen: (previous, current) =>
+          previous.isAuthenticated != current.isAuthenticated ||
+          previous.token != current.token,
       builder: (context, authState) {
         if (!authState.isAuthenticated || authState.token == null) {
-          return const _Redirector(route: NamedRoutes.loginScreen);
+          return const _RedirectScreen(
+            route: NamedRoutes.loginScreen,
+          );
         }
 
-        return _AuthenticatedGuard(token: authState.token!);
+        if (!_initialized) {
+          _initialized = true;
+
+          final profileBloc = context.read<ProfileBloc>();
+          final userBloc = context.read<UserBloc>();
+
+          profileBloc.setAuthToken(authState.token!);
+          userBloc.setAuthToken(authState.token!);
+        }
+
+        return _Bootstrapper(
+          token: authState.token!,
+        );
       },
     );
   }
 }
 
-class _AuthenticatedGuard extends StatelessWidget {
+class _Bootstrapper extends StatefulWidget {
   final String token;
 
-  const _AuthenticatedGuard({required this.token});
-
-  @override
-  Widget build(BuildContext context) {
-    final profileBloc = context.read<ProfileBloc>();
-    final userBloc = context.read<UserBloc>();
-
-    // Set tokens immediately
-    profileBloc.setAuthToken(token);
-    userBloc.setAuthToken(token);
-
-    // Check if profile is already loaded
-    final hasProfile = profileBloc.state.myProfile != null &&
-        profileBloc.state.myProfile!.userId > 0;
-    final hasUser = userBloc.state.currentUser != null;
-
-    if (hasProfile && hasUser) {
-      return const MainWrapper();
-    }
-
-    return _ProfileLoader(
-      token: token,
-      hasProfile: hasProfile,
-      hasUser: hasUser,
-    );
-  }
-}
-
-class _ProfileLoader extends StatefulWidget {
-  final String token;
-  final bool hasProfile;
-  final bool hasUser;
-
-  const _ProfileLoader({
+  const _Bootstrapper({
     required this.token,
-    required this.hasProfile,
-    required this.hasUser,
   });
 
   @override
-  State<_ProfileLoader> createState() => _ProfileLoaderState();
+  State<_Bootstrapper> createState() => _BootstrapperState();
 }
 
-class _ProfileLoaderState extends State<_ProfileLoader> {
+class _BootstrapperState extends State<_Bootstrapper> {
+  bool _loading = true;
+
+  bool _hasProfile = false;
+
+  bool _hasUser = false;
+
+  String? _error;
+
   @override
   void initState() {
     super.initState();
-    _loadData();
+
+    _bootstrap();
   }
 
-  Future<void> _loadData() async {
-    final profileBloc = context.read<ProfileBloc>();
-    final userBloc = context.read<UserBloc>();
+  Future<void> _bootstrap() async {
+    try {
+      final profileBloc = context.read<ProfileBloc>();
+      final userBloc = context.read<UserBloc>();
 
-    final futures = <Future>[];
+      final profile = profileBloc.state.myProfile;
 
-    if (!widget.hasProfile) {
-      profileBloc.add(LoadMyProfile());
-      futures.add(profileBloc.stream.firstWhere(
-        (state) =>
-            state.status == ProfileStatus.success ||
-            state.status == ProfileStatus.error,
-      ));
-    }
+      _hasProfile = profile != null && profile.userId > 0;
 
-    if (!widget.hasUser) {
-      userBloc.add(LoadCurrentUser());
-      futures.add(userBloc.stream.firstWhere(
-        (state) =>
-            state.status == UserStatus.success ||
-            state.status == UserStatus.error,
-      ));
-    }
+      _hasUser = userBloc.state.currentUser != null;
 
-    if (futures.isNotEmpty) {
-      await Future.wait(futures);
-    }
+      final futures = <Future>[];
 
-    if (!mounted) return;
+      if (!_hasProfile) {
+        profileBloc.add(LoadMyProfile());
 
-    final profile = profileBloc.state.myProfile;
-    final hasValidProfile = profile != null && profile.userId > 0;
+        futures.add(
+          profileBloc.stream.firstWhere(
+            (state) =>
+                state.status == ProfileStatus.success ||
+                state.status == ProfileStatus.error,
+          ),
+        );
+      }
 
-    if (!hasValidProfile) {
-      Navigator.pushReplacementNamed(context, NamedRoutes.demographicScreen);
-    } else {
-      Navigator.pushReplacementNamed(context, '/');
+      if (!_hasUser) {
+        userBloc.add(LoadCurrentUser());
+
+        futures.add(
+          userBloc.stream.firstWhere(
+            (state) =>
+                state.status == UserStatus.success ||
+                state.status == UserStatus.error,
+          ),
+        );
+      }
+
+      if (futures.isNotEmpty) {
+        await Future.wait(futures).timeout(
+          const Duration(seconds: 15),
+        );
+      }
+
+      if (!mounted) return;
+
+      final updatedProfile = profileBloc.state.myProfile;
+
+      final hasValidProfile =
+          updatedProfile != null && updatedProfile.userId > 0;
+
+      setState(() {
+        _hasProfile = hasValidProfile;
+        _loading = false;
+      });
+    } on TimeoutException {
+      if (!mounted) return;
+
+      setState(() {
+        _loading = false;
+        _error = 'Connection timeout';
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
     }
   }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const _SplashScreen();
+    }
+
+    if (_error != null) {
+      return _ErrorScreen(
+        error: _error!,
+        onRetry: () {
+          setState(() {
+            _loading = true;
+            _error = null;
+          });
+
+          _bootstrap();
+        },
+      );
+    }
+
+    if (!_hasProfile) {
+      return const _RedirectScreen(
+        route: NamedRoutes.demographicScreen,
+      );
+    }
+
+    return const MainWrapper();
+  }
+}
+
+class _SplashScreen extends StatelessWidget {
+  const _SplashScreen();
 
   @override
   Widget build(BuildContext context) {
@@ -126,7 +193,7 @@ class _ProfileLoaderState extends State<_ProfileLoader> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Image.asset(
-              'assets/images/clique.png',
+              'images/clique.png',
               width: 120,
               height: 120,
               fit: BoxFit.contain,
@@ -147,28 +214,76 @@ class _ProfileLoaderState extends State<_ProfileLoader> {
   }
 }
 
-class _Redirector extends StatelessWidget {
-  final String route;
+class _ErrorScreen extends StatelessWidget {
+  final String error;
+  final VoidCallback onRetry;
 
-  const _Redirector({required this.route});
+  const _ErrorScreen({
+    required this.error,
+    required this.onRetry,
+  });
 
   @override
   Widget build(BuildContext context) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (context.mounted) {
-        Navigator.pushReplacementNamed(context, route);
-      }
-    });
     return Scaffold(
       backgroundColor: Colors.white,
       body: Center(
-        child: Image.asset(
-          'assets/icons/clique.png',
-          width: 120,
-          height: 120,
-          fit: BoxFit.contain,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 56,
+                color: Colors.red,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                error,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: onRetry,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+}
+
+class _RedirectScreen extends StatefulWidget {
+  final String route;
+
+  const _RedirectScreen({
+    required this.route,
+  });
+
+  @override
+  State<_RedirectScreen> createState() => _RedirectScreenState();
+}
+
+class _RedirectScreenState extends State<_RedirectScreen> {
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      Navigator.pushReplacementNamed(
+        context,
+        widget.route,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const _SplashScreen();
   }
 }
