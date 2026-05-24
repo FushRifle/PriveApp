@@ -1,14 +1,21 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
+
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/reels/reel_bloc.dart';
 import 'package:clique/core/cloudinary_service.dart';
 
 class CreateReelPage extends StatefulWidget {
-  const CreateReelPage({super.key});
+  const CreateReelPage({
+    super.key,
+  });
 
   @override
   State<CreateReelPage> createState() => _CreateReelPageState();
@@ -17,50 +24,91 @@ class CreateReelPage extends StatefulWidget {
 class _CreateReelPageState extends State<CreateReelPage> {
   final TextEditingController _captionController = TextEditingController();
   final TextEditingController _musicController = TextEditingController();
+
   final ImagePicker _imagePicker = ImagePicker();
+
   final CloudinaryService _cloudinaryService = CloudinaryService();
 
   File? _selectedVideoFile;
+
   VideoPlayerController? _videoController;
+
   bool _isVideoInitialized = false;
   bool _isUploading = false;
+  bool _isPickingVideo = false;
+
   double _uploadProgress = 0.0;
 
   @override
   void dispose() {
     _captionController.dispose();
     _musicController.dispose();
-    _videoController?.dispose();
+
+    _disposeVideoController();
+
+    _cloudinaryService.cancelAllUploads();
+
     super.dispose();
+  }
+
+  Future<void> _disposeVideoController() async {
+    final controller = _videoController;
+
+    _videoController = null;
+    _isVideoInitialized = false;
+
+    await controller?.pause();
+    await controller?.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: _buildAppBar(),
-      body: BlocListener<ReelBloc, ReelState>(
-        listener: (context, state) {
-          if (state.status == ReelStatus.success && _isUploading) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Reel uploaded successfully!'),
-                backgroundColor: Colors.green,
-              ),
-            );
-            Navigator.pop(context, true);
-          }
-          if (state.error != null && _isUploading) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.error!),
-                backgroundColor: Colors.red,
-              ),
-            );
-            setState(() => _isUploading = false);
-          }
-        },
-        child: _buildBody(),
+    return PopScope(
+      canPop: !_isUploading,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _isUploading) {
+          _showSnackBar(
+            'Upload in progress. Please wait.',
+            isError: true,
+          );
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        appBar: _buildAppBar(),
+        body: BlocListener<ReelBloc, ReelState>(
+          listenWhen: (previous, current) {
+            return _isUploading &&
+                (previous.status != current.status ||
+                    previous.error != current.error);
+          },
+          listener: (context, state) {
+            if (state.status == ReelStatus.success) {
+              _showSnackBar('Reel uploaded successfully');
+
+              if (!mounted) return;
+
+              Navigator.pop(context, true);
+              return;
+            }
+
+            if (state.error != null && state.error!.isNotEmpty) {
+              _showSnackBar(
+                state.error!,
+                isError: true,
+              );
+
+              if (!mounted) return;
+
+              setState(() {
+                _isUploading = false;
+              });
+
+              context.read<ReelBloc>().add(ClearReelError());
+            }
+          },
+          child: _buildBody(),
+        ),
       ),
     );
   }
@@ -70,8 +118,11 @@ class _CreateReelPageState extends State<CreateReelPage> {
       backgroundColor: Colors.black,
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.close, color: Colors.white),
-        onPressed: () => Navigator.pop(context),
+        icon: const Icon(
+          Icons.close,
+          color: Colors.white,
+        ),
+        onPressed: _isUploading ? null : () => Navigator.pop(context),
       ),
       title: const Text(
         'Create Reel',
@@ -84,18 +135,23 @@ class _CreateReelPageState extends State<CreateReelPage> {
       centerTitle: true,
       actions: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 8,
+          ),
           child: ElevatedButton(
-            onPressed: (_selectedVideoFile == null || _isUploading)
-                ? null
-                : _uploadReel,
+            onPressed: _canShare ? _uploadReel : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
+              disabledBackgroundColor: Colors.grey.shade800,
+              disabledForegroundColor: Colors.grey.shade500,
               shape: const StadiumBorder(),
               elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              minimumSize: const Size(60, 40),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+              ),
+              minimumSize: const Size(70, 40),
             ),
             child: _isUploading
                 ? const SizedBox(
@@ -107,7 +163,7 @@ class _CreateReelPageState extends State<CreateReelPage> {
                     ),
                   )
                 : const Text(
-                    "Share",
+                    'Share',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
@@ -119,60 +175,99 @@ class _CreateReelPageState extends State<CreateReelPage> {
     );
   }
 
+  bool get _canShare {
+    return _selectedVideoFile != null &&
+        _isVideoInitialized &&
+        !_isUploading &&
+        !_isPickingVideo;
+  }
+
   Widget _buildBody() {
     if (_selectedVideoFile == null) {
       return _buildVideoPicker();
     }
 
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          _buildVideoPreview(),
-          const SizedBox(height: 16),
-          _buildCaptionInput(),
-          const SizedBox(height: 16),
-          _buildMusicInput(),
-          const SizedBox(height: 32),
-        ],
-      ),
+    return Stack(
+      children: [
+        SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.only(
+            bottom: 32,
+          ),
+          child: Column(
+            children: [
+              _buildVideoPreview(),
+              const SizedBox(height: 16),
+              _buildCaptionInput(),
+              const SizedBox(height: 16),
+              _buildMusicInput(),
+              const SizedBox(height: 32),
+            ],
+          ),
+        ),
+        if (_isUploading) _buildUploadOverlay(),
+      ],
     );
   }
 
   Widget _buildVideoPicker() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade800,
-              shape: BoxShape.circle,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 24,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            GestureDetector(
+              onTap: _isPickingVideo ? null : _showVideoPickerOptions,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade900,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.primary.withOpacity(0.7),
+                    width: 1.5,
+                  ),
+                ),
+                child: _isPickingVideo
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.primary,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.video_call,
+                        size: 52,
+                        color: Colors.white,
+                      ),
+              ),
             ),
-            child: IconButton(
-              icon: const Icon(Icons.video_call, size: 50),
-              color: Colors.white,
-              onPressed: _showVideoPickerOptions,
+            const SizedBox(height: 24),
+            Text(
+              'Select a video to create a reel',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey.shade300,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Select a video to create a reel',
-            style: TextStyle(
-              color: Colors.grey.shade400,
-              fontSize: 16,
+            const SizedBox(height: 8),
+            Text(
+              'Choose from gallery or record a new video',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 14,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Tap to choose from gallery or record',
-            style: TextStyle(
-              color: Colors.grey.shade600,
-              fontSize: 14,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -180,59 +275,57 @@ class _CreateReelPageState extends State<CreateReelPage> {
   Widget _buildVideoPreview() {
     return Container(
       margin: const EdgeInsets.all(16),
+      constraints: const BoxConstraints(
+        maxHeight: 560,
+      ),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.35),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         child: AspectRatio(
           aspectRatio: 9 / 16,
           child: Stack(
             alignment: Alignment.center,
             children: [
-              if (_isVideoInitialized && _videoController != null)
-                VideoPlayer(_videoController!),
-              if (!_isVideoInitialized)
-                Container(
-                  color: Colors.grey.shade900,
-                  child: const Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
-              Positioned(
-                bottom: 16,
-                right: 16,
-                child: GestureDetector(
-                  onTap: _changeVideo,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.edit,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
+              Positioned.fill(
+                child: Container(
+                  color: Colors.grey,
                 ),
               ),
+              if (_isVideoInitialized && _videoController != null)
+                Positioned.fill(
+                  child: FittedBox(
+                    fit: BoxFit.cover,
+                    child: SizedBox(
+                      width: _videoController!.value.size.width,
+                      height: _videoController!.value.size.height,
+                      child: VideoPlayer(_videoController!),
+                    ),
+                  ),
+                ),
+              if (!_isVideoInitialized)
+                const Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.primary,
+                    strokeWidth: 2,
+                  ),
+                ),
               if (_isVideoInitialized && _videoController != null)
                 GestureDetector(
                   onTap: _toggleVideoPlayback,
                   child: Container(
+                    width: 64,
+                    height: 64,
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.4),
+                      color: Colors.black.withOpacity(0.45),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -244,6 +337,25 @@ class _CreateReelPageState extends State<CreateReelPage> {
                     ),
                   ),
                 ),
+              Positioned(
+                bottom: 16,
+                right: 16,
+                child: GestureDetector(
+                  onTap: _isUploading ? null : _changeVideo,
+                  child: Container(
+                    padding: const EdgeInsets.all(9),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.65),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.edit,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -252,179 +364,256 @@ class _CreateReelPageState extends State<CreateReelPage> {
   }
 
   Widget _buildCaptionInput() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Caption',
-            style: TextStyle(
-              color: Colors.grey.shade400,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
+    return _InputSection(
+      label: 'Caption',
+      child: TextField(
+        controller: _captionController,
+        enabled: !_isUploading,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 15,
+        ),
+        maxLines: 3,
+        maxLength: 2200,
+        decoration: InputDecoration(
+          hintText: 'Write a caption...',
+          hintStyle: TextStyle(
+            color: Colors.grey.shade600,
           ),
-          const SizedBox(height: 8),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.grey.shade900,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.grey.shade800,
-                width: 1,
-              ),
-            ),
-            child: TextField(
-              controller: _captionController,
-              style: const TextStyle(color: Colors.white),
-              maxLines: 3,
-              decoration: InputDecoration(
-                hintText: 'Write a caption...',
-                hintStyle: TextStyle(color: Colors.grey.shade600),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.all(16),
-              ),
-            ),
+          border: InputBorder.none,
+          counterStyle: TextStyle(
+            color: Colors.grey.shade600,
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMusicInput() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Music (Optional)',
-            style: TextStyle(
-              color: Colors.grey.shade400,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.grey.shade900,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.grey.shade800,
-                width: 1,
-              ),
-            ),
-            child: TextField(
-              controller: _musicController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'Add music to your reel...',
-                hintStyle: TextStyle(color: Colors.grey.shade600),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.all(16),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showVideoPickerOptions() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.grey.shade900,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade600,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              leading: const Icon(Icons.video_library, color: Colors.white),
-              title: const Text('Choose from Gallery',
-                  style: TextStyle(color: Colors.white)),
-              onTap: () {
-                Navigator.pop(context);
-                _pickVideo(ImageSource.gallery);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.videocam, color: Colors.white),
-              title: const Text('Record Video',
-                  style: TextStyle(color: Colors.white)),
-              onTap: () {
-                Navigator.pop(context);
-                _pickVideo(ImageSource.camera);
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
+          contentPadding: const EdgeInsets.all(16),
         ),
       ),
     );
   }
 
+  Widget _buildMusicInput() {
+    return _InputSection(
+      label: 'Music (Optional)',
+      child: TextField(
+        controller: _musicController,
+        enabled: !_isUploading,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 15,
+        ),
+        decoration: InputDecoration(
+          hintText: 'Add music to your reel...',
+          hintStyle: TextStyle(
+            color: Colors.grey.shade600,
+          ),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.all(16),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUploadOverlay() {
+    final percentage = (_uploadProgress * 100).clamp(0, 100).toInt();
+
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black.withOpacity(0.72),
+        child: Center(
+          child: Container(
+            width: 260,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.grey,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.08),
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Uploading reel',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                LinearProgressIndicator(
+                  value: _uploadProgress <= 0 ? null : _uploadProgress,
+                  color: AppColors.primary,
+                  backgroundColor: Colors.grey.shade800,
+                  minHeight: 6,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '$percentage%',
+                  style: TextStyle(
+                    color: Colors.grey.shade400,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showVideoPickerOptions() {
+    if (_isUploading) return;
+
+    HapticFeedback.lightImpact();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.grey,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(22),
+        ),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.only(
+              bottom: 12,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 10),
+                Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade700,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                _PickerTile(
+                  icon: Icons.video_library,
+                  title: 'Choose from Gallery',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickVideo(ImageSource.gallery);
+                  },
+                ),
+                _PickerTile(
+                  icon: Icons.videocam,
+                  title: 'Record Video',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickVideo(ImageSource.camera);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _pickVideo(ImageSource source) async {
+    if (_isPickingVideo || _isUploading) return;
+
+    setState(() {
+      _isPickingVideo = true;
+    });
+
     try {
-      final XFile? pickedFile = await _imagePicker.pickVideo(
+      final pickedFile = await _imagePicker.pickVideo(
         source: source,
         maxDuration: const Duration(seconds: 60),
       );
 
-      if (pickedFile != null) {
-        setState(() {
-          _selectedVideoFile = File(pickedFile.path);
-        });
-        _initializeVideoController();
-      }
+      if (pickedFile == null) return;
+
+      await _setSelectedVideo(File(pickedFile.path));
     } catch (e) {
-      _showSnackBar('Failed to pick video: $e', isError: true);
+      _showSnackBar(
+        'Failed to pick video: $e',
+        isError: true,
+      );
+    } finally {
+      if (!mounted) return;
+
+      setState(() {
+        _isPickingVideo = false;
+      });
     }
   }
 
-  void _initializeVideoController() {
-    if (_selectedVideoFile == null) return;
+  Future<void> _setSelectedVideo(File file) async {
+    await _disposeVideoController();
 
-    _videoController?.dispose();
-    _videoController = VideoPlayerController.file(_selectedVideoFile!)
-      ..initialize().then((_) {
-        if (mounted) {
-          setState(() {
-            _isVideoInitialized = true;
-          });
-          _videoController!.setLooping(true);
-          _videoController!.play();
-        }
-      }).catchError((error) {
-        debugPrint('Error initializing video: $error');
-        _showSnackBar('Failed to load video', isError: true);
+    if (!mounted) return;
+
+    setState(() {
+      _selectedVideoFile = file;
+      _isVideoInitialized = false;
+    });
+
+    await _initializeVideoController(file);
+  }
+
+  Future<void> _initializeVideoController(File file) async {
+    try {
+      final controller = VideoPlayerController.file(file);
+
+      _videoController = controller;
+
+      await controller.initialize();
+
+      if (!mounted || _videoController != controller) {
+        await controller.dispose();
+        return;
+      }
+
+      await controller.setLooping(true);
+      await controller.play();
+
+      if (!mounted) return;
+
+      setState(() {
+        _isVideoInitialized = true;
       });
+    } catch (error) {
+      debugPrint('Error initializing video: $error');
+
+      if (!mounted) return;
+
+      setState(() {
+        _isVideoInitialized = false;
+      });
+
+      _showSnackBar(
+        'Failed to load video',
+        isError: true,
+      );
+    }
   }
 
   void _toggleVideoPlayback() {
-    if (_videoController == null || !_isVideoInitialized) return;
+    final controller = _videoController;
 
-    setState(() {
-      if (_videoController!.value.isPlaying) {
-        _videoController!.pause();
-      } else {
-        _videoController!.play();
-      }
-    });
+    if (controller == null || !_isVideoInitialized) return;
+
+    if (controller.value.isPlaying) {
+      controller.pause();
+    } else {
+      controller.play();
+    }
+
+    if (!mounted) return;
+
+    setState(() {});
   }
 
   void _changeVideo() {
@@ -432,7 +621,15 @@ class _CreateReelPageState extends State<CreateReelPage> {
   }
 
   Future<void> _uploadReel() async {
-    if (_selectedVideoFile == null) return;
+    final file = _selectedVideoFile;
+
+    if (file == null || _isUploading) return;
+
+    FocusScope.of(context).unfocus();
+
+    await _videoController?.pause();
+
+    if (!mounted) return;
 
     setState(() {
       _isUploading = true;
@@ -440,32 +637,54 @@ class _CreateReelPageState extends State<CreateReelPage> {
     });
 
     try {
-      // Upload video to Cloudinary with progress
       final videoUrl = await _cloudinaryService.uploadVideo(
-        _selectedVideoFile!,
+        file,
         onProgress: (progress) {
+          if (!mounted) return;
+
           setState(() {
-            _uploadProgress = progress;
+            _uploadProgress = progress.clamp(0.0, 1.0);
           });
         },
       );
 
-      // Prepare data for reel creation
-      final data = {
+      if (!mounted) return;
+
+      final caption = _captionController.text.trim();
+      final music = _musicController.text.trim();
+
+      final data = <String, dynamic>{
         'videoUrl': videoUrl,
-        'caption': _captionController.text,
-        if (_musicController.text.isNotEmpty) 'music': _musicController.text,
+        'caption': caption,
+        if (music.isNotEmpty) 'music': music,
       };
 
-      // Dispatch create reel event
-      context.read<ReelBloc>().add(CreateReel(data: data));
+      context.read<ReelBloc>().add(
+            CreateReel(data: data),
+          );
     } catch (e) {
-      _showSnackBar('Failed to upload reel: ${e.toString()}', isError: true);
-      setState(() => _isUploading = false);
+      if (!mounted) return;
+
+      _showSnackBar(
+        'Failed to upload reel: $e',
+        isError: true,
+      );
+
+      setState(() {
+        _isUploading = false;
+        _uploadProgress = 0.0;
+      });
     }
   }
 
-  void _showSnackBar(String message, {bool isError = false}) {
+  void _showSnackBar(
+    String message, {
+    bool isError = false,
+  }) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -473,6 +692,79 @@ class _CreateReelPageState extends State<CreateReelPage> {
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),
+    );
+  }
+}
+
+class _InputSection extends StatelessWidget {
+  final String label;
+  final Widget child;
+
+  const _InputSection({
+    required this.label,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 16,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.grey.shade400,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade900,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: Colors.grey.shade800,
+              ),
+            ),
+            child: child,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PickerTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+
+  const _PickerTile({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: Colors.white,
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      onTap: onTap,
     );
   }
 }

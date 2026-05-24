@@ -38,9 +38,13 @@ class LoadExploreProfiles extends ExploreEvent {
       ];
 }
 
-class RefreshExploreProfiles extends ExploreEvent {}
+class RefreshExploreProfiles extends ExploreEvent {
+  const RefreshExploreProfiles();
+}
 
-class LoadMoreExploreProfiles extends ExploreEvent {}
+class LoadMoreExploreProfiles extends ExploreEvent {
+  const LoadMoreExploreProfiles();
+}
 
 class SwipeProfile extends ExploreEvent {
   final int profileId;
@@ -54,20 +58,42 @@ class SwipeProfile extends ExploreEvent {
   });
 
   @override
-  List<Object?> get props => [profileId, action, index];
+  List<Object?> get props => [
+        profileId,
+        action,
+        index,
+      ];
 }
 
 class UpdateExploreFilters extends ExploreEvent {
   final Map<String, dynamic> filters;
 
-  const UpdateExploreFilters({required this.filters});
+  const UpdateExploreFilters({
+    required this.filters,
+  });
 
   @override
-  List<Object?> get props => [filters];
+  List<Object?> get props => [
+        filters,
+      ];
 }
 
-class LoadExploreStats extends ExploreEvent {}
+class LoadExploreStats extends ExploreEvent {
+  const LoadExploreStats();
+}
 
-class ClearExploreError extends ExploreEvent {}
+class ClearExploreError extends ExploreEvent {
+  const ClearExploreError();
+}
 
-class ResetExploreState extends ExploreEvent {}
+class ClearSwipeFeedback extends ExploreEvent {
+  const ClearSwipeFeedback();
+}
+
+class ClearMatchState extends ExploreEvent {
+  const ClearMatchState();
+}
+
+class ResetExploreState extends ExploreEvent {
+  const ResetExploreState();
+}

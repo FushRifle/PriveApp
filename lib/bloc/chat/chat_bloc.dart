@@ -264,7 +264,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
       MessageModel? realMessage;
 
-      if (response != null && response is Map<String, dynamic>) {
+      if (response != null) {
         final parsed = MessageModel.fromJson(response);
         realMessage = MessageModel(
           id: parsed.id,

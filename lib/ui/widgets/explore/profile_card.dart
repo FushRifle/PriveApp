@@ -1,4 +1,6 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/data/models/profile_model.dart';
@@ -15,13 +17,15 @@ class ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: AppColors.blackColor.withOpacity(isTop ? 0.2 : 0.1),
-            blurRadius: 20,
+            color: AppColors.blackColor.withOpacity(
+              isTop ? 0.2 : 0.08,
+            ),
+            blurRadius: isTop ? 20 : 12,
             offset: const Offset(0, 10),
           ),
         ],
@@ -31,68 +35,116 @@ class ProfileCard extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            _buildProfileImage(),
-            _buildGradientOverlay(),
-            _buildDistanceBadge(),
-            if (profile.isOnline) _buildOnlineIndicator(),
-            _buildMatchScoreBadge(),
-            _buildProfileInfo(),
+            _ProfileImage(profile: profile),
+            const _GradientOverlay(),
+            Positioned(
+              top: 16,
+              left: 16,
+              child: _DistanceBadge(
+                distanceText: profile.distanceText,
+              ),
+            ),
+            if (profile.isOnline)
+              const Positioned(
+                top: 16,
+                right: 16,
+                child: _OnlineBadge(),
+              ),
+            if (profile.matchScore > 0)
+              Positioned(
+                bottom: 106,
+                left: 16,
+                child: _MatchScoreBadge(
+                  score: profile.matchScore,
+                ),
+              ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _ProfileInfo(profile: profile),
+            ),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildProfileImage() {
-    if (profile.image.isNotEmpty) {
-      // Check if it's a network image or asset
-      if (profile.image.startsWith('http')) {
-        return Image.network(
-          profile.image,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return _buildPlaceholderImage();
-          },
-        );
-      }
-      return Image.asset(
-        profile.image,
+class _ProfileImage extends StatelessWidget {
+  final ProfileModel profile;
+
+  const _ProfileImage({
+    required this.profile,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final image = profile.image.trim();
+
+    if (image.isEmpty) {
+      return _PlaceholderImage(profile: profile);
+    }
+
+    if (image.startsWith('http')) {
+      return CachedNetworkImage(
+        imageUrl: image,
         fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return _buildPlaceholderImage();
-        },
+        memCacheWidth: 900,
+        placeholder: (_, __) => _PlaceholderImage(profile: profile),
+        errorWidget: (_, __, ___) => _PlaceholderImage(profile: profile),
       );
     }
-    return _buildPlaceholderImage();
-  }
 
-  Widget _buildPlaceholderImage() {
+    return Image.asset(
+      image,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) {
+        return _PlaceholderImage(profile: profile);
+      },
+    );
+  }
+}
+
+class _PlaceholderImage extends StatelessWidget {
+  final ProfileModel profile;
+
+  const _PlaceholderImage({
+    required this.profile,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final firstLetter = profile.name.trim().isNotEmpty
+        ? profile.name.trim()[0].toUpperCase()
+        : 'U';
+
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.primary.withOpacity(0.3),
-            AppColors.primary.withOpacity(0.8),
+            AppColors.primary.withOpacity(0.35),
+            AppColors.primary.withOpacity(0.85),
           ],
         ),
       ),
       child: Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               Icons.person,
-              size: 100,
-              color: Colors.white.withOpacity(0.5),
+              size: 96,
+              color: Colors.white.withOpacity(0.48),
             ),
             const SizedBox(height: 8),
             Text(
-              profile.name[0].toUpperCase(),
+              firstLetter,
               style: TextStyle(
                 fontSize: 40,
-                color: Colors.white.withOpacity(0.5),
+                color: Colors.white.withOpacity(0.55),
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -101,186 +153,211 @@ class ProfileCard extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildGradientOverlay() {
-    return Container(
+class _GradientOverlay extends StatelessWidget {
+  const _GradientOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return const DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
+          stops: [0.48, 0.7, 1.0],
           colors: [
             Colors.transparent,
-            Colors.black.withOpacity(0.1),
-            Colors.black.withOpacity(0.7),
+            Color.fromRGBO(0, 0, 0, 0.15),
+            Color.fromRGBO(0, 0, 0, 0.78),
           ],
-          stops: const [0.5, 0.7, 1.0],
         ),
       ),
     );
   }
+}
 
-  Widget _buildDistanceBadge() {
-    return Positioned(
-      top: 16,
-      left: 16,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 6,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.5),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: Colors.white.withOpacity(0.3),
-            width: 1,
+class _DistanceBadge extends StatelessWidget {
+  final String distanceText;
+
+  const _DistanceBadge({
+    required this.distanceText,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _GlassBadge(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.location_on,
+            color: Colors.white.withOpacity(0.9),
+            size: 14,
           ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.location_on,
-              color: Colors.white.withOpacity(0.9),
-              size: 14,
+          const SizedBox(width: 4),
+          Text(
+            distanceText,
+            style: AppTheme.whiteTextStyle.copyWith(
+              fontSize: 12,
+              fontWeight: AppTheme.medium,
             ),
-            const SizedBox(width: 4),
-            Text(
-              profile.distanceText,
-              style: AppTheme.whiteTextStyle.copyWith(
-                fontSize: 12,
-                fontWeight: AppTheme.medium,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
+}
 
-  Widget _buildOnlineIndicator() {
-    return Positioned(
-      top: 16,
-      right: 16,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 6,
-        ),
-        decoration: BoxDecoration(
-          color: AppColors.greenColor,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
+class _OnlineBadge extends StatelessWidget {
+  const _OnlineBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 6,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.greenColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(
+            width: 8,
+            height: 8,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
                 color: Colors.white,
+                shape: BoxShape.circle,
               ),
             ),
-            const SizedBox(width: 6),
-            Text(
-              'Online',
-              style: AppTheme.whiteTextStyle.copyWith(
-                fontSize: 12,
-                fontWeight: AppTheme.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMatchScoreBadge() {
-    if (profile.matchScore <= 0) return const SizedBox.shrink();
-
-    return Positioned(
-      bottom: 100,
-      left: 16,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 6,
-        ),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              AppColors.primary,
-              AppColors.secondary,
-            ],
           ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withOpacity(0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+          const SizedBox(width: 6),
+          Text(
+            'Online',
+            style: AppTheme.whiteTextStyle.copyWith(
+              fontSize: 12,
+              fontWeight: AppTheme.bold,
             ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.favorite,
-              color: Colors.white,
-              size: 14,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              '${profile.matchScore}% Match',
-              style: AppTheme.whiteTextStyle.copyWith(
-                fontSize: 12,
-                fontWeight: AppTheme.bold,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
+}
 
-  Widget _buildProfileInfo() {
-    return Positioned(
-      bottom: 0,
-      left: 0,
-      right: 0,
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildNameAndLocation(),
+class _MatchScoreBadge extends StatelessWidget {
+  final int score;
+
+  const _MatchScoreBadge({
+    required this.score,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 6,
+      ),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            AppColors.primary,
+            AppColors.secondary,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.favorite,
+            color: Colors.white,
+            size: 14,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '$score% Match',
+            style: AppTheme.whiteTextStyle.copyWith(
+              fontSize: 12,
+              fontWeight: AppTheme.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileInfo extends StatelessWidget {
+  final ProfileModel profile;
+
+  const _ProfileInfo({
+    required this.profile,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final interests = profile.interests
+            ?.where((interest) => interest.trim().isNotEmpty)
+            .take(4)
+            .toList() ??
+        [];
+
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _NameRow(profile: profile),
+          if (profile.occupation.trim().isNotEmpty) ...[
             const SizedBox(height: 8),
-            _buildOccupation(),
-            if (profile.bio.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                profile.bio,
-                style: AppTheme.whiteTextStyle.copyWith(
-                  fontSize: 14,
-                  height: 1.4,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-            if (profile.interests != null && profile.interests!.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              _buildInterestTags(),
-            ],
+            _OccupationRow(occupation: profile.occupation),
           ],
-        ),
+          if (profile.bio.trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              profile.bio,
+              style: AppTheme.whiteTextStyle.copyWith(
+                fontSize: 14,
+                height: 1.4,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          if (interests.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _InterestTags(interests: interests),
+          ],
+        ],
       ),
     );
   }
+}
 
-  Widget _buildNameAndLocation() {
+class _NameRow extends StatelessWidget {
+  final ProfileModel profile;
+
+  const _NameRow({
+    required this.profile,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       children: [
         Expanded(
@@ -298,7 +375,7 @@ class ProfileCard extends StatelessWidget {
               ),
               if (profile.isVerified) ...[
                 const SizedBox(width: 4),
-                Icon(
+                const Icon(
                   Icons.verified,
                   color: Colors.blue,
                   size: 20,
@@ -307,6 +384,7 @@ class ProfileCard extends StatelessWidget {
             ],
           ),
         ),
+        const SizedBox(width: 8),
         Icon(
           Icons.location_on,
           color: Colors.white.withOpacity(0.8),
@@ -326,10 +404,17 @@ class ProfileCard extends StatelessWidget {
       ],
     );
   }
+}
 
-  Widget _buildOccupation() {
-    if (profile.occupation.isEmpty) return const SizedBox.shrink();
+class _OccupationRow extends StatelessWidget {
+  final String occupation;
 
+  const _OccupationRow({
+    required this.occupation,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       children: [
         Icon(
@@ -338,46 +423,83 @@ class ProfileCard extends StatelessWidget {
           size: 14,
         ),
         const SizedBox(width: 4),
-        Text(
-          profile.occupation,
-          style: AppTheme.whiteTextStyle.copyWith(
-            fontSize: 12,
-            fontWeight: AppTheme.medium,
-            color: Colors.white.withOpacity(0.8),
+        Expanded(
+          child: Text(
+            occupation,
+            style: AppTheme.whiteTextStyle.copyWith(
+              fontSize: 12,
+              fontWeight: AppTheme.medium,
+              color: Colors.white.withOpacity(0.82),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
     );
   }
+}
 
-  Widget _buildInterestTags() {
+class _InterestTags extends StatelessWidget {
+  final List<String> interests;
+
+  const _InterestTags({
+    required this.interests,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Wrap(
       spacing: 8,
       runSpacing: 6,
-      children: profile.interests!
-          .where((interest) => interest.isNotEmpty)
-          .map((interest) => Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Text(
-                  interest,
-                  style: AppTheme.whiteTextStyle.copyWith(
-                    fontSize: 12,
-                    fontWeight: AppTheme.medium,
-                  ),
-                ),
-              ))
-          .toList(),
+      children: interests.map((interest) {
+        return Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 6,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.3),
+            ),
+          ),
+          child: Text(
+            interest,
+            style: AppTheme.whiteTextStyle.copyWith(
+              fontSize: 12,
+              fontWeight: AppTheme.medium,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _GlassBadge extends StatelessWidget {
+  final Widget child;
+
+  const _GlassBadge({
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 6,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.3),
+        ),
+      ),
+      child: child,
     );
   }
 }

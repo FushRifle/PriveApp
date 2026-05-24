@@ -20,8 +20,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<ResendVerificationCode>(_onResendVerificationCode);
     on<UpdateEmail>(_onUpdateEmail);
     on<UpdatePassword>(_onUpdatePassword);
-
-    // Check auth status on initialization
     add(CheckAuthStatus());
   }
 
@@ -210,14 +208,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     VerifyEmailRequested event,
     Emitter<AuthState> emit,
   ) async {
-    // In a real implementation, you would verify the code with your backend
-    // For now, we'll assume verification is handled by Supabase via email link
     emit(state.copyWith(status: AuthStatus.loading, isLoading: true));
-
-    // Simulate verification check
     await Future.delayed(const Duration(seconds: 1));
-
-    // Check if email is now verified
     final isAuthenticated = await _authService.isAuthenticated();
     if (isAuthenticated) {
       final token = await _authService.getToken();

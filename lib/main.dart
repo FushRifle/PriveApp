@@ -1,37 +1,13 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart';
-
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
-
-import 'package:cloudinary_flutter/cloudinary_context.dart';
-import 'package:cloudinary_url_gen/cloudinary.dart';
-
 import 'package:clique/app/configs/api_config.dart';
 import 'package:clique/app/configs/theme.dart';
+import 'package:clique/app/resources/constant/named_routes.dart';
+
+import 'package:clique/bloc/auth/auth_bloc.dart';
+import 'package:clique/bloc/cloudinary/cloudinary_cubit.dart';
 
 import 'package:clique/data/providers/theme_provider.dart';
 
-import 'package:clique/app/resources/constant/named_routes.dart';
-
 import 'package:clique/managers/auth_guard.dart';
-
-import 'package:clique/bloc/auth/auth_bloc.dart';
-import 'package:clique/bloc/chat/chat_bloc.dart';
-import 'package:clique/bloc/chat/gallery/chat_gallery_cubit.dart';
-import 'package:clique/bloc/cloudinary/cloudinary_cubit.dart';
-import 'package:clique/bloc/explore/explore_bloc.dart';
-import 'package:clique/bloc/friends/friends_bloc.dart';
-import 'package:clique/bloc/home/feed_bloc.dart';
-import 'package:clique/bloc/insights/insights_bloc.dart';
-import 'package:clique/bloc/match/match_bloc.dart';
-import 'package:clique/bloc/profile/profile_bloc.dart';
-import 'package:clique/bloc/reels/reel_bloc.dart';
-import 'package:clique/bloc/status/stories_bloc.dart';
-import 'package:clique/bloc/user/user_bloc.dart';
 
 import 'package:clique/ui/pages/auth/demographic_page.dart';
 import 'package:clique/ui/pages/auth/login_page.dart';
@@ -45,6 +21,8 @@ import 'package:clique/ui/pages/auth/success_page.dart';
 import 'package:clique/ui/pages/main/home/create_post_page.dart';
 import 'package:clique/ui/pages/main/home/post_detail_page.dart';
 
+import 'package:clique/ui/pages/main/match/matches_page.dart';
+
 import 'package:clique/ui/pages/main/notification/notification_page.dart';
 
 import 'package:clique/ui/pages/main/profile/edit_profile_page.dart';
@@ -53,18 +31,28 @@ import 'package:clique/ui/pages/main/profile/profile_page.dart';
 import 'package:clique/ui/pages/main/status/create_status_page.dart';
 import 'package:clique/ui/pages/main/status/status_page.dart';
 
-import 'package:clique/ui/pages/settings/settings_page.dart';
-import 'package:clique/ui/pages/settings/subscribe_page.dart';
-
 import 'package:clique/ui/pages/settings/clique/about_page.dart';
 import 'package:clique/ui/pages/settings/clique/help_page.dart';
 import 'package:clique/ui/pages/settings/clique/privacy_page.dart';
 import 'package:clique/ui/pages/settings/clique/terms_page.dart';
 
+import 'package:clique/ui/pages/settings/settings_page.dart';
+import 'package:clique/ui/pages/settings/subscribe_page.dart';
+
 import 'package:clique/ui/pages/social/friends_list_page.dart';
 import 'package:clique/ui/pages/social/insights_page.dart';
 
-import 'package:clique/ui/pages/main/match/matches_page.dart';
+import 'package:cloudinary_flutter/cloudinary_context.dart';
+import 'package:cloudinary_url_gen/cloudinary.dart';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -99,9 +87,7 @@ Future<void> _initializeApp() async {
     cloudName: 'dug6225go',
   );
 
-  FlutterError.onError = (details) {
-    FlutterError.presentError(details);
-  };
+  FlutterError.onError = FlutterError.presentError;
 }
 
 class MyApp extends ConsumerStatefulWidget {
@@ -114,15 +100,15 @@ class MyApp extends ConsumerStatefulWidget {
 class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   late final AuthBloc _authBloc;
 
-  late final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey;
+  final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
+  DateTime? _lastAuthCheck;
 
   @override
   void initState() {
     super.initState();
 
     WidgetsBinding.instance.addObserver(this);
-
-    _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
     _authBloc = AuthBloc()..add(CheckAuthStatus());
   }
@@ -141,7 +127,14 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     AppLifecycleState state,
   ) {
     if (state == AppLifecycleState.resumed) {
-      _authBloc.add(CheckAuthStatus());
+      final now = DateTime.now();
+
+      if (_lastAuthCheck == null ||
+          now.difference(_lastAuthCheck!) > const Duration(seconds: 20)) {
+        _lastAuthCheck = now;
+
+        _authBloc.add(CheckAuthStatus());
+      }
     }
   }
 
@@ -154,41 +147,10 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
         BlocProvider<AuthBloc>.value(
           value: _authBloc,
         ),
+
+        // GLOBAL ONLY
         BlocProvider(
           create: (_) => CloudinaryCubit(),
-        ),
-        BlocProvider(
-          create: (_) => UserBloc(),
-        ),
-        BlocProvider(
-          create: (_) => ProfileBloc(),
-        ),
-        BlocProvider(
-          create: (_) => FeedBloc(),
-        ),
-        BlocProvider(
-          create: (_) => FriendsBloc(),
-        ),
-        BlocProvider(
-          create: (_) => MatchBloc(),
-        ),
-        BlocProvider(
-          create: (_) => InsightsBloc(),
-        ),
-        BlocProvider(
-          create: (_) => StoriesBloc(),
-        ),
-        BlocProvider(
-          create: (_) => ExploreBloc(),
-        ),
-        BlocProvider(
-          create: (_) => ReelBloc(),
-        ),
-        BlocProvider(
-          create: (_) => ChatBloc(),
-        ),
-        BlocProvider(
-          create: (_) => ChatGalleryCubit(),
         ),
       ],
       child: MultiBlocListener(
@@ -233,7 +195,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     ];
 
     return criticalErrors.any(
-      (e) => error.contains(e),
+      error.contains,
     );
   }
 }
@@ -252,136 +214,144 @@ class AppRouter {
           );
         }
 
-        return MaterialPageRoute(
-          builder: (_) => PostDetailPage(
+        return _route(
+          PostDetailPage(
             postId: postId,
           ),
         );
 
       case NamedRoutes.loginScreen:
-        return MaterialPageRoute(
-          builder: (_) => const LoginPage(),
+        return _route(
+          const LoginPage(),
         );
 
       case NamedRoutes.registerScreen:
-        return MaterialPageRoute(
-          builder: (_) => const RegisterPage(),
+        return _route(
+          const RegisterPage(),
         );
 
       case NamedRoutes.demographicScreen:
-        return MaterialPageRoute(
-          builder: (_) => const OnboardingDemographicPage(),
+        return _route(
+          const OnboardingDemographicPage(),
         );
 
       case NamedRoutes.onboardingSuccessScreen:
-        return MaterialPageRoute(
-          builder: (_) => const OnboardingSuccessPage(),
+        return _route(
+          const OnboardingSuccessPage(),
         );
 
       case NamedRoutes.profileScreen:
-        return MaterialPageRoute(
-          builder: (_) => const ProfilePage(
+        return _route(
+          const ProfilePage(
             isOwnProfile: true,
           ),
         );
 
       case NamedRoutes.editProfileScreen:
-        return MaterialPageRoute(
-          builder: (_) => const EditProfilePage(),
+        return _route(
+          const EditProfilePage(),
         );
 
       case NamedRoutes.friendListScreen:
-        return MaterialPageRoute(
-          builder: (_) => const FriendsListPage(),
+        return _route(
+          const FriendsListPage(),
         );
 
       case NamedRoutes.insightsScreen:
-        return MaterialPageRoute(
-          builder: (_) => const InsightsPage(),
+        return _route(
+          const InsightsPage(),
         );
 
       case NamedRoutes.matchScreen:
-        return MaterialPageRoute(
-          builder: (_) => const MatchesPage(),
+        return _route(
+          const MatchesPage(),
         );
 
       case NamedRoutes.createPostScreen:
-        return MaterialPageRoute(
-          builder: (_) => const CreatePostPage(),
+        return _route(
+          const CreatePostPage(),
         );
 
       case NamedRoutes.createStatusScreen:
-        return MaterialPageRoute(
-          builder: (_) => const CreateStatusPage(),
+        return _route(
+          const CreateStatusPage(),
         );
 
       case NamedRoutes.statusScreen:
-        return MaterialPageRoute(
-          builder: (_) => const StatusPage(
+        return _route(
+          const StatusPage(
             stories: [],
           ),
         );
 
       case NamedRoutes.settingsScreen:
-        return MaterialPageRoute(
-          builder: (_) => const SettingsPage(),
+        return _route(
+          const SettingsPage(),
         );
 
       case NamedRoutes.aboutScreen:
-        return MaterialPageRoute(
-          builder: (_) => const AboutPage(),
+        return _route(
+          const AboutPage(),
         );
 
       case NamedRoutes.termsScreen:
-        return MaterialPageRoute(
-          builder: (_) => const TermsPage(),
+        return _route(
+          const TermsPage(),
         );
 
       case NamedRoutes.privacyScreen:
-        return MaterialPageRoute(
-          builder: (_) => const PrivacyPage(),
+        return _route(
+          const PrivacyPage(),
         );
 
       case NamedRoutes.helpScreen:
-        return MaterialPageRoute(
-          builder: (_) => const HelpPage(),
+        return _route(
+          const HelpPage(),
         );
 
       case NamedRoutes.subscribeScreen:
-        return MaterialPageRoute(
-          builder: (_) => const SubscribePage(),
+        return _route(
+          const SubscribePage(),
         );
 
       case NamedRoutes.notificationScreen:
-        return MaterialPageRoute(
-          builder: (_) => const NotificationPage(),
+        return _route(
+          const NotificationPage(),
         );
 
       case NamedRoutes.twoFactorScreen:
-        return MaterialPageRoute(
-          builder: (_) => const TwoFactorPage(),
+        return _route(
+          const TwoFactorPage(),
         );
 
       case NamedRoutes.changePasswordScreen:
-        return MaterialPageRoute(
-          builder: (_) => const ChangePasswordPage(),
+        return _route(
+          const ChangePasswordPage(),
         );
 
       case NamedRoutes.activeSessionsScreen:
-        return MaterialPageRoute(
-          builder: (_) => const ActiveSessionsPage(),
+        return _route(
+          const ActiveSessionsPage(),
         );
 
       case NamedRoutes.lockScreenScreen:
-        return MaterialPageRoute(
-          builder: (_) => const LockScreenPage(),
+        return _route(
+          const LockScreenPage(),
         );
 
       default:
-        return MaterialPageRoute(
-          builder: (_) => const AuthGuard(),
+        return _route(
+          const AuthGuard(),
         );
     }
+  }
+
+  static MaterialPageRoute _route(
+    Widget page,
+  ) {
+    return MaterialPageRoute(
+      builder: (_) => page,
+    );
   }
 
   static Route<dynamic> _errorRoute(

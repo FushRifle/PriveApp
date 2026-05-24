@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/data/models/profile_model.dart';
 import 'package:clique/ui/widgets/explore/profile_card.dart';
@@ -21,109 +22,153 @@ class SwipeableCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: cardBackground,
         borderRadius: BorderRadius.circular(30),
       ),
       child: Stack(
+        fit: StackFit.expand,
         children: [
           ProfileCard(
             profile: profile,
             isTop: true,
           ),
-          // Like Stamp
-          if (likeOpacity > 0)
-            Opacity(
+          if (likeOpacity > 0.02)
+            _SwipeStamp(
+              text: 'LIKE',
+              color: AppColors.greenColor,
               opacity: likeOpacity,
-              child: _buildStamp(
-                text: 'LIKE',
-                color: AppColors.greenColor,
-                isLeft: true,
-                topOffset: 40 + (likeOpacity * 30),
-              ),
+              alignment: Alignment.topLeft,
+              angle: -0.28,
             ),
-          // Dislike Stamp
-          if (dislikeOpacity > 0)
-            Opacity(
+          if (dislikeOpacity > 0.02)
+            _SwipeStamp(
+              text: 'NOPE',
+              color: AppColors.redColor,
               opacity: dislikeOpacity,
-              child: _buildStamp(
-                text: 'NOPE',
-                color: AppColors.redColor,
-                isLeft: false,
-                topOffset: 40 + (dislikeOpacity * 30),
-              ),
+              alignment: Alignment.topRight,
+              angle: 0.28,
             ),
-          // Super Like Stamp
-          if (superLikeOpacity > 0)
-            Opacity(
+          if (superLikeOpacity > 0.02)
+            _SuperLikeStamp(
               opacity: superLikeOpacity,
-              child: _buildSuperLikeStamp(superLikeOpacity),
             ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildStamp({
-    required String text,
-    required Color color,
-    required bool isLeft,
-    required double topOffset,
-  }) {
-    return Positioned(
-      top: topOffset,
-      left: isLeft ? 30 : null,
-      right: isLeft ? null : 30,
-      child: Transform.rotate(
-        angle: isLeft ? -0.3 : 0.3,
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 10,
-          ),
-          decoration: BoxDecoration(
-            border: Border.all(color: color, width: 4),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Text(
-            text,
-            style: TextStyle(
-              color: color,
-              fontSize: 40,
-              fontWeight: FontWeight.bold,
+class _SwipeStamp extends StatelessWidget {
+  final String text;
+  final Color color;
+  final double opacity;
+  final Alignment alignment;
+  final double angle;
+
+  const _SwipeStamp({
+    required this.text,
+    required this.color,
+    required this.opacity,
+    required this.alignment,
+    required this.angle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final safeOpacity = opacity.clamp(0.0, 1.0);
+
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Align(
+          alignment: alignment,
+          child: Padding(
+            padding: const EdgeInsets.only(
+              top: 48,
+              left: 30,
+              right: 30,
+            ),
+            child: Opacity(
+              opacity: safeOpacity,
+              child: Transform.rotate(
+                angle: angle,
+                child: Transform.scale(
+                  scale: 0.9 + (safeOpacity * 0.12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: color,
+                        width: 4,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      text,
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 38,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildSuperLikeStamp(double opacity) {
-    return Positioned(
-      bottom: 200,
-      left: 0,
-      right: 0,
-      child: Transform.scale(
-        scale: 0.5 + (opacity * 0.5),
-        child: Column(
-          children: [
-            Icon(
-              Icons.star,
-              size: 80 * (0.5 + opacity * 0.5),
-              color: Colors.purple.withOpacity(opacity),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'SUPER LIKE',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.purple.withOpacity(opacity),
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
+class _SuperLikeStamp extends StatelessWidget {
+  final double opacity;
+
+  const _SuperLikeStamp({
+    required this.opacity,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final safeOpacity = opacity.clamp(0.0, 1.0);
+    final scale = 0.65 + (safeOpacity * 0.35);
+
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Center(
+          child: Opacity(
+            opacity: safeOpacity,
+            child: Transform.scale(
+              scale: scale,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.star_rounded,
+                    size: 82,
+                    color: Colors.purple.withOpacity(safeOpacity),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'SUPER LIKE',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.purple.withOpacity(safeOpacity),
+                      fontSize: 31,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

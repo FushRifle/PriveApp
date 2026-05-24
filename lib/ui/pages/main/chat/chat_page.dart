@@ -342,8 +342,9 @@ class _ChatPageState extends State<ChatPage>
   Widget _buildUploadProgress() {
     return BlocBuilder<CloudinaryCubit, CloudinaryState>(
       builder: (context, state) {
-        if (state.status != UploadStatus.uploading)
+        if (state.status != UploadStatus.uploading) {
           return const SizedBox.shrink();
+        }
 
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -425,9 +426,9 @@ class _ChatPageState extends State<ChatPage>
                       ),
                     );
                     String status = 'Offline';
-                    if (conv.isTyping)
+                    if (conv.isTyping) {
                       status = 'Typing...';
-                    else if (conv.isOnline) status = 'Online';
+                    } else if (conv.isOnline) status = 'Online';
 
                     return Row(
                       children: [

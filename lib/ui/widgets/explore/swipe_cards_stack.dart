@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
+
 import 'package:clique/data/models/profile_model.dart';
 import 'package:clique/ui/widgets/explore/profile_card.dart';
 import 'package:clique/ui/widgets/explore/swipeable_card.dart';
 
+enum SwipeDirection {
+  none,
+  left,
+  right,
+  up,
+}
+
 class SwipeCardsStack extends StatelessWidget {
-  final List<ProfileModel> profiles; // Changed from Map to ProfileModel
+  final List<ProfileModel> profiles;
   final int currentIndex;
   final double swipeProgress;
   final double verticalSwipeProgress;
@@ -21,95 +29,140 @@ class SwipeCardsStack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (currentIndex >= profiles.length) {
+    if (profiles.isEmpty || currentIndex >= profiles.length) {
       return const SizedBox.shrink();
     }
 
+    final size = MediaQuery.sizeOf(context);
+    final cardHeight = (size.height * 0.58).clamp(440.0, 540.0);
+
     return SizedBox(
-      height: 480,
+      height: cardHeight,
       child: Stack(
+        alignment: Alignment.center,
         children: [
-          ..._buildBackgroundCards(),
-          _buildTopCard(context),
+          for (int offset = 2; offset >= 1; offset--)
+            if (currentIndex + offset < profiles.length)
+              _BackgroundCard(
+                profile: profiles[currentIndex + offset],
+                depth: offset,
+              ),
+          _TopSwipeCard(
+            profile: profiles[currentIndex],
+            swipeProgress: swipeProgress,
+            verticalSwipeProgress: verticalSwipeProgress,
+            swipeDirection: swipeDirection,
+          ),
         ],
       ),
     );
   }
+}
 
-  List<Widget> _buildBackgroundCards() {
-    final List<Widget> cards = [];
-    for (int i = 1; i <= 2; i++) {
-      if (currentIndex + i < profiles.length) {
-        cards.add(
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            top: i * 8.0,
-            left: i * 4.0,
-            right: i * 4.0,
-            bottom: i * 4.0,
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 300),
-              opacity: 0.7 - (i * 0.1),
-              child: ProfileCard(
-                profile: profiles[currentIndex + i],
-                isTop: false,
-              ),
+class _BackgroundCard extends StatelessWidget {
+  final ProfileModel profile;
+  final int depth;
+
+  const _BackgroundCard({
+    required this.profile,
+    required this.depth,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scale = 1 - (depth * 0.035);
+    final topOffset = depth * 10.0;
+
+    return Positioned.fill(
+      top: topOffset,
+      left: depth * 7.0,
+      right: depth * 7.0,
+      bottom: 0,
+      child: Transform.scale(
+        scale: scale,
+        alignment: Alignment.topCenter,
+        child: Opacity(
+          opacity: 1 - (depth * 0.18),
+          child: RepaintBoundary(
+            child: ProfileCard(
+              profile: profile,
+              isTop: false,
             ),
           ),
-        );
-      }
-    }
-    return cards;
-  }
-
-  Widget _buildTopCard(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-
-    double horizontalOffset = swipeProgress * screenWidth * 1.5;
-    double verticalOffset = -verticalSwipeProgress * screenHeight * 0.8;
-    double rotation = swipeProgress * 0.5;
-
-    double likeOpacity = 0.0;
-    double dislikeOpacity = 0.0;
-    double superLikeOpacity = 0.0;
-
-    Color cardBackground = Colors.white;
-
-    switch (swipeDirection) {
-      case SwipeDirection.right:
-        likeOpacity = swipeProgress.clamp(0.0, 1.0);
-        cardBackground = Colors.green.withOpacity(swipeProgress * 0.3);
-        break;
-      case SwipeDirection.left:
-        dislikeOpacity = (-swipeProgress).clamp(0.0, 1.0);
-        cardBackground = Colors.red.withOpacity((-swipeProgress) * 0.3);
-        break;
-      case SwipeDirection.up:
-        superLikeOpacity = verticalSwipeProgress.clamp(0.0, 1.0);
-        cardBackground = Colors.purple.withOpacity(verticalSwipeProgress * 0.3);
-        horizontalOffset = 0;
-        rotation = 0;
-        break;
-      case SwipeDirection.none:
-        break;
-    }
-
-    return Transform.translate(
-      offset: Offset(horizontalOffset, verticalOffset),
-      child: Transform.rotate(
-        angle: rotation,
-        child: SwipeableCard(
-          profile: profiles[currentIndex],
-          likeOpacity: likeOpacity,
-          dislikeOpacity: dislikeOpacity,
-          superLikeOpacity: superLikeOpacity,
-          cardBackground: cardBackground,
         ),
       ),
     );
   }
 }
 
-enum SwipeDirection { none, left, right, up }
+class _TopSwipeCard extends StatelessWidget {
+  final ProfileModel profile;
+  final double swipeProgress;
+  final double verticalSwipeProgress;
+  final SwipeDirection swipeDirection;
+
+  const _TopSwipeCard({
+    required this.profile,
+    required this.swipeProgress,
+    required this.verticalSwipeProgress,
+    required this.swipeDirection,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+
+    double horizontalOffset = swipeProgress * size.width * 1.2;
+    double verticalOffset = -verticalSwipeProgress * size.height * 0.72;
+    double rotation = swipeProgress * 0.45;
+
+    double likeOpacity = 0.0;
+    double dislikeOpacity = 0.0;
+    double superLikeOpacity = 0.0;
+
+    Color backgroundColor = Colors.white;
+
+    switch (swipeDirection) {
+      case SwipeDirection.right:
+        likeOpacity = swipeProgress.abs().clamp(0.0, 1.0);
+        backgroundColor = Colors.green.withOpacity(likeOpacity * 0.18);
+        break;
+
+      case SwipeDirection.left:
+        dislikeOpacity = swipeProgress.abs().clamp(0.0, 1.0);
+        backgroundColor = Colors.red.withOpacity(dislikeOpacity * 0.18);
+        break;
+
+      case SwipeDirection.up:
+        superLikeOpacity = verticalSwipeProgress.clamp(0.0, 1.0);
+        horizontalOffset = 0;
+        rotation = 0;
+        backgroundColor = Colors.purple.withOpacity(superLikeOpacity * 0.18);
+        break;
+
+      case SwipeDirection.none:
+        break;
+    }
+
+    return Positioned.fill(
+      child: Transform.translate(
+        offset: Offset(
+          horizontalOffset,
+          verticalOffset,
+        ),
+        child: Transform.rotate(
+          angle: rotation,
+          child: RepaintBoundary(
+            child: SwipeableCard(
+              profile: profile,
+              likeOpacity: likeOpacity,
+              dislikeOpacity: dislikeOpacity,
+              superLikeOpacity: superLikeOpacity,
+              cardBackground: backgroundColor,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

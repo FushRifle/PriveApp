@@ -1,6 +1,11 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import 'package:video_player/video_player.dart';
+
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/reels/reel_bloc.dart';
 
@@ -24,93 +29,184 @@ class ReelItem extends StatefulWidget {
   State<ReelItem> createState() => _ReelItemState();
 }
 
-class _ReelItemState extends State<ReelItem> {
+class _ReelItemState extends State<ReelItem>
+    with AutomaticKeepAliveClientMixin {
   VideoPlayerController? _videoController;
-  bool _isPlaying = true;
+
   bool _isInitialized = false;
-  late bool _isLiked;
+  bool _isPlaying = false;
+  bool _hasVideoError = false;
   bool _isFollowing = false;
+  bool _isLiked = false;
+
+  int _localLikeDelta = 0;
+  int _localShareDelta = 0;
+
+  String get _videoUrl {
+    final url = widget.reel['videoUrl'] ?? widget.reel['url'];
+    return url?.toString() ?? '';
+  }
+
+  Map<String, dynamic> get _user {
+    final user = widget.reel['user'];
+
+    if (user is Map<String, dynamic>) {
+      return user;
+    }
+
+    if (user is Map) {
+      return Map<String, dynamic>.from(user);
+    }
+
+    return {};
+  }
+
+  @override
+  bool get wantKeepAlive => widget.isActive;
 
   @override
   void initState() {
     super.initState();
-    _isLiked = widget.reel['isLiked'] ?? false;
-    _initVideoPlayer();
+
+    _syncLocalState();
+    _initializeVideo();
   }
 
   @override
-  void didUpdateWidget(ReelItem oldWidget) {
+  void didUpdateWidget(covariant ReelItem oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.isActive != oldWidget.isActive) {
-      if (widget.isActive) {
-        _playVideo();
-      } else {
-        _pauseVideo();
+
+    if (oldWidget.reel != widget.reel) {
+      _syncLocalState();
+
+      final oldUrl = oldWidget.reel['videoUrl'] ?? oldWidget.reel['url'];
+
+      if (oldUrl != _videoUrl) {
+        _disposeController();
+        _initializeVideo();
       }
     }
 
-    if (widget.reel['isLiked'] != oldWidget.reel['isLiked']) {
-      _isLiked = widget.reel['isLiked'] ?? false;
+    if (oldWidget.isActive != widget.isActive) {
+      widget.isActive ? _playVideo() : _pauseVideo();
     }
   }
 
-  void _initVideoPlayer() {
-    final videoUrl = widget.reel['videoUrl'] ?? widget.reel['url'] ?? '';
-    if (videoUrl.isEmpty) {
-      _isInitialized = false;
+  @override
+  void dispose() {
+    _disposeController();
+
+    super.dispose();
+  }
+
+  void _syncLocalState() {
+    _isLiked = _readBool(widget.reel['isLiked']);
+    _isFollowing = _readBool(
+      widget.reel['isFollowing'] ?? _user['isFollowing'],
+    );
+
+    _localLikeDelta = 0;
+    _localShareDelta = 0;
+  }
+
+  Future<void> _disposeController() async {
+    final controller = _videoController;
+
+    _videoController = null;
+    _isInitialized = false;
+    _isPlaying = false;
+
+    await controller?.pause();
+    await controller?.dispose();
+  }
+
+  Future<void> _initializeVideo() async {
+    if (_videoUrl.isEmpty) {
+      if (!mounted) return;
+
+      setState(() {
+        _hasVideoError = true;
+        _isInitialized = false;
+      });
+
       return;
     }
 
-    _videoController = VideoPlayerController.networkUrl(
-      Uri.parse(videoUrl),
-    );
+    try {
+      final controller = VideoPlayerController.networkUrl(
+        Uri.parse(_videoUrl),
+        videoPlayerOptions: VideoPlayerOptions(
+          mixWithOthers: false,
+        ),
+      );
 
-    _videoController!.addListener(() {
-      if (mounted) {
-        setState(() {});
-      }
-    });
+      _videoController = controller;
 
-    _videoController!.setLooping(true);
-    _videoController!.initialize().then((_) {
-      if (mounted) {
-        setState(() {
-          _isInitialized = true;
-        });
-        if (widget.isActive) {
-          _videoController!.play();
-          _isPlaying = true;
-        }
-      }
-    }).catchError((error) {
-      debugPrint('Error initializing video: $error');
-      if (mounted) {
-        setState(() {
-          _isInitialized = false;
-        });
-      }
-    });
-  }
+      await controller.initialize();
 
-  void _playVideo() {
-    if (_isInitialized && _videoController != null && !_isPlaying) {
-      _videoController!.play();
-      setState(() {
+      if (!mounted || _videoController != controller) {
+        await controller.dispose();
+        return;
+      }
+
+      await controller.setLooping(true);
+      await controller.setVolume(1);
+
+      if (widget.isActive) {
+        await controller.play();
         _isPlaying = true;
-      });
-    }
-  }
+      }
 
-  void _pauseVideo() {
-    if (_isInitialized && _videoController != null && _isPlaying) {
-      _videoController!.pause();
+      if (!mounted) return;
+
       setState(() {
+        _isInitialized = true;
+        _hasVideoError = false;
+      });
+    } catch (e) {
+      debugPrint('Error initializing reel video: $e');
+
+      if (!mounted) return;
+
+      setState(() {
+        _hasVideoError = true;
+        _isInitialized = false;
         _isPlaying = false;
       });
     }
   }
 
+  Future<void> _playVideo() async {
+    final controller = _videoController;
+
+    if (!_isInitialized || controller == null) return;
+
+    await controller.play();
+
+    if (!mounted) return;
+
+    setState(() {
+      _isPlaying = true;
+    });
+  }
+
+  Future<void> _pauseVideo() async {
+    final controller = _videoController;
+
+    if (!_isInitialized || controller == null) return;
+
+    await controller.pause();
+
+    if (!mounted) return;
+
+    setState(() {
+      _isPlaying = false;
+    });
+  }
+
   void _togglePlayPause() {
+    if (!_isInitialized) return;
+
     if (_isPlaying) {
       _pauseVideo();
     } else {
@@ -119,90 +215,111 @@ class _ReelItemState extends State<ReelItem> {
   }
 
   void _handleLike() {
-    if (_isLiked) {
-      context.read<ReelBloc>().add(UnlikeReel(
-            reelId: widget.reel['id'].toString(),
-            index: widget.index,
-          ));
+    final reelId = widget.reel['id']?.toString();
+
+    if (reelId == null || reelId.isEmpty) return;
+
+    final wasLiked = _isLiked;
+
+    setState(() {
+      _isLiked = !wasLiked;
+      _localLikeDelta += wasLiked ? -1 : 1;
+    });
+
+    if (wasLiked) {
+      context.read<ReelBloc>().add(
+            UnlikeReel(
+              reelId: reelId,
+              index: widget.index,
+            ),
+          );
     } else {
-      context.read<ReelBloc>().add(LikeReel(
-            reelId: widget.reel['id'].toString(),
-            index: widget.index,
-          ));
+      context.read<ReelBloc>().add(
+            LikeReel(
+              reelId: reelId,
+              index: widget.index,
+            ),
+          );
     }
   }
 
   void _handleShare() {
-    context.read<ReelBloc>().add(ShareReel(
-          reelId: widget.reel['id'].toString(),
-          index: widget.index,
-        ));
+    final reelId = widget.reel['id']?.toString();
+
+    if (reelId == null || reelId.isEmpty) return;
+
+    setState(() {
+      _localShareDelta += 1;
+    });
+
+    context.read<ReelBloc>().add(
+          ShareReel(
+            reelId: reelId,
+            index: widget.index,
+          ),
+        );
+  }
+
+  void _toggleFollow() {
+    setState(() {
+      _isFollowing = !_isFollowing;
+    });
   }
 
   bool _isCurrentUser() {
-    return widget.reel['userId'] == widget.currentUserId;
-  }
+    final userId = widget.reel['userId'] ?? _user['id'];
 
-  @override
-  void dispose() {
-    if (_videoController != null && _isInitialized) {
-      _videoController!.dispose();
+    if (userId is int) return userId == widget.currentUserId;
+    if (userId is String) {
+      return int.tryParse(userId) == widget.currentUserId;
     }
-    super.dispose();
+
+    return false;
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
+
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: _togglePlayPause,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          _buildVideoPlayer(),
-          if (!_isPlaying && _isInitialized) _buildPlayPauseOverlay(),
+          _buildVideoLayer(),
           _buildGradients(),
+          if (!_isPlaying && _isInitialized) _buildPlayPauseOverlay(),
           _buildRightActions(),
           _buildBottomInfo(),
+          if (_isInitialized && _videoController != null)
+            _VideoProgress(controller: _videoController!),
         ],
       ),
     );
   }
 
-  Widget _buildVideoPlayer() {
-    final videoUrl = widget.reel['videoUrl'] ?? widget.reel['url'] ?? '';
+  Widget _buildVideoLayer() {
+    if (_hasVideoError || _videoUrl.isEmpty) {
+      return const _VideoUnavailable();
+    }
 
-    if (videoUrl.isEmpty || !_isInitialized || _videoController == null) {
-      return Container(
-        color: Colors.black,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.video_library,
-                size: 64,
-                color: Colors.white.withOpacity(0.3),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Video unavailable',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.5),
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
+    if (!_isInitialized || _videoController == null) {
+      return const _VideoLoading();
+    }
+
+    final size = _videoController!.value.size;
+
+    if (size.width <= 0 || size.height <= 0) {
+      return const _VideoLoading();
     }
 
     return SizedBox.expand(
       child: FittedBox(
         fit: BoxFit.cover,
         child: SizedBox(
-          width: _videoController!.value.size.width,
-          height: _videoController!.value.size.height,
+          width: size.width,
+          height: size.height,
           child: VideoPlayer(_videoController!),
         ),
       ),
@@ -210,20 +327,22 @@ class _ReelItemState extends State<ReelItem> {
   }
 
   Widget _buildPlayPauseOverlay() {
-    return Container(
-      color: Colors.black.withOpacity(0.3),
-      child: Center(
-        child: Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.5),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.play_arrow,
-            color: Colors.white,
-            size: 40,
+    return IgnorePointer(
+      child: Container(
+        color: Colors.black.withOpacity(0.18),
+        child: Center(
+          child: Container(
+            width: 68,
+            height: 68,
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.45),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.play_arrow_rounded,
+              color: Colors.white,
+              size: 50,
+            ),
           ),
         ),
       ),
@@ -231,93 +350,385 @@ class _ReelItemState extends State<ReelItem> {
   }
 
   Widget _buildGradients() {
-    return Column(
-      children: [
-        Container(
-          height: 100,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.black.withOpacity(0.4),
-                Colors.transparent,
-              ],
-            ),
-          ),
-        ),
-        const Spacer(),
-        Container(
-          height: 200,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.bottomCenter,
-              end: Alignment.topCenter,
-              colors: [
-                Colors.black.withOpacity(0.6),
-                Colors.transparent,
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRightActions() {
-    final likeCount = widget.reel['likes'] ?? 0;
-    final commentCount =
-        widget.reel['commentCount'] ?? widget.reel['comments'] ?? 0;
-    final shareCount = widget.reel['shareCount'] ?? widget.reel['shares'] ?? 0;
-    final currentLikeCount = _isLiked ? likeCount + 1 : likeCount;
-
-    return Positioned(
-      right: 16,
-      bottom: 100,
+    return IgnorePointer(
       child: Column(
         children: [
-          _buildActionButton(
-            icon: _isLiked ? Icons.favorite : Icons.favorite_border,
-            label: _formatCount(currentLikeCount),
-            onTap: _handleLike,
-            color: _isLiked ? AppColors.redColor : Colors.white,
+          Container(
+            height: 130,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withOpacity(0.45),
+                  Colors.transparent,
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 20),
-          _buildActionButton(
-            icon: Icons.comment,
-            label: _formatCount(commentCount),
-            onTap: () {},
+          const Spacer(),
+          Container(
+            height: 260,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+                colors: [
+                  Colors.black.withOpacity(0.72),
+                  Colors.transparent,
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 20),
-          _buildActionButton(
-            icon: Icons.send,
-            label: _formatCount(shareCount),
-            onTap: _handleShare,
-          ),
-          const SizedBox(height: 20),
-          _buildActionButton(
-            icon: Icons.more_horiz,
-            label: '',
-            onTap: () {},
-          ),
-          const SizedBox(height: 20),
-          _buildAudioIcon(),
         ],
       ),
     );
   }
 
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    Color color = Colors.white,
-  }) {
+  Widget _buildRightActions() {
+    final likeCount = _readInt(widget.reel['likes']) + _localLikeDelta;
+    final commentCount = _readInt(
+      widget.reel['commentCount'] ?? widget.reel['comments'],
+    );
+    final shareCount = _readInt(
+          widget.reel['shareCount'] ?? widget.reel['shares'],
+        ) +
+        _localShareDelta;
+
+    return Positioned(
+      right: 14,
+      bottom: 104,
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _ActionButton(
+              icon: _isLiked ? Icons.favorite : Icons.favorite_border,
+              label: _formatCount(likeCount < 0 ? 0 : likeCount),
+              color: _isLiked ? AppColors.redColor : Colors.white,
+              onTap: _handleLike,
+            ),
+            const SizedBox(height: 20),
+            _ActionButton(
+              icon: Icons.mode_comment_outlined,
+              label: _formatCount(commentCount),
+              onTap: () {},
+            ),
+            const SizedBox(height: 20),
+            _ActionButton(
+              icon: Icons.send_rounded,
+              label: _formatCount(shareCount < 0 ? 0 : shareCount),
+              onTap: _handleShare,
+            ),
+            const SizedBox(height: 20),
+            _ActionButton(
+              icon: Icons.more_horiz,
+              label: '',
+              onTap: () {},
+            ),
+            const SizedBox(height: 22),
+            _AudioAvatar(
+              imageUrl: _avatarUrl,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomInfo() {
+    final username = _username;
+    final avatar = _avatarUrl;
+    final isVerified = _readBool(
+      widget.reel['isVerified'] ?? _user['verified'],
+    );
+    final caption = widget.reel['caption']?.toString() ?? '';
+    final hashtags = _readHashtags(widget.reel['hashtags']);
+    final audio = widget.reel['audio']?.toString() ??
+        widget.reel['music']?.toString() ??
+        'Original Sound';
+    final audioArtist = widget.reel['audioArtist']?.toString() ??
+        _user['name']?.toString() ??
+        username;
+
+    return Positioned(
+      left: 16,
+      right: 88,
+      bottom: 24,
+      child: SafeArea(
+        top: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                _ProfileAvatar(
+                  imageUrl: avatar,
+                ),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    username,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                if (isVerified) ...[
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.verified,
+                    color: Colors.blue,
+                    size: 16,
+                  ),
+                ],
+                if (!_isCurrentUser()) ...[
+                  const SizedBox(width: 10),
+                  _FollowButton(
+                    isFollowing: _isFollowing,
+                    onTap: _toggleFollow,
+                  ),
+                ],
+              ],
+            ),
+            if (caption.trim().isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                caption,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  height: 1.25,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+            if (hashtags.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 5,
+                runSpacing: 2,
+                children: hashtags.map((tag) {
+                  return Text(
+                    '#$tag',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(
+                  Icons.music_note,
+                  color: Colors.white,
+                  size: 16,
+                ),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: Text(
+                    '$audio · $audioArtist',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String get _username {
+    return widget.reel['username']?.toString() ??
+        _user['username']?.toString() ??
+        _user['name']?.toString() ??
+        'User';
+  }
+
+  String get _avatarUrl {
+    return widget.reel['userProfile']?.toString() ??
+        widget.reel['avatar']?.toString() ??
+        _user['avatar']?.toString() ??
+        '';
+  }
+
+  int _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+
+    return 0;
+  }
+
+  bool _readBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is int) return value == 1;
+    if (value is String) {
+      return value.toLowerCase() == 'true' || value == '1';
+    }
+
+    return false;
+  }
+
+  List<String> _readHashtags(dynamic value) {
+    if (value is List) {
+      return value
+          .map((e) => e.toString().replaceFirst('#', '').trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+
+    if (value is String && value.trim().isNotEmpty) {
+      return value
+          .split(',')
+          .map((e) => e.replaceFirst('#', '').trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+
+    return [];
+  }
+
+  String _formatCount(int count) {
+    if (count >= 1000000) {
+      return '${(count / 1000000).toStringAsFixed(1)}M';
+    }
+
+    if (count >= 1000) {
+      return '${(count / 1000).toStringAsFixed(1)}K';
+    }
+
+    return count.toString();
+  }
+}
+
+class _VideoLoading extends StatelessWidget {
+  const _VideoLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.black,
+      child: const Center(
+        child: CircularProgressIndicator(
+          color: Colors.white,
+          strokeWidth: 2,
+        ),
+      ),
+    );
+  }
+}
+
+class _VideoUnavailable extends StatelessWidget {
+  const _VideoUnavailable();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.black,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.video_library_outlined,
+              size: 64,
+              color: Colors.white.withOpacity(0.3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Video unavailable',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.55),
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _VideoProgress extends StatelessWidget {
+  final VideoPlayerController controller;
+
+  const _VideoProgress({
+    required this.controller,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: ValueListenableBuilder<VideoPlayerValue>(
+        valueListenable: controller,
+        builder: (context, value, _) {
+          final duration = value.duration.inMilliseconds;
+          final position = value.position.inMilliseconds;
+
+          final progress =
+              duration <= 0 ? 0.0 : (position / duration).clamp(0.0, 1.0);
+
+          return LinearProgressIndicator(
+            value: progress,
+            minHeight: 2,
+            color: Colors.white,
+            backgroundColor: Colors.white.withOpacity(0.18),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color color;
+
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.color = Colors.white,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 32),
+          Icon(
+            icon,
+            color: color,
+            size: 32,
+          ),
           if (label.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
@@ -333,12 +744,75 @@ class _ReelItemState extends State<ReelItem> {
       ),
     );
   }
+}
 
-  Widget _buildAudioIcon() {
-    final userProfile = widget.reel['userProfile'] ??
-        widget.reel['avatar'] ??
-        widget.reel['user']['avatar'] ??
-        '';
+class _ProfileAvatar extends StatelessWidget {
+  final String imageUrl;
+
+  const _ProfileAvatar({
+    required this.imageUrl,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (imageUrl.isEmpty) {
+      return _fallback();
+    }
+
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: Colors.white,
+          width: 2,
+        ),
+      ),
+      child: ClipOval(
+        child: CachedNetworkImage(
+          imageUrl: imageUrl,
+          fit: BoxFit.cover,
+          errorWidget: (_, __, ___) => _fallback(),
+          placeholder: (_, __) => _fallback(),
+        ),
+      ),
+    );
+  }
+
+  Widget _fallback() {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.14),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: Colors.white,
+          width: 2,
+        ),
+      ),
+      child: Icon(
+        Icons.person,
+        color: Colors.white.withOpacity(0.55),
+        size: 20,
+      ),
+    );
+  }
+}
+
+class _AudioAvatar extends StatelessWidget {
+  final String imageUrl;
+
+  const _AudioAvatar({
+    required this.imageUrl,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (imageUrl.isEmpty) {
+      return _fallback();
+    }
 
     return Container(
       width: 44,
@@ -346,205 +820,82 @@ class _ReelItemState extends State<ReelItem> {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: Colors.white.withOpacity(0.3),
+          color: Colors.white.withOpacity(0.35),
           width: 2,
         ),
-        image: userProfile.isNotEmpty
-            ? DecorationImage(
-                fit: BoxFit.cover,
-                image: NetworkImage(userProfile),
-              )
-            : null,
       ),
-      child: userProfile.isEmpty
-          ? Center(
-              child: Icon(
-                Icons.music_note,
-                color: Colors.white.withOpacity(0.5),
-                size: 24,
-              ),
-            )
-          : null,
-    );
-  }
-
-  Widget _buildBottomInfo() {
-    final username = widget.reel['username'] ??
-        widget.reel['user']['username'] ??
-        widget.reel['user']['name'] ??
-        'User';
-    final userProfile = widget.reel['userProfile'] ??
-        widget.reel['avatar'] ??
-        widget.reel['user']['avatar'] ??
-        '';
-    final isVerified =
-        widget.reel['isVerified'] ?? widget.reel['user']['verified'] ?? false;
-    final caption = widget.reel['caption'] ?? '';
-    final hashtags = widget.reel['hashtags'] != null
-        ? List<String>.from(widget.reel['hashtags'])
-        : <String>[];
-    final audio =
-        widget.reel['audio'] ?? widget.reel['music'] ?? 'Original Sound';
-    final audioArtist =
-        widget.reel['audioArtist'] ?? widget.reel['user']['name'] ?? '';
-
-    return Positioned(
-      bottom: 20,
-      left: 16,
-      right: 80,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              GestureDetector(
-                onTap: () {},
-                child: Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white,
-                          width: 2,
-                        ),
-                        image: userProfile.isNotEmpty
-                            ? DecorationImage(
-                                fit: BoxFit.cover,
-                                image: NetworkImage(userProfile),
-                              )
-                            : null,
-                      ),
-                      child: userProfile.isEmpty
-                          ? Center(
-                              child: Icon(
-                                Icons.person,
-                                color: Colors.white.withOpacity(0.5),
-                                size: 20,
-                              ),
-                            )
-                          : null,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      username,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    if (isVerified) ...[
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.verified,
-                        color: Colors.blue,
-                        size: 16,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              if (!_isCurrentUser()) ...[
-                const SizedBox(width: 12),
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _isFollowing = !_isFollowing;
-                    });
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: _isFollowing
-                            ? Colors.white.withOpacity(0.5)
-                            : AppColors.redColor,
-                        width: 1,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      color: _isFollowing
-                          ? Colors.transparent
-                          : AppColors.redColor,
-                    ),
-                    child: Text(
-                      _isFollowing ? 'Following' : 'Follow',
-                      style: TextStyle(
-                        color: _isFollowing
-                            ? Colors.white.withOpacity(0.8)
-                            : Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (caption.isNotEmpty)
-            Text(
-              caption,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          const SizedBox(height: 8),
-          if (hashtags.isNotEmpty)
-            Wrap(
-              spacing: 4,
-              children: hashtags
-                  .map((tag) => Text(
-                        '#$tag',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ))
-                  .toList(),
-            ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              const Icon(
-                Icons.music_note,
-                color: Colors.white,
-                size: 16,
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  '$audio · $audioArtist',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        ],
+      child: ClipOval(
+        child: CachedNetworkImage(
+          imageUrl: imageUrl,
+          fit: BoxFit.cover,
+          errorWidget: (_, __, ___) => _fallback(),
+          placeholder: (_, __) => _fallback(),
+        ),
       ),
     );
   }
 
-  String _formatCount(int count) {
-    if (count >= 1000000) {
-      return '${(count / 1000000).toStringAsFixed(1)}M';
-    } else if (count >= 1000) {
-      return '${(count / 1000).toStringAsFixed(1)}K';
-    }
-    return count.toString();
+  Widget _fallback() {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: Colors.white.withOpacity(0.35),
+          width: 2,
+        ),
+      ),
+      child: Icon(
+        Icons.music_note,
+        color: Colors.white.withOpacity(0.6),
+        size: 24,
+      ),
+    );
+  }
+}
+
+class _FollowButton extends StatelessWidget {
+  final bool isFollowing;
+  final VoidCallback onTap;
+
+  const _FollowButton({
+    required this.isFollowing,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 6,
+        ),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: isFollowing
+                ? Colors.white.withOpacity(0.55)
+                : AppColors.redColor,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          color: isFollowing ? Colors.transparent : AppColors.redColor,
+        ),
+        child: Text(
+          isFollowing ? 'Following' : 'Follow',
+          style: TextStyle(
+            color: isFollowing ? Colors.white.withOpacity(0.85) : Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
   }
 }

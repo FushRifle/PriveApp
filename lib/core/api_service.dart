@@ -24,15 +24,15 @@ class ApiService {
 
   final Map<String, DateTime> _cacheTimestamps = {};
 
-  static const Duration _cacheDuration = Duration(seconds: 30);
+  static const Duration _cacheDuration = Duration(seconds: 60);
 
   ApiService._internal() {
     dio = Dio(
       BaseOptions(
         baseUrl: ApiConfig.baseUrl,
-        connectTimeout: const Duration(seconds: 20),
-        receiveTimeout: const Duration(seconds: 20),
-        sendTimeout: const Duration(seconds: 20),
+        connectTimeout: const Duration(seconds: 60),
+        receiveTimeout: const Duration(seconds: 60),
+        sendTimeout: const Duration(seconds: 60),
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',

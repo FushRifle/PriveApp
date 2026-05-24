@@ -14,6 +14,8 @@ class ExploreState extends Equatable {
   final bool isRefreshing;
   final Set<int> swipedProfileIds;
   final String? lastSwipeAction;
+  final String? matchId;
+  final ProfileModel? matchedProfile;
 
   const ExploreState({
     this.profiles = const [],
@@ -37,6 +39,8 @@ class ExploreState extends Equatable {
     this.isRefreshing = false,
     this.swipedProfileIds = const {},
     this.lastSwipeAction,
+    this.matchId,
+    this.matchedProfile,
   });
 
   ExploreState copyWith({
@@ -48,11 +52,17 @@ class ExploreState extends Equatable {
     Map<String, dynamic>? currentFilters,
     ExploreStatus? status,
     String? error,
+    bool clearError = false,
     bool? isLoading,
     bool? isLoadingMore,
     bool? isRefreshing,
     Set<int>? swipedProfileIds,
     String? lastSwipeAction,
+    bool clearLastSwipeAction = false,
+    String? matchId,
+    bool clearMatchId = false,
+    ProfileModel? matchedProfile,
+    bool clearMatchedProfile = false,
   }) {
     return ExploreState(
       profiles: profiles ?? this.profiles,
@@ -62,18 +72,43 @@ class ExploreState extends Equatable {
       totalLikes: totalLikes ?? this.totalLikes,
       currentFilters: currentFilters ?? this.currentFilters,
       status: status ?? this.status,
-      error: error ?? this.error,
+      error: clearError ? null : error ?? this.error,
       isLoading: isLoading ?? this.isLoading,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       isRefreshing: isRefreshing ?? this.isRefreshing,
       swipedProfileIds: swipedProfileIds ?? this.swipedProfileIds,
-      lastSwipeAction: lastSwipeAction ?? this.lastSwipeAction,
+      lastSwipeAction:
+          clearLastSwipeAction ? null : lastSwipeAction ?? this.lastSwipeAction,
+      matchId: clearMatchId ? null : matchId ?? this.matchId,
+      matchedProfile:
+          clearMatchedProfile ? null : matchedProfile ?? this.matchedProfile,
     );
   }
 
-  int get remainingProfiles => profiles.length - currentIndex;
-  ProfileModel? get currentProfile =>
-      currentIndex < profiles.length ? profiles[currentIndex] : null;
+  int get remainingProfiles {
+    final remaining = profiles.length - currentIndex;
+    return remaining < 0 ? 0 : remaining;
+  }
+
+  ProfileModel? get currentProfile {
+    if (profiles.isEmpty) return null;
+    if (currentIndex < 0) return null;
+    if (currentIndex >= profiles.length) return null;
+
+    return profiles[currentIndex];
+  }
+
+  bool get hasProfiles => profiles.isNotEmpty;
+
+  bool get hasCurrentProfile => currentProfile != null;
+
+  bool get canLoadMore {
+    return hasMore && !isLoading && !isLoadingMore && !isRefreshing;
+  }
+
+  bool get isBusy {
+    return isLoading || isLoadingMore || isRefreshing;
+  }
 
   @override
   List<Object?> get props => [
@@ -90,6 +125,8 @@ class ExploreState extends Equatable {
         isRefreshing,
         swipedProfileIds,
         lastSwipeAction,
+        matchId,
+        matchedProfile,
       ];
 }
 

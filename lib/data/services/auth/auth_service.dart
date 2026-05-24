@@ -324,6 +324,8 @@ class AuthService {
     }
     return 'Service temporarily unavailable. Please try again.';
   }
+
+  Future<Object?> verifyEmail(String email, String code) async {}
 }
 
 class AuthResult {

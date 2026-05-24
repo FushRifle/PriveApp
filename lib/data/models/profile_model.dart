@@ -25,35 +25,54 @@ class ProfileModel {
     required this.matchScore,
   });
 
-  factory ProfileModel.fromJson(Map<String, dynamic> json) => ProfileModel(
-        id: json['id'] ?? 0,
-        name: json['name'] ?? '',
-        age: json['age'] ?? 0,
-        occupation: json['occupation'] ?? '',
-        distance: json['distance'] ?? 0,
-        image: json['image'] ?? '',
-        interests: json['interests'] != null
-            ? List<String>.from(json['interests'].map((x) => x.toString()))
-            : null,
-        verified: json['verified'] ?? false,
-        bio: json['bio'] ?? '',
-        lastActive: json['lastActive'] ?? '',
-        matchScore: json['matchScore'] ?? 0,
-      );
+  factory ProfileModel.fromJson(Map<String, dynamic> json) {
+    return ProfileModel(
+      id: _readInt(json['id']),
+      name: _readString(
+        json['name'] ??
+            json['displayName'] ??
+            json['display_name'] ??
+            json['username'],
+      ),
+      age: _readInt(json['age']),
+      occupation: _readString(json['occupation']),
+      distance: _readInt(json['distance']),
+      image: _readString(
+        json['image'] ??
+            json['avatar'] ??
+            json['profileImage'] ??
+            json['profile_image'] ??
+            json['photo'],
+      ),
+      interests: _readStringList(json['interests']),
+      verified: _readBool(
+        json['verified'] ?? json['isVerified'] ?? json['is_verified'],
+      ),
+      bio: _readString(json['bio']),
+      lastActive: _readString(
+        json['lastActive'] ?? json['last_active'],
+      ),
+      matchScore: _readInt(
+        json['matchScore'] ?? json['match_score'],
+      ),
+    );
+  }
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'age': age,
-        'occupation': occupation,
-        'distance': distance,
-        'image': image,
-        'interests': interests,
-        'verified': verified,
-        'bio': bio,
-        'lastActive': lastActive,
-        'matchScore': matchScore,
-      };
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'age': age,
+      'occupation': occupation,
+      'distance': distance,
+      'image': image,
+      'interests': interests,
+      'verified': verified,
+      'bio': bio,
+      'lastActive': lastActive,
+      'matchScore': matchScore,
+    };
+  }
 
   ProfileModel copyWith({
     int? id,
@@ -63,6 +82,7 @@ class ProfileModel {
     int? distance,
     String? image,
     List<String>? interests,
+    bool clearInterests = false,
     bool? verified,
     String? bio,
     String? lastActive,
@@ -75,7 +95,7 @@ class ProfileModel {
       occupation: occupation ?? this.occupation,
       distance: distance ?? this.distance,
       image: image ?? this.image,
-      interests: interests ?? this.interests,
+      interests: clearInterests ? null : interests ?? this.interests,
       verified: verified ?? this.verified,
       bio: bio ?? this.bio,
       lastActive: lastActive ?? this.lastActive,
@@ -83,17 +103,83 @@ class ProfileModel {
     );
   }
 
-  // Helper getters for UI compatibility
   String get location => '$distance km away';
-  String get distanceText => '$distance km away';
-  bool get isOnline => lastActive == 'active now';
+
+  String get distanceText {
+    if (distance <= 0) {
+      return 'Nearby';
+    }
+
+    return '$distance km away';
+  }
+
+  bool get isOnline {
+    final value = lastActive.trim().toLowerCase();
+
+    return value == 'active now' || value == 'online' || value == 'now';
+  }
+
   bool get isVerified => verified;
-  int get followerCount => 0; // Not in API, provide default
-  int get postCount => 0; // Not in API, provide default
-  String get imageHash => ''; // Not in API, provide default
+
+  int get followerCount => 0;
+
+  int get postCount => 0;
+
+  String get imageHash => '';
 
   @override
   String toString() {
     return 'ProfileModel(id: $id, name: $name, age: $age, distance: $distance km, matchScore: $matchScore)';
+  }
+
+  static String _readString(dynamic value) {
+    if (value == null) return '';
+
+    return value.toString().trim();
+  }
+
+  static int _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+
+    return 0;
+  }
+
+  static bool _readBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is int) return value == 1;
+    if (value is String) {
+      final normalized = value.toLowerCase().trim();
+
+      return normalized == 'true' || normalized == '1' || normalized == 'yes';
+    }
+
+    return false;
+  }
+
+  static List<String>? _readStringList(dynamic value) {
+    if (value == null) return null;
+
+    if (value is List) {
+      final result = value
+          .map((item) => item.toString().trim())
+          .where((item) => item.isNotEmpty)
+          .toList();
+
+      return result.isEmpty ? null : result;
+    }
+
+    if (value is String && value.trim().isNotEmpty) {
+      final result = value
+          .split(',')
+          .map((item) => item.trim())
+          .where((item) => item.isNotEmpty)
+          .toList();
+
+      return result.isEmpty ? null : result;
+    }
+
+    return null;
   }
 }

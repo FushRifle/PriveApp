@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:animate_do/animate_do.dart';
 
-enum SwipeActionType { like, pass, superLike, none }
+enum SwipeActionType {
+  like,
+  pass,
+  superLike,
+  none,
+}
 
 class SwipeFeedbackOverlay extends StatelessWidget {
   final SwipeActionType action;
@@ -15,89 +19,127 @@ class SwipeFeedbackOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (action == SwipeActionType.none) {
+      return const SizedBox.shrink();
+    }
+
     return IgnorePointer(
       child: Center(
         child: AnimatedBuilder(
           animation: animation,
           builder: (context, child) {
-            final opacity = 1.0 - animation.value;
-            final scale = 0.5 + (animation.value * 0.5);
+            final value = animation.value;
+            final opacity = (1 - value).clamp(0.0, 1.0);
+            final scale = 0.72 + (value * 0.28);
 
             return Opacity(
-              opacity: opacity * 0.8,
+              opacity: opacity,
               child: Transform.scale(
                 scale: scale,
                 child: child,
               ),
             );
           },
-          child: _buildFeedbackContent(),
+          child: _FeedbackContent(
+            action: action,
+          ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildFeedbackContent() {
-    late IconData icon;
-    late Color color;
-    late String text;
+class _FeedbackContent extends StatelessWidget {
+  final SwipeActionType action;
 
-    switch (action) {
-      case SwipeActionType.like:
-        icon = Icons.favorite;
-        color = Colors.green;
-        text = 'LIKED!';
-        break;
-      case SwipeActionType.pass:
-        icon = Icons.close;
-        color = Colors.red;
-        text = 'PASSED';
-        break;
-      case SwipeActionType.superLike:
-        icon = Icons.star;
-        color = Colors.blue;
-        text = 'SUPER LIKE!';
-        break;
-      case SwipeActionType.none:
-        return const SizedBox.shrink();
+  const _FeedbackContent({
+    required this.action,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final data = _dataForAction(action);
+
+    if (data == null) {
+      return const SizedBox.shrink();
     }
 
-    return ElasticIn(
-      duration: const Duration(milliseconds: 300),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(40),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.5),
-              blurRadius: 20,
-              spreadRadius: 5,
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 22,
+        vertical: 13,
+      ),
+      decoration: BoxDecoration(
+        color: data.color,
+        borderRadius: BorderRadius.circular(40),
+        boxShadow: [
+          BoxShadow(
+            color: data.color.withOpacity(0.45),
+            blurRadius: 22,
+            spreadRadius: 4,
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            data.icon,
+            color: Colors.white,
+            size: 32,
+          ),
+          const SizedBox(width: 12),
+          Text(
+            data.text,
+            style: const TextStyle(
               color: Colors.white,
-              size: 32,
+              fontSize: 23,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1,
             ),
-            const SizedBox(width: 12),
-            Text(
-              text,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
+
+  _FeedbackData? _dataForAction(SwipeActionType action) {
+    switch (action) {
+      case SwipeActionType.like:
+        return const _FeedbackData(
+          icon: Icons.favorite,
+          color: Colors.green,
+          text: 'LIKED!',
+        );
+
+      case SwipeActionType.pass:
+        return const _FeedbackData(
+          icon: Icons.close,
+          color: Colors.red,
+          text: 'PASSED',
+        );
+
+      case SwipeActionType.superLike:
+        return const _FeedbackData(
+          icon: Icons.star,
+          color: Colors.blue,
+          text: 'SUPER LIKE!',
+        );
+
+      case SwipeActionType.none:
+        return null;
+    }
+  }
+}
+
+class _FeedbackData {
+  final IconData icon;
+  final Color color;
+  final String text;
+
+  const _FeedbackData({
+    required this.icon,
+    required this.color,
+    required this.text,
+  });
 }
