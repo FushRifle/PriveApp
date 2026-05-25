@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
-import 'package:clique/app/resources/constant/named_routes.dart';
+import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/data/hooks/auth/auth_hook.dart';
 
 class RegisterPage extends StatefulWidget {

@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
-import 'package:clique/app/resources/constant/named_routes.dart';
+import 'package:clique/core/router/named_routes.dart';
 
 import 'package:clique/data/models/onboarding_model.dart';
 

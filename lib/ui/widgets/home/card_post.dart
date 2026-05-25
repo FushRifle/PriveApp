@@ -11,7 +11,7 @@ import 'package:clique/app/configs/theme.dart';
 import 'package:clique/data/models/feeds_models.dart';
 import 'package:video_player/video_player.dart';
 import 'package:clique/ui/widgets/home/custom_bottom_sheet.dart';
-import 'package:clique/app/resources/constant/named_routes.dart';
+import 'package:clique/core/router/named_routes.dart';
 
 class CardPost extends StatefulWidget {
   final FeedPost post;

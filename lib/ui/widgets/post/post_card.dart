@@ -1,4 +1,4 @@
-import 'package:clique/app/resources/constant/named_routes.dart';
+import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/data/models/feeds_models.dart';
 import 'package:clique/ui/widgets/home/custom_bottom_sheet.dart';

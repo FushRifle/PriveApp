@@ -1,4 +1,4 @@
-import 'package:clique/app/resources/constant/named_routes.dart';
+import 'package:clique/core/router/named_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:clique/app/configs/colors.dart';

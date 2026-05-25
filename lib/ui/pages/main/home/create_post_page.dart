@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';

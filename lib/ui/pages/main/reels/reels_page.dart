@@ -2,7 +2,7 @@ import 'package:clique/ui/pages/main/reels/create_reel_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:clique/app/resources/constant/named_routes.dart';
+import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/bloc/reels/reel_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/ui/widgets/reels/reel_item.dart';

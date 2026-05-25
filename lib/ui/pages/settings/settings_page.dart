@@ -1,6 +1,6 @@
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
-import 'package:clique/app/resources/constant/named_routes.dart';
+import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/bloc/profile/gallery_profile_cubit.dart';
 import 'package:clique/bloc/profile/profile_bloc.dart';

@@ -1,4 +1,4 @@
-import 'package:clique/app/resources/constant/named_routes.dart';
+import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/data/models/status_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';

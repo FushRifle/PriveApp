@@ -73,6 +73,7 @@ dependencies:
   record: ^6.2.0
   audio_waveforms: ^2.0.2
   just_audio: ^0.10.5
+  cloudinary: ^1.2.0
 
 dev_dependencies:
   flutter_test:

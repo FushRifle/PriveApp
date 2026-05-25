@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:clique/app/configs/colors.dart';
-import 'package:clique/app/resources/constant/named_routes.dart';
+import 'package:clique/core/router/named_routes.dart';
 
 import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/bloc/profile/profile_bloc.dart';
