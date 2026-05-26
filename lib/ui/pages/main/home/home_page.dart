@@ -1,4 +1,4 @@
-import 'package:clique/ui/pages/main/profile/profile_page.dart';
+import 'package:clique/ui/pages/settings/settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -13,6 +13,8 @@ import 'package:clique/bloc/user/user_bloc.dart';
 
 import 'package:clique/data/models/status_model.dart';
 
+import 'package:clique/ui/pages/main/status/create_status_page.dart';
+import 'package:clique/ui/pages/main/status/status_page.dart';
 import 'package:clique/ui/pages/main/status/status_view_page.dart';
 
 import 'package:clique/ui/widgets/post/post_card.dart';
@@ -298,7 +300,7 @@ class _HomeAppBar extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const ProfilePage(),
+                      builder: (_) => const SettingsPage(),
                     ),
                   );
                 },
@@ -421,9 +423,16 @@ class _StoriesSection extends StatelessWidget {
               if (stories.isNotEmpty)
                 TextButton(
                   onPressed: () {
-                    Navigator.pushNamed(
+                    Navigator.push(
                       context,
-                      NamedRoutes.statusScreen,
+                      MaterialPageRoute(
+                        builder: (_) => BlocProvider.value(
+                          value: context.read<StoriesBloc>(),
+                          child: const StatusPage(
+                            stories: [],
+                          ),
+                        ),
+                      ),
                     );
                   },
                   style: TextButton.styleFrom(
@@ -469,9 +478,14 @@ class _StoriesSection extends StatelessWidget {
                       onTap: () {
                         HapticFeedback.lightImpact();
 
-                        Navigator.pushNamed(
+                        Navigator.push(
                           context,
-                          NamedRoutes.createStatusScreen,
+                          MaterialPageRoute(
+                            builder: (_) => BlocProvider.value(
+                              value: context.read<StoriesBloc>(),
+                              child: const CreateStatusPage(),
+                            ),
+                          ),
                         );
                       },
                     );

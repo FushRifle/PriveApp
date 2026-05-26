@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:clique/bloc/home/feed_bloc.dart';
+import 'package:clique/ui/pages/main/home/post_detail_page.dart';
 import 'package:clique/ui/widgets/ui/document_viewer.dart';
 import 'package:clique/ui/widgets/ui/image_viewer.dart';
 import 'package:clique/ui/widgets/ui/video_viewer.dart';
@@ -11,7 +12,6 @@ import 'package:clique/app/configs/theme.dart';
 import 'package:clique/data/models/feeds_models.dart';
 import 'package:video_player/video_player.dart';
 import 'package:clique/ui/widgets/home/custom_bottom_sheet.dart';
-import 'package:clique/core/router/named_routes.dart';
 
 class CardPost extends StatefulWidget {
   final FeedPost post;
@@ -94,10 +94,16 @@ class _CardPostState extends State<CardPost> {
     final cardContent = GestureDetector(
       onTap: () {
         if (!widget.isDetailView) {
-          Navigator.pushNamed(
+          Navigator.push(
             context,
-            NamedRoutes.postDetailScreen,
-            arguments: widget.post.id,
+            MaterialPageRoute(
+              builder: (_) => BlocProvider.value(
+                value: context.read<FeedBloc>(),
+                child: PostDetailPage(
+                  postId: widget.post.id,
+                ),
+              ),
+            ),
           );
         }
       },
@@ -305,10 +311,16 @@ class _CardPostState extends State<CardPost> {
         child: InkWell(
           onTap: () {
             if (!widget.isDetailView) {
-              Navigator.pushNamed(
+              Navigator.push(
                 context,
-                NamedRoutes.postDetailScreen,
-                arguments: widget.post.id,
+                MaterialPageRoute(
+                  builder: (_) => BlocProvider.value(
+                    value: context.read<FeedBloc>(),
+                    child: PostDetailPage(
+                      postId: widget.post.id,
+                    ),
+                  ),
+                ),
               );
             }
           },

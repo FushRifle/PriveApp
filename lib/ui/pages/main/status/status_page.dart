@@ -5,12 +5,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
-import 'package:clique/core/router/named_routes.dart';
 
 import 'package:clique/bloc/status/stories_bloc.dart';
 
 import 'package:clique/data/models/status_model.dart';
 
+import './create_status_page.dart';
 import './status_view_page.dart';
 
 class StatusPage extends StatefulWidget {
@@ -85,9 +85,14 @@ class _StatusPageState extends State<StatusPage> {
                 onPressed: () {
                   HapticFeedback.lightImpact();
 
-                  Navigator.pushNamed(
+                  Navigator.push(
                     context,
-                    NamedRoutes.createStatusScreen,
+                    MaterialPageRoute(
+                      builder: (_) => BlocProvider.value(
+                        value: context.read<StoriesBloc>(),
+                        child: const CreateStatusPage(),
+                      ),
+                    ),
                   );
                 },
                 child: Text(
@@ -170,9 +175,14 @@ class _StatusBody extends StatelessWidget {
               onTap: () {
                 HapticFeedback.lightImpact();
 
-                Navigator.pushNamed(
+                Navigator.push(
                   context,
-                  NamedRoutes.createStatusScreen,
+                  MaterialPageRoute(
+                    builder: (_) => BlocProvider.value(
+                      value: context.read<StoriesBloc>(),
+                      child: const CreateStatusPage(),
+                    ),
+                  ),
                 );
               },
             ),
@@ -631,9 +641,14 @@ class _EmptyStories extends StatelessWidget {
             const SizedBox(height: 22),
             ElevatedButton(
               onPressed: () {
-                Navigator.pushNamed(
+                Navigator.push(
                   context,
-                  NamedRoutes.createStatusScreen,
+                  MaterialPageRoute(
+                    builder: (_) => BlocProvider.value(
+                      value: context.read<StoriesBloc>(),
+                      child: const CreateStatusPage(),
+                    ),
+                  ),
                 );
               },
               style: ElevatedButton.styleFrom(

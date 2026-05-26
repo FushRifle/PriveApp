@@ -7,7 +7,7 @@ class SubscriptionService {
   // Get current subscription
   Future<Map<String, dynamic>> getSubscription() async {
     try {
-      final response = await _api.get('/subscription');
+      final response = await _api.get('/api/subscription');
       return response.data;
     } on DioException catch (e) {
       throw e.response?.data['message'] ?? 'Failed to get subscription';
@@ -21,7 +21,7 @@ class SubscriptionService {
     required String cancelUrl,
   }) async {
     try {
-      final response = await _api.post('/subscription/checkout', data: {
+      final response = await _api.post('/api/subscription/checkout', data: {
         'planId': planId,
         'successUrl': successUrl,
         'cancelUrl': cancelUrl,
@@ -35,7 +35,7 @@ class SubscriptionService {
   // Get available plans
   Future<List<dynamic>> getPlans() async {
     try {
-      final response = await _api.get('/subscription/plans');
+      final response = await _api.get('/api/subscription/plans');
       return response.data is List ? response.data : [];
     } on DioException catch (e) {
       throw e.response?.data['message'] ?? 'Failed to get plans';

@@ -109,9 +109,12 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => ChatSettingsPage(
-                    userName: widget.userName,
-                    userId: widget.userId,
+                  builder: (_) => BlocProvider.value(
+                    value: context.read<ChatBloc>(),
+                    child: ChatSettingsPage(
+                      userName: widget.userName,
+                      userId: widget.userId,
+                    ),
                   ),
                 ),
               );
@@ -122,7 +125,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
       body: BlocBuilder<ChatBloc, ChatState>(
         builder: (context, chatState) {
           final conversation = chatState.conversations.firstWhere(
-            (c) => c.userId.toString() == widget.userId,
+            (c) => c.userId == widget.userId,
             orElse: () => ConversationModel(
               id: 0,
               userId: 0,

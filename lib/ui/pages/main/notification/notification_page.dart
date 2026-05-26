@@ -13,6 +13,7 @@ class NotificationPage extends StatefulWidget {
 
 class _NotificationPageState extends State<NotificationPage> {
   final NotificationService _notificationService = NotificationService();
+  final ScrollController _scrollController = ScrollController();
 
   List<Map<String, dynamic>> _notifications = [];
   bool _isLoading = true;
@@ -24,7 +25,25 @@ class _NotificationPageState extends State<NotificationPage> {
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _loadNotifications();
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients || _isLoadingMore || !_hasMore) return;
+
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 500) {
+      _loadMoreNotifications();
+    }
   }
 
   Future<void> _loadNotifications({bool refresh = false}) async {
@@ -47,6 +66,8 @@ class _NotificationPageState extends State<NotificationPage> {
       final pagination = response['pagination'] ?? {};
       final totalPages = pagination['totalPages'] ?? 1;
 
+      if (!mounted) return;
+
       setState(() {
         if (refresh || _currentPage == 1) {
           _notifications = newNotifications.cast<Map<String, dynamic>>();
@@ -61,6 +82,8 @@ class _NotificationPageState extends State<NotificationPage> {
         _currentPage++;
       }
     } catch (e) {
+      if (!mounted) return;
+
       setState(() {
         _error = e.toString();
         _isLoading = false;
@@ -89,6 +112,8 @@ class _NotificationPageState extends State<NotificationPage> {
       final pagination = response['pagination'] ?? {};
       final totalPages = pagination['totalPages'] ?? 1;
 
+      if (!mounted) return;
+
       setState(() {
         _notifications.addAll(newNotifications.cast<Map<String, dynamic>>());
         _hasMore = _currentPage < totalPages;
@@ -99,6 +124,8 @@ class _NotificationPageState extends State<NotificationPage> {
         _currentPage++;
       }
     } catch (e) {
+      if (!mounted) return;
+
       setState(() {
         _isLoadingMore = false;
         _error = e.toString();
@@ -109,6 +136,8 @@ class _NotificationPageState extends State<NotificationPage> {
   Future<void> _markAsRead(int notificationId, int index) async {
     try {
       await _notificationService.markAsRead(notificationId);
+      if (!mounted || index >= _notifications.length) return;
+
       setState(() {
         _notifications[index]['isUnread'] = false;
       });
@@ -120,6 +149,8 @@ class _NotificationPageState extends State<NotificationPage> {
   Future<void> _markAllAsRead() async {
     try {
       await _notificationService.markAllAsRead();
+      if (!mounted) return;
+
       setState(() {
         for (var notification in _notifications) {
           notification['isUnread'] = false;
@@ -133,6 +164,8 @@ class _NotificationPageState extends State<NotificationPage> {
         ),
       );
     } catch (e) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to mark all as read: $e'),
@@ -145,10 +178,14 @@ class _NotificationPageState extends State<NotificationPage> {
   Future<void> _deleteNotification(int notificationId, int index) async {
     try {
       await _notificationService.deleteNotification(notificationId);
+      if (!mounted || index >= _notifications.length) return;
+
       setState(() {
         _notifications.removeAt(index);
       });
     } catch (e) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to delete notification: $e'),
@@ -180,7 +217,6 @@ class _NotificationPageState extends State<NotificationPage> {
 
   String _getNotificationContent(Map<String, dynamic> notification) {
     final type = notification['type'];
-    final actorName = notification['actorName'] ?? 'Someone';
 
     switch (type) {
       case 'like':
@@ -267,7 +303,7 @@ class _NotificationPageState extends State<NotificationPage> {
                     : Stack(
                         children: [
                           ListView.builder(
-                            controller: ScrollController(),
+                            controller: _scrollController,
                             padding: const EdgeInsets.only(top: 8, bottom: 100),
                             itemCount: _notifications.length + 1,
                             itemBuilder: (context, index) {

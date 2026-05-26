@@ -1,8 +1,13 @@
+import 'package:clique/core/router/main_wrapper.dart';
 import 'package:flutter/material.dart';
-
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clique/core/router/named_routes.dart';
 
-import 'package:clique/managers/auth_guard.dart';
+import 'package:clique/bloc/friends/friends_bloc.dart';
+import 'package:clique/bloc/home/feed_bloc.dart';
+import 'package:clique/bloc/insights/insights_bloc.dart';
+import 'package:clique/bloc/match/match_bloc.dart';
+import 'package:clique/bloc/status/stories_bloc.dart';
 
 import 'package:clique/ui/pages/auth/demographic_page.dart';
 import 'package:clique/ui/pages/auth/login_page.dart';
@@ -42,6 +47,14 @@ class AppRouter {
     RouteSettings settings,
   ) {
     switch (settings.name) {
+      case NamedRoutes.homeScreen:
+      case NamedRoutes.discoverScreen:
+      case NamedRoutes.inboxScreen:
+      case NamedRoutes.reelsScreen:
+        return _page(
+          const MainWrapper(),
+        );
+
       case NamedRoutes.loginScreen:
         return _page(
           const LoginPage(),
@@ -76,33 +89,52 @@ class AppRouter {
 
       case NamedRoutes.friendListScreen:
         return _page(
-          const FriendsListPage(),
+          BlocProvider(
+            create: (_) => FriendsBloc(),
+            child: const FriendsListPage(),
+          ),
         );
 
       case NamedRoutes.insightsScreen:
         return _page(
-          const InsightsPage(),
+          BlocProvider(
+            create: (_) => InsightsBloc(),
+            child: const InsightsPage(),
+          ),
         );
 
       case NamedRoutes.matchScreen:
         return _page(
-          const MatchesPage(),
+          BlocProvider(
+            create: (_) => MatchBloc(),
+            child: const MatchesPage(),
+          ),
         );
 
       case NamedRoutes.createPostScreen:
         return _page(
-          const CreatePostPage(),
+          BlocProvider(
+            create: (_) => FeedBloc(),
+            child: const CreatePostPage(),
+          ),
         );
 
       case NamedRoutes.createStatusScreen:
         return _page(
-          const CreateStatusPage(),
+          BlocProvider(
+            create: (_) => StoriesBloc(),
+            child: const CreateStatusPage(),
+          ),
         );
 
       case NamedRoutes.statusScreen:
+      case NamedRoutes.statusViewScreen:
         return _page(
-          const StatusPage(
-            stories: [],
+          BlocProvider(
+            create: (_) => StoriesBloc(),
+            child: const StatusPage(
+              stories: [],
+            ),
           ),
         );
 
@@ -137,6 +169,7 @@ class AppRouter {
         );
 
       case NamedRoutes.notificationScreen:
+      case NamedRoutes.notificationsScreen:
         return _page(
           const NotificationPage(),
         );
@@ -171,14 +204,21 @@ class AppRouter {
         }
 
         return _page(
-          PostDetailPage(
-            postId: postId,
+          BlocProvider(
+            create: (_) => FeedBloc(),
+            child: PostDetailPage(
+              postId: postId,
+            ),
           ),
         );
 
       default:
-        return _page(
-          const AuthGuard(),
+        debugPrint(
+          'ROUTE NOT FOUND: ${settings.name}',
+        );
+
+        return _errorRoute(
+          'Route not found: ${settings.name}',
         );
     }
   }

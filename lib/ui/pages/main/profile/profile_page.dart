@@ -8,6 +8,9 @@ import 'package:clique/app/configs/theme.dart';
 
 import 'package:clique/bloc/profile/gallery_profile_cubit.dart';
 import 'package:clique/bloc/profile/profile_bloc.dart';
+import 'package:clique/bloc/friends/friends_bloc.dart';
+import 'package:clique/bloc/insights/insights_bloc.dart';
+import 'package:clique/bloc/match/match_bloc.dart';
 
 import 'package:clique/data/models/gallery_model.dart';
 
@@ -664,8 +667,11 @@ class _StatsRow extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => const FriendsListPage(
-                  isFollowers: false,
+                builder: (_) => BlocProvider(
+                  create: (_) => FriendsBloc(),
+                  child: const FriendsListPage(
+                    isFollowers: false,
+                  ),
                 ),
               ),
             );
@@ -678,8 +684,11 @@ class _StatsRow extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => const FriendsListPage(
-                  isFollowers: true,
+                builder: (_) => BlocProvider(
+                  create: (_) => FriendsBloc(),
+                  child: const FriendsListPage(
+                    isFollowers: true,
+                  ),
                 ),
               ),
             );
@@ -692,7 +701,10 @@ class _StatsRow extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => const InsightsPage(),
+                builder: (_) => BlocProvider(
+                  create: (_) => InsightsBloc(),
+                  child: const InsightsPage(),
+                ),
               ),
             );
           },
@@ -760,7 +772,10 @@ class _InsightsButton extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => const InsightsPage(),
+              builder: (_) => BlocProvider(
+                create: (_) => InsightsBloc(),
+                child: const InsightsPage(),
+              ),
             ),
           );
         },
@@ -839,7 +854,10 @@ class _ActionButtons extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const MatchesPage(),
+                    builder: (_) => BlocProvider(
+                      create: (_) => MatchBloc(),
+                      child: const MatchesPage(),
+                    ),
                   ),
                 );
               },

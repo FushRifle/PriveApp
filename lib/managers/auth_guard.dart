@@ -4,13 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:clique/app/configs/colors.dart';
-import 'package:clique/core/router/named_routes.dart';
 
 import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/bloc/profile/profile_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 
-import './main_wrapper.dart';
+import 'package:clique/ui/pages/auth/demographic_page.dart';
+import 'package:clique/ui/pages/auth/login_page.dart';
+
+import '../core/router/main_wrapper.dart';
 
 class AuthGuard extends StatefulWidget {
   const AuthGuard({super.key});
@@ -25,24 +27,33 @@ class _AuthGuardState extends State<AuthGuard> {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
-      buildWhen: (previous, current) =>
-          previous.isAuthenticated != current.isAuthenticated ||
-          previous.token != current.token,
+      buildWhen: (previous, current) {
+        return previous.isAuthenticated !=
+                current.isAuthenticated ||
+            previous.token != current.token;
+      },
       builder: (context, authState) {
-        if (!authState.isAuthenticated || authState.token == null) {
-          return const _RedirectScreen(
-            route: NamedRoutes.loginScreen,
-          );
+        if (!authState.isAuthenticated ||
+            authState.token == null) {
+          return const LoginPage();
         }
 
         if (!_initialized) {
           _initialized = true;
 
-          final profileBloc = context.read<ProfileBloc>();
-          final userBloc = context.read<UserBloc>();
+          final profileBloc =
+              context.read<ProfileBloc>();
 
-          profileBloc.setAuthToken(authState.token!);
-          userBloc.setAuthToken(authState.token!);
+          final userBloc =
+              context.read<UserBloc>();
+
+          profileBloc.setAuthToken(
+            authState.token!,
+          );
+
+          userBloc.setAuthToken(
+            authState.token!,
+          );
         }
 
         return _Bootstrapper(
@@ -61,10 +72,12 @@ class _Bootstrapper extends StatefulWidget {
   });
 
   @override
-  State<_Bootstrapper> createState() => _BootstrapperState();
+  State<_Bootstrapper> createState() =>
+      _BootstrapperState();
 }
 
-class _BootstrapperState extends State<_Bootstrapper> {
+class _BootstrapperState
+    extends State<_Bootstrapper> {
   bool _loading = true;
 
   bool _hasProfile = false;
@@ -77,42 +90,66 @@ class _BootstrapperState extends State<_Bootstrapper> {
   void initState() {
     super.initState();
 
-    _bootstrap();
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) {
+      _bootstrap();
+    });
   }
 
   Future<void> _bootstrap() async {
     try {
-      final profileBloc = context.read<ProfileBloc>();
-      final userBloc = context.read<UserBloc>();
+      final profileBloc =
+          context.read<ProfileBloc>();
 
-      final profile = profileBloc.state.myProfile;
+      final userBloc =
+          context.read<UserBloc>();
 
-      _hasProfile = profile != null && profile.userId > 0;
+      final profile =
+          profileBloc.state.myProfile;
 
-      _hasUser = userBloc.state.currentUser != null;
+      _hasProfile =
+          profile != null &&
+              profile.userId > 0;
+
+      _hasUser =
+          userBloc.state.currentUser != null;
 
       final futures = <Future>[];
 
-      if (!_hasProfile) {
-        profileBloc.add(LoadMyProfile());
+      if (!_hasProfile &&
+          profileBloc.state.status !=
+              ProfileStatus.loading) {
+        profileBloc.add(
+          LoadMyProfile(),
+        );
 
         futures.add(
           profileBloc.stream.firstWhere(
-            (state) =>
-                state.status == ProfileStatus.success ||
-                state.status == ProfileStatus.error,
+            (state) {
+              return state.status ==
+                      ProfileStatus.success ||
+                  state.status ==
+                      ProfileStatus.error;
+            },
           ),
         );
       }
 
-      if (!_hasUser) {
-        userBloc.add(LoadCurrentUser());
+      if (!_hasUser &&
+          userBloc.state.status !=
+              UserStatus.loading) {
+        userBloc.add(
+          LoadCurrentUser(),
+        );
 
         futures.add(
           userBloc.stream.firstWhere(
-            (state) =>
-                state.status == UserStatus.success ||
-                state.status == UserStatus.error,
+            (state) {
+              return state.status ==
+                      UserStatus.success ||
+                  state.status ==
+                      UserStatus.error;
+            },
           ),
         );
       }
@@ -125,10 +162,12 @@ class _BootstrapperState extends State<_Bootstrapper> {
 
       if (!mounted) return;
 
-      final updatedProfile = profileBloc.state.myProfile;
+      final updatedProfile =
+          profileBloc.state.myProfile;
 
       final hasValidProfile =
-          updatedProfile != null && updatedProfile.userId > 0;
+          updatedProfile != null &&
+              updatedProfile.userId > 0;
 
       setState(() {
         _hasProfile = hasValidProfile;
@@ -172,9 +211,7 @@ class _BootstrapperState extends State<_Bootstrapper> {
     }
 
     if (!_hasProfile) {
-      return const _RedirectScreen(
-        route: NamedRoutes.demographicScreen,
-      );
+      return const OnboardingDemographicPage();
     }
 
     return const MainWrapper();
@@ -190,7 +227,8 @@ class _SplashScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       body: Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment:
+              MainAxisAlignment.center,
           children: [
             Image.asset(
               'images/clique.png',
@@ -202,7 +240,8 @@ class _SplashScreen extends StatelessWidget {
             const SizedBox(
               width: 24,
               height: 24,
-              child: CircularProgressIndicator(
+              child:
+                  CircularProgressIndicator(
                 strokeWidth: 2,
                 color: AppColors.primary,
               ),
@@ -216,6 +255,7 @@ class _SplashScreen extends StatelessWidget {
 
 class _ErrorScreen extends StatelessWidget {
   final String error;
+
   final VoidCallback onRetry;
 
   const _ErrorScreen({
@@ -229,9 +269,11 @@ class _ErrorScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding:
+              const EdgeInsets.all(24),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment:
+                MainAxisAlignment.center,
             children: [
               const Icon(
                 Icons.error_outline,
@@ -246,44 +288,14 @@ class _ErrorScreen extends StatelessWidget {
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: onRetry,
-                child: const Text('Retry'),
+                child: const Text(
+                  'Retry',
+                ),
               ),
             ],
           ),
         ),
       ),
     );
-  }
-}
-
-class _RedirectScreen extends StatefulWidget {
-  final String route;
-
-  const _RedirectScreen({
-    required this.route,
-  });
-
-  @override
-  State<_RedirectScreen> createState() => _RedirectScreenState();
-}
-
-class _RedirectScreenState extends State<_RedirectScreen> {
-  @override
-  void initState() {
-    super.initState();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-
-      Navigator.pushReplacementNamed(
-        context,
-        widget.route,
-      );
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return const _SplashScreen();
   }
 }

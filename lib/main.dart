@@ -4,21 +4,20 @@ import 'package:flutter/services.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
+import 'package:cloudinary_flutter/cloudinary_context.dart';
+import 'package:cloudinary_url_gen/cloudinary.dart';
 
-import 'package:clique/app/configs/api_config.dart';
 import 'package:clique/app/configs/theme.dart';
-
-import 'package:clique/core/providers/bloc_providers.dart';
+import 'package:clique/managers/auth_guard.dart';
+import 'package:clique/bloc/auth/auth_bloc.dart';
+import 'package:clique/app/configs/api_config.dart';
+import 'package:clique/data/providers/theme_provider.dart';
+import 'package:clique/bloc/cloudinary/cloudinary_cubit.dart';
+import 'package:clique/bloc/profile/profile_bloc.dart';
+import 'package:clique/bloc/user/user_bloc.dart';
 
 import 'package:clique/core/router/app_router.dart';
-
-import 'package:clique/data/providers/theme_provider.dart';
-
-import 'package:clique/managers/auth_guard.dart';
-
-import 'package:clique/bloc/auth/auth_bloc.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,6 +48,10 @@ Future<void> _initializeApp() async {
     debug: false,
   );
 
+  CloudinaryContext.cloudinary = Cloudinary.fromCloudName(
+    cloudName: 'dug6225go',
+  );
+
   FlutterError.onError = FlutterError.presentError;
 }
 
@@ -59,13 +62,13 @@ class MyApp extends ConsumerStatefulWidget {
   ConsumerState<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends ConsumerState<MyApp>
-    with WidgetsBindingObserver {
+class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   late final AuthBloc _authBloc;
 
-  final GlobalKey<ScaffoldMessengerState>
-      _scaffoldMessengerKey =
+  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
       GlobalKey<ScaffoldMessengerState>();
+
+  DateTime? _lastAuthCheck;
 
   @override
   void initState() {
@@ -73,8 +76,7 @@ class _MyAppState extends ConsumerState<MyApp>
 
     WidgetsBinding.instance.addObserver(this);
 
-    _authBloc = AuthBloc()
-      ..add(CheckAuthStatus());
+    _authBloc = AuthBloc()..add(CheckAuthStatus());
   }
 
   @override
@@ -91,7 +93,14 @@ class _MyAppState extends ConsumerState<MyApp>
     AppLifecycleState state,
   ) {
     if (state == AppLifecycleState.resumed) {
-      _authBloc.add(CheckAuthStatus());
+      final now = DateTime.now();
+
+      if (_lastAuthCheck == null ||
+          now.difference(_lastAuthCheck!) > const Duration(seconds: 20)) {
+        _lastAuthCheck = now;
+
+        _authBloc.add(CheckAuthStatus());
+      }
     }
   }
 
@@ -102,68 +111,40 @@ class _MyAppState extends ConsumerState<MyApp>
     );
 
     return MultiBlocProvider(
-      providers: AppBlocProviders.providers(
-        authBloc: _authBloc,
-      ),
-      child: MultiBlocListener(
-        listeners: [
-          BlocListener<AuthBloc, AuthState>(
-            listenWhen: (previous, current) {
-              return previous.status !=
-                      current.status ||
-                  previous.error != current.error;
-            },
-            listener: (context, state) {
-              final error =
-                  state.error?.toLowerCase() ?? '';
-
-              if (_isCriticalAuthError(error)) {
-                context
-                    .read<AuthBloc>()
-                    .add(SignOutRequested());
-              }
-            },
-          ),
-        ],
-        child: MaterialApp(
-          title: 'Clique',
-          debugShowCheckedModeBanner: false,
-          scaffoldMessengerKey:
-              _scaffoldMessengerKey,
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          themeMode: themeMode,
-          scrollBehavior:
-              const CustomScrollBehavior(),
-          home: const AuthGuard(),
-          onGenerateRoute:
-              AppRouter.onGenerateRoute,
+      providers: [
+        BlocProvider<AuthBloc>.value(
+          value: _authBloc,
         ),
+        BlocProvider(
+          create: (_) => CloudinaryCubit(),
+        ),
+        BlocProvider(
+          create: (_) => UserBloc(),
+        ),
+        BlocProvider(
+          create: (_) => ProfileBloc(),
+        ),
+      ],
+      child: Builder(
+        builder: (context) {
+          return MaterialApp(
+            title: 'Clique',
+            debugShowCheckedModeBanner: false,
+            scaffoldMessengerKey: _scaffoldMessengerKey,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeMode,
+            scrollBehavior: const CustomScrollBehavior(),
+            home: const AuthGuard(),
+            onGenerateRoute: AppRouter.onGenerateRoute,
+          );
+        },
       ),
-    );
-  }
-
-  bool _isCriticalAuthError(
-    String error,
-  ) {
-    const criticalErrors = [
-      'token',
-      'session',
-      'unauthorized',
-      'forbidden',
-      'blocked',
-      'suspended',
-      'invalid credentials',
-    ];
-
-    return criticalErrors.any(
-      (e) => error.contains(e),
     );
   }
 }
 
-class CustomScrollBehavior
-    extends ScrollBehavior {
+class CustomScrollBehavior extends ScrollBehavior {
   const CustomScrollBehavior();
 
   @override

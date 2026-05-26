@@ -302,11 +302,14 @@ class _InboxPageState extends State<InboxPage> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => ChatPage(
-                  conversationId: conversationId,
-                  userName: message.name,
-                  userAvatar: message.avatar,
-                  userId: message.userId,
+                builder: (_) => BlocProvider.value(
+                  value: context.read<ChatBloc>(),
+                  child: ChatPage(
+                    conversationId: conversationId,
+                    userName: message.name,
+                    userAvatar: message.avatar,
+                    userId: message.userId,
+                  ),
                 ),
               ),
             );

@@ -88,7 +88,7 @@ class UserService {
     required List<String> interests,
   }) async {
     try {
-      await _api.put('/users/me/demographic', data: {
+      await _api.put('/api/users/me/demographic', data: {
         'age': age,
         'gender': gender,
         'looking_for': lookingFor,
@@ -107,7 +107,7 @@ class UserService {
 // Complete onboarding
   Future<void> completeOnboarding() async {
     try {
-      await _api.put('/users/onboard');
+      await _api.put('/api/users/onboard');
     } on DioException catch (e) {
       throw e.response?.data['message'] ?? 'Failed to complete onboarding';
     }

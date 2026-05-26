@@ -1,6 +1,6 @@
-import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/data/models/feeds_models.dart';
+import 'package:clique/ui/pages/main/home/post_detail_page.dart';
 import 'package:clique/ui/widgets/home/custom_bottom_sheet.dart';
 import 'package:clique/ui/widgets/post/post_actions.dart';
 import 'package:clique/ui/widgets/post/post_footer.dart';
@@ -59,10 +59,16 @@ class _CardPostState extends State<CardPost> {
   void _openDetail() {
     if (widget.isDetailView) return;
 
-    Navigator.pushNamed(
+    Navigator.push(
       context,
-      NamedRoutes.postDetailScreen,
-      arguments: widget.post.id,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: context.read<FeedBloc>(),
+          child: PostDetailPage(
+            postId: widget.post.id,
+          ),
+        ),
+      ),
     );
   }
 

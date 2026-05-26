@@ -20,6 +20,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   final TextEditingController _textController = TextEditingController();
   final CloudinaryService _cloudinaryService = CloudinaryService();
   final ImagePicker _imagePicker = ImagePicker();
+  StreamSubscription<StoriesState>? _createStorySubscription;
 
   File? _selectedImageFile;
   Color _selectedColor = const Color(0xFF1D1B20);
@@ -45,6 +46,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
 
   @override
   void dispose() {
+    _createStorySubscription?.cancel();
     _textController.dispose();
     super.dispose();
   }
@@ -521,6 +523,8 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
 
     setState(() => _isSubmitting = true);
 
+    final storiesBloc = context.read<StoriesBloc>();
+
     try {
       String? imageUrl;
       if (_hasImage) {
@@ -539,39 +543,42 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
         ];
       }
 
-      // Create story using StoriesBloc
-      context.read<StoriesBloc>().add(CreateStoryEvent(
-            content: _textController.text.trim(),
-            attachments: attachments.isNotEmpty ? attachments : null,
-            backgroundColor: _hasImage
-                ? null
-                : '#${_selectedColor.value.toRadixString(16).substring(2)}',
-            textAlign: _textAlign == TextAlign.center ? 'center' : 'left',
-            fontSize: _fontSize,
-          ));
+      await _createStorySubscription?.cancel();
 
-      // Declare subscription first
-      late final StreamSubscription<StoriesState> subscription;
-
-      subscription = context.read<StoriesBloc>().stream.listen((state) {
+      _createStorySubscription = storiesBloc.stream.listen((state) {
         if (state.status == StoriesStatus.loaded && !state.isCreating) {
-          if (mounted) {
-            _showSnackBar('Story shared successfully!');
-            Navigator.pop(context, true);
-          }
-          subscription.cancel();
+          if (!mounted) return;
+
+          _showSnackBar('Story shared successfully!');
+          Navigator.pop(context, true);
         } else if (state.status == StoriesStatus.error && mounted) {
           _showSnackBar(state.error ?? 'Failed to share story', isError: true);
           setState(() => _isSubmitting = false);
-          subscription.cancel();
+        }
+
+        if (state.status == StoriesStatus.loaded ||
+            state.status == StoriesStatus.error) {
+          _createStorySubscription?.cancel();
+          _createStorySubscription = null;
         }
       });
+
+      // Create story using StoriesBloc
+      storiesBloc.add(CreateStoryEvent(
+        content: _textController.text.trim(),
+        attachments: attachments.isNotEmpty ? attachments : null,
+        backgroundColor: _hasImage
+            ? null
+            : '#${_selectedColor.value.toRadixString(16).substring(2)}',
+        textAlign: _textAlign == TextAlign.center ? 'center' : 'left',
+        fontSize: _fontSize,
+      ));
     } catch (e) {
       debugPrint('Error sharing story: $e');
       if (mounted) {
         _showSnackBar('Failed to share story: ${e.toString()}', isError: true);
+        setState(() => _isSubmitting = false);
       }
-      setState(() => _isSubmitting = false);
     }
   }
 

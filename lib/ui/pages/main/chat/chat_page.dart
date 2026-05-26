@@ -8,6 +8,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
+import 'package:clique/bloc/chat/gallery/chat_gallery_cubit.dart';
 import 'package:clique/bloc/cloudinary/cloudinary_cubit.dart';
 import 'package:clique/core/audio_recorder_service.dart';
 import 'package:clique/ui/pages/main/chat/chat_info_page.dart';
@@ -385,10 +386,20 @@ class _ChatPageState extends State<ChatPage>
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ChatInfoPage(
-              userName: widget.userName,
-              userAvatar: widget.userAvatar,
-              userId: widget.userId,
+            builder: (_) => MultiBlocProvider(
+              providers: [
+                BlocProvider.value(
+                  value: context.read<ChatBloc>(),
+                ),
+                BlocProvider(
+                  create: (_) => ChatGalleryCubit(),
+                ),
+              ],
+              child: ChatInfoPage(
+                userName: widget.userName,
+                userAvatar: widget.userAvatar,
+                userId: widget.userId,
+              ),
             ),
           ),
         ),

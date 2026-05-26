@@ -4,9 +4,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:clique/app/configs/colors.dart';
-import 'package:clique/core/router/named_routes.dart';
 
+import 'package:clique/bloc/chat/chat_bloc.dart';
+import 'package:clique/bloc/explore/explore_bloc.dart';
+import 'package:clique/bloc/home/feed_bloc.dart';
+import 'package:clique/bloc/status/stories_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
+import 'package:clique/ui/pages/main/home/create_post_page.dart';
 
 import 'package:clique/ui/pages/main/chat/inbox_page.dart';
 import 'package:clique/ui/pages/main/explore/explore_page.dart';
@@ -35,20 +39,7 @@ class _MainWrapperState extends State<MainWrapper>
   @override
   bool get wantKeepAlive => true;
 
-  final List<Widget> _pages = const [
-    HomePage(
-      key: PageStorageKey('home_page'),
-    ),
-    DiscoverPage(
-      key: PageStorageKey('discover_page'),
-    ),
-    ReelsPage(
-      key: PageStorageKey('reels_page'),
-    ),
-    InboxPage(
-      key: PageStorageKey('inbox_page'),
-    ),
-  ];
+  final Set<int> _visitedTabs = {0};
 
   @override
   void initState() {
@@ -83,6 +74,7 @@ class _MainWrapperState extends State<MainWrapper>
 
     setState(() {
       _currentIndex = index;
+      _visitedTabs.add(index);
     });
 
     _pageController.jumpToPage(index);
@@ -99,54 +91,145 @@ class _MainWrapperState extends State<MainWrapper>
     final backgroundColor =
         isDarkMode ? AppColors.darkBackground : Colors.white;
 
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      extendBody: true,
-      body: Stack(
-        children: [
-          PageStorage(
-            bucket: _bucket,
-            child: PageView(
-              controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(),
-              onPageChanged: (index) {
-                if (_currentIndex == index) return;
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => FeedBloc(),
+        ),
+        BlocProvider(
+          create: (_) => StoriesBloc(),
+        ),
+      ],
+      child: Scaffold(
+        backgroundColor: backgroundColor,
+        extendBody: true,
+        body: Stack(
+          children: [
+            PageStorage(
+              bucket: _bucket,
+              child: PageView(
+                controller: _pageController,
+                physics: const NeverScrollableScrollPhysics(),
+                onPageChanged: (index) {
+                  if (_currentIndex == index) return;
 
-                setState(() {
-                  _currentIndex = index;
-                });
-              },
-              children: _pages,
-            ),
-          ),
-          if (_showBottomBar)
-            const Positioned.fill(
-              child: IgnorePointer(
-                child: _BackgroundGradient(),
+                  setState(() {
+                    _currentIndex = index;
+                    _visitedTabs.add(index);
+                  });
+                },
+                children: [
+                  _DeferredTab(
+                    enabled: _visitedTabs.contains(0),
+                    child: const HomePage(
+                      key: PageStorageKey('home_page'),
+                    ),
+                  ),
+                  _DeferredTab(
+                    enabled: _visitedTabs.contains(1),
+                    child: const _ExploreTabScope(
+                      key: PageStorageKey('discover_page'),
+                      child: DiscoverPage(),
+                    ),
+                  ),
+                  _DeferredTab(
+                    enabled: _visitedTabs.contains(2),
+                    child: const ReelsPage(
+                      key: PageStorageKey('reels_page'),
+                    ),
+                  ),
+                  _DeferredTab(
+                    enabled: _visitedTabs.contains(3),
+                    child: const _ChatTabScope(
+                      key: PageStorageKey('inbox_page'),
+                      child: InboxPage(),
+                    ),
+                  ),
+                ],
               ),
             ),
-          if (_showBottomBar)
-            Positioned(
-              bottom: 72,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: _CreateButton(),
+            if (_showBottomBar)
+              const Positioned.fill(
+                child: IgnorePointer(
+                  child: _BackgroundGradient(),
+                ),
               ),
-            ),
-          if (_showBottomBar)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: _BottomNavBar(
-                currentIndex: _currentIndex,
-                backgroundColor: backgroundColor,
-                onChanged: _onTabChanged,
+            if (_showBottomBar)
+              Positioned(
+                bottom: 72,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: _CreateButton(),
+                ),
               ),
-            ),
-        ],
+            if (_showBottomBar)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: _BottomNavBar(
+                  currentIndex: _currentIndex,
+                  backgroundColor: backgroundColor,
+                  onChanged: _onTabChanged,
+                ),
+              ),
+          ],
+        ),
       ),
+    );
+  }
+}
+
+class _DeferredTab extends StatelessWidget {
+  final bool enabled;
+  final Widget child;
+
+  const _DeferredTab({
+    required this.enabled,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (!enabled) {
+      return const SizedBox.shrink();
+    }
+
+    return child;
+  }
+}
+
+class _ExploreTabScope extends StatelessWidget {
+  final Widget child;
+
+  const _ExploreTabScope({
+    super.key,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => ExploreBloc(),
+      child: child,
+    );
+  }
+}
+
+class _ChatTabScope extends StatelessWidget {
+  final Widget child;
+
+  const _ChatTabScope({
+    super.key,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => ChatBloc(),
+      child: child,
     );
   }
 }
@@ -335,9 +418,14 @@ class _CreateButton extends StatelessWidget {
           onTap: () {
             HapticFeedback.lightImpact();
 
-            Navigator.pushNamed(
+            Navigator.push(
               context,
-              NamedRoutes.createPostScreen,
+              MaterialPageRoute(
+                builder: (_) => BlocProvider.value(
+                  value: context.read<FeedBloc>(),
+                  child: const CreatePostPage(),
+                ),
+              ),
             );
           },
           child: ClipPath(

@@ -9,6 +9,15 @@ part 'feed_state.dart';
 class FeedBloc extends Bloc<FeedEvent, FeedState> {
   final FeedService _feedService = FeedService();
 
+  DateTime? _lastFeedRequest;
+
+  bool _isFetchingPosts = false;
+  bool _isFetchingMorePosts = false;
+  bool _isFetchingComments = false;
+  bool _isFetchingMedia = false;
+
+  bool _disposed = false;
+
   FeedBloc() : super(const FeedState()) {
     on<GetFeedPosts>(_onGetFeedPosts);
     on<RefreshFeed>(_onRefreshFeed);
@@ -38,38 +47,76 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     GetFeedPosts event,
     Emitter<FeedState> emit,
   ) async {
-    if (event.refresh) {
-      emit(state.copyWith(
-        postsStatus: FeedStatus.loading,
-        currentPage: 1,
-        postsError: null,
-      ));
-    } else if (state.posts.isEmpty) {
-      emit(state.copyWith(
-        postsStatus: FeedStatus.loading,
-        postsError: null,
-      ));
+    if (_disposed) return;
+
+    if (_isFetchingPosts) return;
+
+    final now = DateTime.now();
+
+    if (_lastFeedRequest != null &&
+        now.difference(_lastFeedRequest!) <
+            const Duration(seconds: 2) &&
+        !event.refresh) {
+      return;
     }
 
+    _isFetchingPosts = true;
+
+    _lastFeedRequest = now;
+
     try {
-      final response = await _feedService.getPosts(page: event.page);
+      if (event.refresh || state.posts.isEmpty) {
+        emit(
+          state.copyWith(
+            postsStatus: FeedStatus.loading,
+            postsError: null,
+          ),
+        );
+      }
 
-      final newPosts = event.refresh || event.page == 1
-          ? response.posts
-          : [...state.posts, ...response.posts];
+      final response = await _feedService.getPosts(
+        page: event.page,
+      );
 
-      emit(state.copyWith(
-        postsStatus: FeedStatus.loaded,
-        posts: newPosts,
-        hasMorePosts: response.hasMore,
-        currentPage: event.page,
-        postsError: null,
-      ));
+      final existingIds =
+          state.posts.map((e) => e.id).toSet();
+
+      final filteredPosts = response.posts.where(
+        (post) {
+          if (event.page == 1 || event.refresh) {
+            return true;
+          }
+
+          return !existingIds.contains(post.id);
+        },
+      ).toList();
+
+      final updatedPosts =
+          event.page == 1 || event.refresh
+              ? filteredPosts
+              : [
+                  ...state.posts,
+                  ...filteredPosts,
+                ];
+
+      emit(
+        state.copyWith(
+          postsStatus: FeedStatus.loaded,
+          posts: updatedPosts,
+          hasMorePosts: response.hasMore,
+          currentPage: event.page,
+          postsError: null,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        postsStatus: FeedStatus.error,
-        postsError: e.toString(),
-      ));
+      emit(
+        state.copyWith(
+          postsStatus: FeedStatus.error,
+          postsError: e.toString(),
+        ),
+      );
+    } finally {
+      _isFetchingPosts = false;
     }
   }
 
@@ -77,26 +124,89 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     RefreshFeed event,
     Emitter<FeedState> emit,
   ) async {
-    add(GetFeedPosts(page: 1, refresh: true));
+    await _onGetFeedPosts(
+      const GetFeedPosts(
+        page: 1,
+        refresh: true,
+      ),
+      emit,
+    );
   }
 
   Future<void> _onLoadMoreFeedPosts(
     LoadMoreFeedPosts event,
     Emitter<FeedState> emit,
   ) async {
-    if (!state.hasMorePosts || state.isLoadingMore) return;
+    if (_disposed) return;
 
-    emit(state.copyWith(postsStatus: FeedStatus.loadingMore));
+    if (_isFetchingMorePosts) return;
 
-    final nextPage = state.currentPage + 1;
-    add(GetFeedPosts(page: nextPage));
+    if (!state.hasMorePosts) return;
+
+    if (state.postsStatus == FeedStatus.loadingMore) {
+      return;
+    }
+
+    _isFetchingMorePosts = true;
+
+    try {
+      emit(
+        state.copyWith(
+          postsStatus: FeedStatus.loadingMore,
+        ),
+      );
+
+      final nextPage = state.currentPage + 1;
+
+      final response = await _feedService.getPosts(
+        page: nextPage,
+      );
+
+      final existingIds =
+          state.posts.map((e) => e.id).toSet();
+
+      final filteredPosts = response.posts
+          .where(
+            (post) => !existingIds.contains(post.id),
+          )
+          .toList();
+
+      emit(
+        state.copyWith(
+          postsStatus: FeedStatus.loaded,
+          posts: [
+            ...state.posts,
+            ...filteredPosts,
+          ],
+          currentPage: nextPage,
+          hasMorePosts: response.hasMore,
+          postsError: null,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          postsStatus: FeedStatus.error,
+          postsError: e.toString(),
+        ),
+      );
+    } finally {
+      _isFetchingMorePosts = false;
+    }
   }
 
   Future<void> _onCreateFeedPost(
     CreateFeedPost event,
     Emitter<FeedState> emit,
   ) async {
-    emit(state.copyWith(isCreatingPost: true, generalError: null));
+    if (state.isCreatingPost) return;
+
+    emit(
+      state.copyWith(
+        isCreatingPost: true,
+        generalError: null,
+      ),
+    );
 
     try {
       await _feedService.createPost(
@@ -104,13 +214,23 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
         attachments: event.attachments,
       );
 
-      emit(state.copyWith(isCreatingPost: false));
-      add(RefreshFeed());
+      emit(
+        state.copyWith(
+          isCreatingPost: false,
+        ),
+      );
+
+      await _onRefreshFeed(
+        RefreshFeed(),
+        emit,
+      );
     } catch (e) {
-      emit(state.copyWith(
-        isCreatingPost: false,
-        generalError: e.toString(),
-      ));
+      emit(
+        state.copyWith(
+          isCreatingPost: false,
+          generalError: e.toString(),
+        ),
+      );
     }
   }
 
@@ -118,27 +238,37 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     LikeFeedPost event,
     Emitter<FeedState> emit,
   ) async {
-    // Optimistic update
+    final originalPosts = state.posts;
+
     final updatedPosts = state.posts.map((post) {
-      if (post.id == event.postId && !post.isLiked) {
-        return post.copyWith(isLiked: true, likes: post.likes + 1);
+      if (post.id == event.postId &&
+          !post.isLiked) {
+        return post.copyWith(
+          isLiked: true,
+          likes: post.likes + 1,
+        );
       }
+
       return post;
     }).toList();
 
-    emit(state.copyWith(posts: updatedPosts));
+    emit(
+      state.copyWith(
+        posts: updatedPosts,
+      ),
+    );
 
     try {
-      await _feedService.likePost(event.postId);
+      await _feedService.likePost(
+        event.postId,
+      );
     } catch (e) {
-      // Revert on error
-      final revertedPosts = state.posts.map((post) {
-        if (post.id == event.postId && post.isLiked) {
-          return post.copyWith(isLiked: false, likes: post.likes - 1);
-        }
-        return post;
-      }).toList();
-      emit(state.copyWith(posts: revertedPosts, generalError: e.toString()));
+      emit(
+        state.copyWith(
+          posts: originalPosts,
+          generalError: e.toString(),
+        ),
+      );
     }
   }
 
@@ -146,27 +276,37 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     UnlikeFeedPost event,
     Emitter<FeedState> emit,
   ) async {
-    // Optimistic update
+    final originalPosts = state.posts;
+
     final updatedPosts = state.posts.map((post) {
-      if (post.id == event.postId && post.isLiked) {
-        return post.copyWith(isLiked: false, likes: post.likes - 1);
+      if (post.id == event.postId &&
+          post.isLiked) {
+        return post.copyWith(
+          isLiked: false,
+          likes: post.likes - 1,
+        );
       }
+
       return post;
     }).toList();
 
-    emit(state.copyWith(posts: updatedPosts));
+    emit(
+      state.copyWith(
+        posts: updatedPosts,
+      ),
+    );
 
     try {
-      await _feedService.unlikePost(event.postId);
+      await _feedService.unlikePost(
+        event.postId,
+      );
     } catch (e) {
-      // Revert on error
-      final revertedPosts = state.posts.map((post) {
-        if (post.id == event.postId && !post.isLiked) {
-          return post.copyWith(isLiked: true, likes: post.likes + 1);
-        }
-        return post;
-      }).toList();
-      emit(state.copyWith(posts: revertedPosts, generalError: e.toString()));
+      emit(
+        state.copyWith(
+          posts: originalPosts,
+          generalError: e.toString(),
+        ),
+      );
     }
   }
 
@@ -174,53 +314,109 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     GetPostComments event,
     Emitter<FeedState> emit,
   ) async {
-    final isFirstPage = event.page == 1;
+    if (_disposed) return;
 
-    final updatedStatus = Map<int, CommentsStatus>.from(state.commentsStatus);
-    updatedStatus[event.postId] = CommentsStatus.loading;
+    if (_isFetchingComments) return;
 
-    emit(state.copyWith(
-      commentsStatus: updatedStatus,
-      commentsError: null,
-    ));
+    _isFetchingComments = true;
 
     try {
+      final updatedStatus =
+          Map<int, CommentsStatus>.from(
+        state.commentsStatus,
+      );
+
+      updatedStatus[event.postId] =
+          event.page == 1
+              ? CommentsStatus.loading
+              : CommentsStatus.loadingMore;
+
+      emit(
+        state.copyWith(
+          commentsStatus: updatedStatus,
+          commentsError: null,
+        ),
+      );
+
       final response =
-          await _feedService.getComments(event.postId, page: event.page);
+          await _feedService.getComments(
+        event.postId,
+        page: event.page,
+      );
 
-      final existingComments = state.comments[event.postId] ?? [];
-      final newComments = isFirstPage
-          ? response.comments
-          : [...existingComments, ...response.comments];
+      final existingComments =
+          state.comments[event.postId] ?? [];
 
-      final updatedComments = Map<int, List<Comment>>.from(state.comments);
-      updatedComments[event.postId] = newComments;
+      final existingIds =
+          existingComments.map((e) => e.id).toSet();
 
-      final updatedHasMore = Map<int, bool>.from(state.hasMoreComments);
-      updatedHasMore[event.postId] = response.hasMore;
+      final filteredComments = response.comments
+          .where(
+            (comment) =>
+                !existingIds.contains(
+              comment.id,
+            ),
+          )
+          .toList();
 
-      final updatedPage = Map<int, int>.from(state.commentsPage);
-      updatedPage[event.postId] = event.page;
+      final updatedComments =
+          Map<int, List<Comment>>.from(
+        state.comments,
+      );
 
-      final updatedStatusDone =
-          Map<int, CommentsStatus>.from(state.commentsStatus);
-      updatedStatusDone[event.postId] = CommentsStatus.loaded;
+      updatedComments[event.postId] =
+          event.page == 1
+              ? response.comments
+              : [
+                  ...existingComments,
+                  ...filteredComments,
+                ];
 
-      emit(state.copyWith(
-        comments: updatedComments,
-        commentsStatus: updatedStatusDone,
-        hasMoreComments: updatedHasMore,
-        commentsPage: updatedPage,
-      ));
+      final updatedHasMore =
+          Map<int, bool>.from(
+        state.hasMoreComments,
+      );
+
+      updatedHasMore[event.postId] =
+          response.hasMore;
+
+      final updatedPages =
+          Map<int, int>.from(
+        state.commentsPage,
+      );
+
+      updatedPages[event.postId] =
+          event.page;
+
+      updatedStatus[event.postId] =
+          CommentsStatus.loaded;
+
+      emit(
+        state.copyWith(
+          comments: updatedComments,
+          commentsStatus: updatedStatus,
+          hasMoreComments: updatedHasMore,
+          commentsPage: updatedPages,
+          commentsError: null,
+        ),
+      );
     } catch (e) {
-      final updatedStatusError =
-          Map<int, CommentsStatus>.from(state.commentsStatus);
-      updatedStatusError[event.postId] = CommentsStatus.error;
+      final updatedStatus =
+          Map<int, CommentsStatus>.from(
+        state.commentsStatus,
+      );
 
-      emit(state.copyWith(
-        commentsStatus: updatedStatusError,
-        commentsError: e.toString(),
-      ));
+      updatedStatus[event.postId] =
+          CommentsStatus.error;
+
+      emit(
+        state.copyWith(
+          commentsStatus: updatedStatus,
+          commentsError: e.toString(),
+        ),
+      );
+    } finally {
+      _isFetchingComments = false;
     }
   }
 
@@ -228,45 +424,70 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     LoadMoreComments event,
     Emitter<FeedState> emit,
   ) async {
-    final currentStatus = state.commentsStatus[event.postId];
-    final hasMore = state.hasMoreComments[event.postId] ?? false;
-    final currentPage = state.commentsPage[event.postId] ?? 1;
+    final hasMore =
+        state.hasMoreComments[event.postId] ??
+            false;
 
-    if (currentStatus == CommentsStatus.loadingMore || !hasMore) return;
+    if (!hasMore) return;
 
-    final updatedStatus = Map<int, CommentsStatus>.from(state.commentsStatus);
-    updatedStatus[event.postId] = CommentsStatus.loadingMore;
+    final currentPage =
+        state.commentsPage[event.postId] ?? 1;
 
-    emit(state.copyWith(commentsStatus: updatedStatus));
-
-    add(GetPostComments(postId: event.postId, page: currentPage + 1));
+    await _onGetPostComments(
+      GetPostComments(
+        postId: event.postId,
+        page: currentPage + 1,
+      ),
+      emit,
+    );
   }
 
   Future<void> _onCreatePostComment(
     CreatePostComment event,
     Emitter<FeedState> emit,
   ) async {
-    emit(state.copyWith(isCreatingComment: true, generalError: null));
+    if (state.isCreatingComment) return;
+
+    emit(
+      state.copyWith(
+        isCreatingComment: true,
+        generalError: null,
+      ),
+    );
 
     try {
-      final newComment = await _feedService.addComment(
+      final comment =
+          await _feedService.addComment(
         postId: event.postId,
         content: event.content,
       );
 
-      final existingComments = state.comments[event.postId] ?? [];
-      final updatedComments = Map<int, List<Comment>>.from(state.comments);
-      updatedComments[event.postId] = [newComment, ...existingComments];
+      final existingComments =
+          state.comments[event.postId] ?? [];
 
-      emit(state.copyWith(
-        comments: updatedComments,
-        isCreatingComment: false,
-      ));
+      final updatedComments =
+          Map<int, List<Comment>>.from(
+        state.comments,
+      );
+
+      updatedComments[event.postId] = [
+        comment,
+        ...existingComments,
+      ];
+
+      emit(
+        state.copyWith(
+          comments: updatedComments,
+          isCreatingComment: false,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        isCreatingComment: false,
-        generalError: e.toString(),
-      ));
+      emit(
+        state.copyWith(
+          isCreatingComment: false,
+          generalError: e.toString(),
+        ),
+      );
     }
   }
 
@@ -274,36 +495,64 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     GetUserMedia event,
     Emitter<FeedState> emit,
   ) async {
-    if (event.page == 1) {
-      emit(state.copyWith(
-        mediaStatus: MediaStatus.loading,
-        mediaError: null,
-      ));
-    }
+    if (_disposed) return;
+
+    if (_isFetchingMedia) return;
+
+    _isFetchingMedia = true;
 
     try {
-      final response = await _feedService.getUserMedia(
+      emit(
+        state.copyWith(
+          mediaStatus:
+              event.page == 1
+                  ? MediaStatus.loading
+                  : MediaStatus.loadingMore,
+          mediaError: null,
+        ),
+      );
+
+      final response =
+          await _feedService.getUserMedia(
         userId: event.userId,
         page: event.page,
         type: event.type,
       );
 
-      final newMedia = event.page == 1
-          ? response.media
-          : [...state.media, ...response.media];
+      final existingIds =
+          state.media.map((e) => e.id).toSet();
 
-      emit(state.copyWith(
-        mediaStatus: MediaStatus.loaded,
-        media: newMedia,
-        hasMoreMedia: response.hasMore,
-        mediaPage: event.page,
-        mediaError: null,
-      ));
+      final filteredMedia = response.media
+          .where(
+            (media) =>
+                !existingIds.contains(media.id),
+          )
+          .toList();
+
+      emit(
+        state.copyWith(
+          mediaStatus: MediaStatus.loaded,
+          media:
+              event.page == 1
+                  ? response.media
+                  : [
+                      ...state.media,
+                      ...filteredMedia,
+                    ],
+          hasMoreMedia: response.hasMore,
+          mediaPage: event.page,
+          mediaError: null,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        mediaStatus: MediaStatus.error,
-        mediaError: e.toString(),
-      ));
+      emit(
+        state.copyWith(
+          mediaStatus: MediaStatus.error,
+          mediaError: e.toString(),
+        ),
+      );
+    } finally {
+      _isFetchingMedia = false;
     }
   }
 
@@ -311,55 +560,78 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     LoadMoreUserMedia event,
     Emitter<FeedState> emit,
   ) async {
-    if (!state.hasMoreMedia || state.mediaStatus == MediaStatus.loadingMore) {
-      return;
-    }
+    if (!state.hasMoreMedia) return;
 
-    emit(state.copyWith(mediaStatus: MediaStatus.loadingMore));
-
-    add(GetUserMedia(
-      userId: event.userId,
-      page: state.mediaPage + 1,
-      type: event.type,
-    ));
+    await _onGetUserMedia(
+      GetUserMedia(
+        userId: event.userId,
+        page: state.mediaPage + 1,
+        type: event.type,
+      ),
+      emit,
+    );
   }
 
   void _onClearFeedError(
     ClearFeedError event,
     Emitter<FeedState> emit,
   ) {
-    emit(state.copyWith(
-      postsError: null,
-      commentsError: null,
-      mediaError: null,
-      generalError: null,
-    ));
+    emit(
+      state.copyWith(
+        postsError: null,
+        commentsError: null,
+        mediaError: null,
+        generalError: null,
+      ),
+    );
   }
 
   void _onResetFeedState(
     ResetFeedState event,
     Emitter<FeedState> emit,
   ) {
-    emit(const FeedState());
+    emit(
+      const FeedState(),
+    );
   }
 
   Future<void> _onDeleteFeedPost(
     DeleteFeedPost event,
     Emitter<FeedState> emit,
   ) async {
-    try {
-      await _feedService.deletePost(event.postId);
+    final originalPosts = state.posts;
 
-      // Remove post from state
-      final updatedPosts = List<FeedPost>.from(state.posts)
-        ..removeWhere((post) => post.id == event.postId);
+    final updatedPosts =
+        List<FeedPost>.from(state.posts)
+          ..removeWhere(
+            (post) =>
+                post.id == event.postId,
+          );
 
-      emit(state.copyWith(
+    emit(
+      state.copyWith(
         posts: updatedPosts,
-        hasMorePosts: updatedPosts.length >= 10,
-      ));
+      ),
+    );
+
+    try {
+      await _feedService.deletePost(
+        event.postId,
+      );
     } catch (e) {
-      emit(state.copyWith(generalError: e.toString()));
+      emit(
+        state.copyWith(
+          posts: originalPosts,
+          generalError: e.toString(),
+        ),
+      );
     }
+  }
+
+  @override
+  Future<void> close() {
+    _disposed = true;
+
+    return super.close();
   }
 }
