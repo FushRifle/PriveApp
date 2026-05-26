@@ -4,18 +4,20 @@ import 'package:clique/app/configs/theme.dart';
 
 class NoMoreProfiles extends StatelessWidget {
   final VoidCallback onRefresh;
+  final String message;
 
   const NoMoreProfiles({
     super.key,
     required this.onRefresh,
-    required String message,
+    required this.message,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       height: 400,
-      width: 400,
+      width: double.infinity,
+      constraints: const BoxConstraints(maxWidth: 400),
       decoration: BoxDecoration(
         color: AppColors.backgroundColor,
         borderRadius: BorderRadius.circular(30),
@@ -47,10 +49,15 @@ class NoMoreProfiles extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Check back later for new people',
+              message.trim().isEmpty
+                  ? 'Check back later for new people'
+                  : message,
               style: AppTheme.greyTextStyle.copyWith(
                 fontSize: 14,
               ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 24),
             ElevatedButton(

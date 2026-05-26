@@ -25,10 +25,11 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     LoadReels event,
     Emitter<ReelState> emit,
   ) async {
-    if (state.reels.isEmpty) {
+    if (state.reels.isEmpty || event.page == 1) {
       emit(state.copyWith(
         status: ReelStatus.loading,
         isLoading: true,
+        clearError: true,
       ));
     }
 
@@ -36,12 +37,12 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
       final reels = await _reelService.getReels(page: event.page);
 
       emit(state.copyWith(
-        reels: reels,
+        reels: _dedupeReels(reels),
         currentPage: event.page,
         hasMore: reels.length >= _pageSize,
         status: ReelStatus.success,
         isLoading: false,
-        error: null,
+        clearError: true,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -59,18 +60,19 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     emit(state.copyWith(
       status: ReelStatus.refreshing,
       isRefreshing: true,
+      clearError: true,
     ));
 
     try {
       final reels = await _reelService.getReels(page: 1);
 
       emit(state.copyWith(
-        reels: reels,
+        reels: _dedupeReels(reels),
         currentPage: 1,
         hasMore: reels.length >= _pageSize,
         status: ReelStatus.success,
         isRefreshing: false,
-        error: null,
+        clearError: true,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -90,13 +92,14 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     emit(state.copyWith(
       status: ReelStatus.loadingMore,
       isLoadingMore: true,
+      clearError: true,
     ));
 
     try {
       final nextPage = state.currentPage + 1;
       final newReels = await _reelService.getReels(page: nextPage);
 
-      final updatedReels = List<dynamic>.from(state.reels)..addAll(newReels);
+      final updatedReels = _dedupeReels([...state.reels, ...newReels]);
 
       emit(state.copyWith(
         reels: updatedReels,
@@ -134,12 +137,15 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     LikeReel event,
     Emitter<ReelState> emit,
   ) async {
+    if (event.index < 0 || event.index >= state.reels.length) return;
+
     final oldReel = state.reels[event.index];
+    if (oldReel is! Map) return;
 
     // Optimistic update
     final updatedReels = List<dynamic>.from(state.reels);
     updatedReels[event.index] = {
-      ...oldReel,
+      ...Map<String, dynamic>.from(oldReel),
       'isLiked': true,
       'likes': (oldReel['likes'] ?? 0) + 1,
     };
@@ -163,12 +169,15 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     UnlikeReel event,
     Emitter<ReelState> emit,
   ) async {
+    if (event.index < 0 || event.index >= state.reels.length) return;
+
     final oldReel = state.reels[event.index];
+    if (oldReel is! Map) return;
 
     // Optimistic update
     final updatedReels = List<dynamic>.from(state.reels);
     updatedReels[event.index] = {
-      ...oldReel,
+      ...Map<String, dynamic>.from(oldReel),
       'isLiked': false,
       'likes': ((oldReel['likes'] ?? 0) - 1).clamp(0, 999999),
     };
@@ -203,7 +212,7 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     ClearReelError event,
     Emitter<ReelState> emit,
   ) {
-    emit(state.copyWith(error: null));
+    emit(state.copyWith(clearError: true));
   }
 
   void _onResetReelState(
@@ -211,5 +220,24 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     Emitter<ReelState> emit,
   ) {
     emit(const ReelState());
+  }
+
+  List<dynamic> _dedupeReels(List<dynamic> reels) {
+    final seen = <Object>{};
+    final deduped = <dynamic>[];
+
+    for (final reel in reels) {
+      final id = reel is Map ? reel['id'] ?? reel['_id'] : null;
+      if (id == null) {
+        deduped.add(reel);
+        continue;
+      }
+
+      if (seen.add(id)) {
+        deduped.add(reel);
+      }
+    }
+
+    return deduped;
   }
 }

@@ -31,7 +31,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       state.copyWith(
         status: AuthStatus.loading,
         isLoading: true,
-        error: null,
+        clearError: true,
         needsVerification: false,
       ),
     );
@@ -51,7 +51,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           token: result.token,
           user: result.user,
           isLoading: false,
-          error: null,
+          clearError: true,
           needsVerification: false,
         ),
       );
@@ -86,7 +86,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       state.copyWith(
         status: AuthStatus.loading,
         isLoading: true,
-        error: null,
+        clearError: true,
         needsVerification: false,
       ),
     );
@@ -106,7 +106,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           token: result.token,
           user: result.user,
           isLoading: false,
-          error: null,
+          clearError: true,
           needsVerification: false,
         ),
       );
@@ -173,8 +173,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         state.copyWith(
           status: AuthStatus.unauthenticated,
           isAuthenticated: false,
-          token: null,
-          user: null,
+          clearToken: true,
+          clearUser: true,
           isLoading: false,
         ),
       );
@@ -201,7 +201,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   void _onClearAuthError(ClearAuthError event, Emitter<AuthState> emit) {
-    emit(state.copyWith(error: null, status: AuthStatus.unauthenticated));
+    emit(state.copyWith(clearError: true, status: AuthStatus.unauthenticated));
   }
 
   Future<void> _onVerifyEmailRequested(
@@ -244,12 +244,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       return;
     }
 
-    emit(state.copyWith(isLoading: true, error: null));
+    emit(state.copyWith(isLoading: true, clearError: true));
 
     final success = await _authService.resendVerification(state.email);
 
     if (success) {
-      emit(state.copyWith(isLoading: false, error: null));
+      emit(state.copyWith(isLoading: false, clearError: true));
       // Show success message to user
     } else {
       emit(

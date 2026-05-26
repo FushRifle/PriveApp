@@ -33,7 +33,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     emit(state.copyWith(
       status: SettingsStatus.loading,
       isLoading: true,
-      error: null,
+      clearError: true,
     ));
 
     try {
@@ -71,8 +71,10 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     emit(state.copyWith(
       status: SettingsStatus.saving,
       isSaving: true,
-      error: null,
+      clearError: true,
     ));
+
+    final previousState = state;
 
     try {
       // Optimistically update local state
@@ -111,12 +113,12 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       emit(updatedState.copyWith(
         status: SettingsStatus.success,
         isSaving: false,
-        error: null,
+        clearError: true,
       ));
     } catch (e) {
       // Reload settings to revert optimistic update
       add(LoadSettings());
-      emit(state.copyWith(
+      emit(previousState.copyWith(
         status: SettingsStatus.error,
         isSaving: false,
         error: e.toString(),
@@ -217,7 +219,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     ClearSettingsError event,
     Emitter<SettingsState> emit,
   ) {
-    emit(state.copyWith(error: null));
+    emit(state.copyWith(clearError: true));
   }
 
   Future<void> _onDeleteAccountSettings(
@@ -227,7 +229,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     emit(state.copyWith(
       status: SettingsStatus.deleting,
       isDeleting: true,
-      error: null,
+      clearError: true,
     ));
 
     try {

@@ -318,9 +318,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
     });
 
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final file = await FilePicker.pickFile(
         type: FileType.custom,
-        withData: kIsWeb,
         allowedExtensions: const [
           'pdf',
           'doc',
@@ -333,9 +332,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
         ],
       );
 
-      if (result == null || result.files.isEmpty) return;
-
-      final file = result.files.single;
+      if (file == null) return;
 
       if (!kIsWeb && file.path == null) {
         _showSnackBar(
@@ -345,6 +342,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
         return;
       }
 
+      final bytes = kIsWeb ? await file.readAsBytes() : null;
+
       if (!mounted) return;
 
       setState(() {
@@ -353,7 +352,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
           ..add(
             MediaItem(
               file: kIsWeb ? null : File(file.path!),
-              fileBytes: file.bytes,
+              fileBytes: bytes,
               fileName: file.name,
               type: MediaType.document,
             ),

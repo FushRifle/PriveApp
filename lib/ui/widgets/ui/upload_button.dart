@@ -46,14 +46,19 @@ class CloudinaryUploadButton extends StatelessWidget {
       builder: (context, state) {
         final isUploading = state.status == UploadStatus.uploading &&
             state.uploadType == uploadType;
+        final isPicking = state.status == UploadStatus.picking &&
+            state.uploadType == uploadType;
 
         if (isUploading && showProgress) {
           return _buildProgressButton(context, state);
         }
 
-        return GestureDetector(
-          onTap: () => _handleUpload(context),
-          child: child,
+        return AbsorbPointer(
+          absorbing: isUploading || isPicking,
+          child: GestureDetector(
+            onTap: () => _handleUpload(context),
+            child: child,
+          ),
         );
       },
     );

@@ -46,16 +46,19 @@ class UserState extends Equatable {
     String? error,
     DateTime? lastUpdated,
     Map<String, dynamic>? lastUpdateData,
+    bool clearCurrentUser = false,
+    bool clearViewedUser = false,
+    bool clearError = false,
   }) {
     return UserState(
       status: status ?? this.status,
-      currentUser: currentUser ?? this.currentUser,
-      viewedUser: viewedUser ?? this.viewedUser,
+      currentUser: clearCurrentUser ? null : currentUser ?? this.currentUser,
+      viewedUser: clearViewedUser ? null : viewedUser ?? this.viewedUser,
       isLoading: isLoading ?? this.isLoading,
       isRefreshing: isRefreshing ?? this.isRefreshing,
       isSaving: isSaving ?? this.isSaving,
       isDeleting: isDeleting ?? this.isDeleting,
-      error: error ?? this.error,
+      error: clearError ? null : error ?? this.error,
       lastUpdated: lastUpdated ?? this.lastUpdated,
       lastUpdateData: lastUpdateData ?? this.lastUpdateData,
     );

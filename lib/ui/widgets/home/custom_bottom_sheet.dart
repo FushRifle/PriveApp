@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -49,6 +50,8 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
   }
 
   void _loadComments() {
+    if (!mounted) return;
+
     setState(() {
       _isLoading = true;
       _error = null;
@@ -60,6 +63,8 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
 
   void _loadMoreComments() {
     if (_isLoadingMore || !_hasMore) return;
+    if (!mounted) return;
+
     setState(() {
       _isLoadingMore = true;
       _currentPage++;
@@ -73,6 +78,8 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
     final content = _commentController.text.trim();
     if (content.isEmpty) return;
 
+    if (!mounted) return;
+
     setState(() => _isPosting = true);
     context.read<FeedBloc>().add(CreatePostComment(
           postId: widget.postId,
@@ -85,6 +92,7 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
 
     // Refresh comments after a short delay
     Future.delayed(const Duration(milliseconds: 500), () {
+      if (!mounted) return;
       _currentPage = 1;
       _loadComments();
       setState(() => _isPosting = false);
@@ -97,6 +105,7 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
       listener: (context, state) {
         // Update comments when loaded
         if (state.comments.containsKey(widget.postId)) {
+          if (!mounted) return;
           setState(() {
             _comments = state.comments[widget.postId]!;
             _hasMore = state.hasMoreComments[widget.postId] ?? false;
@@ -108,6 +117,7 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
 
         // Handle errors
         if (state.commentsError != null && _isLoading) {
+          if (!mounted) return;
           setState(() {
             _error = state.commentsError;
             _isLoading = false;
@@ -122,66 +132,74 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
               backgroundColor: Colors.red,
             ),
           );
-          setState(() => _isPosting = false);
+          if (mounted) {
+            setState(() => _isPosting = false);
+          }
         }
       },
-      child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.6,
-        width: double.infinity,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              width: 40,
-              height: 6,
-              margin: const EdgeInsets.only(top: 16, bottom: 6),
-              decoration: BoxDecoration(
-                color: AppColors.backgroundColor,
-                borderRadius: BorderRadius.circular(50),
-              ),
-            ),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.only(top: 30),
+      child: AnimatedPadding(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.6,
+          width: double.infinity,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 40,
+                height: 6,
+                margin: const EdgeInsets.only(top: 16, bottom: 6),
                 decoration: BoxDecoration(
                   color: AppColors.backgroundColor,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(30),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 26),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "Comments",
-                            style: AppTheme.blackTextStyle.copyWith(
-                              fontSize: 18,
-                              fontWeight: AppTheme.bold,
-                            ),
-                          ),
-                          Text(
-                            "${_comments.length} comments",
-                            style: AppTheme.greyTextStyle.copyWith(
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    Expanded(
-                      child: _buildCommentsList(),
-                    ),
-                    _buildCommentInput(),
-                  ],
+                  borderRadius: BorderRadius.circular(50),
                 ),
               ),
-            ),
-          ],
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.only(top: 30),
+                  decoration: BoxDecoration(
+                    color: AppColors.backgroundColor,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(30),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 26),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "Comments",
+                              style: AppTheme.blackTextStyle.copyWith(
+                                fontSize: 18,
+                                fontWeight: AppTheme.bold,
+                              ),
+                            ),
+                            Text(
+                              "${_comments.length} comments",
+                              style: AppTheme.greyTextStyle.copyWith(
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Expanded(
+                        child: _buildCommentsList(),
+                      ),
+                      _buildCommentInput(),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -368,11 +386,11 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
             child: SizedBox(
               width: 45,
               height: 45,
-              child: imageUrl.isNotEmpty
-                  ? Image.network(
-                      imageUrl,
+              child: imageUrl.startsWith('http')
+                  ? CachedNetworkImage(
+                      imageUrl: imageUrl,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
+                      errorWidget: (context, error, stackTrace) {
                         return Container(
                           color: AppColors.greyColor.withOpacity(0.2),
                           child: const Icon(Icons.person, size: 25),

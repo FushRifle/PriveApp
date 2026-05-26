@@ -1,6 +1,8 @@
 import 'package:bloc/bloc.dart';
 import 'package:clique/core/cloudinary_service.dart';
 import 'package:equatable/equatable.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
 part 'cloudinary_state.dart';
@@ -11,6 +13,7 @@ enum UploadStatus { idle, picking, uploading, success, error }
 
 class CloudinaryCubit extends Cubit<CloudinaryState> {
   final CloudinaryService _cloudinaryService;
+  final ImagePicker _imagePicker = ImagePicker();
 
   CloudinaryCubit({CloudinaryService? cloudinaryService})
       : _cloudinaryService = cloudinaryService ?? CloudinaryService(),
@@ -66,7 +69,9 @@ class CloudinaryCubit extends Cubit<CloudinaryState> {
         status: UploadStatus.uploading,
         uploadType: type,
         progress: 0.0,
-        errorMessage: null,
+        clearErrorMessage: true,
+        clearUploadedUrl: true,
+        clearUploadedFile: true,
       ));
 
       String url;
@@ -119,9 +124,22 @@ class CloudinaryCubit extends Cubit<CloudinaryState> {
 
   Future<File?> _pickFile(
       UploadType type, List<String>? allowedExtensions) async {
-    // You can use image_picker, file_picker, etc.
-    // This is a placeholder - implement based on your needs
-    return null;
+    switch (type) {
+      case UploadType.image:
+        final image = await _imagePicker.pickImage(source: ImageSource.gallery);
+        return image == null ? null : File(image.path);
+      case UploadType.video:
+        final video = await _imagePicker.pickVideo(source: ImageSource.gallery);
+        return video == null ? null : File(video.path);
+      case UploadType.audio:
+      case UploadType.document:
+        final file = await FilePicker.pickFile(
+          type: allowedExtensions == null ? FileType.any : FileType.custom,
+          allowedExtensions: allowedExtensions,
+        );
+        final path = file?.path;
+        return path == null ? null : File(path);
+    }
   }
 
   Future<String?> _validateFile(File file, UploadType type) async {
@@ -155,6 +173,6 @@ class CloudinaryCubit extends Cubit<CloudinaryState> {
   }
 
   void clearUrl() {
-    emit(state.copyWith(uploadedUrl: null));
+    emit(state.copyWith(clearUploadedUrl: true));
   }
 }

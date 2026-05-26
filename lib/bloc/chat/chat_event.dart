@@ -28,6 +28,7 @@ class LoadMessages extends ChatEvent {
 }
 
 class SendMessage extends ChatEvent {
+  final int conversationId;
   final int receiverId;
   final String message;
   final String messageType;
@@ -36,6 +37,7 @@ class SendMessage extends ChatEvent {
   final String? replyToMessage;
   final String? replyToSender;
   const SendMessage({
+    required this.conversationId,
     required this.receiverId,
     required this.message,
     this.messageType = 'text',
@@ -46,7 +48,7 @@ class SendMessage extends ChatEvent {
   });
   @override
   List<Object?> get props =>
-      [receiverId, message, messageType, mediaUrl, replyToId];
+      [conversationId, receiverId, message, messageType, mediaUrl, replyToId];
 }
 
 class DeleteMessage extends ChatEvent {

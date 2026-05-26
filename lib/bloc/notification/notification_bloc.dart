@@ -41,6 +41,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       emit(state.copyWith(
         status: NotificationStatus.loading,
         isLoading: true,
+        clearError: true,
       ));
     }
 
@@ -63,7 +64,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
         totalUnreadCount: result['unreadCount'] ?? 0,
         status: NotificationStatus.success,
         isLoading: false,
-        error: null,
+        clearError: true,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -81,6 +82,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     emit(state.copyWith(
       status: NotificationStatus.refreshing,
       isRefreshing: true,
+      clearError: true,
     ));
 
     try {
@@ -102,7 +104,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
         totalUnreadCount: result['unreadCount'] ?? 0,
         status: NotificationStatus.success,
         isRefreshing: false,
-        error: null,
+        clearError: true,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -122,6 +124,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     emit(state.copyWith(
       status: NotificationStatus.loadingMore,
       isLoadingMore: true,
+      clearError: true,
     ));
 
     try {
@@ -136,10 +139,10 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
               .toList() ??
           [];
 
-      final updatedNotifications = [
+      final updatedNotifications = _dedupeNotifications([
         ...state.notifications,
-        ...newNotifications
-      ];
+        ...newNotifications,
+      ]);
 
       emit(state.copyWith(
         notifications: updatedNotifications,
@@ -161,6 +164,18 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     MarkNotificationAsRead event,
     Emitter<NotificationState> emit,
   ) async {
+    final originalNotifications = state.notifications;
+    final originalUnreadCount = state.totalUnreadCount;
+    NotificationItem? target;
+    for (final notification in state.notifications) {
+      if (notification.id == event.notificationId) {
+        target = notification;
+        break;
+      }
+    }
+
+    if (target == null || target.isRead) return;
+
     // Optimistic update
     final updatedNotifications = state.notifications.map((n) {
       if (n.id == event.notificationId && !n.isRead) {
@@ -169,7 +184,8 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       return n;
     }).toList();
 
-    final newUnreadCount = updatedNotifications.where((n) => !n.isRead).length;
+    final newUnreadCount =
+        state.totalUnreadCount > 0 ? state.totalUnreadCount - 1 : 0;
 
     emit(state.copyWith(
       notifications: updatedNotifications,
@@ -179,20 +195,9 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     try {
       await _notificationService.markAsRead(event.notificationId);
     } catch (e) {
-      // Rollback on error
-      final rolledBackNotifications = state.notifications.map((n) {
-        if (n.id == event.notificationId) {
-          return n.copyWith(isRead: false);
-        }
-        return n;
-      }).toList();
-
-      final rolledBackUnreadCount =
-          rolledBackNotifications.where((n) => !n.isRead).length;
-
       emit(state.copyWith(
-        notifications: rolledBackNotifications,
-        totalUnreadCount: rolledBackUnreadCount,
+        notifications: originalNotifications,
+        totalUnreadCount: originalUnreadCount,
         error: e.toString(),
       ));
     }
@@ -202,6 +207,9 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     MarkAllNotificationsAsRead event,
     Emitter<NotificationState> emit,
   ) async {
+    final originalNotifications = state.notifications;
+    final originalUnreadCount = state.totalUnreadCount;
+
     // Optimistic update - mark all as read
     final updatedNotifications = state.notifications.map((n) {
       return n.copyWith(isRead: true);
@@ -217,7 +225,11 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     } catch (e) {
       // Refresh to restore correct state
       add(RefreshNotifications());
-      emit(state.copyWith(error: e.toString()));
+      emit(state.copyWith(
+        notifications: originalNotifications,
+        totalUnreadCount: originalUnreadCount,
+        error: e.toString(),
+      ));
     }
   }
 
@@ -225,6 +237,9 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     DeleteNotification event,
     Emitter<NotificationState> emit,
   ) async {
+    final originalNotifications = state.notifications;
+    final originalUnreadCount = state.totalUnreadCount;
+
     // Optimistic update - remove notification
     final updatedNotifications =
         state.notifications.where((n) => n.id != event.notificationId).toList();
@@ -244,6 +259,8 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       // Refresh to restore correct state
       add(RefreshNotifications());
       emit(state.copyWith(
+        notifications: originalNotifications,
+        totalUnreadCount: originalUnreadCount,
         isDeleting: false,
         error: e.toString(),
       ));
@@ -280,6 +297,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   ) async {
     emit(state.copyWith(
       preferencesStatus: NotificationStatus.loading,
+      clearError: true,
     ));
 
     try {
@@ -287,6 +305,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       emit(state.copyWith(
         preferences: NotificationPreferences.fromJson(prefs),
         preferencesStatus: NotificationStatus.success,
+        clearError: true,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -300,14 +319,27 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     UpdateNotificationPreferences event,
     Emitter<NotificationState> emit,
   ) async {
+    final previousPreferences = state.preferences;
+
     try {
+      if (previousPreferences != null) {
+        emit(state.copyWith(
+          preferences: NotificationPreferences.fromJson(event.preferences),
+          clearError: true,
+        ));
+      }
+
       final result =
           await _notificationService.updatePreferences(event.preferences);
       emit(state.copyWith(
         preferences: NotificationPreferences.fromJson(result),
+        clearError: true,
       ));
     } catch (e) {
-      emit(state.copyWith(error: e.toString()));
+      emit(state.copyWith(
+        preferences: previousPreferences,
+        error: e.toString(),
+      ));
     }
   }
 
@@ -389,9 +421,9 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     Emitter<NotificationState> emit,
   ) {
     emit(state.copyWith(
-      filterType: null,
-      filterFromDate: null,
-      filterToDate: null,
+      clearFilterType: true,
+      clearFilterFromDate: true,
+      clearFilterToDate: true,
     ));
     add(RefreshNotifications());
   }
@@ -412,7 +444,9 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     // Add to beginning of list if not already present
     final exists = state.notifications.any((n) => n.id == newNotification.id);
     if (!exists) {
-      final updatedNotifications = [newNotification, ...state.notifications];
+      final updatedNotifications = _dedupeNotifications(
+        [newNotification, ...state.notifications],
+      );
       final newUnreadCount =
           state.totalUnreadCount + (newNotification.isRead ? 0 : 1);
 
@@ -427,7 +461,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     ClearNotificationError event,
     Emitter<NotificationState> emit,
   ) {
-    emit(state.copyWith(error: null));
+    emit(state.copyWith(clearError: true));
   }
 
   void _onResetNotificationState(
@@ -435,5 +469,20 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     Emitter<NotificationState> emit,
   ) {
     emit(const NotificationState());
+  }
+
+  List<NotificationItem> _dedupeNotifications(
+    List<NotificationItem> notifications,
+  ) {
+    final seen = <int>{};
+    final deduped = <NotificationItem>[];
+
+    for (final notification in notifications) {
+      if (seen.add(notification.id)) {
+        deduped.add(notification);
+      }
+    }
+
+    return deduped;
   }
 }

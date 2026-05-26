@@ -73,6 +73,8 @@ class _CardPostState extends State<CardPost> {
   }
 
   void _toggleLike() {
+    if (!mounted) return;
+
     HapticFeedback.lightImpact();
 
     final wasLiked = _isLiked;
@@ -109,6 +111,8 @@ class _CardPostState extends State<CardPost> {
   }
 
   void _showComingSoon(String message) {
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
     ScaffoldMessenger.of(context).showSnackBar(

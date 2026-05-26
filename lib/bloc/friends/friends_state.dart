@@ -89,6 +89,7 @@ class FriendsState extends Equatable {
     int? friendsTotal,
     FollowStats? stats,
     String? error,
+    bool clearError = false,
   }) {
     return FriendsState(
       followersStatus: followersStatus ?? this.followersStatus,
@@ -107,7 +108,7 @@ class FriendsState extends Equatable {
       friendsHasMore: friendsHasMore ?? this.friendsHasMore,
       friendsTotal: friendsTotal ?? this.friendsTotal,
       stats: stats ?? this.stats,
-      error: error ?? this.error,
+      error: clearError ? null : error ?? this.error,
     );
   }
 

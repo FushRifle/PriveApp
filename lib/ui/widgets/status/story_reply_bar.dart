@@ -51,6 +51,7 @@ class _StoryReplyBarState extends State<StoryReplyBar> {
     final canSend = widget.controller.text.trim().isNotEmpty;
 
     if (canSend == _canSend) return;
+    if (!mounted) return;
 
     setState(() {
       _canSend = canSend;
@@ -101,7 +102,7 @@ class _StoryReplyBarState extends State<StoryReplyBar> {
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(vertical: 13),
               ),
-              onSubmitted: widget.onSend,
+              onSubmitted: (_) => _send(),
             ),
           ),
         ),

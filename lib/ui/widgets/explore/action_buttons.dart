@@ -104,6 +104,8 @@ class _ActionButton extends StatelessWidget {
               fontWeight: AppTheme.medium,
               color: color,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ],

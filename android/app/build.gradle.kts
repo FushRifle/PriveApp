@@ -32,3 +32,8 @@ android {
 flutter {
     source = "../.."
 }
+
+// ADD THIS BLOCK - fixes the JVM target mismatch
+kotlin {
+    jvmToolchain(17)
+}

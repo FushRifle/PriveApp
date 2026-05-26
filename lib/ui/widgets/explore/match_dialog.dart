@@ -1,4 +1,5 @@
 import 'package:animate_do/animate_do.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:clique/app/configs/colors.dart';
@@ -70,6 +71,9 @@ class MatchDialog extends StatelessWidget {
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
                       ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -166,20 +170,30 @@ class MatchDialog extends StatelessWidget {
         ],
       ),
       child: ClipOval(
-        child: Image.asset(
-          imagePath,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              color: Colors.grey[300],
-              child: const Icon(
-                Icons.person,
-                size: 50,
-                color: Colors.grey,
+        child: imagePath.startsWith('http')
+            ? CachedNetworkImage(
+                imageUrl: imagePath,
+                fit: BoxFit.cover,
+                errorWidget: (_, __, ___) => _profileFallback(),
+              )
+            : Image.asset(
+                imagePath,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return _profileFallback();
+                },
               ),
-            );
-          },
-        ),
+      ),
+    );
+  }
+
+  Widget _profileFallback() {
+    return Container(
+      color: Colors.grey[300],
+      child: const Icon(
+        Icons.person,
+        size: 50,
+        color: Colors.grey,
       ),
     );
   }

@@ -44,7 +44,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       emit(state.copyWith(
         status: ProfileStatus.loading,
         isLoading: true,
-        error: null,
+        clearError: true,
       ));
     }
 
@@ -74,7 +74,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         myProfile: profile,
         status: ProfileStatus.success,
         isLoading: false,
-        error: null,
+        clearError: true,
         lastUpdated: DateTime.now(),
       ));
     } catch (e) {
@@ -93,7 +93,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     emit(state.copyWith(
       status: ProfileStatus.refreshing,
       isRefreshing: true,
-      error: null,
+      clearError: true,
     ));
 
     try {
@@ -120,7 +120,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         myProfile: profile,
         status: ProfileStatus.success,
         isRefreshing: false,
-        error: null,
+        clearError: true,
         lastUpdated: DateTime.now(),
       ));
     } catch (e) {
@@ -139,7 +139,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     emit(state.copyWith(
       viewedStatus: ProfileStatus.loading,
       isLoading: true,
-      error: null,
+      clearError: true,
     ));
 
     try {
@@ -165,7 +165,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         viewedProfile: profile,
         viewedStatus: ProfileStatus.success,
         isLoading: false,
-        error: null,
+        clearError: true,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -183,12 +183,13 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     emit(state.copyWith(
       status: ProfileStatus.saving,
       isSaving: true,
-      error: null,
+      clearError: true,
     ));
+
+    final currentProfile = state.myProfile;
 
     try {
       // Optimistic update
-      final currentProfile = state.myProfile;
       if (currentProfile != null) {
         final updatedProfile = currentProfile.copyWith(
           displayName: event.data['displayName'] ??
@@ -225,13 +226,14 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         myProfile: updatedProfile,
         status: ProfileStatus.success,
         isSaving: false,
-        error: null,
+        clearError: true,
         lastUpdated: DateTime.now(),
       ));
     } catch (e) {
       // Refresh to revert optimistic update
       add(RefreshMyProfile());
       emit(state.copyWith(
+        myProfile: currentProfile,
         status: ProfileStatus.error,
         isSaving: false,
         error: e.toString(),
@@ -292,7 +294,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     ClearProfileError event,
     Emitter<ProfileState> emit,
   ) {
-    emit(state.copyWith(error: null));
+    emit(state.copyWith(clearError: true));
   }
 
   void _onResetProfileState(

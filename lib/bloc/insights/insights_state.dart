@@ -100,13 +100,14 @@ class InsightsState extends Equatable {
     RealtimeStats? realtimeStats,
     int? currentPeriodDays,
     String? error,
+    bool clearError = false,
   }) {
     return InsightsState(
       status: status ?? this.status,
       insights: insights ?? this.insights,
       realtimeStats: realtimeStats ?? this.realtimeStats,
       currentPeriodDays: currentPeriodDays ?? this.currentPeriodDays,
-      error: error ?? this.error,
+      error: clearError ? null : error ?? this.error,
     );
   }
 

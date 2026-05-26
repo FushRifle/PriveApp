@@ -34,7 +34,7 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
         matches: matches,
         status: MatchStatus.success,
         isLoading: false,
-        error: null,
+        clearError: true,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -62,7 +62,7 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
         recommendations: recommendations,
         status: MatchStatus.success,
         isLoading: false,
-        error: null,
+        clearError: true,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -77,7 +77,7 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     LikeUser event,
     Emitter<MatchState> emit,
   ) async {
-    emit(state.copyWith(isLiking: true, error: null));
+    emit(state.copyWith(isLiking: true, clearError: true));
 
     try {
       await _matchService.likeUser(event.userId);
@@ -118,7 +118,7 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
   }
 
   void _onClearMatchError(ClearMatchError event, Emitter<MatchState> emit) {
-    emit(state.copyWith(error: null));
+    emit(state.copyWith(clearError: true));
   }
 
   void _onResetMatchState(ResetMatchState event, Emitter<MatchState> emit) {

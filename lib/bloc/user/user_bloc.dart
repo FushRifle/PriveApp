@@ -39,7 +39,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       emit(state.copyWith(
         status: UserStatus.loading,
         isLoading: true,
-        error: null,
+        clearError: true,
       ));
     }
 
@@ -50,7 +50,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
         currentUser: userData,
         status: UserStatus.success,
         isLoading: false,
-        error: null,
+        clearError: true,
         lastUpdated: DateTime.now(),
       ));
     } catch (e) {
@@ -69,7 +69,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     emit(state.copyWith(
       status: UserStatus.refreshing,
       isRefreshing: true,
-      error: null,
+      clearError: true,
     ));
 
     try {
@@ -79,7 +79,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
         currentUser: userData,
         status: UserStatus.success,
         isRefreshing: false,
-        error: null,
+        clearError: true,
         lastUpdated: DateTime.now(),
       ));
     } catch (e) {
@@ -97,7 +97,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
   ) async {
     emit(state.copyWith(
       isLoading: true,
-      error: null,
+      clearError: true,
     ));
 
     try {
@@ -106,7 +106,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       emit(state.copyWith(
         viewedUser: userData,
         isLoading: false,
-        error: null,
+        clearError: true,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -123,7 +123,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     emit(state.copyWith(
       status: UserStatus.saving,
       isSaving: true,
-      error: null,
+      clearError: true,
     ));
 
     final updateData = <String, dynamic>{};
@@ -139,6 +139,8 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     if (event.languages != null) updateData['languages'] = event.languages;
     if (event.avatar != null) updateData['avatar'] = event.avatar;
     if (event.coverImage != null) updateData['coverImage'] = event.coverImage;
+
+    final previousUser = state.currentUser;
 
     try {
       // Optimistic update
@@ -167,7 +169,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
         currentUser: result,
         status: UserStatus.success,
         isSaving: false,
-        error: null,
+        clearError: true,
         lastUpdated: DateTime.now(),
         lastUpdateData: updateData,
       ));
@@ -175,6 +177,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       // Refresh to revert optimistic update
       add(RefreshCurrentUser());
       emit(state.copyWith(
+        currentUser: previousUser,
         status: UserStatus.error,
         isSaving: false,
         error: e.toString(),
@@ -210,7 +213,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     emit(state.copyWith(
       status: UserStatus.saving,
       isSaving: true,
-      error: null,
+      clearError: true,
     ));
 
     try {
@@ -232,7 +235,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       emit(state.copyWith(
         status: UserStatus.success,
         isSaving: false,
-        error: null,
+        clearError: true,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -250,7 +253,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     emit(state.copyWith(
       status: UserStatus.saving,
       isSaving: true,
-      error: null,
+      clearError: true,
     ));
 
     try {
@@ -262,7 +265,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       emit(state.copyWith(
         status: UserStatus.success,
         isSaving: false,
-        error: null,
+        clearError: true,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -280,17 +283,17 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     emit(state.copyWith(
       status: UserStatus.deleting,
       isDeleting: true,
-      error: null,
+      clearError: true,
     ));
 
     try {
       await _userService.deleteAccount();
 
       emit(state.copyWith(
-        currentUser: null,
+        clearCurrentUser: true,
         status: UserStatus.success,
         isDeleting: false,
-        error: null,
+        clearError: true,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -305,7 +308,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     ClearUserError event,
     Emitter<UserState> emit,
   ) {
-    emit(state.copyWith(error: null));
+    emit(state.copyWith(clearError: true));
   }
 
   void _onResetUserState(

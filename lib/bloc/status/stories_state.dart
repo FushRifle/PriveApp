@@ -20,11 +20,12 @@ class StoriesState extends Equatable {
     List<Story>? stories,
     String? error,
     bool? isCreating,
+    bool clearError = false,
   }) {
     return StoriesState(
       status: status ?? this.status,
       stories: stories ?? this.stories,
-      error: error ?? this.error,
+      error: clearError ? null : error ?? this.error,
       isCreating: isCreating ?? this.isCreating,
     );
   }

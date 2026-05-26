@@ -221,6 +221,8 @@ class _ReelItemState extends State<ReelItem>
 
     final wasLiked = _isLiked;
 
+    if (!mounted) return;
+
     setState(() {
       _isLiked = !wasLiked;
       _localLikeDelta += wasLiked ? -1 : 1;
@@ -248,6 +250,8 @@ class _ReelItemState extends State<ReelItem>
 
     if (reelId == null || reelId.isEmpty) return;
 
+    if (!mounted) return;
+
     setState(() {
       _localShareDelta += 1;
     });
@@ -261,6 +265,8 @@ class _ReelItemState extends State<ReelItem>
   }
 
   void _toggleFollow() {
+    if (!mounted) return;
+
     setState(() {
       _isFollowing = !_isFollowing;
     });
@@ -759,6 +765,10 @@ class _ProfileAvatar extends StatelessWidget {
       return _fallback();
     }
 
+    if (!imageUrl.startsWith('http')) {
+      return _fallback();
+    }
+
     return Container(
       width: 40,
       height: 40,
@@ -811,6 +821,10 @@ class _AudioAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (imageUrl.isEmpty) {
+      return _fallback();
+    }
+
+    if (!imageUrl.startsWith('http')) {
       return _fallback();
     }
 

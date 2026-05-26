@@ -55,9 +55,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       try {
         final user = await _userService.getCurrentUser();
         _currentUserId = user['id'];
-      } catch (e) {
-        print('Failed to load current user ID: $e');
-      }
+      } catch (_) {}
     }
   }
 
@@ -74,7 +72,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       emit(state.copyWith(
         conversations: conversations,
         conversationsStatus: ChatStatus.success,
-        error: null,
+        clearError: true,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -94,7 +92,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       emit(state.copyWith(
         conversations: conversations,
         conversationsStatus: ChatStatus.success,
-        error: null,
+        clearError: true,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -109,7 +107,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     try {
       final data = await _chatService.getConversationInfo(event.conversationId);
       final info = ConversationInfoModel.fromJson(data);
-      emit(state.copyWith(conversationInfo: info, error: null));
+      emit(state.copyWith(conversationInfo: info, clearError: true));
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }
@@ -205,7 +203,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         currentPage: event.page,
         hasMoreMessages: fetchedMessages.length >= 50,
         messagesStatus: ChatStatus.success,
-        error: null,
+        clearError: true,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -227,7 +225,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
     final tempMessage = MessageModel(
       id: tempId,
-      conversationId: event.receiverId,
+      conversationId: event.conversationId,
       senderId: _currentUserId!,
       receiverId: event.receiverId,
       message: event.message,
@@ -246,7 +244,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       ...state.messages,
     ];
 
-    _messageCache[event.receiverId] = updatedMessages;
+    _messageCache[event.conversationId] = updatedMessages;
 
     emit(state.copyWith(
       messages: updatedMessages,
@@ -290,24 +288,25 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         return m;
       }).toList();
 
-      _messageCache[event.receiverId] = replacedMessages;
+      _messageCache[event.conversationId] = replacedMessages;
 
       emit(state.copyWith(
         messages: replacedMessages,
         messagesStatus: ChatStatus.success,
       ));
 
+      _chatService.clearMessagesCache(event.conversationId);
       add(RefreshConversations());
 
       add(LoadMessages(
-        conversationId: event.receiverId,
+        conversationId: event.conversationId,
         page: 1,
       ));
     } catch (e) {
       final rollbackMessages =
           state.messages.where((m) => m.id != tempId).toList();
 
-      _messageCache[event.receiverId] = rollbackMessages;
+      _messageCache[event.conversationId] = rollbackMessages;
 
       emit(state.copyWith(
         messages: rollbackMessages,
@@ -320,6 +319,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       DeleteMessage event, Emitter<ChatState> emit) async {
     try {
       await _chatService.deleteMessage(event.messageId);
+      for (final entry in _messageCache.entries) {
+        if (entry.value.any((m) => m.id == event.messageId)) {
+          _chatService.clearMessagesCache(entry.key);
+          _messageCache[entry.key] =
+              entry.value.where((m) => m.id != event.messageId).toList();
+        }
+      }
       emit(state.copyWith(
         messages: state.messages.where((m) => m.id != event.messageId).toList(),
       ));
@@ -332,7 +338,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       ReportMessage event, Emitter<ChatState> emit) async {
     try {
       await _chatService.reportMessage(event.messageId, event.reason);
-      emit(state.copyWith(error: null));
+      emit(state.copyWith(clearError: true));
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }
@@ -366,9 +372,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         return conv;
       }).toList();
       emit(state.copyWith(conversations: updatedConversations));
-    } catch (e) {
-      print('Failed to mark as read: $e');
-    }
+    } catch (_) {}
   }
 
   Future<void> _onSetTyping(SetTyping event, Emitter<ChatState> emit) async {
@@ -384,7 +388,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       emit(state.copyWith(
         chatSettings: settings,
         settingsStatus: ChatStatus.success,
-        error: null,
+        clearError: true,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -396,6 +400,45 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
   Future<void> _onUpdateChatSettings(
       UpdateChatSettings event, Emitter<ChatState> emit) async {
+    final current = state.chatSettings;
+    final baseSettings = current ??
+        ChatSettingsModel(
+          id: event.conversationId,
+          isPinned: false,
+          isMuted: false,
+          wallpaper: 'default',
+          chatColor: 'default',
+          notificationSound: 'default',
+        );
+
+    final optimisticSettings = baseSettings.copyWith(
+      id: event.conversationId,
+      isPinned: event.isPinned,
+      isMuted: event.isMuted,
+      muteUntil: event.muteUntil,
+      clearMuteUntil: event.isMuted == false,
+      wallpaper: event.wallpaper,
+      chatColor: event.chatColor,
+      notificationSound: event.notificationSound,
+    );
+
+    final updatedConversations = state.conversations.map((conv) {
+      if (conv.id != event.conversationId) return conv;
+      return conv.copyWith(
+        isPinned: event.isPinned,
+        isMuted: event.isMuted,
+        muteUntil: event.muteUntil,
+        clearMuteUntil: event.isMuted == false,
+      );
+    }).toList();
+
+    emit(state.copyWith(
+      chatSettings: optimisticSettings,
+      conversations: updatedConversations,
+      settingsStatus: ChatStatus.success,
+      clearError: true,
+    ));
+
     try {
       await _chatService.updateChatSettings(
         event.conversationId,
@@ -422,7 +465,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       emit(state.copyWith(
         userPreferences: preferences,
         preferencesStatus: ChatStatus.success,
-        error: null,
+        clearError: true,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -455,7 +498,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   Future<void> _onBlockUser(BlockUser event, Emitter<ChatState> emit) async {
     try {
       await _chatService.blockUser(event.userId);
-      emit(state.copyWith(error: null));
+      emit(state.copyWith(clearError: true));
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }
@@ -465,7 +508,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       UnblockUser event, Emitter<ChatState> emit) async {
     try {
       await _chatService.unblockUser(event.userId);
-      emit(state.copyWith(error: null));
+      emit(state.copyWith(clearError: true));
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }
@@ -474,6 +517,14 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   Future<void> _onClearChat(ClearChat event, Emitter<ChatState> emit) async {
     try {
       await _chatService.clearChat(event.conversationId);
+      _messageCache.remove(event.conversationId);
+      emit(state.copyWith(
+        messages: const [],
+        currentPage: 1,
+        hasMoreMessages: false,
+        messagesStatus: ChatStatus.success,
+        clearError: true,
+      ));
       add(LoadMessages(conversationId: event.conversationId, page: 1));
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
@@ -481,7 +532,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   }
 
   void _onClearChatError(ClearChatError event, Emitter<ChatState> emit) {
-    emit(state.copyWith(error: null));
+    emit(state.copyWith(clearError: true));
   }
 
   void _onResetChatState(ResetChatState event, Emitter<ChatState> emit) {
@@ -536,21 +587,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       MessageReadReceived event, Emitter<ChatState> emit) {
     final updatedMessages = state.messages.map((msg) {
       if (!msg.isOwn && !msg.isRead) {
-        return MessageModel(
-          id: msg.id,
-          conversationId: msg.conversationId,
-          senderId: msg.senderId,
-          receiverId: msg.receiverId,
-          message: msg.message,
-          messageType: msg.messageType,
-          mediaUrl: msg.mediaUrl,
-          replyToId: msg.replyToId,
-          replyToMessage: msg.replyToMessage,
-          replyToSender: msg.replyToSender,
-          isRead: true,
-          isOwn: msg.isOwn,
-          createdAt: msg.createdAt,
-        );
+        return msg.copyWith(isRead: true);
       }
       return msg;
     }).toList();
@@ -563,24 +600,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   ) {
     final updatedConversations = state.conversations.map((conv) {
       if (conv.userId == event.userId) {
-        return ConversationModel(
-          id: conv.id,
-          userId: conv.userId,
-          name: conv.name,
-          username: conv.username,
-          avatar: conv.avatar,
-          age: conv.age,
-          verified: conv.verified,
-          lastMessage: conv.lastMessage,
-          lastMessageType: conv.lastMessageType,
-          timestamp: conv.timestamp,
-          unreadCount: conv.unreadCount,
-          isOnline: conv.isOnline,
-          isTyping: event.isTyping,
-          isPinned: conv.isPinned,
-          isMuted: conv.isMuted,
-          muteUntil: conv.muteUntil,
-        );
+        return conv.copyWith(isTyping: event.isTyping);
       }
 
       return conv;

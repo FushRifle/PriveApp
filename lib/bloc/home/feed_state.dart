@@ -91,26 +91,32 @@ class FeedState extends Equatable {
     bool? isCreatingPost,
     bool? isCreatingComment,
     String? generalError,
+    bool clearPostsError = false,
+    bool clearCommentsError = false,
+    bool clearMediaError = false,
+    bool clearGeneralError = false,
   }) {
     return FeedState(
       postsStatus: postsStatus ?? this.postsStatus,
       posts: posts ?? this.posts,
       hasMorePosts: hasMorePosts ?? this.hasMorePosts,
       currentPage: currentPage ?? this.currentPage,
-      postsError: postsError ?? this.postsError,
+      postsError: clearPostsError ? null : postsError ?? this.postsError,
       commentsStatus: commentsStatus ?? this.commentsStatus,
       comments: comments ?? this.comments,
       hasMoreComments: hasMoreComments ?? this.hasMoreComments,
       commentsPage: commentsPage ?? this.commentsPage,
-      commentsError: commentsError ?? this.commentsError,
+      commentsError:
+          clearCommentsError ? null : commentsError ?? this.commentsError,
       mediaStatus: mediaStatus ?? this.mediaStatus,
       media: media ?? this.media,
       hasMoreMedia: hasMoreMedia ?? this.hasMoreMedia,
       mediaPage: mediaPage ?? this.mediaPage,
-      mediaError: mediaError ?? this.mediaError,
+      mediaError: clearMediaError ? null : mediaError ?? this.mediaError,
       isCreatingPost: isCreatingPost ?? this.isCreatingPost,
       isCreatingComment: isCreatingComment ?? this.isCreatingComment,
-      generalError: generalError ?? this.generalError,
+      generalError:
+          clearGeneralError ? null : generalError ?? this.generalError,
     );
   }
 

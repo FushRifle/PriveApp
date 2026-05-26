@@ -133,9 +133,11 @@ class _PostVideoState extends State<PostVideo>
   Future<void> _toggleMute() async {
     final controller = _controller;
 
-    if (controller == null) return;
+    if (controller == null || !_isInitialized) return;
 
     HapticFeedback.selectionClick();
+
+    if (!mounted) return;
 
     setState(() {
       _isMuted = !_isMuted;

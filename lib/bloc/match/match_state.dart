@@ -64,6 +64,7 @@ class MatchState extends Equatable {
     bool? isLoading,
     bool? isLiking,
     String? error,
+    bool clearError = false,
   }) {
     return MatchState(
       status: status ?? this.status,
@@ -71,7 +72,7 @@ class MatchState extends Equatable {
       recommendations: recommendations ?? this.recommendations,
       isLoading: isLoading ?? this.isLoading,
       isLiking: isLiking ?? this.isLiking,
-      error: error ?? this.error,
+      error: clearError ? null : error ?? this.error,
     );
   }
 

@@ -7,11 +7,13 @@ import 'package:clique/bloc/chat/chat_bloc.dart';
 
 class ChatSettingsPage extends StatefulWidget {
   final String userName;
+  final int conversationId;
   final int userId;
 
   const ChatSettingsPage({
     super.key,
     required this.userName,
+    required this.conversationId,
     required this.userId,
   });
 
@@ -34,37 +36,27 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
     WallpaperItem(
         id: 'palms',
         name: 'Palms',
-        asset: 'assets/wallpapers/palms.jpg',
+        asset: 'assets/wallpapers/palms.png',
         color: null),
     WallpaperItem(
         id: 'modern',
         name: 'Modern',
-        asset: 'assets/wallpapers/modern.jpg',
+        asset: 'assets/wallpapers/modern.png',
         color: null),
     WallpaperItem(
         id: 'sunset',
         name: 'Sunset',
-        asset: 'assets/wallpapers/sunset.jpg',
+        asset: 'assets/wallpapers/sunset.png',
         color: null),
     WallpaperItem(
         id: 'sky',
         name: 'Sky',
-        asset: 'assets/wallpapers/sky.jpg',
+        asset: 'assets/wallpapers/sky.png',
         color: null),
     WallpaperItem(
         id: 'galaxy',
         name: 'Galaxy',
-        asset: 'assets/wallpapers/galaxy.jpg',
-        color: null),
-    WallpaperItem(
-        id: 'forest',
-        name: 'Forest',
-        asset: 'assets/wallpapers/forest.jpg',
-        color: null),
-    WallpaperItem(
-        id: 'ocean',
-        name: 'Ocean',
-        asset: 'assets/wallpapers/ocean.jpg',
+        asset: 'assets/wallpapers/galaxy.png',
         color: null),
   ];
 
@@ -83,7 +75,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
   @override
   void initState() {
     super.initState();
-    _conversationId = widget.userId;
+    _conversationId = widget.conversationId;
     if (_conversationId != 0) {
       _loadSettings();
     }
@@ -180,7 +172,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              context.read<ChatBloc>().add(BlockUser(userId: _conversationId));
+              context.read<ChatBloc>().add(BlockUser(userId: widget.userId));
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                     content: Text('User blocked'), backgroundColor: Colors.red),

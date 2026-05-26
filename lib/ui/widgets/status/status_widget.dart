@@ -94,7 +94,7 @@ class StatusWidget extends StatelessWidget {
                       ),
                       child: Center(
                         child: Text(
-                          '$statusCount',
+                          statusCount > 9 ? '9+' : '$statusCount',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 9,

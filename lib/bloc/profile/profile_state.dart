@@ -216,13 +216,17 @@ class ProfileState extends Equatable {
     bool? isSaving,
     bool? isRefreshing,
     DateTime? lastUpdated,
+    bool clearMyProfile = false,
+    bool clearViewedProfile = false,
+    bool clearError = false,
   }) {
     return ProfileState(
-      myProfile: myProfile ?? this.myProfile,
-      viewedProfile: viewedProfile ?? this.viewedProfile,
+      myProfile: clearMyProfile ? null : myProfile ?? this.myProfile,
+      viewedProfile:
+          clearViewedProfile ? null : viewedProfile ?? this.viewedProfile,
       status: status ?? this.status,
       viewedStatus: viewedStatus ?? this.viewedStatus,
-      error: error ?? this.error,
+      error: clearError ? null : error ?? this.error,
       isLoading: isLoading ?? this.isLoading,
       isSaving: isSaving ?? this.isSaving,
       isRefreshing: isRefreshing ?? this.isRefreshing,

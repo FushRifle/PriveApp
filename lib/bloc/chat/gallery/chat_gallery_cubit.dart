@@ -24,13 +24,13 @@ class ChatGalleryCubit extends Cubit<ChatGalleryState> {
         if (msg['messageType'] == 'image' && msg['mediaUrl'] != null) {
           images.add(SharedMedia(
             url: msg['mediaUrl'],
-            createdAt: DateTime.parse(msg['createdAt']),
+            createdAt: _parseDate(msg['createdAt']),
             senderId: msg['senderId'],
           ));
         } else if (msg['messageType'] == 'video' && msg['mediaUrl'] != null) {
           videos.add(SharedMedia(
             url: msg['mediaUrl'],
-            createdAt: DateTime.parse(msg['createdAt']),
+            createdAt: _parseDate(msg['createdAt']),
             senderId: msg['senderId'],
           ));
         } else if (msg['messageType'] == 'document' &&
@@ -39,7 +39,7 @@ class ChatGalleryCubit extends Cubit<ChatGalleryState> {
             url: msg['mediaUrl'],
             name: msg['message'] ?? 'Document',
             size: _getFileSize(msg['mediaUrl']),
-            createdAt: DateTime.parse(msg['createdAt']),
+            createdAt: _parseDate(msg['createdAt']),
             senderId: msg['senderId'],
           ));
         }
@@ -58,6 +58,14 @@ class ChatGalleryCubit extends Cubit<ChatGalleryState> {
   String _getFileSize(String url) {
     // This is a placeholder - in production, you'd get file size from metadata
     return 'Unknown size';
+  }
+
+  DateTime _parseDate(dynamic value) {
+    if (value is DateTime) return value;
+    if (value is String) {
+      return DateTime.tryParse(value) ?? DateTime.now();
+    }
+    return DateTime.now();
   }
 }
 

@@ -104,9 +104,11 @@ class PostDocument extends StatelessWidget {
     final uri = Uri.tryParse(url);
 
     if (uri == null || uri.pathSegments.isEmpty) {
-      return url.split('/').last;
+      final fallback = url.split('/').last.trim();
+      return fallback.isEmpty ? 'Document' : fallback;
     }
 
-    return uri.pathSegments.last;
+    final fileName = Uri.decodeComponent(uri.pathSegments.last).trim();
+    return fileName.isEmpty ? 'Document' : fileName;
   }
 }

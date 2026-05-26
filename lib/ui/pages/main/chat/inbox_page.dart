@@ -15,7 +15,7 @@ class InboxPage extends StatefulWidget {
 }
 
 class _InboxPageState extends State<InboxPage> {
-  final RefreshIndicatorKey = GlobalKey<RefreshIndicatorState>();
+  final _refreshIndicatorKey = GlobalKey<RefreshIndicatorState>();
 
   @override
   void initState() {
@@ -50,7 +50,7 @@ class _InboxPageState extends State<InboxPage> {
             const SizedBox(height: 8),
             Expanded(
               child: RefreshIndicator(
-                key: RefreshIndicatorKey,
+                key: _refreshIndicatorKey,
                 color: AppColors.primary,
                 onRefresh: _refreshConversations,
                 child: BlocBuilder<ChatBloc, ChatState>(

@@ -82,6 +82,45 @@ class ConversationModel {
       'muteUntil': muteUntil?.toIso8601String(),
     };
   }
+
+  ConversationModel copyWith({
+    int? id,
+    int? userId,
+    String? name,
+    String? username,
+    String? avatar,
+    int? age,
+    bool? verified,
+    String? lastMessage,
+    String? lastMessageType,
+    String? timestamp,
+    int? unreadCount,
+    bool? isOnline,
+    bool? isTyping,
+    bool? isPinned,
+    bool? isMuted,
+    DateTime? muteUntil,
+    bool clearMuteUntil = false,
+  }) {
+    return ConversationModel(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      name: name ?? this.name,
+      username: username ?? this.username,
+      avatar: avatar ?? this.avatar,
+      age: age ?? this.age,
+      verified: verified ?? this.verified,
+      lastMessage: lastMessage ?? this.lastMessage,
+      lastMessageType: lastMessageType ?? this.lastMessageType,
+      timestamp: timestamp ?? this.timestamp,
+      unreadCount: unreadCount ?? this.unreadCount,
+      isOnline: isOnline ?? this.isOnline,
+      isTyping: isTyping ?? this.isTyping,
+      isPinned: isPinned ?? this.isPinned,
+      isMuted: isMuted ?? this.isMuted,
+      muteUntil: clearMuteUntil ? null : muteUntil ?? this.muteUntil,
+    );
+  }
 }
 
 class MessageModel {
@@ -150,6 +189,38 @@ class MessageModel {
       'createdAt': createdAt.toIso8601String(),
     };
   }
+
+  MessageModel copyWith({
+    int? id,
+    int? conversationId,
+    int? senderId,
+    int? receiverId,
+    String? message,
+    String? messageType,
+    String? mediaUrl,
+    int? replyToId,
+    String? replyToMessage,
+    String? replyToSender,
+    bool? isRead,
+    bool? isOwn,
+    DateTime? createdAt,
+  }) {
+    return MessageModel(
+      id: id ?? this.id,
+      conversationId: conversationId ?? this.conversationId,
+      senderId: senderId ?? this.senderId,
+      receiverId: receiverId ?? this.receiverId,
+      message: message ?? this.message,
+      messageType: messageType ?? this.messageType,
+      mediaUrl: mediaUrl ?? this.mediaUrl,
+      replyToId: replyToId ?? this.replyToId,
+      replyToMessage: replyToMessage ?? this.replyToMessage,
+      replyToSender: replyToSender ?? this.replyToSender,
+      isRead: isRead ?? this.isRead,
+      isOwn: isOwn ?? this.isOwn,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 }
 
 class ConversationInfoModel {
@@ -214,6 +285,27 @@ class ChatSettingsModel {
       wallpaper: json['wallpaper'] ?? 'default',
       chatColor: json['chatColor'] ?? 'default',
       notificationSound: json['notificationSound'] ?? 'default',
+    );
+  }
+
+  ChatSettingsModel copyWith({
+    int? id,
+    bool? isPinned,
+    bool? isMuted,
+    DateTime? muteUntil,
+    String? wallpaper,
+    String? chatColor,
+    String? notificationSound,
+    bool clearMuteUntil = false,
+  }) {
+    return ChatSettingsModel(
+      id: id ?? this.id,
+      isPinned: isPinned ?? this.isPinned,
+      isMuted: isMuted ?? this.isMuted,
+      muteUntil: clearMuteUntil ? null : muteUntil ?? this.muteUntil,
+      wallpaper: wallpaper ?? this.wallpaper,
+      chatColor: chatColor ?? this.chatColor,
+      notificationSound: notificationSound ?? this.notificationSound,
     );
   }
 }
@@ -300,6 +392,7 @@ class ChatState extends Equatable {
     int? currentPage,
     bool? hasMoreMessages,
     String? error,
+    bool clearError = false,
   }) {
     return ChatState(
       conversationsStatus: conversationsStatus ?? this.conversationsStatus,
@@ -313,7 +406,7 @@ class ChatState extends Equatable {
       userPreferences: userPreferences ?? this.userPreferences,
       currentPage: currentPage ?? this.currentPage,
       hasMoreMessages: hasMoreMessages ?? this.hasMoreMessages,
-      error: error ?? this.error,
+      error: clearError ? null : error ?? this.error,
     );
   }
 

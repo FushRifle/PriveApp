@@ -54,8 +54,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     final now = DateTime.now();
 
     if (_lastFeedRequest != null &&
-        now.difference(_lastFeedRequest!) <
-            const Duration(seconds: 2) &&
+        now.difference(_lastFeedRequest!) < const Duration(seconds: 2) &&
         !event.refresh) {
       return;
     }
@@ -69,7 +68,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
         emit(
           state.copyWith(
             postsStatus: FeedStatus.loading,
-            postsError: null,
+            clearPostsError: true,
           ),
         );
       }
@@ -78,8 +77,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
         page: event.page,
       );
 
-      final existingIds =
-          state.posts.map((e) => e.id).toSet();
+      final existingIds = state.posts.map((e) => e.id).toSet();
 
       final filteredPosts = response.posts.where(
         (post) {
@@ -91,13 +89,12 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
         },
       ).toList();
 
-      final updatedPosts =
-          event.page == 1 || event.refresh
-              ? filteredPosts
-              : [
-                  ...state.posts,
-                  ...filteredPosts,
-                ];
+      final updatedPosts = event.page == 1 || event.refresh
+          ? filteredPosts
+          : [
+              ...state.posts,
+              ...filteredPosts,
+            ];
 
       emit(
         state.copyWith(
@@ -105,7 +102,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
           posts: updatedPosts,
           hasMorePosts: response.hasMore,
           currentPage: event.page,
-          postsError: null,
+          clearPostsError: true,
         ),
       );
     } catch (e) {
@@ -162,8 +159,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
         page: nextPage,
       );
 
-      final existingIds =
-          state.posts.map((e) => e.id).toSet();
+      final existingIds = state.posts.map((e) => e.id).toSet();
 
       final filteredPosts = response.posts
           .where(
@@ -180,7 +176,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
           ],
           currentPage: nextPage,
           hasMorePosts: response.hasMore,
-          postsError: null,
+          clearPostsError: true,
         ),
       );
     } catch (e) {
@@ -204,7 +200,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     emit(
       state.copyWith(
         isCreatingPost: true,
-        generalError: null,
+        clearGeneralError: true,
       ),
     );
 
@@ -241,8 +237,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     final originalPosts = state.posts;
 
     final updatedPosts = state.posts.map((post) {
-      if (post.id == event.postId &&
-          !post.isLiked) {
+      if (post.id == event.postId && !post.isLiked) {
         return post.copyWith(
           isLiked: true,
           likes: post.likes + 1,
@@ -279,8 +274,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     final originalPosts = state.posts;
 
     final updatedPosts = state.posts.map((post) {
-      if (post.id == event.postId &&
-          post.isLiked) {
+      if (post.id == event.postId && post.isLiked) {
         return post.copyWith(
           isLiked: false,
           likes: post.likes - 1,
@@ -321,75 +315,61 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     _isFetchingComments = true;
 
     try {
-      final updatedStatus =
-          Map<int, CommentsStatus>.from(
+      final updatedStatus = Map<int, CommentsStatus>.from(
         state.commentsStatus,
       );
 
       updatedStatus[event.postId] =
-          event.page == 1
-              ? CommentsStatus.loading
-              : CommentsStatus.loadingMore;
+          event.page == 1 ? CommentsStatus.loading : CommentsStatus.loadingMore;
 
       emit(
         state.copyWith(
           commentsStatus: updatedStatus,
-          commentsError: null,
+          clearCommentsError: true,
         ),
       );
 
-      final response =
-          await _feedService.getComments(
+      final response = await _feedService.getComments(
         event.postId,
         page: event.page,
       );
 
-      final existingComments =
-          state.comments[event.postId] ?? [];
+      final existingComments = state.comments[event.postId] ?? [];
 
-      final existingIds =
-          existingComments.map((e) => e.id).toSet();
+      final existingIds = existingComments.map((e) => e.id).toSet();
 
       final filteredComments = response.comments
           .where(
-            (comment) =>
-                !existingIds.contains(
+            (comment) => !existingIds.contains(
               comment.id,
             ),
           )
           .toList();
 
-      final updatedComments =
-          Map<int, List<Comment>>.from(
+      final updatedComments = Map<int, List<Comment>>.from(
         state.comments,
       );
 
-      updatedComments[event.postId] =
-          event.page == 1
-              ? response.comments
-              : [
-                  ...existingComments,
-                  ...filteredComments,
-                ];
+      updatedComments[event.postId] = event.page == 1
+          ? response.comments
+          : [
+              ...existingComments,
+              ...filteredComments,
+            ];
 
-      final updatedHasMore =
-          Map<int, bool>.from(
+      final updatedHasMore = Map<int, bool>.from(
         state.hasMoreComments,
       );
 
-      updatedHasMore[event.postId] =
-          response.hasMore;
+      updatedHasMore[event.postId] = response.hasMore;
 
-      final updatedPages =
-          Map<int, int>.from(
+      final updatedPages = Map<int, int>.from(
         state.commentsPage,
       );
 
-      updatedPages[event.postId] =
-          event.page;
+      updatedPages[event.postId] = event.page;
 
-      updatedStatus[event.postId] =
-          CommentsStatus.loaded;
+      updatedStatus[event.postId] = CommentsStatus.loaded;
 
       emit(
         state.copyWith(
@@ -397,17 +377,15 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
           commentsStatus: updatedStatus,
           hasMoreComments: updatedHasMore,
           commentsPage: updatedPages,
-          commentsError: null,
+          clearCommentsError: true,
         ),
       );
     } catch (e) {
-      final updatedStatus =
-          Map<int, CommentsStatus>.from(
+      final updatedStatus = Map<int, CommentsStatus>.from(
         state.commentsStatus,
       );
 
-      updatedStatus[event.postId] =
-          CommentsStatus.error;
+      updatedStatus[event.postId] = CommentsStatus.error;
 
       emit(
         state.copyWith(
@@ -424,14 +402,11 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     LoadMoreComments event,
     Emitter<FeedState> emit,
   ) async {
-    final hasMore =
-        state.hasMoreComments[event.postId] ??
-            false;
+    final hasMore = state.hasMoreComments[event.postId] ?? false;
 
     if (!hasMore) return;
 
-    final currentPage =
-        state.commentsPage[event.postId] ?? 1;
+    final currentPage = state.commentsPage[event.postId] ?? 1;
 
     await _onGetPostComments(
       GetPostComments(
@@ -451,22 +426,19 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     emit(
       state.copyWith(
         isCreatingComment: true,
-        generalError: null,
+        clearGeneralError: true,
       ),
     );
 
     try {
-      final comment =
-          await _feedService.addComment(
+      final comment = await _feedService.addComment(
         postId: event.postId,
         content: event.content,
       );
 
-      final existingComments =
-          state.comments[event.postId] ?? [];
+      final existingComments = state.comments[event.postId] ?? [];
 
-      final updatedComments =
-          Map<int, List<Comment>>.from(
+      final updatedComments = Map<int, List<Comment>>.from(
         state.comments,
       );
 
@@ -505,43 +477,37 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
       emit(
         state.copyWith(
           mediaStatus:
-              event.page == 1
-                  ? MediaStatus.loading
-                  : MediaStatus.loadingMore,
-          mediaError: null,
+              event.page == 1 ? MediaStatus.loading : MediaStatus.loadingMore,
+          clearMediaError: true,
         ),
       );
 
-      final response =
-          await _feedService.getUserMedia(
+      final response = await _feedService.getUserMedia(
         userId: event.userId,
         page: event.page,
         type: event.type,
       );
 
-      final existingIds =
-          state.media.map((e) => e.id).toSet();
+      final existingIds = state.media.map((e) => e.id).toSet();
 
       final filteredMedia = response.media
           .where(
-            (media) =>
-                !existingIds.contains(media.id),
+            (media) => !existingIds.contains(media.id),
           )
           .toList();
 
       emit(
         state.copyWith(
           mediaStatus: MediaStatus.loaded,
-          media:
-              event.page == 1
-                  ? response.media
-                  : [
-                      ...state.media,
-                      ...filteredMedia,
-                    ],
+          media: event.page == 1
+              ? response.media
+              : [
+                  ...state.media,
+                  ...filteredMedia,
+                ],
           hasMoreMedia: response.hasMore,
           mediaPage: event.page,
-          mediaError: null,
+          clearMediaError: true,
         ),
       );
     } catch (e) {
@@ -578,10 +544,10 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
   ) {
     emit(
       state.copyWith(
-        postsError: null,
-        commentsError: null,
-        mediaError: null,
-        generalError: null,
+        clearPostsError: true,
+        clearCommentsError: true,
+        clearMediaError: true,
+        clearGeneralError: true,
       ),
     );
   }
@@ -601,12 +567,10 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
   ) async {
     final originalPosts = state.posts;
 
-    final updatedPosts =
-        List<FeedPost>.from(state.posts)
-          ..removeWhere(
-            (post) =>
-                post.id == event.postId,
-          );
+    final updatedPosts = List<FeedPost>.from(state.posts)
+      ..removeWhere(
+        (post) => post.id == event.postId,
+      );
 
     emit(
       state.copyWith(

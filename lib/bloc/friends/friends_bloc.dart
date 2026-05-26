@@ -7,7 +7,6 @@ part 'friends_state.dart';
 
 class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
   final FriendsService _friendsService = FriendsService();
-  static const int _pageSize = 20;
 
   FriendsBloc() : super(const FriendsState()) {
     on<LoadFollowers>(_onLoadFollowers);
@@ -35,9 +34,11 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
     Emitter<FriendsState> emit,
   ) async {
     emit(state.copyWith(
-      followersStatus: FollowersStatus.loading,
+      followersStatus: event.page == 1
+          ? FollowersStatus.loading
+          : FollowersStatus.loadingMore,
       followers: event.page == 1 ? [] : state.followers,
-      error: null,
+      clearError: true,
     ));
 
     try {
@@ -46,9 +47,9 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
         pageSize: event.pageSize,
       );
 
-      final newFollowers = event.page == 1
+      final newFollowers = _dedupeUsers(event.page == 1
           ? response.data
-          : [...state.followers, ...response.data];
+          : [...state.followers, ...response.data]);
 
       emit(state.copyWith(
         followersStatus: FollowersStatus.success,
@@ -56,7 +57,7 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
         followersPage: event.page,
         followersHasMore: response.data.length >= event.pageSize,
         followersTotal: response.total,
-        error: null,
+        clearError: true,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -71,9 +72,11 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
     Emitter<FriendsState> emit,
   ) async {
     emit(state.copyWith(
-      followingStatus: FollowingStatus.loading,
+      followingStatus: event.page == 1
+          ? FollowingStatus.loading
+          : FollowingStatus.loadingMore,
       following: event.page == 1 ? [] : state.following,
-      error: null,
+      clearError: true,
     ));
 
     try {
@@ -82,9 +85,9 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
         pageSize: event.pageSize,
       );
 
-      final newFollowing = event.page == 1
+      final newFollowing = _dedupeUsers(event.page == 1
           ? response.data
-          : [...state.following, ...response.data];
+          : [...state.following, ...response.data]);
 
       emit(state.copyWith(
         followingStatus: FollowingStatus.success,
@@ -92,7 +95,7 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
         followingPage: event.page,
         followingHasMore: response.data.length >= event.pageSize,
         followingTotal: response.total,
-        error: null,
+        clearError: true,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -109,7 +112,7 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
     emit(state.copyWith(
       friendsStatus: FriendsStatus.loading,
       friends: event.page == 1 ? [] : state.friends,
-      error: null,
+      clearError: true,
     ));
 
     try {
@@ -118,9 +121,9 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
         pageSize: event.pageSize,
       );
 
-      final newFriends = event.page == 1
+      final newFriends = _dedupeUsers(event.page == 1
           ? response.data
-          : [...state.friends, ...response.data];
+          : [...state.friends, ...response.data]);
 
       emit(state.copyWith(
         friendsStatus: FriendsStatus.success,
@@ -128,7 +131,7 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
         friendsPage: event.page,
         friendsHasMore: response.data.length >= event.pageSize,
         friendsTotal: response.total,
-        error: null,
+        clearError: true,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -215,6 +218,7 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
     emit(state.copyWith(
       followers: updatedFollowers,
       following: updatedFollowing,
+      clearError: true,
     ));
 
     try {
@@ -270,6 +274,7 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
     emit(state.copyWith(
       followers: updatedFollowers,
       following: updatedFollowing,
+      clearError: true,
     ));
 
     try {
@@ -288,7 +293,7 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
   ) async {
     try {
       final stats = await _friendsService.getFollowStats();
-      emit(state.copyWith(stats: stats));
+      emit(state.copyWith(stats: stats, clearError: true));
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }
@@ -298,7 +303,7 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
     ClearFriendsError event,
     Emitter<FriendsState> emit,
   ) {
-    emit(state.copyWith(error: null));
+    emit(state.copyWith(clearError: true));
   }
 
   void _onResetFriendsState(
@@ -306,5 +311,18 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
     Emitter<FriendsState> emit,
   ) {
     emit(const FriendsState());
+  }
+
+  List<FriendUser> _dedupeUsers(List<FriendUser> users) {
+    final seen = <int>{};
+    final deduped = <FriendUser>[];
+
+    for (final user in users) {
+      if (seen.add(user.id)) {
+        deduped.add(user);
+      }
+    }
+
+    return deduped;
   }
 }

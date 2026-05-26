@@ -35,13 +35,13 @@ class _DocumentViewerState extends State<DocumentViewer> {
     final url = widget.documentUrl;
     if (url.contains('.')) {
       final extension = url.split('.').last.split('?').first.toLowerCase();
-      setState(() {
-        _fileExtension = extension;
-      });
+      _fileExtension = extension;
     }
   }
 
   Future<void> _openDocument() async {
+    if (_isLoading) return;
+
     setState(() {
       _isLoading = true;
       _error = null;
@@ -57,18 +57,22 @@ class _DocumentViewerState extends State<DocumentViewer> {
 
       final result = await OpenFile.open(filePath);
       if (result.type != ResultType.done) {
+        if (!mounted) return;
         setState(() {
           _error = 'Failed to open document';
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = 'Error downloading document: $e';
       });
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 

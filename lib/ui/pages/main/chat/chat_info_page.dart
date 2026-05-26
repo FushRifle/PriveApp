@@ -11,12 +11,14 @@ import 'package:clique/ui/pages/main/chat/chat_settings_page.dart';
 class ChatInfoPage extends StatefulWidget {
   final String userName;
   final String userAvatar;
+  final int conversationId;
   final int userId;
 
   const ChatInfoPage({
     super.key,
     required this.userName,
     required this.userAvatar,
+    required this.conversationId,
     required this.userId,
   });
 
@@ -31,7 +33,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
   @override
   void initState() {
     super.initState();
-    _conversationId = (widget.userId);
+    _conversationId = widget.conversationId;
     if (_conversationId != 0) {
       context.read<ChatGalleryCubit>().loadSharedMedia(_conversationId);
       _loadChatSettings();
@@ -65,7 +67,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
   }
 
   void _blockUser() async {
-    context.read<ChatBloc>().add(BlockUser(userId: _conversationId));
+    context.read<ChatBloc>().add(BlockUser(userId: widget.userId));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
           content: Text('User blocked'), backgroundColor: Colors.red),
@@ -113,6 +115,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                     value: context.read<ChatBloc>(),
                     child: ChatSettingsPage(
                       userName: widget.userName,
+                      conversationId: widget.conversationId,
                       userId: widget.userId,
                     ),
                   ),

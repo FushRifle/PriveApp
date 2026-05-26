@@ -50,11 +50,13 @@ class _ChatInputBarState extends State<ChatInputBar> {
   void initState() {
     super.initState();
     _controller.addListener(_updateTextStatus);
+    _focusNode.addListener(_handleFocusChange);
   }
 
   @override
   void dispose() {
     _controller.removeListener(_updateTextStatus);
+    _focusNode.removeListener(_handleFocusChange);
     _controller.dispose();
     _focusNode.dispose();
     _typingTimer?.cancel();
@@ -64,9 +66,21 @@ class _ChatInputBarState extends State<ChatInputBar> {
   void _updateTextStatus() {
     final hasText = _controller.text.trim().isNotEmpty;
     if (_hasText != hasText) {
+      if (!mounted) return;
       setState(() {
         _hasText = hasText;
       });
+    }
+  }
+
+  void _handleFocusChange() {
+    if (mounted) {
+      setState(() {});
+    }
+
+    if (!_focusNode.hasFocus) {
+      _typingTimer?.cancel();
+      widget.onTyping(false);
     }
   }
 
@@ -104,6 +118,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) => SafeArea(
+        top: false,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -178,6 +193,8 @@ class _ChatInputBarState extends State<ChatInputBar> {
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -217,12 +234,14 @@ class _ChatInputBarState extends State<ChatInputBar> {
                     Icon(Icons.reply, size: 12, color: widget.sendButtonColor),
                     const SizedBox(width: 6),
                     Text(
-                      'Replying to ${isReplyingToSelf ? 'yourself' : ''}',
+                      isReplyingToSelf ? 'Replying to yourself' : 'Replying',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: widget.sendButtonColor,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -250,147 +269,161 @@ class _ChatInputBarState extends State<ChatInputBar> {
   @override
   Widget build(BuildContext context) {
     final isActive = _hasText || widget.isRecording;
+    final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _buildReplyPreview(),
-        Container(
-          color: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: SafeArea(
-            top: false,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Attachment Button
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: _showAttachmentMenu,
-                    borderRadius: BorderRadius.circular(24),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      child: Icon(
-                        Icons.add_circle_outline,
-                        color: AppColors.primary,
-                        size: 26,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                // Mic Button
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: widget.isRecording
-                        ? widget.onStopRecording
-                        : widget.onStartRecording,
-                    borderRadius: BorderRadius.circular(24),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.all(8),
-                      child: Icon(
-                        widget.isRecording ? Icons.stop : Icons.mic,
-                        color:
-                            widget.isRecording ? Colors.red : AppColors.primary,
-                        size: 26,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Text Input
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F1F1),
-                      borderRadius: BorderRadius.circular(28),
-                      boxShadow: _focusNode.hasFocus
-                          ? [
-                              BoxShadow(
-                                color: widget.sendButtonColor.withOpacity(0.1),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ]
-                          : null,
-                    ),
-                    child: TextField(
-                      controller: _controller,
-                      focusNode: _focusNode,
-                      style: AppTheme.blackTextStyle.copyWith(fontSize: 15),
-                      textCapitalization: TextCapitalization.sentences,
-                      onChanged: _handleTyping,
-                      decoration: InputDecoration(
-                        hintText:
-                            widget.isRecording ? 'Recording...' : 'Message',
-                        hintStyle:
-                            AppTheme.greyTextStyle.copyWith(fontSize: 14),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                      ),
-                      onSubmitted: (_) => _handleSend(),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Send Button - Modern sophisticated design
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeInOut,
-                  child: Material(
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      padding: EdgeInsets.only(bottom: keyboardHeight),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildReplyPreview(),
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: SafeArea(
+              top: false,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Attachment Button
+                  Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: isActive ? _handleSend : null,
-                      borderRadius: BorderRadius.circular(28),
+                      onTap: _showAttachmentMenu,
+                      borderRadius: BorderRadius.circular(24),
                       child: Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          gradient: isActive
-                              ? LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    widget.sendButtonColor,
-                                    widget.sendButtonColor.withOpacity(0.8),
-                                  ],
-                                )
-                              : null,
-                          color: isActive ? null : Colors.grey.shade200,
-                          shape: BoxShape.circle,
-                          boxShadow: isActive
-                              ? [
-                                  BoxShadow(
-                                    color:
-                                        widget.sendButtonColor.withOpacity(0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ]
-                              : null,
-                        ),
+                        padding: const EdgeInsets.all(8),
                         child: Icon(
-                          widget.isRecording
-                              ? Icons.send
-                              : Icons.arrow_forward_rounded,
-                          color: isActive ? Colors.white : Colors.grey.shade400,
-                          size: 22,
+                          Icons.add_circle_outline,
+                          color: AppColors.primary,
+                          size: 26,
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 4),
+                  // Mic Button
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: widget.isRecording
+                          ? widget.onStopRecording
+                          : widget.onStartRecording,
+                      borderRadius: BorderRadius.circular(24),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.all(8),
+                        child: Icon(
+                          widget.isRecording ? Icons.stop : Icons.mic,
+                          color: widget.isRecording
+                              ? Colors.red
+                              : AppColors.primary,
+                          size: 26,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Text Input
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F1F1),
+                        borderRadius: BorderRadius.circular(28),
+                        boxShadow: _focusNode.hasFocus
+                            ? [
+                                BoxShadow(
+                                  color:
+                                      widget.sendButtonColor.withOpacity(0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: TextField(
+                        controller: _controller,
+                        focusNode: _focusNode,
+                        style: AppTheme.blackTextStyle.copyWith(fontSize: 15),
+                        textCapitalization: TextCapitalization.sentences,
+                        keyboardType: TextInputType.multiline,
+                        textInputAction: TextInputAction.newline,
+                        minLines: 1,
+                        maxLines: 5,
+                        onChanged: _handleTyping,
+                        enabled: !widget.isRecording,
+                        decoration: InputDecoration(
+                          hintText:
+                              widget.isRecording ? 'Recording...' : 'Message',
+                          hintStyle:
+                              AppTheme.greyTextStyle.copyWith(fontSize: 14),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                        ),
+                        onSubmitted: (_) => _handleSend(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Send Button - Modern sophisticated design
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeInOut,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: isActive ? _handleSend : null,
+                        borderRadius: BorderRadius.circular(28),
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            gradient: isActive
+                                ? LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      widget.sendButtonColor,
+                                      widget.sendButtonColor.withOpacity(0.8),
+                                    ],
+                                  )
+                                : null,
+                            color: isActive ? null : Colors.grey.shade200,
+                            shape: BoxShape.circle,
+                            boxShadow: isActive
+                                ? [
+                                    BoxShadow(
+                                      color: widget.sendButtonColor
+                                          .withOpacity(0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: Icon(
+                            widget.isRecording
+                                ? Icons.send
+                                : Icons.arrow_forward_rounded,
+                            color:
+                                isActive ? Colors.white : Colors.grey.shade400,
+                            size: 22,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

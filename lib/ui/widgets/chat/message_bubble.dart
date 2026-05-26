@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
+import 'package:clique/ui/widgets/chat/audio_message_bubble.dart';
+import 'package:clique/ui/widgets/ui/image_viewer.dart';
+import 'package:clique/ui/widgets/ui/video_viewer.dart';
 
 class MessageBubble extends StatelessWidget {
   final MessageModel message;
@@ -36,9 +40,12 @@ class MessageBubble extends StatelessWidget {
         ),
         alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
         padding: EdgeInsets.only(right: isMe ? 20 : 0, left: !isMe ? 20 : 0),
-        child: Icon(Icons.reply, color: AppColors.primary, size: 24),
+        child: const Icon(Icons.reply, color: AppColors.primary, size: 24),
       ),
-      onDismissed: (direction) => onReply?.call(),
+      confirmDismiss: (_) async {
+        onReply?.call();
+        return false;
+      },
       child: Padding(
         padding: EdgeInsets.only(
             bottom: 8, top: 5, left: isMe ? 0 : 2, right: isMe ? 2 : 0),
@@ -52,10 +59,10 @@ class MessageBubble extends StatelessWidget {
                 padding: const EdgeInsets.only(right: 10),
                 child: CircleAvatar(
                   radius: 18,
-                  backgroundImage: userAvatar.isNotEmpty
+                  backgroundImage: userAvatar.startsWith('http')
                       ? CachedNetworkImageProvider(userAvatar)
                       : null,
-                  child: userAvatar.isEmpty
+                  child: !userAvatar.startsWith('http')
                       ? const Icon(Icons.person, size: 18)
                       : null,
                 ),
@@ -206,19 +213,13 @@ class MessageBubble extends StatelessWidget {
       );
     }
 
-    if (message.messageType == 'audio' && message.mediaUrl != null) {
-      return Row(
-        children: [
-          Icon(Icons.audiotrack,
-              color: isMe ? Colors.white : AppColors.primary),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Audio message',
-              style: TextStyle(color: isMe ? Colors.white : Colors.black),
-            ),
-          ),
-        ],
+    if (message.messageType == 'audio' &&
+        message.mediaUrl != null &&
+        message.mediaUrl!.isNotEmpty) {
+      return AudioMessageBubble(
+        audioUrl: message.mediaUrl!,
+        isMe: isMe,
+        chatColor: chatColor,
       );
     }
 
@@ -440,6 +441,7 @@ class MessageBubble extends StatelessWidget {
   }
 
   void _copyToClipboard(BuildContext context) {
+    Clipboard.setData(ClipboardData(text: message.message));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
           content: Text('Copied to clipboard'), backgroundColor: Colors.green),
@@ -450,38 +452,23 @@ class MessageBubble extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => Scaffold(
-          backgroundColor: Colors.black,
-          body: Stack(
-            children: [
-              Center(
-                child: InteractiveViewer(
-                  child: CachedNetworkImage(
-                    imageUrl: url,
-                    placeholder: (_, __) => const CircularProgressIndicator(),
-                    errorWidget: (_, __, ___) => const Icon(Icons.error_outline,
-                        color: Colors.white, size: 50),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 40,
-                right: 16,
-                child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ),
-            ],
-          ),
+        builder: (context) => ImageViewer(
+          imageUrl: url,
+          caption: message.messageType == 'image' ? message.message : null,
         ),
       ),
     );
   }
 
   void _showVideoPlayer(BuildContext context, String url) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Video player coming soon')),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => VideoViewer(
+          videoUrl: url,
+          caption: message.messageType == 'video' ? message.message : null,
+        ),
+      ),
     );
   }
 

@@ -52,7 +52,7 @@ class DiscoverHeader extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              '$remainingCount left',
+              '${remainingCount < 0 ? 0 : remainingCount} left',
               style: TextStyle(
                 color: AppColors.primary,
                 fontWeight: FontWeight.w600,

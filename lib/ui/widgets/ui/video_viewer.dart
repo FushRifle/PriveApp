@@ -23,6 +23,7 @@ class _VideoViewerState extends State<VideoViewer> {
   late VideoPlayerController _controller;
   bool _isInitialized = false;
   bool _isPlaying = true;
+  bool _hasError = false;
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
 
@@ -38,9 +39,10 @@ class _VideoViewerState extends State<VideoViewer> {
     );
 
     _controller.addListener(() {
-      if (mounted) {
+      if (mounted && _controller.value.isInitialized) {
         setState(() {
           _position = _controller.value.position;
+          _isPlaying = _controller.value.isPlaying;
         });
       }
     });
@@ -53,13 +55,13 @@ class _VideoViewerState extends State<VideoViewer> {
           _duration = _controller.value.duration;
         });
         _controller.play();
-        _isPlaying = true;
       }
     }).catchError((error) {
       debugPrint('Error initializing video: $error');
       if (mounted) {
         setState(() {
           _isInitialized = false;
+          _hasError = true;
         });
       }
     });
@@ -72,14 +74,13 @@ class _VideoViewerState extends State<VideoViewer> {
   }
 
   void _togglePlayPause() {
+    if (!_isInitialized) return;
+
     if (_isPlaying) {
       _controller.pause();
     } else {
       _controller.play();
     }
-    setState(() {
-      _isPlaying = !_isPlaying;
-    });
   }
 
   String _formatDuration(Duration duration) {
@@ -107,28 +108,37 @@ class _VideoViewerState extends State<VideoViewer> {
                       aspectRatio: _controller.value.aspectRatio,
                       child: VideoPlayer(_controller),
                     )
-                  : widget.thumbnailUrl != null
-                      ? CachedNetworkImage(
-                          imageUrl: widget.thumbnailUrl!,
-                          fit: BoxFit.contain,
-                          placeholder: (context, url) => const Center(
-                            child: CircularProgressIndicator(
-                              color: AppColors.primary,
-                            ),
-                          ),
-                          errorWidget: (context, url, error) => const Center(
-                            child: Icon(
-                              Icons.video_library,
-                              color: Colors.white54,
-                              size: 64,
-                            ),
+                  : _hasError
+                      ? const Center(
+                          child: Icon(
+                            Icons.error_outline,
+                            color: Colors.white54,
+                            size: 64,
                           ),
                         )
-                      : const Center(
-                          child: CircularProgressIndicator(
-                            color: AppColors.primary,
-                          ),
-                        ),
+                      : widget.thumbnailUrl != null
+                          ? CachedNetworkImage(
+                              imageUrl: widget.thumbnailUrl!,
+                              fit: BoxFit.contain,
+                              placeholder: (context, url) => const Center(
+                                child: CircularProgressIndicator(
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                              errorWidget: (context, url, error) =>
+                                  const Center(
+                                child: Icon(
+                                  Icons.video_library,
+                                  color: Colors.white54,
+                                  size: 64,
+                                ),
+                              ),
+                            )
+                          : const Center(
+                              child: CircularProgressIndicator(
+                                color: AppColors.primary,
+                              ),
+                            ),
             ),
 
             // Close Button
@@ -212,7 +222,9 @@ class _VideoViewerState extends State<VideoViewer> {
                             child: Slider(
                               value: _position.inSeconds.toDouble(),
                               min: 0,
-                              max: _duration.inSeconds.toDouble(),
+                              max: _duration.inSeconds > 0
+                                  ? _duration.inSeconds.toDouble()
+                                  : 1.0,
                               activeColor: AppColors.primary,
                               inactiveColor: Colors.white30,
                               onChanged: (value) {

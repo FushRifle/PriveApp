@@ -42,7 +42,9 @@ class _StoryViewerState extends State<StoryViewer>
   void initState() {
     super.initState();
 
-    _currentIndex = widget.initialIndex.clamp(0, widget.stories.length - 1);
+    _currentIndex = widget.stories.isEmpty
+        ? 0
+        : widget.initialIndex.clamp(0, widget.stories.length - 1);
 
     _replyController = TextEditingController();
     _pageController = PageController(initialPage: _currentIndex);
@@ -53,6 +55,7 @@ class _StoryViewerState extends State<StoryViewer>
     )..addStatusListener(_onProgressStatus);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || widget.stories.isEmpty) return;
       _markSeen(_currentStory);
       _startProgress();
     });
@@ -146,6 +149,8 @@ class _StoryViewerState extends State<StoryViewer>
   }
 
   void _onPageChanged(int index) {
+    if (!mounted) return;
+
     setState(() {
       _currentIndex = index;
       _isPaused = false;
@@ -156,6 +161,8 @@ class _StoryViewerState extends State<StoryViewer>
   }
 
   void _markSeen(Story story) {
+    if (!mounted) return;
+
     context.read<StoriesBloc>().add(
           MarkStorySeen(storyId: story.id),
         );
@@ -181,6 +188,8 @@ class _StoryViewerState extends State<StoryViewer>
     );
 
     FocusScope.of(context).unfocus();
+
+    if (!mounted) return;
 
     setState(() {
       _isReplying = false;
@@ -282,6 +291,7 @@ class _StoryViewerState extends State<StoryViewer>
                   controller: _replyController,
                   isReplying: _isReplying,
                   onFocusChanged: (focused) {
+                    if (!mounted) return;
                     setState(() {
                       _isReplying = focused;
                       _isPaused = focused;
@@ -602,6 +612,18 @@ class _StoryVideoState extends State<_StoryVideo> {
     }
 
     final size = _controller!.value.size;
+
+    if (size.width <= 0 || size.height <= 0) {
+      return const ColoredBox(
+        color: Colors.black,
+        child: Center(
+          child: CircularProgressIndicator(
+            color: Colors.white,
+            strokeWidth: 2,
+          ),
+        ),
+      );
+    }
 
     return FittedBox(
       fit: BoxFit.cover,

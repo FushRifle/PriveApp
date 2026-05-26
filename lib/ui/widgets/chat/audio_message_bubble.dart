@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -19,6 +21,9 @@ class AudioMessageBubble extends StatefulWidget {
 
 class _AudioMessageBubbleState extends State<AudioMessageBubble> {
   late AudioPlayer _player;
+  StreamSubscription<PlayerState>? _playerStateSubscription;
+  StreamSubscription<Duration>? _positionSubscription;
+  StreamSubscription<Duration?>? _durationSubscription;
   bool _isPlaying = false;
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
@@ -34,7 +39,7 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
     _player = AudioPlayer();
 
     // Set up listeners
-    _player.playerStateStream.listen((state) {
+    _playerStateSubscription = _player.playerStateStream.listen((state) {
       if (mounted) {
         setState(() {
           _isPlaying = state.playing;
@@ -42,7 +47,7 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
       }
     });
 
-    _player.positionStream.listen((position) {
+    _positionSubscription = _player.positionStream.listen((position) {
       if (mounted) {
         setState(() {
           _position = position;
@@ -50,7 +55,7 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
       }
     });
 
-    _player.durationStream.listen((duration) {
+    _durationSubscription = _player.durationStream.listen((duration) {
       if (mounted && duration != null) {
         setState(() {
           _duration = duration;
@@ -62,7 +67,7 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
     try {
       await _player.setAudioSource(AudioSource.uri(Uri.parse(widget.audioUrl)));
     } catch (e) {
-      print('Error loading audio: $e');
+      debugPrint('Error loading audio: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -73,11 +78,14 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
 
   @override
   void dispose() {
+    _playerStateSubscription?.cancel();
+    _positionSubscription?.cancel();
+    _durationSubscription?.cancel();
     _player.dispose();
     super.dispose();
   }
 
-  void _togglePlayback() async {
+  Future<void> _togglePlayback() async {
     if (_isPlaying) {
       await _player.pause();
     } else {
@@ -93,6 +101,11 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
 
   @override
   Widget build(BuildContext context) {
+    final durationMs = _duration.inMilliseconds;
+    final progress = durationMs <= 0
+        ? 0.0
+        : (_position.inMilliseconds / durationMs).clamp(0.0, 1.0);
+
     return Container(
       constraints: const BoxConstraints(minWidth: 150, maxWidth: 250),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -134,8 +147,7 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       LinearProgressIndicator(
-                        value: _position.inSeconds /
-                            (_duration.inSeconds > 0 ? _duration.inSeconds : 1),
+                        value: progress,
                         backgroundColor:
                             widget.isMe ? Colors.white24 : Colors.grey.shade300,
                         color: widget.isMe ? Colors.white : widget.chatColor,

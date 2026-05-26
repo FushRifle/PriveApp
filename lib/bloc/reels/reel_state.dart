@@ -39,13 +39,14 @@ class ReelState extends Equatable {
     bool? isLoading,
     bool? isRefreshing,
     bool? isLoadingMore,
+    bool clearError = false,
   }) {
     return ReelState(
       status: status ?? this.status,
       reels: reels ?? this.reels,
       currentPage: currentPage ?? this.currentPage,
       hasMore: hasMore ?? this.hasMore,
-      error: error ?? this.error,
+      error: clearError ? null : error ?? this.error,
       isLoading: isLoading ?? this.isLoading,
       isRefreshing: isRefreshing ?? this.isRefreshing,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,

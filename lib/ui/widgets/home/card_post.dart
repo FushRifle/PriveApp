@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/ui/pages/main/home/post_detail_page.dart';
 import 'package:clique/ui/widgets/ui/document_viewer.dart';
@@ -74,6 +75,8 @@ class _CardPostState extends State<CardPost> {
   }
 
   void _toggleLike() {
+    if (!mounted) return;
+
     if (isLiked) {
       context.read<FeedBloc>().add(UnlikeFeedPost(postId: widget.post.id));
     } else {
@@ -82,6 +85,7 @@ class _CardPostState extends State<CardPost> {
     setState(() {
       isLiked = !isLiked;
       likeCount += isLiked ? 1 : -1;
+      if (likeCount < 0) likeCount = 0;
     });
   }
 
@@ -332,14 +336,10 @@ class _CardPostState extends State<CardPost> {
               children: [
                 Row(
                   children: [
-                    CircleAvatar(
+                    _UserAvatar(
+                      avatar: widget.post.user.avatar,
                       radius: 20,
-                      backgroundImage: widget.post.user.avatar.isNotEmpty
-                          ? NetworkImage(widget.post.user.avatar)
-                          : null,
-                      child: widget.post.user.avatar.isEmpty
-                          ? Icon(Icons.person, size: 18, color: Colors.grey)
-                          : null,
+                      iconSize: 18,
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -479,12 +479,12 @@ class _CardPostState extends State<CardPost> {
               VideoPlayer(_videoController!)
             else if (videoAttachment.thumbnail != null &&
                 videoAttachment.thumbnail!.isNotEmpty)
-              Image.network(
-                videoAttachment.thumbnail!,
+              CachedNetworkImage(
+                imageUrl: videoAttachment.thumbnail!,
                 fit: BoxFit.cover,
                 width: double.infinity,
                 height: double.infinity,
-                errorBuilder: (_, __, ___) => Container(
+                errorWidget: (_, __, ___) => Container(
                   color: Colors.grey.shade900,
                   child: const Center(
                     child:
@@ -533,12 +533,12 @@ class _CardPostState extends State<CardPost> {
         },
         child: Hero(
           tag: 'post_image_${widget.post.id}',
-          child: Image.network(
-            imageAttachment.url,
+          child: CachedNetworkImage(
+            imageUrl: imageAttachment.url,
             fit: BoxFit.cover,
             width: double.infinity,
             height: double.infinity,
-            errorBuilder: (_, __, ___) => Container(
+            errorWidget: (_, __, ___) => Container(
               color: Colors.grey.shade200,
               child: const Icon(Icons.broken_image, size: 40),
             ),
@@ -555,7 +555,7 @@ class _CardPostState extends State<CardPost> {
             MaterialPageRoute(
               builder: (context) => DocumentViewer(
                 documentUrl: documentAttachment.url,
-                fileName: documentAttachment.url.split('/').last,
+                fileName: _fileNameFromUrl(documentAttachment.url),
                 caption:
                     widget.post.content.isNotEmpty ? widget.post.content : null,
               ),
@@ -621,14 +621,10 @@ class _CardPostState extends State<CardPost> {
       bottom: 18,
       child: Row(
         children: [
-          CircleAvatar(
+          _UserAvatar(
+            avatar: widget.post.user.avatar,
             radius: 14,
-            backgroundImage: widget.post.user.avatar.isNotEmpty
-                ? NetworkImage(widget.post.user.avatar)
-                : null,
-            child: widget.post.user.avatar.isEmpty
-                ? const Icon(Icons.person, size: 12)
-                : null,
+            iconSize: 12,
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -658,6 +654,45 @@ class _CardPostState extends State<CardPost> {
           ),
         ],
       ),
+    );
+  }
+
+  String _fileNameFromUrl(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri != null && uri.pathSegments.isNotEmpty) {
+      final name = Uri.decodeComponent(uri.pathSegments.last).trim();
+      if (name.isNotEmpty) return name;
+    }
+
+    final fallback = url.split('/').last.trim();
+    return fallback.isEmpty ? 'Document' : fallback;
+  }
+}
+
+class _UserAvatar extends StatelessWidget {
+  final String avatar;
+  final double radius;
+  final double iconSize;
+
+  const _UserAvatar({
+    required this.avatar,
+    required this.radius,
+    required this.iconSize,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (avatar.startsWith('http')) {
+      return CircleAvatar(
+        radius: radius,
+        backgroundImage: CachedNetworkImageProvider(avatar),
+      );
+    }
+
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: AppColors.greyColor.withOpacity(0.2),
+      child: Icon(Icons.person, size: iconSize, color: Colors.grey),
     );
   }
 }

@@ -18,6 +18,19 @@ class PostImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final imageUrl = attachment.url;
 
+    if (imageUrl.trim().isEmpty) {
+      return Container(
+        color: Colors.grey.shade200,
+        child: const Center(
+          child: Icon(
+            Icons.broken_image_outlined,
+            size: 42,
+            color: Colors.grey,
+          ),
+        ),
+      );
+    }
+
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();

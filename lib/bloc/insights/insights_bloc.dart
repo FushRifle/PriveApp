@@ -1,5 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart';
 import 'package:clique/data/services/insights/insights_service.dart';
 
 part 'insights_event.dart';
@@ -23,7 +24,7 @@ class InsightsBloc extends Bloc<InsightsEvent, InsightsState> {
     Emitter<InsightsState> emit,
   ) async {
     if (state.insights == null) {
-      emit(state.copyWith(status: InsightsStatus.loading, error: null));
+      emit(state.copyWith(status: InsightsStatus.loading, clearError: true));
     }
 
     try {
@@ -34,7 +35,7 @@ class InsightsBloc extends Bloc<InsightsEvent, InsightsState> {
         insights: insights,
         currentPeriodDays: event.days,
         status: InsightsStatus.success,
-        error: null,
+        clearError: true,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -48,7 +49,7 @@ class InsightsBloc extends Bloc<InsightsEvent, InsightsState> {
     RefreshInsights event,
     Emitter<InsightsState> emit,
   ) async {
-    emit(state.copyWith(status: InsightsStatus.refreshing, error: null));
+    emit(state.copyWith(status: InsightsStatus.refreshing, clearError: true));
 
     try {
       final data = await _service.getInsights(days: event.days);
@@ -58,7 +59,7 @@ class InsightsBloc extends Bloc<InsightsEvent, InsightsState> {
         insights: insights,
         currentPeriodDays: event.days,
         status: InsightsStatus.success,
-        error: null,
+        clearError: true,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -89,7 +90,7 @@ class InsightsBloc extends Bloc<InsightsEvent, InsightsState> {
       emit(state.copyWith(realtimeStats: stats));
     } catch (e) {
       // Silently fail - realtime stats are non-critical
-      print('Failed to load realtime stats: $e');
+      debugPrint('Failed to load realtime stats: $e');
     }
   }
 
@@ -104,7 +105,7 @@ class InsightsBloc extends Bloc<InsightsEvent, InsightsState> {
     ClearInsightsError event,
     Emitter<InsightsState> emit,
   ) {
-    emit(state.copyWith(error: null));
+    emit(state.copyWith(clearError: true));
   }
 
   void _onResetInsightsState(

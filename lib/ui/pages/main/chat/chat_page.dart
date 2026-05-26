@@ -145,6 +145,7 @@ class _ChatPageState extends State<ChatPage>
 
     context.read<ChatBloc>().add(
           SendMessage(
+            conversationId: widget.conversationId,
             receiverId: widget.userId,
             message: text.trim(),
             messageType: 'text',
@@ -201,6 +202,7 @@ class _ChatPageState extends State<ChatPage>
     super.build(context);
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: AppColors.backgroundColor,
       appBar: _buildAppBar(),
       body: MultiBlocListener(
@@ -228,6 +230,7 @@ class _ChatPageState extends State<ChatPage>
                   messageText = 'Sent a file';
               }
               context.read<ChatBloc>().add(SendMessage(
+                    conversationId: widget.conversationId,
                     receiverId: widget.userId,
                     message: messageText,
                     messageType: state.uploadType!.name,
@@ -238,7 +241,9 @@ class _ChatPageState extends State<ChatPage>
           ),
           BlocListener<ChatBloc, ChatState>(
             listenWhen: (previous, current) =>
-                previous.messages.length != current.messages.length,
+                previous.messages.length != current.messages.length ||
+                previous.messagesStatus != current.messagesStatus ||
+                previous.chatSettings != current.chatSettings,
             listener: (context, state) {
               if (state.chatSettings != null) {
                 final settings = state.chatSettings!;
@@ -273,62 +278,68 @@ class _ChatPageState extends State<ChatPage>
             final isUploading = context.watch<CloudinaryCubit>().state.status ==
                 UploadStatus.uploading;
 
-            return Column(
-              children: [
-                Expanded(
-                  child: isLoading
-                      ? _buildLoadingState()
-                      : messages.isEmpty
-                          ? _buildEmptyState()
-                          : ListView.builder(
-                              controller: _scrollController,
-                              reverse: false,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 16),
-                              itemCount:
-                                  messages.length + (_isLoadingMore ? 1 : 0),
-                              itemBuilder: (context, index) {
-                                if (_isLoadingMore &&
-                                    index == messages.length) {
-                                  return const Padding(
-                                    padding: EdgeInsets.all(16),
-                                    child: Center(
-                                      child: SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                            strokeWidth: 2),
+            return Container(
+              decoration: _buildChatBackground(),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: isLoading
+                        ? _buildLoadingState()
+                        : messages.isEmpty
+                            ? _buildEmptyState()
+                            : ListView.builder(
+                                controller: _scrollController,
+                                reverse: false,
+                                keyboardDismissBehavior:
+                                    ScrollViewKeyboardDismissBehavior.onDrag,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 16),
+                                itemCount:
+                                    messages.length + (_isLoadingMore ? 1 : 0),
+                                itemBuilder: (context, index) {
+                                  if (_isLoadingMore &&
+                                      index == messages.length) {
+                                    return const Padding(
+                                      padding: EdgeInsets.all(16),
+                                      child: Center(
+                                        child: SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2),
+                                        ),
                                       ),
-                                    ),
+                                    );
+                                  }
+                                  return MessageBubble(
+                                    message: messages[index],
+                                    userAvatar: widget.userAvatar,
+                                    chatColor: _getChatColor(),
+                                    index: index,
+                                    onReply: () =>
+                                        _replyToMessage(messages[index]),
                                   );
-                                }
-                                return MessageBubble(
-                                  message: messages[index],
-                                  userAvatar: widget.userAvatar,
-                                  chatColor: _getChatColor(),
-                                  index: index,
-                                  onReply: () =>
-                                      _replyToMessage(messages[index]),
-                                );
-                              },
-                            ),
-                ),
-                if (isUploading) _buildUploadProgress(),
-                if (_buildTypingIndicator(state)) _buildTypingIndicatorWidget(),
-                ChatInputBar(
-                  onSendMessage: _sendMessage,
-                  onTyping: _sendTyping,
-                  replyingTo: _replyingTo,
-                  onCancelReply: () => setState(() => _replyingTo = null),
-                  sendButtonColor: _getChatColor(),
-                  onPickImage: () => _pickImage(ImageSource.gallery),
-                  onPickVideo: _pickVideo,
-                  onPickDocument: _pickDocument,
-                  onStartRecording: _startRecording,
-                  onStopRecording: _stopRecording,
-                  isRecording: _isRecording,
-                ),
-              ],
+                                },
+                              ),
+                  ),
+                  if (isUploading) _buildUploadProgress(),
+                  if (_buildTypingIndicator(state))
+                    _buildTypingIndicatorWidget(),
+                  ChatInputBar(
+                    onSendMessage: _sendMessage,
+                    onTyping: _sendTyping,
+                    replyingTo: _replyingTo,
+                    onCancelReply: () => setState(() => _replyingTo = null),
+                    sendButtonColor: _getChatColor(),
+                    onPickImage: () => _pickImage(ImageSource.gallery),
+                    onPickVideo: _pickVideo,
+                    onPickDocument: _pickDocument,
+                    onStartRecording: _startRecording,
+                    onStopRecording: _stopRecording,
+                    isRecording: _isRecording,
+                  ),
+                ],
+              ),
             );
           },
         ),
@@ -398,6 +409,7 @@ class _ChatPageState extends State<ChatPage>
               child: ChatInfoPage(
                 userName: widget.userName,
                 userAvatar: widget.userAvatar,
+                conversationId: widget.conversationId,
                 userId: widget.userId,
               ),
             ),
@@ -439,7 +451,9 @@ class _ChatPageState extends State<ChatPage>
                     String status = 'Offline';
                     if (conv.isTyping) {
                       status = 'Typing...';
-                    } else if (conv.isOnline) status = 'Online';
+                    } else if (conv.isOnline) {
+                      status = 'Online';
+                    }
 
                     return Row(
                       children: [
@@ -584,10 +598,9 @@ class _ChatPageState extends State<ChatPage>
   }
 
   Future<void> _pickDocument() async {
-    final result = await FilePicker.platform.pickFiles();
-    if (result != null && result.files.isNotEmpty) {
-      final file = result.files.first;
-      if (file.path != null) _sendMedia(File(file.path!), UploadType.document);
+    final file = await FilePicker.pickFile();
+    if (file != null && file.path != null) {
+      _sendMedia(File(file.path!), UploadType.document);
     }
   }
 
@@ -603,8 +616,45 @@ class _ChatPageState extends State<ChatPage>
         return Colors.pink;
       case 'orange':
         return Colors.orange;
+      case 'teal':
+        return Colors.teal;
+      case 'indigo':
+        return Colors.indigo;
       default:
         return AppColors.primary;
+    }
+  }
+
+  BoxDecoration _buildChatBackground() {
+    final wallpaperAsset = _wallpaperAsset(_wallpaper);
+
+    if (wallpaperAsset == null) {
+      return BoxDecoration(color: AppColors.backgroundColor);
+    }
+
+    return BoxDecoration(
+      color: AppColors.backgroundColor,
+      image: DecorationImage(
+        image: AssetImage(wallpaperAsset),
+        fit: BoxFit.cover,
+        colorFilter: ColorFilter.mode(
+          Colors.white.withOpacity(0.22),
+          BlendMode.srcATop,
+        ),
+      ),
+    );
+  }
+
+  String? _wallpaperAsset(String wallpaper) {
+    switch (wallpaper) {
+      case 'palms':
+      case 'modern':
+      case 'sunset':
+      case 'sky':
+      case 'galaxy':
+        return 'assets/wallpapers/$wallpaper.png';
+      default:
+        return null;
     }
   }
 }

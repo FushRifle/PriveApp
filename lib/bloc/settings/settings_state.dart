@@ -69,6 +69,7 @@ class SettingsState extends Equatable {
     bool? isSaving,
     bool? isDeleting,
     DateTime? lastUpdated,
+    bool clearError = false,
   }) {
     return SettingsState(
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
@@ -82,7 +83,7 @@ class SettingsState extends Equatable {
       showActivityStatus: showActivityStatus ?? this.showActivityStatus,
       allowTagging: allowTagging ?? this.allowTagging,
       status: status ?? this.status,
-      error: error ?? this.error,
+      error: clearError ? null : error ?? this.error,
       isLoading: isLoading ?? this.isLoading,
       isSaving: isSaving ?? this.isSaving,
       isDeleting: isDeleting ?? this.isDeleting,

@@ -23,12 +23,17 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   void initState() {
     super.initState();
     _ageRange = RangeValues(
-      (widget.currentFilters['minAge'] ?? 18).toDouble(),
-      (widget.currentFilters['maxAge'] ?? 99).toDouble(),
+      _readDouble(widget.currentFilters['minAge'], 18).clamp(18, 99).toDouble(),
+      _readDouble(widget.currentFilters['maxAge'], 99).clamp(18, 99).toDouble(),
     );
-    _distance = (widget.currentFilters['distance'] ?? 100).toDouble();
-    _sortBy = widget.currentFilters['sortBy'] ?? 'nearest';
-    _verifiedOnly = widget.currentFilters['verifiedOnly'] ?? false;
+    if (_ageRange.start > _ageRange.end) {
+      _ageRange = RangeValues(_ageRange.end, _ageRange.start);
+    }
+    _distance = _readDouble(widget.currentFilters['distance'], 100)
+        .clamp(1, 100)
+        .toDouble();
+    _sortBy = widget.currentFilters['sortBy']?.toString() ?? 'nearest';
+    _verifiedOnly = widget.currentFilters['verifiedOnly'] == true;
   }
 
   @override
@@ -98,7 +103,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
             ),
           ),
           // Content
-          Expanded(
+          Flexible(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
@@ -387,5 +392,11 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       'verifiedOnly': _verifiedOnly,
     };
     Navigator.pop(context, filters);
+  }
+
+  double _readDouble(dynamic value, double fallback) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? fallback;
+    return fallback;
   }
 }

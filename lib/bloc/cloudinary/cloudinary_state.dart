@@ -24,14 +24,19 @@ class CloudinaryState extends Equatable {
     File? uploadedFile,
     double? progress,
     String? errorMessage,
+    bool clearUploadedUrl = false,
+    bool clearUploadedFile = false,
+    bool clearErrorMessage = false,
   }) {
     return CloudinaryState(
       status: status ?? this.status,
       uploadType: uploadType ?? this.uploadType,
-      uploadedUrl: uploadedUrl ?? this.uploadedUrl,
-      uploadedFile: uploadedFile ?? this.uploadedFile,
+      uploadedUrl: clearUploadedUrl ? null : uploadedUrl ?? this.uploadedUrl,
+      uploadedFile:
+          clearUploadedFile ? null : uploadedFile ?? this.uploadedFile,
       progress: progress ?? this.progress,
-      errorMessage: errorMessage ?? this.errorMessage,
+      errorMessage:
+          clearErrorMessage ? null : errorMessage ?? this.errorMessage,
     );
   }
 
