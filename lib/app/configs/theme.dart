@@ -280,10 +280,13 @@ extension ThemeHelper on BuildContext {
 
   Color get primaryColor => AppColors.primary;
   Color get secondaryColor => AppColors.secondary;
-  Color get cardColor => AppColors.card;
-  Color get cardBorderColor => AppColors.cardBorder;
-  Color get shadowColor => AppColors.shadow;
-  Color get shadowElevatedColor => AppColors.shadowElevated;
+  Color get cardColor => isDarkMode ? AppColors.darkCard : AppColors.lightCard;
+  Color get cardBorderColor =>
+      isDarkMode ? AppColors.darkCardBorder : AppColors.lightCardBorder;
+  Color get shadowColor =>
+      isDarkMode ? AppColors.darkShadow : AppColors.lightShadow;
+  Color get shadowElevatedColor =>
+      isDarkMode ? AppColors.darkShadowElevated : AppColors.lightShadowElevated;
 
   Color get successColor => AppColors.success;
   Color get warningColor => AppColors.warning;
@@ -291,11 +294,17 @@ extension ThemeHelper on BuildContext {
   Color get infoColor => AppColors.info;
 
   // Theme-aware colors
-  Color get backgroundColor => AppColors.background;
-  Color get textColor => AppColors.text;
-  Color get textSecondaryColor => AppColors.textSecondary;
-  Color get textHintColor => AppColors.textHint;
-  Color get borderColor => AppColors.border;
-  Color get dividerColor => AppColors.divider;
-  Color get iconColor => AppColors.icon;
+  Color get backgroundColor =>
+      isDarkMode ? AppColors.darkBackground : AppColors.lightBackground;
+  Color get textColor => isDarkMode ? AppColors.darkText : AppColors.lightText;
+  Color get textSecondaryColor =>
+      isDarkMode ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+  Color get textHintColor =>
+      isDarkMode ? AppColors.darkTextHint : AppColors.lightTextHint;
+  Color get borderColor =>
+      isDarkMode ? AppColors.darkBorderColor : AppColors.lightBorderColor;
+  Color get dividerColor =>
+      isDarkMode ? AppColors.darkDivider : AppColors.lightDivider;
+  Color get iconColor =>
+      isDarkMode ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
 }

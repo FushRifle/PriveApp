@@ -104,10 +104,11 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
   void _showAttachmentMenu() {
     _focusNode.unfocus();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? AppColors.darkCard : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -201,12 +202,17 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
     final replyTo = widget.replyingTo!;
     final isReplyingToSelf = replyTo.isOwn;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        border: Border(top: BorderSide(color: Colors.grey.shade200)),
+        color: isDark ? AppColors.darkCard : Colors.grey.shade50,
+        border: Border(
+          top: BorderSide(
+            color: isDark ? AppColors.darkDivider : Colors.grey.shade200,
+          ),
+        ),
       ),
       child: Row(
         children: [
@@ -264,6 +270,10 @@ class _ChatInputBarState extends State<ChatInputBar> {
   Widget build(BuildContext context) {
     final isActive = _hasText;
     final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceColor = isDark ? AppColors.darkCard : Colors.white;
+    final fieldColor =
+        isDark ? AppColors.darkBackgroundPress : const Color(0xFFF1F1F1);
 
     return AnimatedPadding(
       duration: const Duration(milliseconds: 180),
@@ -274,7 +284,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
         children: [
           _buildReplyPreview(),
           Container(
-            color: Colors.white,
+            color: surfaceColor,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: SafeArea(
               top: false,
@@ -302,7 +312,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF1F1F1),
+                        color: fieldColor,
                         borderRadius: BorderRadius.circular(28),
                         boxShadow: _focusNode.hasFocus
                             ? [
@@ -363,7 +373,11 @@ class _ChatInputBarState extends State<ChatInputBar> {
                                     ],
                                   )
                                 : null,
-                            color: isActive ? null : Colors.grey.shade200,
+                            color: isActive
+                                ? null
+                                : isDark
+                                    ? AppColors.darkBackgroundPress
+                                    : Colors.grey.shade200,
                             shape: BoxShape.circle,
                             boxShadow: isActive
                                 ? [

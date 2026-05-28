@@ -8,33 +8,58 @@ final themeModeProvider =
 });
 
 class ThemeNotifier extends StateNotifier<ThemeMode> {
-  ThemeNotifier() : super(ThemeMode.light) {
+  ThemeNotifier() : super(ThemeMode.system) {
     _loadTheme();
   }
 
   Future<void> _loadTheme() async {
     final prefs = await SharedPreferences.getInstance();
-    final isDark = prefs.getBool('isDarkMode') ?? false;
-    state = isDark ? ThemeMode.dark : ThemeMode.light;
+    final savedThemeMode = prefs.getString('themeMode');
+
+    if (savedThemeMode != null) {
+      state = _themeModeFromValue(savedThemeMode);
+      return;
+    }
+
+    final legacyIsDark = prefs.getBool('isDarkMode');
+    if (legacyIsDark == null) {
+      state = ThemeMode.system;
+      return;
+    }
+
+    state = legacyIsDark ? ThemeMode.dark : ThemeMode.light;
   }
 
   Future<void> toggleTheme() async {
     final newMode = state == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
-    state = newMode;
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isDarkMode', newMode == ThemeMode.dark);
+    await setThemeMode(newMode);
   }
 
   Future<void> setLightMode() async {
-    state = ThemeMode.light;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isDarkMode', false);
+    await setThemeMode(ThemeMode.light);
   }
 
   Future<void> setDarkMode() async {
-    state = ThemeMode.dark;
+    await setThemeMode(ThemeMode.dark);
+  }
+
+  Future<void> setSystemMode() async {
+    await setThemeMode(ThemeMode.system);
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    state = mode;
+
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isDarkMode', true);
+    await prefs.setString('themeMode', mode.name);
+    await prefs.setBool('isDarkMode', mode == ThemeMode.dark);
+  }
+
+  ThemeMode _themeModeFromValue(String value) {
+    return switch (value) {
+      'light' => ThemeMode.light,
+      'dark' => ThemeMode.dark,
+      _ => ThemeMode.system,
+    };
   }
 }

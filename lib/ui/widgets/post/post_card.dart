@@ -1,4 +1,5 @@
 import 'package:clique/bloc/home/feed_bloc.dart';
+import 'package:clique/app/configs/colors.dart';
 import 'package:clique/data/models/feeds_models.dart';
 import 'package:clique/ui/pages/main/home/post_detail_page.dart';
 import 'package:clique/ui/widgets/home/custom_bottom_sheet.dart';
@@ -135,11 +136,14 @@ class _CardPostState extends State<CardPost> {
             bottom: widget.isDetailView ? 0 : 18,
           ),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.cardColor,
             borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: AppColors.cardBorderColor,
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.045),
+                color: AppColors.shadowElevated,
                 blurRadius: 22,
                 offset: const Offset(0, 8),
               ),

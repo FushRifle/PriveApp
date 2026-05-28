@@ -1,5 +1,4 @@
 import 'package:clique/app/configs/colors.dart';
-import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/bloc/profile/gallery_profile_cubit.dart';
@@ -38,7 +37,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode == ThemeMode.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     SystemChrome.setSystemUIOverlayStyle(
       SystemUiOverlayStyle(
@@ -65,50 +64,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           }
         },
         builder: (context, state) {
-          if (state.status == ProfileStatus.loading) {
-            return const Scaffold(
-              body: Center(
-                child: CircularProgressIndicator(
-                  color: AppColors.primary,
-                ),
-              ),
-            );
-          }
-
-          if (state.status == ProfileStatus.error) {
-            return Scaffold(
-              backgroundColor:
-                  isDark ? AppColors.darkBackground : AppColors.lightBackground,
-              body: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline_rounded,
-                        size: 70,
-                        color: Colors.grey.shade500,
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        state.error ?? 'Something went wrong',
-                        textAlign: TextAlign.center,
-                        style: AppTheme.greyTextStyle,
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: () {
-                          context.read<ProfileBloc>().add(LoadMyProfile());
-                        },
-                        child: const Text('Retry'),
-                      )
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }
+          final profile = state.myProfile ?? _profile;
 
           return Scaffold(
             backgroundColor:
@@ -140,21 +96,21 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
               child: Column(
                 children: [
-                  _buildProfileCard(isDark),
+                  _buildProfileCard(profile, isDark),
                   const SizedBox(height: 28),
                   _section(
                     'Appearance',
                     [
-                      _switchTile(
+                      _themeDropdownTile(
                         isDark: isDark,
                         icon: Icons.dark_mode_rounded,
-                        title: 'Dark Mode',
-                        subtitle: 'Switch app appearance',
-                        value: isDark,
-                        onChanged: (_) async {
+                        themeMode: themeMode,
+                        onChanged: (mode) async {
+                          if (mode == null) return;
+
                           await ref
                               .read(themeModeProvider.notifier)
-                              .toggleTheme();
+                              .setThemeMode(mode);
                         },
                       ),
                       _divider(isDark),
@@ -393,11 +349,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  Widget _buildProfileCard(bool isDark) {
+  Widget _buildProfileCard(Profile? profile, bool isDark) {
     final name =
-        _profile?.displayName ?? _profile?.displayNameOrDefault ?? 'User';
+        profile?.displayName ?? profile?.displayNameOrDefault ?? 'User';
 
-    final avatar = _profile?.avatar ?? '';
+    final avatar = profile?.avatar ?? '';
 
     return GestureDetector(
       onTap: () {
@@ -605,6 +561,78 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             color: Colors.grey.shade500,
           ),
     );
+  }
+
+  Widget _themeDropdownTile({
+    required bool isDark,
+    required IconData icon,
+    required ThemeMode themeMode,
+    required ValueChanged<ThemeMode?> onChanged,
+  }) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 18,
+        vertical: 4,
+      ),
+      leading: Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          color: AppColors.primary.withOpacity(0.1),
+        ),
+        child: Icon(
+          icon,
+          color: AppColors.primary,
+          size: 20,
+        ),
+      ),
+      title: Text(
+        'Theme',
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          color: isDark ? Colors.white : Colors.black,
+        ),
+      ),
+      subtitle: Text(
+        'System, light, or dark',
+        style: TextStyle(
+          fontSize: 12,
+          color: Colors.grey.shade500,
+        ),
+      ),
+      trailing: DropdownButtonHideUnderline(
+        child: DropdownButton<ThemeMode>(
+          value: themeMode,
+          borderRadius: BorderRadius.circular(16),
+          dropdownColor: isDark ? AppColors.darkCard : Colors.white,
+          icon: Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: Colors.grey.shade500,
+          ),
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black,
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
+          items: ThemeMode.values.map((mode) {
+            return DropdownMenuItem<ThemeMode>(
+              value: mode,
+              child: Text(_themeModeLabel(mode)),
+            );
+          }).toList(),
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+
+  String _themeModeLabel(ThemeMode mode) {
+    return switch (mode) {
+      ThemeMode.system => 'System',
+      ThemeMode.light => 'Light',
+      ThemeMode.dark => 'Dark',
+    };
   }
 
   Widget _switchTile({

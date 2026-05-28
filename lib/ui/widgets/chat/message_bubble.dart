@@ -26,6 +26,9 @@ class MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isMe = message.isOwn;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final otherBubbleColor = isDark ? AppColors.darkCard : AppColors.lightCard;
+    final otherTextColor = isDark ? AppColors.darkText : AppColors.lightText;
 
     return Dismissible(
       key: Key(
@@ -80,14 +83,14 @@ class MessageBubble extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
-                      color: isMe ? chatColor : Colors.white,
+                      color: isMe ? chatColor : otherBubbleColor,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (message.replyToId != null) _buildReplyPreview(isMe),
-                        _buildMessageContent(isMe, context),
+                        _buildMessageContent(isMe, context, otherTextColor),
                         const SizedBox(height: 4),
                         _buildTimeAndStatus(isMe),
                       ],
@@ -144,7 +147,11 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildMessageContent(bool isMe, BuildContext context) {
+  Widget _buildMessageContent(
+    bool isMe,
+    BuildContext context,
+    Color otherTextColor,
+  ) {
     if (message.messageType == 'image' && message.mediaUrl != null) {
       return GestureDetector(
         onTap: () => _showImageViewer(context, message.mediaUrl!),
@@ -226,7 +233,7 @@ class MessageBubble extends StatelessWidget {
     return Text(
       message.message,
       style: TextStyle(
-        color: isMe ? Colors.white : AppColors.blackColor,
+        color: isMe ? Colors.white : otherTextColor,
         fontSize: 14,
         height: 1.4,
       ),
@@ -253,6 +260,15 @@ class MessageBubble extends StatelessWidget {
   }
 
   Widget _buildStatusIcon() {
+    if (message.id.toString().startsWith('999')) {
+      return const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.schedule, size: 12, color: Colors.white60),
+        ],
+      );
+    }
+
     // For own messages - show status indicators
     // Check if message has been read
     if (message.isRead) {
@@ -280,7 +296,7 @@ class MessageBubble extends StatelessWidget {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),

@@ -364,11 +364,14 @@ class _ChatPageState extends State<ChatPage>
   }
 
   PreferredSizeWidget _buildAppBar() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final foregroundColor = isDark ? AppColors.darkText : AppColors.lightText;
+
     return AppBar(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? AppColors.darkBackground : Colors.white,
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+        icon: Icon(Icons.arrow_back_ios_new, color: foregroundColor),
         onPressed: () => Navigator.pop(context),
       ),
       title: GestureDetector(
@@ -460,10 +463,10 @@ class _ChatPageState extends State<ChatPage>
       ),
       actions: [
         IconButton(
-            icon: const Icon(Icons.call_outlined, color: Colors.black),
+            icon: Icon(Icons.call_outlined, color: foregroundColor),
             onPressed: () {}),
         IconButton(
-            icon: const Icon(Icons.videocam_outlined, color: Colors.black),
+            icon: Icon(Icons.videocam_outlined, color: foregroundColor),
             onPressed: () {}),
       ],
     );
@@ -533,6 +536,8 @@ class _ChatPageState extends State<ChatPage>
   }
 
   Widget _buildTypingIndicatorWidget() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
@@ -541,7 +546,9 @@ class _ChatPageState extends State<ChatPage>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-                color: Colors.white, borderRadius: BorderRadius.circular(16)),
+              color: isDark ? AppColors.darkCard : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -605,6 +612,7 @@ class _ChatPageState extends State<ChatPage>
 
   BoxDecoration _buildChatBackground() {
     final wallpaperAsset = _wallpaperAsset(_wallpaper);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (wallpaperAsset == null) {
       return BoxDecoration(color: AppColors.backgroundColor);
@@ -616,7 +624,7 @@ class _ChatPageState extends State<ChatPage>
         image: AssetImage(wallpaperAsset),
         fit: BoxFit.cover,
         colorFilter: ColorFilter.mode(
-          Colors.white.withOpacity(0.22),
+          (isDark ? Colors.black : Colors.white).withOpacity(0.22),
           BlendMode.srcATop,
         ),
       ),

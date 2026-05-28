@@ -11,7 +11,10 @@ void customBottomSheetComments(BuildContext context, {required int postId}) =>
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (builder) => CommentBottomSheetContent(postId: postId),
+      builder: (builder) => BlocProvider<FeedBloc>.value(
+        value: context.read<FeedBloc>(),
+        child: CommentBottomSheetContent(postId: postId),
+      ),
     );
 
 class CommentBottomSheetContent extends StatefulWidget {

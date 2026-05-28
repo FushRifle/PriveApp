@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:clique/data/services/chat/chat_service.dart';
@@ -13,6 +15,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   int? _currentUserId;
   final Map<int, List<MessageModel>> _messageCache = {};
   final Set<int> _loadingConversations = {};
+  final Map<int, Timer> _retryTimers = {};
+  final Set<int> _retryingTempMessages = {};
 
   ChatBloc() : super(const ChatState()) {
     on<LoadConversations>(_onLoadConversations);
@@ -33,6 +37,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<ClearChat>(_onClearChat);
     on<ClearChatError>(_onClearChatError);
     on<ResetChatState>(_onResetChatState);
+    on<RetryPendingMessages>(_onRetryPendingMessages);
 
     // Real-time events
     on<NewMessageReceived>(_onNewMessageReceived);
@@ -303,15 +308,118 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         page: 1,
       ));
     } catch (e) {
-      final rollbackMessages =
-          state.messages.where((m) => m.id != tempId).toList();
-
-      _messageCache[event.conversationId] = rollbackMessages;
-
+      _messageCache[event.conversationId] = state.messages;
+      _schedulePendingRetry(event.conversationId);
       emit(state.copyWith(
-        messages: rollbackMessages,
+        messagesStatus: ChatStatus.success,
         error: e.toString(),
       ));
+    }
+  }
+
+  void _schedulePendingRetry(int conversationId) {
+    _retryTimers[conversationId]?.cancel();
+    _retryTimers[conversationId] = Timer(
+      const Duration(seconds: 8),
+      () => add(RetryPendingMessages(conversationId: conversationId)),
+    );
+  }
+
+  Future<void> _onRetryPendingMessages(
+    RetryPendingMessages event,
+    Emitter<ChatState> emit,
+  ) async {
+    final pendingMessages = (_messageCache[event.conversationId] ??
+            state.messages
+                .where((m) => m.conversationId == event.conversationId))
+        .where((m) => m.id.toString().startsWith('999'))
+        .toList()
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+    if (pendingMessages.isEmpty) {
+      _retryTimers[event.conversationId]?.cancel();
+      _retryTimers.remove(event.conversationId);
+      return;
+    }
+
+    for (final pending in pendingMessages) {
+      if (_retryingTempMessages.contains(pending.id)) continue;
+
+      _retryingTempMessages.add(pending.id);
+      try {
+        final response = await _chatService.sendMessage(
+          receiverId: pending.receiverId,
+          message: pending.message,
+          messageType: pending.messageType,
+          mediaUrl: pending.mediaUrl,
+          replyToId: pending.replyToId,
+        );
+
+        if (response == null) continue;
+
+        final parsed = MessageModel.fromJson(response);
+        final deliveredMessage = MessageModel(
+          id: parsed.id,
+          conversationId: parsed.conversationId,
+          senderId: parsed.senderId,
+          receiverId: parsed.receiverId,
+          message: parsed.message,
+          messageType: parsed.messageType,
+          mediaUrl: parsed.mediaUrl,
+          replyToId: parsed.replyToId,
+          replyToMessage: parsed.replyToMessage,
+          replyToSender: parsed.replyToSender,
+          isRead: parsed.isRead,
+          isOwn: true,
+          createdAt: parsed.createdAt,
+        );
+
+        final cachedMessages =
+            _messageCache[event.conversationId] ?? state.messages;
+        final replacedCachedMessages = cachedMessages.map((m) {
+          return m.id == pending.id ? deliveredMessage : m;
+        }).toList();
+
+        _messageCache[event.conversationId] = replacedCachedMessages;
+
+        if (state.messages.any((m) => m.id == pending.id)) {
+          final replacedVisibleMessages = state.messages.map((m) {
+            return m.id == pending.id ? deliveredMessage : m;
+          }).toList();
+
+          emit(state.copyWith(
+            messages: replacedVisibleMessages,
+            messagesStatus: ChatStatus.success,
+            clearError: true,
+          ));
+        } else {
+          emit(state.copyWith(
+            messagesStatus: ChatStatus.success,
+            clearError: true,
+          ));
+        }
+
+        _chatService.clearMessagesCache(event.conversationId);
+        add(RefreshConversations());
+      } catch (e) {
+        emit(state.copyWith(
+          messagesStatus: ChatStatus.success,
+          error: e.toString(),
+        ));
+      } finally {
+        _retryingTempMessages.remove(pending.id);
+      }
+    }
+
+    final stillPending = (_messageCache[event.conversationId] ?? state.messages)
+        .any((m) => m.id.toString().startsWith('999'));
+
+    if (stillPending) {
+      _schedulePendingRetry(event.conversationId);
+    } else {
+      _retryTimers[event.conversationId]?.cancel();
+      _retryTimers.remove(event.conversationId);
+      add(LoadMessages(conversationId: event.conversationId, page: 1));
     }
   }
 
@@ -537,6 +645,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
   void _onResetChatState(ResetChatState event, Emitter<ChatState> emit) {
     _currentUserId = null;
+    for (final timer in _retryTimers.values) {
+      timer.cancel();
+    }
+    _retryTimers.clear();
+    _retryingTempMessages.clear();
     emit(const ChatState());
   }
 
@@ -609,5 +722,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     emit(state.copyWith(
       conversations: updatedConversations,
     ));
+  }
+
+  @override
+  Future<void> close() {
+    for (final timer in _retryTimers.values) {
+      timer.cancel();
+    }
+    return super.close();
   }
 }

@@ -68,13 +68,13 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     UpdateSettings event,
     Emitter<SettingsState> emit,
   ) async {
+    final previousState = state;
+
     emit(state.copyWith(
       status: SettingsStatus.saving,
       isSaving: true,
       clearError: true,
     ));
-
-    final previousState = state;
 
     try {
       // Optimistically update local state
@@ -130,70 +130,100 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     ToggleNotifications event,
     Emitter<SettingsState> emit,
   ) async {
-    add(UpdateSettings(notificationsEnabled: event.enabled));
+    await _onUpdateSettings(
+      UpdateSettings(notificationsEnabled: event.enabled),
+      emit,
+    );
   }
 
   Future<void> _onTogglePrivateAccount(
     TogglePrivateAccount event,
     Emitter<SettingsState> emit,
   ) async {
-    add(UpdateSettings(privateAccount: event.isPrivate));
+    await _onUpdateSettings(
+      UpdateSettings(privateAccount: event.isPrivate),
+      emit,
+    );
   }
 
   Future<void> _onToggleTwoFactorAuth(
     ToggleTwoFactorAuth event,
     Emitter<SettingsState> emit,
   ) async {
-    add(UpdateSettings(twoFactorAuth: event.enabled));
+    await _onUpdateSettings(
+      UpdateSettings(twoFactorAuth: event.enabled),
+      emit,
+    );
   }
 
   Future<void> _onChangeLanguage(
     ChangeLanguage event,
     Emitter<SettingsState> emit,
   ) async {
-    add(UpdateSettings(language: event.language));
+    await _onUpdateSettings(
+      UpdateSettings(language: event.language),
+      emit,
+    );
   }
 
   Future<void> _onChangeTheme(
     ChangeTheme event,
     Emitter<SettingsState> emit,
   ) async {
-    add(UpdateSettings(theme: event.theme));
+    await _onUpdateSettings(
+      UpdateSettings(theme: event.theme),
+      emit,
+    );
   }
 
   Future<void> _onChangeVideoQuality(
     ChangeVideoQuality event,
     Emitter<SettingsState> emit,
   ) async {
-    add(UpdateSettings(videoQuality: event.quality));
+    await _onUpdateSettings(
+      UpdateSettings(videoQuality: event.quality),
+      emit,
+    );
   }
 
   Future<void> _onToggleAutoPlayVideos(
     ToggleAutoPlayVideos event,
     Emitter<SettingsState> emit,
   ) async {
-    add(UpdateSettings(autoPlayVideos: event.autoPlay));
+    await _onUpdateSettings(
+      UpdateSettings(autoPlayVideos: event.autoPlay),
+      emit,
+    );
   }
 
   Future<void> _onToggleSaveOriginalPhotos(
     ToggleSaveOriginalPhotos event,
     Emitter<SettingsState> emit,
   ) async {
-    add(UpdateSettings(saveOriginalPhotos: event.save));
+    await _onUpdateSettings(
+      UpdateSettings(saveOriginalPhotos: event.save),
+      emit,
+    );
   }
 
   Future<void> _onToggleActivityStatus(
     ToggleActivityStatus event,
     Emitter<SettingsState> emit,
   ) async {
-    add(UpdateSettings(showActivityStatus: event.show));
+    await _onUpdateSettings(
+      UpdateSettings(showActivityStatus: event.show),
+      emit,
+    );
   }
 
   Future<void> _onToggleTagging(
     ToggleTagging event,
     Emitter<SettingsState> emit,
   ) async {
-    add(UpdateSettings(allowTagging: event.allow));
+    await _onUpdateSettings(
+      UpdateSettings(allowTagging: event.allow),
+      emit,
+    );
   }
 
   Future<void> _onResetSettings(
@@ -201,18 +231,21 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     Emitter<SettingsState> emit,
   ) async {
     // Reset to default values
-    add(UpdateSettings(
-      notificationsEnabled: true,
-      privateAccount: false,
-      twoFactorAuth: false,
-      language: 'en',
-      videoQuality: 'auto',
-      theme: 'system',
-      autoPlayVideos: true,
-      saveOriginalPhotos: false,
-      showActivityStatus: true,
-      allowTagging: true,
-    ));
+    await _onUpdateSettings(
+      const UpdateSettings(
+        notificationsEnabled: true,
+        privateAccount: false,
+        twoFactorAuth: false,
+        language: 'en',
+        videoQuality: 'auto',
+        theme: 'system',
+        autoPlayVideos: true,
+        saveOriginalPhotos: false,
+        showActivityStatus: true,
+        allowTagging: true,
+      ),
+      emit,
+    );
   }
 
   void _onClearSettingsError(

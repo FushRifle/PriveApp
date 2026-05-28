@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import 'package:cloudinary_flutter/cloudinary_context.dart';
 import 'package:cloudinary_url_gen/cloudinary.dart';
 
+import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/managers/auth_guard.dart';
 import 'package:clique/bloc/auth/auth_bloc.dart';
@@ -108,10 +109,22 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   }
 
   @override
+  void didChangePlatformBrightness() {
+    setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(
       themeModeProvider,
     );
+    final platformBrightness =
+        WidgetsBinding.instance.platformDispatcher.platformBrightness;
+    final isDarkMode = themeMode == ThemeMode.dark ||
+        (themeMode == ThemeMode.system &&
+            platformBrightness == Brightness.dark);
+
+    AppColors.setDarkMode(isDarkMode);
 
     return MultiBlocProvider(
       providers: [

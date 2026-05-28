@@ -338,11 +338,11 @@ class _HomeAppBar extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppColors.cardColor,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: AppColors.shadow,
                         blurRadius: 10,
                       ),
                     ],

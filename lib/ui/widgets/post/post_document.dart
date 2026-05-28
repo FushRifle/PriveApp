@@ -37,20 +37,23 @@ class PostDocument extends StatelessWidget {
         );
       },
       child: Container(
-        color: AppColors.primary.withOpacity(0.06),
+        color:
+            AppColors.primary.withOpacity(AppColors.isDarkMode ? 0.12 : 0.06),
         padding: const EdgeInsets.all(24),
         child: Center(
           child: Container(
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.cardColor,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: AppColors.primary.withOpacity(0.12),
+                color: AppColors.isDarkMode
+                    ? AppColors.cardBorderColor
+                    : AppColors.primary.withOpacity(0.12),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withOpacity(0.08),
+                  color: AppColors.shadow,
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),

@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:clique/app/configs/colors.dart';
 import 'package:clique/data/models/feeds_models.dart';
 import 'package:clique/ui/widgets/ui/video_viewer.dart';
 import 'package:flutter/material.dart';
@@ -249,16 +250,16 @@ class _VideoFallback extends StatelessWidget {
 
   Widget _placeholder() {
     return Container(
-      color: Colors.grey.shade900,
+      color: AppColors.backgroundColor,
       child: Center(
         child: isLoading
-            ? const CircularProgressIndicator(
-                color: Colors.white,
+            ? CircularProgressIndicator(
+                color: AppColors.textSecondary,
                 strokeWidth: 2,
               )
-            : const Icon(
+            : Icon(
                 Icons.video_library_outlined,
-                color: Colors.white70,
+                color: AppColors.textHint,
                 size: 48,
               ),
       ),

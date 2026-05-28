@@ -24,6 +24,8 @@ class PostActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final actionColor = AppColors.text;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 4, 14, 14),
       child: Row(
@@ -33,24 +35,26 @@ class PostActions extends StatelessWidget {
                 ? Icons.favorite_rounded
                 : Icons.favorite_border_rounded,
             label: _formatCount(likeCount),
-            color: isLiked ? Colors.redAccent : Colors.black87,
+            color: isLiked ? Colors.redAccent : actionColor,
             onTap: onLike,
           ),
           const SizedBox(width: 10),
           _ActionPill(
             icon: Icons.mode_comment_outlined,
             label: _formatCount(commentCount),
-            color: Colors.black87,
+            color: actionColor,
             onTap: onComment,
           ),
           const SizedBox(width: 10),
           _IconAction(
             icon: Icons.send_outlined,
+            color: actionColor,
             onTap: onShare,
           ),
           const Spacer(),
           _IconAction(
             icon: Icons.bookmark_border_rounded,
+            color: actionColor,
             onTap: onSave,
           ),
         ],
@@ -90,7 +94,12 @@ class _ActionPill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.backgroundColor.withOpacity(0.9),
-      borderRadius: BorderRadius.circular(24),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: BorderSide(
+          color: AppColors.cardBorderColor,
+        ),
+      ),
       child: InkWell(
         onTap: () {
           HapticFeedback.lightImpact();
@@ -128,10 +137,12 @@ class _ActionPill extends StatelessWidget {
 
 class _IconAction extends StatelessWidget {
   final IconData icon;
+  final Color color;
   final VoidCallback onTap;
 
   const _IconAction({
     required this.icon,
+    required this.color,
     required this.onTap,
   });
 
@@ -140,19 +151,28 @@ class _IconAction extends StatelessWidget {
     return Material(
       color: AppColors.backgroundColor.withOpacity(0.9),
       shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
           HapticFeedback.lightImpact();
           onTap();
         },
         customBorder: const CircleBorder(),
-        child: SizedBox(
-          width: 40,
-          height: 40,
-          child: Icon(
-            icon,
-            color: Colors.black87,
-            size: 20,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: AppColors.cardBorderColor,
+            ),
+          ),
+          child: SizedBox(
+            width: 40,
+            height: 40,
+            child: Icon(
+              icon,
+              color: color,
+              size: 20,
+            ),
           ),
         ),
       ),

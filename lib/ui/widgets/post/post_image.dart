@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:clique/app/configs/colors.dart';
 import 'package:clique/data/models/feeds_models.dart';
 import 'package:clique/ui/widgets/ui/image_viewer.dart';
 import 'package:flutter/material.dart';
@@ -19,13 +20,13 @@ class PostImage extends StatelessWidget {
     final imageUrl = attachment.url;
 
     if (imageUrl.trim().isEmpty) {
-      return Container(
-        color: Colors.grey.shade200,
-        child: const Center(
+      return ColoredBox(
+        color: AppColors.backgroundColor,
+        child: Center(
           child: Icon(
             Icons.broken_image_outlined,
             size: 42,
-            color: Colors.grey,
+            color: AppColors.textHint,
           ),
         ),
       );
@@ -57,23 +58,24 @@ class PostImage extends StatelessWidget {
               fit: BoxFit.cover,
               memCacheWidth: 1080,
               placeholder: (_, __) {
-                return Container(
-                  color: Colors.grey.shade200,
+                return ColoredBox(
+                  color: AppColors.backgroundColor,
                   child: const Center(
                     child: CircularProgressIndicator(
+                      color: AppColors.primary,
                       strokeWidth: 2,
                     ),
                   ),
                 );
               },
               errorWidget: (_, __, ___) {
-                return Container(
-                  color: Colors.grey.shade200,
-                  child: const Center(
+                return ColoredBox(
+                  color: AppColors.backgroundColor,
+                  child: Center(
                     child: Icon(
                       Icons.broken_image_outlined,
                       size: 42,
-                      color: Colors.grey,
+                      color: AppColors.textHint,
                     ),
                   ),
                 );

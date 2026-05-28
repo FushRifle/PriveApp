@@ -41,9 +41,9 @@ class PostHeader extends StatelessWidget {
               HapticFeedback.lightImpact();
               onMoreTap?.call();
             },
-            icon: const Icon(
+            icon: Icon(
               Icons.more_horiz_rounded,
-              color: Colors.black87,
+              color: AppColors.text,
             ),
           ),
         ],
