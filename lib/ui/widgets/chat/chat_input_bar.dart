@@ -13,9 +13,6 @@ class ChatInputBar extends StatefulWidget {
   final VoidCallback onPickImage;
   final VoidCallback onPickVideo;
   final VoidCallback onPickDocument;
-  final VoidCallback onStartRecording;
-  final VoidCallback onStopRecording;
-  final bool isRecording;
 
   const ChatInputBar({
     super.key,
@@ -27,9 +24,6 @@ class ChatInputBar extends StatefulWidget {
     required this.onPickImage,
     required this.onPickVideo,
     required this.onPickDocument,
-    required this.onStartRecording,
-    required this.onStopRecording,
-    required this.isRecording,
   });
 
   @override
@@ -268,7 +262,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
   @override
   Widget build(BuildContext context) {
-    final isActive = _hasText || widget.isRecording;
+    final isActive = _hasText;
     final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
 
     return AnimatedPadding(
@@ -304,28 +298,6 @@ class _ChatInputBarState extends State<ChatInputBar> {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  // Mic Button
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: widget.isRecording
-                          ? widget.onStopRecording
-                          : widget.onStartRecording,
-                      borderRadius: BorderRadius.circular(24),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.all(8),
-                        child: Icon(
-                          widget.isRecording ? Icons.stop : Icons.mic,
-                          color: widget.isRecording
-                              ? Colors.red
-                              : AppColors.primary,
-                          size: 26,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
                   // Text Input
                   Expanded(
                     child: Container(
@@ -353,10 +325,8 @@ class _ChatInputBarState extends State<ChatInputBar> {
                         minLines: 1,
                         maxLines: 5,
                         onChanged: _handleTyping,
-                        enabled: !widget.isRecording,
                         decoration: InputDecoration(
-                          hintText:
-                              widget.isRecording ? 'Recording...' : 'Message',
+                          hintText: 'Message',
                           hintStyle:
                               AppTheme.greyTextStyle.copyWith(fontSize: 14),
                           border: InputBorder.none,
@@ -407,9 +377,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                                 : null,
                           ),
                           child: Icon(
-                            widget.isRecording
-                                ? Icons.send
-                                : Icons.arrow_forward_rounded,
+                            Icons.arrow_forward_rounded,
                             color:
                                 isActive ? Colors.white : Colors.grey.shade400,
                             size: 22,

@@ -1,8 +1,15 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
-    id("org.jetbrains.kotlin.android")
 }
+
+val localProperties =
+    Properties().apply {
+        rootProject.file("local.properties").inputStream().use { load(it) }
+    }
 
 android {
     namespace = "com.example.clique"
@@ -15,7 +22,10 @@ android {
     }
 
     defaultConfig {
+        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.clique"
+        // You can update the following values to match your application needs.
+        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -24,16 +34,19 @@ android {
 
     buildTypes {
         release {
+            // TODO: Add your own signing config for the release build.
+            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
         }
     }
 }
 
-flutter {
-    source = "../.."
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
 }
 
-// ADD THIS BLOCK - fixes the JVM target mismatch
-kotlin {
-    jvmToolchain(17)
+flutter {
+    source = localProperties.getProperty("flutter.projectDir", "../..")
 }
