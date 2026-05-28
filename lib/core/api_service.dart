@@ -303,16 +303,19 @@ class ApiService {
 
   Future<Response> delete(
     String path, {
+    dynamic data,
     CancelToken? cancelToken,
   }) async {
     final key = _requestKey(
       'DELETE',
       path,
+      data: data,
     );
 
     return _withRetry(
       () => dio.delete(
         path,
+        data: data,
         cancelToken: cancelToken ?? _createCancelToken(key),
       ),
     );

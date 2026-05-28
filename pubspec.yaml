@@ -43,6 +43,8 @@ dependencies:
   supabase_flutter: ^2.12.4
   flutter_secure_storage: ^10.0.0
   local_auth: ^3.0.1
+  firebase_core: ^4.2.1
+  firebase_messaging: ^16.0.4
 
   # Cloud Storage
   cloudinary_public: ^0.23.0

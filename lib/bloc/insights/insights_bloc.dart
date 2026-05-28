@@ -83,8 +83,12 @@ class InsightsBloc extends Bloc<InsightsEvent, InsightsState> {
     try {
       final data = await _service.getRealtimeStats();
       final stats = RealtimeStats(
-        onlineViewers: data['onlineViewers'] ?? data['viewers'] ?? 0,
-        activeSessions: data['activeSessions'] ?? data['sessions'] ?? 0,
+        onlineViewers: _readInt(
+          data['onlineViewers'] ?? data['viewers'] ?? data['viewsToday'],
+        ),
+        activeSessions: _readInt(
+          data['activeSessions'] ?? data['sessions'] ?? data['likesToday'],
+        ),
       );
 
       emit(state.copyWith(realtimeStats: stats));
@@ -121,53 +125,75 @@ class InsightsBloc extends Bloc<InsightsEvent, InsightsState> {
         data['previousOverview'] as Map<String, dynamic>? ?? {};
 
     final demographicsData =
-        data['demographics'] as Map<String, dynamic>? ?? {};
+        _readMap(data['demographics'] ?? data['audienceDemographics']);
     final locationsData = data['topLocations'] as List? ?? [];
     final ageRangesData = data['ageRanges'] as List? ?? [];
     final chartDataMap = data['chartData'] as Map<String, dynamic>? ?? {};
+    final metrics = data['metrics'] as List? ?? [];
+    final genderData = _readMap(demographicsData['genders']);
+    final ageGroupData = _readMap(demographicsData['ageGroups']);
+    final previousEngagementRate =
+        (data['previousEngagementRate'] as num?)?.toDouble() ?? 0;
 
     return InsightsData(
-      totalViews: overview['totalViews'] ?? 0,
+      totalViews: _readInt(overview['totalViews'] ?? data['totalImpressions']),
       totalViewsChange: _getChangePercentage(
-        overview['totalViews'],
+        overview['totalViews'] ?? data['totalImpressions'],
         previousOverview['totalViews'],
       ),
-      totalEngagement: overview['totalEngagement'] ?? 0,
+      totalEngagement:
+          _readInt(overview['totalEngagement'] ?? data['totalEngagement']),
       totalEngagementChange: _getChangePercentage(
-        overview['totalEngagement'],
+        overview['totalEngagement'] ?? data['totalEngagement'],
         previousOverview['totalEngagement'],
       ),
-      newFollowers: overview['newFollowers'] ?? 0,
+      newFollowers: _readInt(
+        overview['newFollowers'] ?? data['followerGrowth'],
+      ),
       newFollowersChange: _getChangePercentage(
-        overview['newFollowers'],
+        overview['newFollowers'] ?? data['followerGrowth'],
         previousOverview['newFollowers'],
       ),
-      totalReach: overview['totalReach'] ?? 0,
+      totalReach: _readInt(overview['totalReach'] ?? data['totalReach']),
       totalReachChange: _getChangePercentage(
-        overview['totalReach'],
+        overview['totalReach'] ?? data['totalReach'],
         previousOverview['totalReach'],
       ),
-      engagementRate: (data['engagementRate'] as num?)?.toDouble() ?? 0,
-      previousEngagementRate:
-          (data['previousEngagementRate'] as num?)?.toDouble() ?? 0,
+      engagementRate: (data['engagementRate'] as num?)?.toDouble() ??
+          (data['averageEngagementRate'] as num?)?.toDouble() ??
+          0,
+      previousEngagementRate: previousEngagementRate,
       demographics: Demographics(
-        male: demographicsData['male'] ?? 0,
-        female: demographicsData['female'] ?? 0,
-        other: demographicsData['other'] ?? 0,
+        male: _readInt(demographicsData['male'] ?? genderData['male']),
+        female: _readInt(demographicsData['female'] ?? genderData['female']),
+        other: _readInt(demographicsData['other'] ?? genderData['other']),
       ),
       topLocations: (locationsData)
           .map((item) => TopLocation(
-                location: item['location'] ?? '',
+                location: item['location'] ??
+                    [item['city'], item['country']]
+                        .where((value) =>
+                            value != null && value.toString().isNotEmpty)
+                        .join(', '),
                 percentage: (item['percentage'] as num?)?.toDouble() ?? 0,
               ))
           .toList(),
-      ageRanges: (ageRangesData)
+      ageRanges: (ageRangesData.isNotEmpty
+              ? ageRangesData
+              : ageGroupData.entries
+                  .map((entry) => {
+                        'range': entry.key,
+                        'count': entry.value,
+                      })
+                  .toList())
           .map((item) => AgeRange(
                 range: item['range'] ?? '',
-                count: item['count'] ?? 0,
+                count: _readInt(item['count']),
               ))
           .toList(),
-      chartData: _parseChartData(chartDataMap),
+      chartData: chartDataMap.isNotEmpty
+          ? _parseChartData(chartDataMap)
+          : _parseMetricsChartData(metrics),
     );
   }
 
@@ -207,5 +233,67 @@ class InsightsBloc extends Bloc<InsightsEvent, InsightsState> {
     }
 
     return result;
+  }
+
+  Map<String, List<ChartDataPoint>> _parseMetricsChartData(List metrics) {
+    final views = <ChartDataPoint>[];
+    final engagement = <ChartDataPoint>[];
+    final reach = <ChartDataPoint>[];
+
+    for (final item in metrics.reversed) {
+      if (item is! Map) continue;
+
+      final metric = Map<String, dynamic>.from(item);
+      final label = _formatMetricDate(metric['date']);
+
+      views.add(
+        ChartDataPoint(
+          label: label,
+          value: _readInt(metric['impressions']).toDouble(),
+        ),
+      );
+      engagement.add(
+        ChartDataPoint(
+          label: label,
+          value: _readInt(metric['engagement']).toDouble(),
+        ),
+      );
+      reach.add(
+        ChartDataPoint(
+          label: label,
+          value: _readInt(metric['reach']).toDouble(),
+        ),
+      );
+    }
+
+    return {
+      'views': views,
+      'engagement': engagement,
+      'reach': reach,
+    };
+  }
+
+  String _formatMetricDate(dynamic value) {
+    if (value == null) return '';
+
+    final parsed = DateTime.tryParse(value.toString());
+    if (parsed == null) return value.toString();
+
+    return '${parsed.month}/${parsed.day}';
+  }
+
+  Map<String, dynamic> _readMap(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return Map<String, dynamic>.from(value);
+
+    return {};
+  }
+
+  int _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+
+    return 0;
   }
 }

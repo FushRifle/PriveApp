@@ -84,4 +84,39 @@ class NotificationService {
       throw e.response?.data['message'] ?? 'Failed to update preferences';
     }
   }
+
+  Future<Map<String, dynamic>> registerDeviceToken({
+    required String token,
+    required String platform,
+    String? deviceId,
+  }) async {
+    try {
+      final response = await _api.post(
+        '/api/notifications/device-tokens',
+        data: {
+          'token': token,
+          'platform': platform,
+          if (deviceId != null && deviceId.trim().isNotEmpty)
+            'deviceId': deviceId,
+        },
+      );
+      return response.data;
+    } on DioException catch (e) {
+      throw e.response?.data['message'] ?? 'Failed to register device token';
+    }
+  }
+
+  Future<Map<String, dynamic>> deleteDeviceToken(String token) async {
+    try {
+      final response = await _api.delete(
+        '/api/notifications/device-tokens',
+        data: {
+          'token': token,
+        },
+      );
+      return response.data;
+    } on DioException catch (e) {
+      throw e.response?.data['message'] ?? 'Failed to delete device token';
+    }
+  }
 }

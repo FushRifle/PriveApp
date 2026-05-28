@@ -48,6 +48,7 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
       minAge: event.minAge,
       maxAge: event.maxAge,
       distance: event.distance,
+      interests: event.interests,
       verifiedOnly: event.verifiedOnly,
       sortBy: event.sortBy,
     );
@@ -74,6 +75,7 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
         minAge: filters['minAge'],
         maxAge: filters['maxAge'],
         distance: filters['distance'],
+        interests: _readStringList(filters['interests']),
         verifiedOnly: filters['verifiedOnly'] ?? false,
         sortBy: filters['sortBy'],
       );
@@ -152,6 +154,7 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
         minAge: filters['minAge'],
         maxAge: filters['maxAge'],
         distance: filters['distance'],
+        interests: _readStringList(filters['interests']),
         verifiedOnly: filters['verifiedOnly'] ?? false,
         sortBy: filters['sortBy'],
       );
@@ -221,6 +224,7 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
         minAge: filters['minAge'],
         maxAge: filters['maxAge'],
         distance: filters['distance'],
+        interests: _readStringList(filters['interests']),
         verifiedOnly: filters['verifiedOnly'] ?? false,
         sortBy: filters['sortBy'],
       );
@@ -375,6 +379,7 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
         minAge: filters['minAge'],
         maxAge: filters['maxAge'],
         distance: filters['distance'],
+        interests: _readStringList(filters['interests']),
         verifiedOnly: filters['verifiedOnly'] ?? false,
         sortBy: filters['sortBy'],
       ),
@@ -453,6 +458,7 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
     int? minAge,
     int? maxAge,
     int? distance,
+    List<String>? interests,
     bool? verifiedOnly,
     String? sortBy,
   }) {
@@ -463,6 +469,7 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
       'minAge': minAge,
       'maxAge': maxAge,
       'distance': distance,
+      'interests': interests ?? state.currentFilters['interests'],
       'verifiedOnly': verifiedOnly ?? false,
       'sortBy': sortBy,
     };
@@ -560,6 +567,31 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
     if (value is String) return int.tryParse(value) ?? 0;
 
     return 0;
+  }
+
+  List<String>? _readStringList(dynamic value) {
+    if (value == null) return null;
+
+    if (value is List<String>) {
+      return value.where((item) => item.trim().isNotEmpty).toList();
+    }
+
+    if (value is List) {
+      return value
+          .map((item) => item.toString().trim())
+          .where((item) => item.isNotEmpty)
+          .toList();
+    }
+
+    if (value is String && value.trim().isNotEmpty) {
+      return value
+          .split(',')
+          .map((item) => item.trim())
+          .where((item) => item.isNotEmpty)
+          .toList();
+    }
+
+    return null;
   }
 
   @override

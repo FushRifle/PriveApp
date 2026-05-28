@@ -1,6 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:clique/data/services/auth/auth_service.dart';
+import 'package:clique/data/services/notification/push_notification_service.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
@@ -139,6 +140,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(state.copyWith(status: AuthStatus.loading, isLoading: true));
 
+    await PushNotificationService.instance.deleteDeviceToken();
     await _authService.signOut();
 
     emit(

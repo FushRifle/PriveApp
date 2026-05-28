@@ -16,6 +16,7 @@ import 'package:clique/data/providers/theme_provider.dart';
 import 'package:clique/bloc/cloudinary/cloudinary_cubit.dart';
 import 'package:clique/bloc/profile/profile_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
+import 'package:clique/data/services/notification/push_notification_service.dart';
 
 import 'package:clique/core/router/app_router.dart';
 
@@ -51,6 +52,8 @@ Future<void> _initializeApp() async {
   CloudinaryContext.cloudinary = Cloudinary.fromCloudName(
     cloudName: 'dug6225go',
   );
+
+  await PushNotificationService.instance.initialize();
 
   FlutterError.onError = FlutterError.presentError;
 }
@@ -127,16 +130,30 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       ],
       child: Builder(
         builder: (context) {
-          return MaterialApp(
-            title: 'Clique',
-            debugShowCheckedModeBanner: false,
-            scaffoldMessengerKey: _scaffoldMessengerKey,
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
-            themeMode: themeMode,
-            scrollBehavior: const CustomScrollBehavior(),
-            home: const AuthGuard(),
-            onGenerateRoute: AppRouter.onGenerateRoute,
+          return BlocListener<AuthBloc, AuthState>(
+            listenWhen: (previous, current) {
+              return previous.status != current.status ||
+                  previous.token != current.token;
+            },
+            listener: (context, state) {
+              if (state.status == AuthStatus.authenticated) {
+                PushNotificationService.instance.syncDeviceToken();
+              }
+              if (state.status == AuthStatus.unauthenticated) {
+                PushNotificationService.instance.deleteDeviceToken();
+              }
+            },
+            child: MaterialApp(
+              title: 'Clique',
+              debugShowCheckedModeBanner: false,
+              scaffoldMessengerKey: _scaffoldMessengerKey,
+              theme: AppTheme.lightTheme,
+              darkTheme: AppTheme.darkTheme,
+              themeMode: themeMode,
+              scrollBehavior: const CustomScrollBehavior(),
+              home: const AuthGuard(),
+              onGenerateRoute: AppRouter.onGenerateRoute,
+            ),
           );
         },
       ),

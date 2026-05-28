@@ -29,6 +29,7 @@ class ExploreState extends Equatable {
       'minAge': null,
       'maxAge': null,
       'distance': null,
+      'interests': <String>[],
       'verifiedOnly': false,
       'sortBy': null,
     },

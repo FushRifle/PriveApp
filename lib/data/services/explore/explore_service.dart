@@ -12,6 +12,7 @@ class ExploreService {
     int? minAge,
     int? maxAge,
     int? distance,
+    List<String>? interests,
     bool? verifiedOnly,
     String? sortBy,
   }) async {
@@ -23,6 +24,9 @@ class ExploreService {
       if (minAge != null) queryParams['minAge'] = minAge;
       if (maxAge != null) queryParams['maxAge'] = maxAge;
       if (distance != null) queryParams['distance'] = distance;
+      if (interests != null && interests.isNotEmpty) {
+        queryParams['interests'] = interests.join(',');
+      }
       if (verifiedOnly == true) queryParams['verifiedOnly'] = true;
       if (sortBy != null) queryParams['sortBy'] = sortBy;
 

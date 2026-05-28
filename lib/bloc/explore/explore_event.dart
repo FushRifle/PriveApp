@@ -13,6 +13,7 @@ class LoadExploreProfiles extends ExploreEvent {
   final int? minAge;
   final int? maxAge;
   final int? distance;
+  final List<String>? interests;
   final bool? verifiedOnly;
   final String? sortBy;
 
@@ -22,6 +23,7 @@ class LoadExploreProfiles extends ExploreEvent {
     this.minAge,
     this.maxAge,
     this.distance,
+    this.interests,
     this.verifiedOnly = false,
     this.sortBy,
   });
@@ -33,6 +35,7 @@ class LoadExploreProfiles extends ExploreEvent {
         minAge,
         maxAge,
         distance,
+        interests,
         verifiedOnly,
         sortBy,
       ];

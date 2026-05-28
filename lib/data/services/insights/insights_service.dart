@@ -39,14 +39,15 @@ class InsightsService {
     try {
       final data = <String, dynamic>{
         'eventType': eventType,
-        'objectType': objectType,
-        'objectId': objectId,
+        'targetId': objectId,
+        'metadata': {
+          'objectType': objectType,
+          if (section != null) 'section': section,
+          if (source != null) 'source': source,
+        },
       };
-      if (section != null) data['section'] = section;
-      if (source != null) data['source'] = source;
 
-      final response = await _api.post('/api/insights/track', data: data);
-      // Success - no return data needed
+      await _api.post('/api/insights/track', data: data);
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to track event');
     }
@@ -186,10 +187,12 @@ extension InsightsServiceEvents on InsightsService {
     try {
       final data = {
         'eventType': 'search',
-        'objectType': 'search',
-        'objectId': 0,
-        'section': section ?? 'search',
-        'source': query,
+        'targetId': 0,
+        'metadata': {
+          'objectType': 'search',
+          'section': section ?? 'search',
+          'source': query,
+        },
       };
       await _api.post('/api/insights/track', data: data);
     } on DioException catch (e) {
