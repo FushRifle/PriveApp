@@ -70,7 +70,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
     context.read<ChatBloc>().add(BlockUser(userId: widget.userId));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-          content: Text('User blocked'), backgroundColor: Colors.red),
+          content: Text('User blocked'), backgroundColor: AppColors.red),
     );
     Navigator.pop(context);
   }
@@ -81,7 +81,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
+        statusBarColor: AppColors.transparent,
         statusBarIconBrightness: Brightness.dark,
       ),
     );
@@ -89,10 +89,10 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.black),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -105,7 +105,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_outlined, color: Colors.black),
+            icon: const Icon(Icons.settings_outlined, color: AppColors.black),
             onPressed: () {
               HapticFeedback.lightImpact();
               Navigator.push(
@@ -181,11 +181,11 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: AppColors.black.withOpacity(0.03),
               blurRadius: 8,
               offset: const Offset(0, 2)),
         ],
@@ -208,7 +208,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                 height: 8,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isOnline ? AppColors.greenColor : Colors.grey,
+                  color: isOnline ? AppColors.greenColor : AppColors.grey,
                 ),
               ),
               const SizedBox(width: 6),
@@ -216,7 +216,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                 isOnline ? 'Active now' : 'Offline',
                 style: AppTheme.greyTextStyle.copyWith(
                   fontSize: 13,
-                  color: isOnline ? AppColors.greenColor : Colors.grey,
+                  color: isOnline ? AppColors.greenColor : AppColors.grey,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -335,11 +335,11 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.white,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
+                  color: AppColors.black.withOpacity(0.03),
                   blurRadius: 8,
                   offset: const Offset(0, 2)),
             ],
@@ -427,11 +427,11 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.white,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
+                  color: AppColors.black.withOpacity(0.03),
                   blurRadius: 8,
                   offset: const Offset(0, 2)),
             ],
@@ -514,11 +514,11 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: AppColors.black.withOpacity(0.03),
               blurRadius: 8,
               offset: const Offset(0, 2)),
         ],
@@ -579,11 +579,11 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.8,
         decoration: const BoxDecoration(
-            color: Colors.white,
+            color: AppColors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
         child: Column(
           children: [
@@ -628,7 +628,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
       context,
       MaterialPageRoute(
         builder: (context) => Scaffold(
-          backgroundColor: Colors.black,
+          backgroundColor: AppColors.black,
           body: Stack(
             children: [
               Center(
@@ -638,7 +638,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                   top: 40,
                   right: 16,
                   child: IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
+                    icon: const Icon(Icons.close, color: AppColors.white),
                     onPressed: () => Navigator.pop(context),
                   )),
             ],
@@ -685,25 +685,25 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
     final ext = filename.split('.').last.toLowerCase();
     switch (ext) {
       case 'pdf':
-        return Colors.red;
+        return AppColors.red;
       case 'doc':
       case 'docx':
-        return Colors.blue;
+        return AppColors.blue;
       case 'xls':
       case 'xlsx':
-        return Colors.green;
+        return AppColors.green;
       case 'ppt':
       case 'pptx':
-        return Colors.orange;
+        return AppColors.orange;
       case 'jpg':
       case 'jpeg':
       case 'png':
       case 'gif':
-        return Colors.purple;
+        return AppColors.purple;
       case 'mp4':
       case 'mov':
       case 'avi':
-        return Colors.teal;
+        return AppColors.teal;
       default:
         return AppColors.primary;
     }

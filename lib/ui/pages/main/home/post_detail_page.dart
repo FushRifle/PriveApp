@@ -374,7 +374,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       builder: (_) {
         return _PostOptionsSheet(
           isOwnPost: _isOwnPost,
@@ -461,7 +461,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
+        backgroundColor: isError ? AppColors.red : AppColors.green,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),
@@ -484,8 +484,8 @@ class _PostAppBar extends StatelessWidget {
       floating: true,
       pinned: true,
       elevation: 0,
-      backgroundColor: Colors.white.withOpacity(0.92),
-      foregroundColor: Colors.black,
+      backgroundColor: AppColors.backgroundColor.withOpacity(0.92),
+      foregroundColor: AppColors.black,
       centerTitle: true,
       title: Text(
         'Post',
@@ -501,7 +501,7 @@ class _PostAppBar extends StatelessWidget {
             sigmaY: 12,
           ),
           child: Container(
-            color: Colors.transparent,
+            color: AppColors.transparent,
           ),
         ),
       ),
@@ -515,7 +515,7 @@ class _PostAppBar extends StatelessWidget {
       actions: [
         Padding(
           padding: const EdgeInsets.all(8),
-          child: _AppBarCircleButton(
+          child: _AppBarCircleButton( 
             icon: Icons.more_horiz,
             onTap: onMore,
           ),
@@ -537,14 +537,14 @@ class _AppBarCircleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.black.withOpacity(0.05),
+      color: AppColors.cardColor.withOpacity(0.05),
       shape: const CircleBorder(),
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onTap,
         child: Icon(
           icon,
-          color: Colors.black,
+          color: AppColors.white,
           size: 20,
         ),
       ),
@@ -716,14 +716,14 @@ class _CommentTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardColor,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: Colors.black.withOpacity(0.03),
+          color: AppColors.border.withOpacity(0.03),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.018),
+            color: AppColors.shadow.withOpacity(0.018),
             blurRadius: 12,
             offset: const Offset(0, 3),
           ),
@@ -748,7 +748,7 @@ class _CommentTile extends StatelessWidget {
                         comment.userName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: AppTheme.blackTextStyle.copyWith(
+                        style: AppTheme.greyTextStyle.copyWith(
                           fontWeight: FontWeight.w800,
                           fontSize: 14,
                         ),
@@ -766,10 +766,10 @@ class _CommentTile extends StatelessWidget {
                 const SizedBox(height: 7),
                 Text(
                   comment.content,
-                  style: AppTheme.blackTextStyle.copyWith(
+                  style: AppTheme.greyTextStyle.copyWith(
                     fontSize: 14,
                     height: 1.4,
-                    color: Colors.black87,
+                    color: AppColors.text,
                   ),
                 ),
               ],
@@ -805,7 +805,7 @@ class _CommentComposer extends StatelessWidget {
       left: 0,
       right: 0,
       child: Material(
-        color: Colors.transparent,
+        color: AppColors.transparent,
         child: Container(
           padding: EdgeInsets.fromLTRB(
             16,
@@ -814,13 +814,13 @@ class _CommentComposer extends StatelessWidget {
             bottomPadding + 12,
           ),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.cardColor,
             borderRadius: const BorderRadius.vertical(
               top: Radius.circular(24),
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.06),
+                color: AppColors.black.withOpacity(0.06),
                 blurRadius: 14,
                 offset: const Offset(0, -3),
               ),
@@ -844,7 +844,7 @@ class _CommentComposer extends StatelessWidget {
                     color: AppColors.backgroundColor,
                     borderRadius: BorderRadius.circular(26),
                     border: Border.all(
-                      color: Colors.black.withOpacity(0.03),
+                      color: AppColors.black.withOpacity(0.03),
                     ),
                   ),
                   child: TextField(
@@ -891,14 +891,14 @@ class _CommentComposer extends StatelessWidget {
                             width: 18,
                             height: 18,
                             child: CircularProgressIndicator(
-                              color: Colors.white,
+                              color: AppColors.white,
                               strokeWidth: 2,
                             ),
                           )
                         : Icon(
                             Icons.send_rounded,
                             size: 20,
-                            color: canSend ? Colors.white : Colors.grey,
+                            color: canSend ? AppColors.white : AppColors.grey,
                           ),
                   ),
                 ),
@@ -986,7 +986,7 @@ class _PostOptionsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: AppColors.white,
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(30),
         ),
@@ -1008,13 +1008,13 @@ class _PostOptionsSheet extends StatelessWidget {
             _OptionTile(
               icon: Icons.link,
               title: 'Copy Link',
-              color: Colors.black87,
+              color: AppColors.black87,
               onTap: onCopyLink,
             ),
             _OptionTile(
               icon: Icons.share_outlined,
               title: 'Share Post',
-              color: Colors.black87,
+              color: AppColors.black87,
               onTap: onShare,
             ),
             if (isOwnPost) ...[
@@ -1022,7 +1022,7 @@ class _PostOptionsSheet extends StatelessWidget {
               _OptionTile(
                 icon: Icons.delete_outline,
                 title: 'Delete Post',
-                color: Colors.redAccent,
+                color: AppColors.redAccent,
                 onTap: onDelete,
               ),
             ],
@@ -1030,7 +1030,7 @@ class _PostOptionsSheet extends StatelessWidget {
             _OptionTile(
               icon: Icons.flag_outlined,
               title: 'Report',
-              color: Colors.redAccent,
+              color: AppColors.redAccent,
               onTap: onReport,
             ),
             const SizedBox(height: 10),
@@ -1092,7 +1092,7 @@ class _CommentsError extends StatelessWidget {
       ),
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
@@ -1100,7 +1100,7 @@ class _CommentsError extends StatelessWidget {
           const Icon(
             Icons.error_outline,
             size: 48,
-            color: Colors.grey,
+            color: AppColors.grey,
           ),
           const SizedBox(height: 12),
           Text(
@@ -1135,7 +1135,7 @@ class _EmptyComments extends StatelessWidget {
       ),
       padding: const EdgeInsets.all(36),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
@@ -1184,7 +1184,7 @@ class _PostNotFound extends StatelessWidget {
             const Icon(
               Icons.error_outline,
               size: 64,
-              color: Colors.grey,
+              color: AppColors.grey,
             ),
             const SizedBox(height: 16),
             Text(

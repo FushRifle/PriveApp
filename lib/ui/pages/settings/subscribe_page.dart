@@ -17,7 +17,7 @@ class _SubscribePageState extends State<SubscribePage> {
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
+        statusBarColor: AppColors.transparent,
         statusBarIconBrightness: Brightness.dark,
       ),
     );
@@ -25,10 +25,10 @@ class _SubscribePageState extends State<SubscribePage> {
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.black),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -52,11 +52,11 @@ class _SubscribePageState extends State<SubscribePage> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: const LinearGradient(
-                    colors: [Colors.purple, Colors.pink],
+                    colors: [AppColors.purple, AppColors.pink],
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.purple.withOpacity(0.3),
+                      color: AppColors.purple.withOpacity(0.3),
                       blurRadius: 30,
                       offset: const Offset(0, 15),
                     ),
@@ -65,7 +65,7 @@ class _SubscribePageState extends State<SubscribePage> {
                 child: const Icon(
                   Icons.workspace_premium,
                   size: 60,
-                  color: Colors.white,
+                  color: AppColors.white,
                 ),
               ),
               const SizedBox(height: 24),
@@ -91,7 +91,7 @@ class _SubscribePageState extends State<SubscribePage> {
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.white,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
@@ -108,7 +108,7 @@ class _SubscribePageState extends State<SubscribePage> {
                           decoration: BoxDecoration(
                             color: _selectedPlan == 0
                                 ? AppColors.primary
-                                : Colors.transparent,
+                                : AppColors.transparent,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Column(
@@ -117,7 +117,7 @@ class _SubscribePageState extends State<SubscribePage> {
                                 'Monthly',
                                 style: TextStyle(
                                   color: _selectedPlan == 0
-                                      ? Colors.white
+                                      ? AppColors.white
                                       : AppColors.blackColor,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
@@ -128,7 +128,7 @@ class _SubscribePageState extends State<SubscribePage> {
                                 '\$9.99/mo',
                                 style: TextStyle(
                                   color: _selectedPlan == 0
-                                      ? Colors.white.withOpacity(0.8)
+                                      ? AppColors.white.withOpacity(0.8)
                                       : AppColors.greyColor,
                                   fontSize: 12,
                                 ),
@@ -150,7 +150,7 @@ class _SubscribePageState extends State<SubscribePage> {
                           decoration: BoxDecoration(
                             color: _selectedPlan == 1
                                 ? AppColors.primary
-                                : Colors.transparent,
+                                : AppColors.transparent,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Column(
@@ -162,7 +162,7 @@ class _SubscribePageState extends State<SubscribePage> {
                                     'Yearly',
                                     style: TextStyle(
                                       color: _selectedPlan == 1
-                                          ? Colors.white
+                                          ? AppColors.white
                                           : AppColors.blackColor,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
@@ -176,7 +176,7 @@ class _SubscribePageState extends State<SubscribePage> {
                                     ),
                                     decoration: BoxDecoration(
                                       color: _selectedPlan == 1
-                                          ? Colors.white.withOpacity(0.3)
+                                          ? AppColors.white.withOpacity(0.3)
                                           : AppColors.greenColor,
                                       borderRadius: BorderRadius.circular(6),
                                     ),
@@ -184,8 +184,8 @@ class _SubscribePageState extends State<SubscribePage> {
                                       'Save 50%',
                                       style: TextStyle(
                                         color: _selectedPlan == 1
-                                            ? Colors.white
-                                            : Colors.white,
+                                            ? AppColors.white
+                                            : AppColors.white,
                                         fontSize: 10,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -198,7 +198,7 @@ class _SubscribePageState extends State<SubscribePage> {
                                 '\$4.99/mo',
                                 style: TextStyle(
                                   color: _selectedPlan == 1
-                                      ? Colors.white.withOpacity(0.8)
+                                      ? AppColors.white.withOpacity(0.8)
                                       : AppColors.greyColor,
                                   fontSize: 12,
                                 ),
@@ -218,42 +218,42 @@ class _SubscribePageState extends State<SubscribePage> {
                 icon: Icons.verified,
                 title: 'Verified Badge',
                 description: 'Get a blue checkmark and stand out',
-                color: Colors.blue,
+                color: AppColors.blue,
               ),
               const SizedBox(height: 20),
               _buildFeatureItem(
                 icon: Icons.analytics,
                 title: 'Advanced Analytics',
                 description: 'Detailed insights about your content',
-                color: Colors.orange,
+                color: AppColors.orange,
               ),
               const SizedBox(height: 20),
               _buildFeatureItem(
                 icon: Icons.ad_units,
                 title: 'No Ads',
                 description: 'Enjoy an ad-free experience',
-                color: Colors.green,
+                color: AppColors.green,
               ),
               const SizedBox(height: 20),
               _buildFeatureItem(
                 icon: Icons.cloud_upload,
                 title: 'HD Uploads',
                 description: 'Upload high-quality videos and photos',
-                color: Colors.purple,
+                color: AppColors.purple,
               ),
               const SizedBox(height: 20),
               _buildFeatureItem(
                 icon: Icons.auto_awesome,
                 title: 'Exclusive Filters',
                 description: 'Access premium filters and effects',
-                color: Colors.pink,
+                color: AppColors.pink,
               ),
               const SizedBox(height: 20),
               _buildFeatureItem(
                 icon: Icons.headphones,
                 title: 'Priority Support',
                 description: '24/7 dedicated customer support',
-                color: Colors.teal,
+                color: AppColors.teal,
               ),
               const SizedBox(height: 32),
 
@@ -268,12 +268,12 @@ class _SubscribePageState extends State<SubscribePage> {
                   height: 60,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Colors.purple, Colors.pink],
+                      colors: [AppColors.purple, AppColors.pink],
                     ),
                     borderRadius: BorderRadius.circular(30),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.purple.withOpacity(0.3),
+                        color: AppColors.purple.withOpacity(0.3),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
@@ -337,7 +337,7 @@ class _SubscribePageState extends State<SubscribePage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -428,7 +428,7 @@ class _SubscribePageState extends State<SubscribePage> {
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Colors.purple, Colors.pink],
+                    colors: [AppColors.purple, AppColors.pink],
                   ),
                   borderRadius: BorderRadius.circular(25),
                 ),

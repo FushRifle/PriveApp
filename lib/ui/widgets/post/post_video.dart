@@ -161,7 +161,7 @@ class _PostVideoState extends State<PostVideo>
           const Center(
             child: Icon(
               Icons.play_circle_fill_rounded,
-              color: Colors.white,
+              color: AppColors.white,
               size: 62,
             ),
           ),
@@ -174,12 +174,12 @@ class _PostVideoState extends State<PostVideo>
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.45),
+                  color: AppColors.black.withOpacity(0.45),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
-                  color: Colors.white,
+                  color: AppColors.white,
                   size: 19,
                 ),
               ),
@@ -280,7 +280,7 @@ class _VideoGradient extends StatelessWidget {
           stops: [0, 0.55, 1],
           colors: [
             Color.fromRGBO(0, 0, 0, 0.16),
-            Colors.transparent,
+            AppColors.transparent,
             Color.fromRGBO(0, 0, 0, 0.26),
           ],
         ),

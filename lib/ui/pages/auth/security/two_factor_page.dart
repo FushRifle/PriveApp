@@ -25,13 +25,13 @@ class _TwoFactorPageState extends State<TwoFactorPage> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_new,
-              color: isDarkMode ? Colors.white : Colors.black),
+              color: isDarkMode ? AppColors.white : AppColors.black),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Two-Factor Authentication',
           style: TextStyle(
-            color: isDarkMode ? Colors.white : Colors.black,
+            color: isDarkMode ? AppColors.white : AppColors.black,
             fontWeight: FontWeight.w600,
             fontSize: 18,
           ),

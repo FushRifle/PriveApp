@@ -335,18 +335,18 @@ class _ReelItemState extends State<ReelItem>
   Widget _buildPlayPauseOverlay() {
     return IgnorePointer(
       child: Container(
-        color: Colors.black.withOpacity(0.18),
+        color: AppColors.black.withOpacity(0.18),
         child: Center(
           child: Container(
             width: 68,
             height: 68,
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.45),
+              color: AppColors.black.withOpacity(0.45),
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.play_arrow_rounded,
-              color: Colors.white,
+              color: AppColors.white,
               size: 50,
             ),
           ),
@@ -366,8 +366,8 @@ class _ReelItemState extends State<ReelItem>
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.black.withOpacity(0.45),
-                  Colors.transparent,
+                  AppColors.black.withOpacity(0.45),
+                  AppColors.transparent,
                 ],
               ),
             ),
@@ -380,8 +380,8 @@ class _ReelItemState extends State<ReelItem>
                 begin: Alignment.bottomCenter,
                 end: Alignment.topCenter,
                 colors: [
-                  Colors.black.withOpacity(0.72),
-                  Colors.transparent,
+                  AppColors.black.withOpacity(0.72),
+                  AppColors.transparent,
                 ],
               ),
             ),
@@ -412,7 +412,7 @@ class _ReelItemState extends State<ReelItem>
             _ActionButton(
               icon: _isLiked ? Icons.favorite : Icons.favorite_border,
               label: _formatCount(likeCount < 0 ? 0 : likeCount),
-              color: _isLiked ? AppColors.redColor : Colors.white,
+              color: _isLiked ? AppColors.redColor : AppColors.white,
               onTap: _handleLike,
             ),
             const SizedBox(height: 20),
@@ -479,7 +479,7 @@ class _ReelItemState extends State<ReelItem>
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.white,
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
@@ -489,7 +489,7 @@ class _ReelItemState extends State<ReelItem>
                   const SizedBox(width: 4),
                   const Icon(
                     Icons.verified,
-                    color: Colors.blue,
+                    color: AppColors.blue,
                     size: 16,
                   ),
                 ],
@@ -507,7 +507,7 @@ class _ReelItemState extends State<ReelItem>
               Text(
                 caption,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.white,
                   fontSize: 14,
                   height: 1.25,
                 ),
@@ -524,7 +524,7 @@ class _ReelItemState extends State<ReelItem>
                   return Text(
                     '#$tag',
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.white,
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                     ),
@@ -537,7 +537,7 @@ class _ReelItemState extends State<ReelItem>
               children: [
                 const Icon(
                   Icons.music_note,
-                  color: Colors.white,
+                  color: AppColors.white,
                   size: 16,
                 ),
                 const SizedBox(width: 5),
@@ -547,7 +547,7 @@ class _ReelItemState extends State<ReelItem>
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.white,
                       fontSize: 12,
                     ),
                   ),
@@ -630,10 +630,10 @@ class _VideoLoading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.black,
+      color: AppColors.black,
       child: const Center(
         child: CircularProgressIndicator(
-          color: Colors.white,
+          color: AppColors.white,
           strokeWidth: 2,
         ),
       ),
@@ -647,7 +647,7 @@ class _VideoUnavailable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.black,
+      color: AppColors.black,
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -655,13 +655,13 @@ class _VideoUnavailable extends StatelessWidget {
             Icon(
               Icons.video_library_outlined,
               size: 64,
-              color: Colors.white.withOpacity(0.3),
+              color: AppColors.white.withOpacity(0.3),
             ),
             const SizedBox(height: 16),
             Text(
               'Video unavailable',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.55),
+                color: AppColors.white.withOpacity(0.55),
                 fontSize: 14,
               ),
             ),
@@ -697,8 +697,8 @@ class _VideoProgress extends StatelessWidget {
           return LinearProgressIndicator(
             value: progress,
             minHeight: 2,
-            color: Colors.white,
-            backgroundColor: Colors.white.withOpacity(0.18),
+            color: AppColors.white,
+            backgroundColor: AppColors.white.withOpacity(0.18),
           );
         },
       ),
@@ -716,7 +716,7 @@ class _ActionButton extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
-    this.color = Colors.white,
+    this.color = AppColors.white,
   });
 
   @override
@@ -740,7 +740,7 @@ class _ActionButton extends StatelessWidget {
             Text(
               label,
               style: const TextStyle(
-                color: Colors.white,
+                color: AppColors.white,
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
               ),
@@ -775,7 +775,7 @@ class _ProfileAvatar extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: Colors.white,
+          color: AppColors.white,
           width: 2,
         ),
       ),
@@ -795,16 +795,16 @@ class _ProfileAvatar extends StatelessWidget {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.14),
+        color: AppColors.white.withOpacity(0.14),
         shape: BoxShape.circle,
         border: Border.all(
-          color: Colors.white,
+          color: AppColors.white,
           width: 2,
         ),
       ),
       child: Icon(
         Icons.person,
-        color: Colors.white.withOpacity(0.55),
+        color: AppColors.white.withOpacity(0.55),
         size: 20,
       ),
     );
@@ -834,7 +834,7 @@ class _AudioAvatar extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: Colors.white.withOpacity(0.35),
+          color: AppColors.white.withOpacity(0.35),
           width: 2,
         ),
       ),
@@ -854,16 +854,16 @@ class _AudioAvatar extends StatelessWidget {
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: AppColors.white.withOpacity(0.1),
         shape: BoxShape.circle,
         border: Border.all(
-          color: Colors.white.withOpacity(0.35),
+          color: AppColors.white.withOpacity(0.35),
           width: 2,
         ),
       ),
       child: Icon(
         Icons.music_note,
-        color: Colors.white.withOpacity(0.6),
+        color: AppColors.white.withOpacity(0.6),
         size: 24,
       ),
     );
@@ -895,16 +895,18 @@ class _FollowButton extends StatelessWidget {
         decoration: BoxDecoration(
           border: Border.all(
             color: isFollowing
-                ? Colors.white.withOpacity(0.55)
+                ? AppColors.white.withOpacity(0.55)
                 : AppColors.redColor,
           ),
           borderRadius: BorderRadius.circular(20),
-          color: isFollowing ? Colors.transparent : AppColors.redColor,
+          color: isFollowing ? AppColors.transparent : AppColors.redColor,
         ),
         child: Text(
           isFollowing ? 'Following' : 'Follow',
           style: TextStyle(
-            color: isFollowing ? Colors.white.withOpacity(0.85) : Colors.white,
+            color: isFollowing
+                ? AppColors.white.withOpacity(0.85)
+                : AppColors.white,
             fontSize: 12,
             fontWeight: FontWeight.bold,
           ),

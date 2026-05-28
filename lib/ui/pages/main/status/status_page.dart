@@ -268,7 +268,7 @@ class _CreateStoryBanner extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
       child: Material(
-        color: Colors.white,
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(24),
         child: InkWell(
           onTap: onTap,
@@ -279,7 +279,7 @@ class _CreateStoryBanner extends StatelessWidget {
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.035),
+                  color: AppColors.black.withOpacity(0.035),
                   blurRadius: 18,
                   offset: const Offset(0, 6),
                 ),
@@ -301,7 +301,7 @@ class _CreateStoryBanner extends StatelessWidget {
                   ),
                   child: const Icon(
                     Icons.add_rounded,
-                    color: Colors.white,
+                    color: AppColors.white,
                     size: 30,
                   ),
                 ),
@@ -353,7 +353,7 @@ class _StoryListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: AppColors.white,
       borderRadius: BorderRadius.circular(24),
       child: InkWell(
         onTap: onTap,
@@ -364,7 +364,7 @@ class _StoryListItem extends StatelessWidget {
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.025),
+                color: AppColors.black.withOpacity(0.025),
                 blurRadius: 16,
                 offset: const Offset(0, 6),
               ),
@@ -386,7 +386,7 @@ class _StoryListItem extends StatelessWidget {
               const SizedBox(width: 8),
               Icon(
                 Icons.arrow_forward_ios_rounded,
-                color: Colors.grey.shade400,
+                color: AppColors.grey.shade400,
                 size: 15,
               ),
             ],
@@ -423,14 +423,14 @@ class _StoryAvatar extends StatelessWidget {
                 colors: [
                   AppColors.primary,
                   AppColors.secondary,
-                  Colors.purple,
+                  AppColors.purple,
                 ],
               )
             : null,
         border: hasUnseen
             ? null
             : Border.all(
-                color: Colors.grey.shade300,
+                color: AppColors.grey.shade300,
                 width: 1.3,
               ),
       ),
@@ -497,7 +497,8 @@ class _StoryInfo extends StatelessWidget {
               ? 'Tap to view'
               : 'Viewed ${_formatTimeAgo(group.latestStory)}',
           style: AppTheme.greyTextStyle.copyWith(
-            color: group.hasUnseen ? AppColors.primary : Colors.grey.shade600,
+            color:
+                group.hasUnseen ? AppColors.primary : AppColors.grey.shade600,
             fontSize: 13,
             fontWeight: group.hasUnseen ? FontWeight.w700 : FontWeight.w500,
           ),

@@ -41,7 +41,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
     SystemChrome.setSystemUIOverlayStyle(
       SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
+        statusBarColor: AppColors.transparent,
         statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
       ),
     );
@@ -67,24 +67,25 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           final profile = state.myProfile ?? _profile;
 
           return Scaffold(
-            backgroundColor:
-                isDark ? AppColors.darkBackground : const Color(0xfff7f7f7),
+            backgroundColor: isDark
+                ? AppColors.darkBackground
+                : AppColors.settingsLightBackground,
             appBar: AppBar(
-              backgroundColor: Colors.transparent,
+              backgroundColor: AppColors.transparent,
               elevation: 0,
               centerTitle: true,
               leading: IconButton(
                 onPressed: () => Navigator.pop(context),
                 icon: Icon(
                   Icons.arrow_back_ios_new_rounded,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: isDark ? AppColors.white : AppColors.black,
                 ),
               ),
               title: Text(
                 'Settings',
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: isDark ? AppColors.white : AppColors.black,
                 ),
               ),
             ),
@@ -244,15 +245,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             borderRadius: BorderRadius.circular(50),
                             gradient: const LinearGradient(
                               colors: [
-                                Colors.purple,
-                                Colors.pink,
+                                AppColors.purple,
+                                AppColors.pink,
                               ],
                             ),
                           ),
                           child: const Text(
                             'PREMIUM',
                             style: TextStyle(
-                              color: Colors.white,
+                              color: AppColors.white,
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
                             ),
@@ -380,12 +381,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(26),
-          color: isDark ? AppColors.darkCard : Colors.white,
+          color: isDark ? AppColors.darkCard : AppColors.white,
           boxShadow: [
             BoxShadow(
               blurRadius: 25,
               offset: const Offset(0, 8),
-              color: Colors.black.withOpacity(0.04),
+              color: AppColors.black.withOpacity(0.04),
             ),
           ],
         ),
@@ -406,14 +407,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.white : Colors.black,
+                      color: isDark ? AppColors.white : AppColors.black,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'View profile',
                     style: TextStyle(
-                      color: Colors.grey.shade500,
+                      color: AppColors.grey.shade500,
                       fontSize: 13,
                     ),
                   ),
@@ -422,7 +423,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
             Icon(
               Icons.chevron_right_rounded,
-              color: Colors.grey.shade500,
+              color: AppColors.grey.shade500,
             ),
           ],
         ),
@@ -465,7 +466,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       child: Text(
         text,
         style: const TextStyle(
-          color: Colors.white,
+          color: AppColors.white,
           fontWeight: FontWeight.bold,
           fontSize: 28,
         ),
@@ -493,16 +494,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
-                color: isDark ? Colors.white : Colors.black,
+                color: isDark ? AppColors.white : AppColors.black,
               ),
             ),
           ),
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24),
-              color: isDark ? AppColors.darkCard : Colors.white,
+              color: isDark ? AppColors.darkCard : AppColors.white,
               border: Border.all(
-                color: isDark ? Colors.white10 : Colors.black.withOpacity(0.04),
+                color: isDark
+                    ? AppColors.white10
+                    : AppColors.black.withOpacity(0.04),
               ),
             ),
             child: Column(
@@ -545,20 +548,20 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         title,
         style: TextStyle(
           fontWeight: FontWeight.w600,
-          color: isDark ? Colors.white : Colors.black,
+          color: isDark ? AppColors.white : AppColors.black,
         ),
       ),
       subtitle: Text(
         subtitle,
         style: TextStyle(
           fontSize: 12,
-          color: Colors.grey.shade500,
+          color: AppColors.grey.shade500,
         ),
       ),
       trailing: trailing ??
           Icon(
             Icons.chevron_right_rounded,
-            color: Colors.grey.shade500,
+            color: AppColors.grey.shade500,
           ),
     );
   }
@@ -591,27 +594,27 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         'Theme',
         style: TextStyle(
           fontWeight: FontWeight.w600,
-          color: isDark ? Colors.white : Colors.black,
+          color: isDark ? AppColors.white : AppColors.black,
         ),
       ),
       subtitle: Text(
         'System, light, or dark',
         style: TextStyle(
           fontSize: 12,
-          color: Colors.grey.shade500,
+          color: AppColors.grey.shade500,
         ),
       ),
       trailing: DropdownButtonHideUnderline(
         child: DropdownButton<ThemeMode>(
           value: themeMode,
           borderRadius: BorderRadius.circular(16),
-          dropdownColor: isDark ? AppColors.darkCard : Colors.white,
+          dropdownColor: isDark ? AppColors.darkCard : AppColors.white,
           icon: Icon(
             Icons.keyboard_arrow_down_rounded,
-            color: Colors.grey.shade500,
+            color: AppColors.grey.shade500,
           ),
           style: TextStyle(
-            color: isDark ? Colors.white : Colors.black,
+            color: isDark ? AppColors.white : AppColors.black,
             fontWeight: FontWeight.w600,
             fontSize: 14,
           ),
@@ -667,14 +670,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         title,
         style: TextStyle(
           fontWeight: FontWeight.w600,
-          color: isDark ? Colors.white : Colors.black,
+          color: isDark ? AppColors.white : AppColors.black,
         ),
       ),
       subtitle: Text(
         subtitle,
         style: TextStyle(
           fontSize: 12,
-          color: Colors.grey.shade500,
+          color: AppColors.grey.shade500,
         ),
       ),
     );
@@ -684,7 +687,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     return Divider(
       height: 1,
       indent: 78,
-      color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05),
+      color: isDark ? AppColors.white10 : AppColors.black.withOpacity(0.05),
     );
   }
 
@@ -735,7 +738,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: isDark ? AppColors.darkCard : Colors.white,
+      backgroundColor: isDark ? AppColors.darkCard : AppColors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(28),
@@ -756,7 +759,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   height: 4,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),
-                    color: Colors.grey.shade400,
+                    color: AppColors.grey.shade400,
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -765,7 +768,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 18,
-                    color: isDark ? Colors.white : Colors.black,
+                    color: isDark ? AppColors.white : AppColors.black,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -777,7 +780,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     title: Text(
                       e,
                       style: TextStyle(
-                        color: isDark ? Colors.white : Colors.black,
+                        color: isDark ? AppColors.white : AppColors.black,
                       ),
                     ),
                     trailing: selected == e
@@ -807,7 +810,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: isDark ? AppColors.darkCard : Colors.white,
+        backgroundColor: isDark ? AppColors.darkCard : AppColors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
         ),
@@ -828,7 +831,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             child: Text(
               'Cancel',
               style: TextStyle(
-                color: Colors.grey.shade600,
+                color: AppColors.grey.shade600,
               ),
             ),
           ),

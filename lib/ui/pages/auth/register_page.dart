@@ -50,7 +50,7 @@ class _RegisterPageState extends State<RegisterPage> {
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
+        statusBarColor: AppColors.transparent,
         statusBarIconBrightness: Brightness.dark,
       ),
     );
@@ -234,11 +234,13 @@ class _RegisterPageState extends State<RegisterPage> {
                           : AppColors.greyColor,
                       width: 2,
                     ),
-                    color:
-                        _agreeToTerms ? AppColors.primary : Colors.transparent,
+                    color: _agreeToTerms
+                        ? AppColors.primary
+                        : AppColors.transparent,
                   ),
                   child: _agreeToTerms
-                      ? const Icon(Icons.check, size: 14, color: Colors.white)
+                      ? const Icon(Icons.check,
+                          size: 14, color: AppColors.white)
                       : null,
                 ),
               ),
@@ -301,7 +303,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             width: 24,
                             height: 24,
                             child: CircularProgressIndicator(
-                              color: Colors.white,
+                              color: AppColors.white,
                               strokeWidth: 2,
                             ),
                           )

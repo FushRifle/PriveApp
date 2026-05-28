@@ -340,7 +340,7 @@ class _ChatPageState extends State<ChatPage>
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.white,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
@@ -368,7 +368,7 @@ class _ChatPageState extends State<ChatPage>
     final foregroundColor = isDark ? AppColors.darkText : AppColors.lightText;
 
     return AppBar(
-      backgroundColor: isDark ? AppColors.darkBackground : Colors.white,
+      backgroundColor: isDark ? AppColors.darkBackground : AppColors.white,
       elevation: 0,
       leading: IconButton(
         icon: Icon(Icons.arrow_back_ios_new, color: foregroundColor),
@@ -445,7 +445,7 @@ class _ChatPageState extends State<ChatPage>
                             shape: BoxShape.circle,
                             color: conv.isOnline
                                 ? AppColors.greenColor
-                                : Colors.grey,
+                                : AppColors.grey,
                           ),
                         ),
                         const SizedBox(width: 4),
@@ -546,7 +546,7 @@ class _ChatPageState extends State<ChatPage>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: isDark ? AppColors.darkCard : Colors.white,
+              color: isDark ? AppColors.darkCard : AppColors.white,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
@@ -592,19 +592,19 @@ class _ChatPageState extends State<ChatPage>
   Color _parseColor(String colorName) {
     switch (colorName) {
       case 'blue':
-        return Colors.blue;
+        return AppColors.blue;
       case 'green':
-        return Colors.green;
+        return AppColors.green;
       case 'purple':
-        return Colors.purple;
+        return AppColors.purple;
       case 'pink':
-        return Colors.pink;
+        return AppColors.pink;
       case 'orange':
-        return Colors.orange;
+        return AppColors.orange;
       case 'teal':
-        return Colors.teal;
+        return AppColors.teal;
       case 'indigo':
-        return Colors.indigo;
+        return AppColors.indigo;
       default:
         return AppColors.primary;
     }
@@ -624,7 +624,7 @@ class _ChatPageState extends State<ChatPage>
         image: AssetImage(wallpaperAsset),
         fit: BoxFit.cover,
         colorFilter: ColorFilter.mode(
-          (isDark ? Colors.black : Colors.white).withOpacity(0.22),
+          (isDark ? AppColors.black : AppColors.white).withOpacity(0.22),
           BlendMode.srcATop,
         ),
       ),

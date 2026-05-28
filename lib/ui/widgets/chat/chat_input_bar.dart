@@ -108,7 +108,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: isDark ? AppColors.darkCard : Colors.white,
+      backgroundColor: isDark ? AppColors.darkCard : AppColors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -131,22 +131,22 @@ class _ChatInputBarState extends State<ChatInputBar> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 _buildAttachmentOption(
-                    Icons.image, 'Gallery', const Color(0xFF8B5CF6), () {
+                    Icons.image, 'Gallery', AppColors.attachmentPurple, () {
                   Navigator.pop(context);
                   widget.onPickImage();
                 }),
                 _buildAttachmentOption(
-                    Icons.camera_alt, 'Camera', const Color(0xFF06B6D4), () {
+                    Icons.camera_alt, 'Camera', AppColors.attachmentCyan, () {
                   Navigator.pop(context);
                   widget.onPickImage();
                 }),
                 _buildAttachmentOption(
-                    Icons.videocam, 'Video', const Color(0xFF10B981), () {
+                    Icons.videocam, 'Video', AppColors.attachmentGreen, () {
                   Navigator.pop(context);
                   widget.onPickVideo();
                 }),
                 _buildAttachmentOption(
-                    Icons.folder, 'Document', const Color(0xFFF59E0B), () {
+                    Icons.folder, 'Document', AppColors.attachmentAmber, () {
                   Navigator.pop(context);
                   widget.onPickDocument();
                 }),
@@ -207,10 +207,10 @@ class _ChatInputBarState extends State<ChatInputBar> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : Colors.grey.shade50,
+        color: isDark ? AppColors.darkCard : AppColors.grey.shade50,
         border: Border(
           top: BorderSide(
-            color: isDark ? AppColors.darkDivider : Colors.grey.shade200,
+            color: isDark ? AppColors.darkDivider : AppColors.grey.shade200,
           ),
         ),
       ),
@@ -248,7 +248,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                 const SizedBox(height: 2),
                 Text(
                   replyTo.message,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  style: const TextStyle(fontSize: 12, color: AppColors.grey),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -256,7 +256,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+            icon: const Icon(Icons.close, size: 18, color: AppColors.grey),
             onPressed: widget.onCancelReply,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
@@ -271,9 +271,9 @@ class _ChatInputBarState extends State<ChatInputBar> {
     final isActive = _hasText;
     final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surfaceColor = isDark ? AppColors.darkCard : Colors.white;
+    final surfaceColor = isDark ? AppColors.darkCard : AppColors.white;
     final fieldColor =
-        isDark ? AppColors.darkBackgroundPress : const Color(0xFFF1F1F1);
+        isDark ? AppColors.darkBackgroundPress : AppColors.inputLightBackground;
 
     return AnimatedPadding(
       duration: const Duration(milliseconds: 180),
@@ -293,7 +293,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                 children: [
                   // Attachment Button
                   Material(
-                    color: Colors.transparent,
+                    color: AppColors.transparent,
                     child: InkWell(
                       onTap: _showAttachmentMenu,
                       borderRadius: BorderRadius.circular(24),
@@ -355,7 +355,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                     duration: const Duration(milliseconds: 200),
                     curve: Curves.easeInOut,
                     child: Material(
-                      color: Colors.transparent,
+                      color: AppColors.transparent,
                       child: InkWell(
                         onTap: isActive ? _handleSend : null,
                         borderRadius: BorderRadius.circular(28),
@@ -377,7 +377,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                                 ? null
                                 : isDark
                                     ? AppColors.darkBackgroundPress
-                                    : Colors.grey.shade200,
+                                    : AppColors.grey.shade200,
                             shape: BoxShape.circle,
                             boxShadow: isActive
                                 ? [
@@ -392,8 +392,9 @@ class _ChatInputBarState extends State<ChatInputBar> {
                           ),
                           child: Icon(
                             Icons.arrow_forward_rounded,
-                            color:
-                                isActive ? Colors.white : Colors.grey.shade400,
+                            color: isActive
+                                ? AppColors.white
+                                : AppColors.grey.shade400,
                             size: 22,
                           ),
                         ),

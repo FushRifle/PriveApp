@@ -55,7 +55,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
+        statusBarColor: AppColors.transparent,
         statusBarIconBrightness: Brightness.dark,
       ),
     );
@@ -72,7 +72,7 @@ class _LoginPageState extends State<LoginPage> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(state.error!),
-                  backgroundColor: Colors.red,
+                  backgroundColor: AppColors.red,
                   duration: const Duration(seconds: 3),
                 ),
               );
@@ -223,11 +223,11 @@ class _LoginPageState extends State<LoginPage> {
                             width: 2),
                         color: _rememberMe
                             ? AppColors.primary
-                            : Colors.transparent,
+                            : AppColors.transparent,
                       ),
                       child: _rememberMe
                           ? const Icon(Icons.check,
-                              size: 14, color: Colors.white)
+                              size: 14, color: AppColors.white)
                           : null,
                     ),
                   ),
@@ -268,7 +268,7 @@ class _LoginPageState extends State<LoginPage> {
                         width: 24,
                         height: 24,
                         child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2))
+                            color: AppColors.white, strokeWidth: 2))
                     : Text('Sign In',
                         style: AppTheme.whiteTextStyle
                             .copyWith(fontWeight: AppTheme.bold, fontSize: 18)),
@@ -294,13 +294,13 @@ class _LoginPageState extends State<LoginPage> {
           const SizedBox(height: 24),
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
             _buildSocialButton(
-                icon: Icons.g_mobiledata, color: Colors.red, onTap: () {}),
+                icon: Icons.g_mobiledata, color: AppColors.red, onTap: () {}),
             const SizedBox(width: 20),
             _buildSocialButton(
-                icon: Icons.apple, color: Colors.black, onTap: () {}),
+                icon: Icons.apple, color: AppColors.black, onTap: () {}),
             const SizedBox(width: 20),
             _buildSocialButton(
-                icon: Icons.facebook, color: Colors.blue, onTap: () {}),
+                icon: Icons.facebook, color: AppColors.blue, onTap: () {}),
           ]),
           const SizedBox(height: 32),
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -342,7 +342,7 @@ class _LoginPageState extends State<LoginPage> {
                   color: AppColors.backgroundColor,
                   borderRadius: BorderRadius.circular(12)),
               child: const Icon(Icons.arrow_back_ios_new,
-                  color: Colors.black, size: 18),
+                  color: AppColors.black, size: 18),
             ),
           ),
           const SizedBox(height: 40),
@@ -403,7 +403,7 @@ class _LoginPageState extends State<LoginPage> {
                         width: 24,
                         height: 24,
                         child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2))
+                            color: AppColors.white, strokeWidth: 2))
                     : Text('Resend Verification Email',
                         style: AppTheme.whiteTextStyle
                             .copyWith(fontWeight: AppTheme.bold, fontSize: 16)),

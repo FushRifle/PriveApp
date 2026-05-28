@@ -18,13 +18,13 @@ class HelpPage extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_new,
-              color: isDarkMode ? Colors.white : Colors.black),
+              color: isDarkMode ? AppColors.white : AppColors.black),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Help Center',
           style: TextStyle(
-            color: isDarkMode ? Colors.white : Colors.black,
+            color: isDarkMode ? AppColors.white : AppColors.black,
             fontWeight: FontWeight.w600,
             fontSize: 18,
           ),
@@ -316,7 +316,7 @@ class HelpPage extends StatelessWidget {
         style: AppTheme.greyTextStyle.copyWith(fontSize: 13),
       ),
       trailing: Icon(Icons.chevron_right,
-          color: isDarkMode ? Colors.white54 : Colors.black54),
+          color: isDarkMode ? AppColors.white54 : AppColors.black54),
       onTap: onTap,
     );
   }
@@ -373,7 +373,7 @@ class HelpPage extends StatelessWidget {
                   const SnackBar(
                     content: Text(
                         'Thank you for your report! We\'ll review it shortly.'),
-                    backgroundColor: Colors.green,
+                    backgroundColor: AppColors.green,
                   ),
                 );
               }

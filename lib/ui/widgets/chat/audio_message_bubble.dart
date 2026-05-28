@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
+import 'package:clique/app/configs/colors.dart';
+
 class AudioMessageBubble extends StatefulWidget {
   final String audioUrl;
   final bool isMe;
@@ -110,7 +112,7 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
       constraints: const BoxConstraints(minWidth: 150, maxWidth: 250),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: widget.isMe ? widget.chatColor : Colors.grey.shade200,
+        color: widget.isMe ? widget.chatColor : AppColors.grey.shade200,
         borderRadius: BorderRadius.circular(16),
       ),
       child: _isLoading
@@ -131,13 +133,13 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
                   child: Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: widget.isMe ? Colors.white : widget.chatColor,
+                      color: widget.isMe ? AppColors.white : widget.chatColor,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       _isPlaying ? Icons.pause : Icons.play_arrow,
                       size: 18,
-                      color: widget.isMe ? widget.chatColor : Colors.white,
+                      color: widget.isMe ? widget.chatColor : AppColors.white,
                     ),
                   ),
                 ),
@@ -148,9 +150,10 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
                     children: [
                       LinearProgressIndicator(
                         value: progress,
-                        backgroundColor:
-                            widget.isMe ? Colors.white24 : Colors.grey.shade300,
-                        color: widget.isMe ? Colors.white : widget.chatColor,
+                        backgroundColor: widget.isMe
+                            ? AppColors.white24
+                            : AppColors.grey.shade300,
+                        color: widget.isMe ? AppColors.white : widget.chatColor,
                       ),
                       const SizedBox(height: 4),
                       Row(
@@ -160,8 +163,8 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
                             style: TextStyle(
                               fontSize: 10,
                               color: widget.isMe
-                                  ? Colors.white70
-                                  : Colors.grey.shade600,
+                                  ? AppColors.white70
+                                  : AppColors.grey.shade600,
                             ),
                           ),
                           const Spacer(),
@@ -170,8 +173,8 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
                             style: TextStyle(
                               fontSize: 10,
                               color: widget.isMe
-                                  ? Colors.white70
-                                  : Colors.grey.shade600,
+                                  ? AppColors.white70
+                                  : AppColors.grey.shade600,
                             ),
                           ),
                         ],

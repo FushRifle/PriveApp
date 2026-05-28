@@ -17,7 +17,7 @@ class SwipeableCard extends StatelessWidget {
     this.likeOpacity = 0.0,
     this.dislikeOpacity = 0.0,
     this.superLikeOpacity = 0.0,
-    this.cardBackground = Colors.white,
+    this.cardBackground = AppColors.white,
   });
 
   @override
@@ -152,14 +152,14 @@ class _SuperLikeStamp extends StatelessWidget {
                   Icon(
                     Icons.star_rounded,
                     size: 82,
-                    color: Colors.purple.withOpacity(safeOpacity),
+                    color: AppColors.purple.withOpacity(safeOpacity),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'SUPER LIKE',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.purple.withOpacity(safeOpacity),
+                      color: AppColors.purple.withOpacity(safeOpacity),
                       fontSize: 31,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1,

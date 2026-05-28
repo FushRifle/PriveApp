@@ -96,7 +96,7 @@ class _VideoViewerState extends State<VideoViewer> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.black,
       body: GestureDetector(
         onTap: () => Navigator.pop(context),
         child: Stack(
@@ -112,7 +112,7 @@ class _VideoViewerState extends State<VideoViewer> {
                       ? const Center(
                           child: Icon(
                             Icons.error_outline,
-                            color: Colors.white54,
+                            color: AppColors.white54,
                             size: 64,
                           ),
                         )
@@ -129,7 +129,7 @@ class _VideoViewerState extends State<VideoViewer> {
                                   const Center(
                                 child: Icon(
                                   Icons.video_library,
-                                  color: Colors.white54,
+                                  color: AppColors.white54,
                                   size: 64,
                                 ),
                               ),
@@ -150,12 +150,12 @@ class _VideoViewerState extends State<VideoViewer> {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.5),
+                    color: AppColors.black.withOpacity(0.5),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.close,
-                    color: Colors.white,
+                    color: AppColors.white,
                     size: 24,
                   ),
                 ),
@@ -168,17 +168,17 @@ class _VideoViewerState extends State<VideoViewer> {
                 child: GestureDetector(
                   onTap: _togglePlayPause,
                   child: Container(
-                    color: Colors.transparent,
+                    color: AppColors.transparent,
                     child: Center(
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.6),
+                          color: AppColors.black.withOpacity(0.6),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
                           Icons.play_arrow,
-                          color: Colors.white,
+                          color: AppColors.white,
                           size: 48,
                         ),
                       ),
@@ -200,8 +200,8 @@ class _VideoViewerState extends State<VideoViewer> {
                       begin: Alignment.bottomCenter,
                       end: Alignment.topCenter,
                       colors: [
-                        Colors.black.withOpacity(0.8),
-                        Colors.transparent,
+                        AppColors.black.withOpacity(0.8),
+                        AppColors.transparent,
                       ],
                     ),
                   ),
@@ -214,7 +214,7 @@ class _VideoViewerState extends State<VideoViewer> {
                           Text(
                             _formatDuration(_position),
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: AppColors.white,
                               fontSize: 12,
                             ),
                           ),
@@ -226,7 +226,7 @@ class _VideoViewerState extends State<VideoViewer> {
                                   ? _duration.inSeconds.toDouble()
                                   : 1.0,
                               activeColor: AppColors.primary,
-                              inactiveColor: Colors.white30,
+                              inactiveColor: AppColors.white30,
                               onChanged: (value) {
                                 final newPosition =
                                     Duration(seconds: value.toInt());
@@ -237,7 +237,7 @@ class _VideoViewerState extends State<VideoViewer> {
                           Text(
                             _formatDuration(_duration),
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: AppColors.white,
                               fontSize: 12,
                             ),
                           ),
@@ -250,7 +250,7 @@ class _VideoViewerState extends State<VideoViewer> {
                           child: Text(
                             widget.caption!,
                             style: const TextStyle(
-                              color: Colors.white70,
+                              color: AppColors.white70,
                               fontSize: 14,
                             ),
                             textAlign: TextAlign.center,
@@ -272,13 +272,13 @@ class _VideoViewerState extends State<VideoViewer> {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
+                    color: AppColors.black.withOpacity(0.7),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     widget.caption!,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.white,
                       fontSize: 14,
                     ),
                     textAlign: TextAlign.center,

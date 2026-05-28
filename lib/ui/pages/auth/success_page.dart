@@ -53,7 +53,7 @@ class _OnboardingSuccessPageState extends State<OnboardingSuccessPage>
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
+        statusBarColor: AppColors.transparent,
         statusBarIconBrightness: Brightness.light,
       ),
     );
@@ -86,11 +86,11 @@ class _OnboardingSuccessPageState extends State<OnboardingSuccessPage>
                       width: 120,
                       height: 120,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.white,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
+                            color: AppColors.black.withOpacity(0.2),
                             blurRadius: 20,
                             offset: const Offset(0, 10),
                           ),
@@ -143,7 +143,7 @@ class _OnboardingSuccessPageState extends State<OnboardingSuccessPage>
 
               // Loading indicator
               const CircularProgressIndicator(
-                color: Colors.white,
+                color: AppColors.white,
                 strokeWidth: 2,
               ),
 

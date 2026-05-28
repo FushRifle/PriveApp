@@ -74,7 +74,7 @@ class _CreateReelPageState extends State<CreateReelPage> {
         }
       },
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.black,
         appBar: _buildAppBar(),
         body: BlocListener<ReelBloc, ReelState>(
           listenWhen: (previous, current) {
@@ -115,19 +115,19 @@ class _CreateReelPageState extends State<CreateReelPage> {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.black,
       elevation: 0,
       leading: IconButton(
         icon: const Icon(
           Icons.close,
-          color: Colors.white,
+          color: AppColors.white,
         ),
         onPressed: _isUploading ? null : () => Navigator.pop(context),
       ),
       title: const Text(
         'Create Reel',
         style: TextStyle(
-          color: Colors.white,
+          color: AppColors.white,
           fontWeight: FontWeight.bold,
           fontSize: 18,
         ),
@@ -143,9 +143,9 @@ class _CreateReelPageState extends State<CreateReelPage> {
             onPressed: _canShare ? _uploadReel : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: Colors.grey.shade800,
-              disabledForegroundColor: Colors.grey.shade500,
+              foregroundColor: AppColors.white,
+              disabledBackgroundColor: AppColors.grey.shade800,
+              disabledForegroundColor: AppColors.grey.shade500,
               shape: const StadiumBorder(),
               elevation: 0,
               padding: const EdgeInsets.symmetric(
@@ -159,7 +159,7 @@ class _CreateReelPageState extends State<CreateReelPage> {
                     height: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.white,
+                      color: AppColors.white,
                     ),
                   )
                 : const Text(
@@ -226,7 +226,7 @@ class _CreateReelPageState extends State<CreateReelPage> {
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade900,
+                  color: AppColors.grey.shade900,
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: AppColors.primary.withOpacity(0.7),
@@ -243,7 +243,7 @@ class _CreateReelPageState extends State<CreateReelPage> {
                     : const Icon(
                         Icons.video_call,
                         size: 52,
-                        color: Colors.white,
+                        color: AppColors.white,
                       ),
               ),
             ),
@@ -252,7 +252,7 @@ class _CreateReelPageState extends State<CreateReelPage> {
               'Select a video to create a reel',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.grey.shade300,
+                color: AppColors.grey.shade300,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
@@ -262,7 +262,7 @@ class _CreateReelPageState extends State<CreateReelPage> {
               'Choose from gallery or record a new video',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.grey.shade600,
+                color: AppColors.grey.shade600,
                 fontSize: 14,
               ),
             ),
@@ -282,7 +282,7 @@ class _CreateReelPageState extends State<CreateReelPage> {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.35),
+            color: AppColors.black.withOpacity(0.35),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -297,7 +297,7 @@ class _CreateReelPageState extends State<CreateReelPage> {
             children: [
               Positioned.fill(
                 child: Container(
-                  color: Colors.grey,
+                  color: AppColors.grey,
                 ),
               ),
               if (_isVideoInitialized && _videoController != null)
@@ -325,14 +325,14 @@ class _CreateReelPageState extends State<CreateReelPage> {
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.45),
+                      color: AppColors.black.withOpacity(0.45),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       _videoController!.value.isPlaying
                           ? Icons.pause
                           : Icons.play_arrow,
-                      color: Colors.white,
+                      color: AppColors.white,
                       size: 40,
                     ),
                   ),
@@ -345,12 +345,12 @@ class _CreateReelPageState extends State<CreateReelPage> {
                   child: Container(
                     padding: const EdgeInsets.all(9),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.65),
+                      color: AppColors.black.withOpacity(0.65),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.edit,
-                      color: Colors.white,
+                      color: AppColors.white,
                       size: 20,
                     ),
                   ),
@@ -370,7 +370,7 @@ class _CreateReelPageState extends State<CreateReelPage> {
         controller: _captionController,
         enabled: !_isUploading,
         style: const TextStyle(
-          color: Colors.white,
+          color: AppColors.white,
           fontSize: 15,
         ),
         maxLines: 3,
@@ -378,11 +378,11 @@ class _CreateReelPageState extends State<CreateReelPage> {
         decoration: InputDecoration(
           hintText: 'Write a caption...',
           hintStyle: TextStyle(
-            color: Colors.grey.shade600,
+            color: AppColors.grey.shade600,
           ),
           border: InputBorder.none,
           counterStyle: TextStyle(
-            color: Colors.grey.shade600,
+            color: AppColors.grey.shade600,
           ),
           contentPadding: const EdgeInsets.all(16),
         ),
@@ -397,13 +397,13 @@ class _CreateReelPageState extends State<CreateReelPage> {
         controller: _musicController,
         enabled: !_isUploading,
         style: const TextStyle(
-          color: Colors.white,
+          color: AppColors.white,
           fontSize: 15,
         ),
         decoration: InputDecoration(
           hintText: 'Add music to your reel...',
           hintStyle: TextStyle(
-            color: Colors.grey.shade600,
+            color: AppColors.grey.shade600,
           ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.all(16),
@@ -417,16 +417,16 @@ class _CreateReelPageState extends State<CreateReelPage> {
 
     return Positioned.fill(
       child: Container(
-        color: Colors.black.withOpacity(0.72),
+        color: AppColors.black.withOpacity(0.72),
         child: Center(
           child: Container(
             width: 260,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.grey,
+              color: AppColors.grey,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: Colors.white.withOpacity(0.08),
+                color: AppColors.white.withOpacity(0.08),
               ),
             ),
             child: Column(
@@ -435,7 +435,7 @@ class _CreateReelPageState extends State<CreateReelPage> {
                 const Text(
                   'Uploading reel',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -444,7 +444,7 @@ class _CreateReelPageState extends State<CreateReelPage> {
                 LinearProgressIndicator(
                   value: _uploadProgress <= 0 ? null : _uploadProgress,
                   color: AppColors.primary,
-                  backgroundColor: Colors.grey.shade800,
+                  backgroundColor: AppColors.grey.shade800,
                   minHeight: 6,
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -452,7 +452,7 @@ class _CreateReelPageState extends State<CreateReelPage> {
                 Text(
                   '$percentage%',
                   style: TextStyle(
-                    color: Colors.grey.shade400,
+                    color: AppColors.grey.shade400,
                     fontSize: 13,
                   ),
                 ),
@@ -471,7 +471,7 @@ class _CreateReelPageState extends State<CreateReelPage> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.grey,
+      backgroundColor: AppColors.grey,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(22),
@@ -491,7 +491,7 @@ class _CreateReelPageState extends State<CreateReelPage> {
                   width: 42,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade700,
+                    color: AppColors.grey.shade700,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -688,7 +688,7 @@ class _CreateReelPageState extends State<CreateReelPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
+        backgroundColor: isError ? AppColors.red : AppColors.green,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),
@@ -717,7 +717,7 @@ class _InputSection extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: Colors.grey.shade400,
+              color: AppColors.grey.shade400,
               fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
@@ -725,10 +725,10 @@ class _InputSection extends StatelessWidget {
           const SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
-              color: Colors.grey.shade900,
+              color: AppColors.grey.shade900,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: Colors.grey.shade800,
+                color: AppColors.grey.shade800,
               ),
             ),
             child: child,
@@ -755,12 +755,12 @@ class _PickerTile extends StatelessWidget {
     return ListTile(
       leading: Icon(
         icon,
-        color: Colors.white,
+        color: AppColors.white,
       ),
       title: Text(
         title,
         style: const TextStyle(
-          color: Colors.white,
+          color: AppColors.white,
           fontWeight: FontWeight.w600,
         ),
       ),

@@ -63,13 +63,13 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
   // Color options
   final List<ColorOption> _colorOptions = [
     ColorOption(id: 'default', name: 'Default', color: AppColors.primary),
-    ColorOption(id: 'blue', name: 'Blue', color: Colors.blue),
-    ColorOption(id: 'green', name: 'Green', color: Colors.green),
-    ColorOption(id: 'purple', name: 'Purple', color: Colors.purple),
-    ColorOption(id: 'pink', name: 'Pink', color: Colors.pink),
-    ColorOption(id: 'orange', name: 'Orange', color: Colors.orange),
-    ColorOption(id: 'teal', name: 'Teal', color: Colors.teal),
-    ColorOption(id: 'indigo', name: 'Indigo', color: Colors.indigo),
+    ColorOption(id: 'blue', name: 'Blue', color: AppColors.blue),
+    ColorOption(id: 'green', name: 'Green', color: AppColors.green),
+    ColorOption(id: 'purple', name: 'Purple', color: AppColors.purple),
+    ColorOption(id: 'pink', name: 'Pink', color: AppColors.pink),
+    ColorOption(id: 'orange', name: 'Orange', color: AppColors.orange),
+    ColorOption(id: 'teal', name: 'Teal', color: AppColors.teal),
+    ColorOption(id: 'indigo', name: 'Indigo', color: AppColors.indigo),
   ];
 
   @override
@@ -120,7 +120,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text('Settings updated'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.green,
             duration: Duration(seconds: 1)),
       );
     }
@@ -146,11 +146,11 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                     content: Text('Chat cleared'),
-                    backgroundColor: Colors.green),
+                    backgroundColor: AppColors.green),
               );
               Navigator.pop(context);
             },
-            child: const Text('Clear', style: TextStyle(color: Colors.red)),
+            child: const Text('Clear', style: TextStyle(color: AppColors.red)),
           ),
         ],
       ),
@@ -175,11 +175,12 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
               context.read<ChatBloc>().add(BlockUser(userId: widget.userId));
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                    content: Text('User blocked'), backgroundColor: Colors.red),
+                    content: Text('User blocked'),
+                    backgroundColor: AppColors.red),
               );
               Navigator.pop(context);
             },
-            child: const Text('Block', style: TextStyle(color: Colors.red)),
+            child: const Text('Block', style: TextStyle(color: AppColors.red)),
           ),
         ],
       ),
@@ -193,10 +194,10 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.black),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -286,7 +287,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
         height: 40,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
-          color: Colors.grey.shade200,
+          color: AppColors.grey.shade200,
           image: currentWallpaper.asset != null
               ? DecorationImage(
                   image: AssetImage(currentWallpaper.asset!), fit: BoxFit.cover)
@@ -319,10 +320,10 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: currentColor.color,
-          border: Border.all(color: Colors.grey.shade300, width: 2),
+          border: Border.all(color: AppColors.grey.shade300, width: 2),
         ),
         child: _chatColor == 'default'
-            ? const Icon(Icons.palette, color: Colors.white, size: 20)
+            ? const Icon(Icons.palette, color: AppColors.white, size: 20)
             : null,
       ),
       title: Text('Chat Color',
@@ -417,7 +418,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
       onTap: () {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Chat archived'), backgroundColor: Colors.green),
+              content: Text('Chat archived'), backgroundColor: AppColors.green),
         );
         Navigator.pop(context);
       },
@@ -445,10 +446,10 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
 
   Widget _buildClearChatTile() {
     return ListTile(
-      leading: const Icon(Icons.delete_outline, color: Colors.red, size: 24),
+      leading: const Icon(Icons.delete_outline, color: AppColors.red, size: 24),
       title: Text('Clear Chat',
           style: AppTheme.blackTextStyle.copyWith(
-              fontWeight: FontWeight.w500, fontSize: 15, color: Colors.red)),
+              fontWeight: FontWeight.w500, fontSize: 15, color: AppColors.red)),
       subtitle: Text('Delete all messages',
           style: AppTheme.greyTextStyle.copyWith(fontSize: 12)),
       onTap: _clearChat,
@@ -458,10 +459,10 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
 
   Widget _buildBlockTile() {
     return ListTile(
-      leading: const Icon(Icons.block, color: Colors.red, size: 24),
+      leading: const Icon(Icons.block, color: AppColors.red, size: 24),
       title: Text('Block ${widget.userName}',
           style: AppTheme.blackTextStyle.copyWith(
-              fontWeight: FontWeight.w500, fontSize: 15, color: Colors.red)),
+              fontWeight: FontWeight.w500, fontSize: 15, color: AppColors.red)),
       subtitle: Text('Block this user',
           style: AppTheme.greyTextStyle.copyWith(fontSize: 12)),
       onTap: _blockUser,
@@ -492,11 +493,11 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
   Widget _buildSettingsCard(List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: AppColors.black.withOpacity(0.03),
               blurRadius: 8,
               offset: const Offset(0, 2))
         ],
@@ -511,7 +512,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.white,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => StatefulBuilder(
@@ -555,11 +556,11 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
                           border: Border.all(
                               color: isSelected
                                   ? AppColors.primary
-                                  : Colors.transparent,
+                                  : AppColors.transparent,
                               width: 3),
                           boxShadow: [
                             BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
+                                color: AppColors.black.withOpacity(0.1),
                                 blurRadius: 4,
                                 offset: const Offset(0, 2))
                           ],
@@ -580,7 +581,8 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
                                                 .withOpacity(0.3)),
                                         child: const Center(
                                             child: Icon(Icons.check_circle,
-                                                color: Colors.white, size: 32)),
+                                                color: AppColors.white,
+                                                size: 32)),
                                       ),
                                     Positioned(
                                       bottom: 8,
@@ -589,13 +591,13 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
                                         padding: const EdgeInsets.symmetric(
                                             horizontal: 8, vertical: 4),
                                         decoration: BoxDecoration(
-                                            color:
-                                                Colors.black.withOpacity(0.6),
+                                            color: AppColors.black
+                                                .withOpacity(0.6),
                                             borderRadius:
                                                 BorderRadius.circular(8)),
                                         child: Text(wallpaper.name,
                                             style: const TextStyle(
-                                                color: Colors.white,
+                                                color: AppColors.white,
                                                 fontSize: 10)),
                                       ),
                                     ),
@@ -616,7 +618,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
                                                   .withOpacity(0.3)),
                                           child: const Center(
                                               child: Icon(Icons.check_circle,
-                                                  color: Colors.white,
+                                                  color: AppColors.white,
                                                   size: 32)),
                                         ),
                                       Positioned(
@@ -626,13 +628,13 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
                                           padding: const EdgeInsets.symmetric(
                                               horizontal: 8, vertical: 4),
                                           decoration: BoxDecoration(
-                                              color:
-                                                  Colors.black.withOpacity(0.6),
+                                              color: AppColors.black
+                                                  .withOpacity(0.6),
                                               borderRadius:
                                                   BorderRadius.circular(8)),
                                           child: Text(wallpaper.name,
                                               style: const TextStyle(
-                                                  color: Colors.white,
+                                                  color: AppColors.white,
                                                   fontSize: 10)),
                                         ),
                                       ),
@@ -655,7 +657,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
   void _showColorPicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.white,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => Container(
@@ -695,13 +697,13 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
                                 border: Border.all(
                                     color: _chatColor == color.id
                                         ? AppColors.primary
-                                        : Colors.transparent,
+                                        : AppColors.transparent,
                                     width: 3),
                               ),
                               child: _chatColor == color.id
                                   ? const Center(
                                       child: Icon(Icons.check,
-                                          color: Colors.white, size: 30))
+                                          color: AppColors.white, size: 30))
                                   : null,
                             ),
                             const SizedBox(height: 8),
@@ -724,7 +726,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
     final sounds = ['default', 'classic', 'gentle', 'pop', 'ping'];
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.white,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => SafeArea(
@@ -766,7 +768,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
     final durations = ['1 hour', '8 hours', '24 hours', '7 days', 'Forever'];
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.white,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => SafeArea(

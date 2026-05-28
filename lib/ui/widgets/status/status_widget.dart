@@ -73,7 +73,7 @@ class StatusWidget extends StatelessWidget {
                     padding: const EdgeInsets.all(2),
                     child: ClipOval(
                       child: Container(
-                        color: Colors.white,
+                        color: AppColors.white,
                         child: _buildAvatar(),
                       ),
                     ),
@@ -90,13 +90,13 @@ class StatusWidget extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: AppColors.primary,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.5),
+                        border: Border.all(color: AppColors.white, width: 1.5),
                       ),
                       child: Center(
                         child: Text(
                           statusCount > 9 ? '9+' : '$statusCount',
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: AppColors.white,
                             fontSize: 9,
                             fontWeight: FontWeight.bold,
                           ),
@@ -115,11 +115,11 @@ class StatusWidget extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: AppColors.primary,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.5),
+                        border: Border.all(color: AppColors.white, width: 1.5),
                       ),
                       child: const Icon(
                         Icons.add,
-                        color: Colors.white,
+                        color: AppColors.white,
                         size: 12,
                       ),
                     ),
@@ -150,9 +150,9 @@ class StatusWidget extends StatelessWidget {
     if (hasUnviewed) {
       return const LinearGradient(
         colors: [
-          Color(0xFF833AB4),
-          Color(0xFFFD1D1D),
-          Color(0xFFFCAF45),
+          AppColors.storyRingPurple,
+          AppColors.storyRingRed,
+          AppColors.storyRingOrange,
         ],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
@@ -161,8 +161,8 @@ class StatusWidget extends StatelessWidget {
 
     return LinearGradient(
       colors: [
-        Colors.grey.withOpacity(0.3),
-        Colors.grey.withOpacity(0.1),
+        AppColors.grey.withOpacity(0.3),
+        AppColors.grey.withOpacity(0.1),
       ],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
@@ -174,11 +174,11 @@ class StatusWidget extends StatelessWidget {
 
     if (!hasValidAvatar) {
       return Container(
-        color: Colors.grey[100],
+        color: AppColors.grey[100],
         child: Center(
           child: Icon(
             isAddStatus ? Icons.add_a_photo : Icons.person,
-            color: Colors.grey[400],
+            color: AppColors.grey[400],
             size: 28,
           ),
         ),
@@ -190,7 +190,7 @@ class StatusWidget extends StatelessWidget {
         imageUrl: avatar,
         fit: BoxFit.cover,
         placeholder: (context, url) => Container(
-          color: Colors.grey[100],
+          color: AppColors.grey[100],
           child: const Center(
             child: SizedBox(
               width: 20,
@@ -203,8 +203,8 @@ class StatusWidget extends StatelessWidget {
           ),
         ),
         errorWidget: (context, url, error) => Container(
-          color: Colors.grey[100],
-          child: Icon(Icons.person, color: Colors.grey[400], size: 28),
+          color: AppColors.grey[100],
+          child: Icon(Icons.person, color: AppColors.grey[400], size: 28),
         ),
       );
     }
@@ -214,8 +214,8 @@ class StatusWidget extends StatelessWidget {
         avatar,
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => Container(
-          color: Colors.grey[100],
-          child: Icon(Icons.person, color: Colors.grey[400], size: 28),
+          color: AppColors.grey[100],
+          child: Icon(Icons.person, color: AppColors.grey[400], size: 28),
         ),
       ),
     );

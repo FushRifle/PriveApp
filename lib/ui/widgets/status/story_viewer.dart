@@ -225,11 +225,11 @@ class _StoryViewerState extends State<StoryViewer>
   Widget build(BuildContext context) {
     if (widget.stories.isEmpty) {
       return const Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.black,
         body: Center(
           child: Text(
             'No stories available',
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: AppColors.white),
           ),
         ),
       );
@@ -238,7 +238,7 @@ class _StoryViewerState extends State<StoryViewer>
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.black,
         resizeToAvoidBottomInset: true,
         body: GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -315,7 +315,7 @@ class _StoryViewerState extends State<StoryViewer>
                       child: Center(
                         child: Icon(
                           Icons.pause_circle_filled_rounded,
-                          color: Colors.white,
+                          color: AppColors.white,
                           size: 66,
                         ),
                       ),
@@ -378,7 +378,7 @@ class _StoryContent extends StatelessWidget {
 
   Color _backgroundColor(String? value) {
     if (value == null || value.isEmpty) {
-      return const Color(0xFF1D1B20);
+      return AppColors.storyTextBackground;
     }
 
     try {
@@ -390,7 +390,7 @@ class _StoryContent extends StatelessWidget {
 
       return Color(int.parse(hex, radix: 16));
     } catch (_) {
-      return const Color(0xFF1D1B20);
+      return AppColors.storyTextBackground;
     }
   }
 
@@ -418,7 +418,7 @@ class _StoryContent extends StatelessWidget {
     }
 
     return TextStyle(
-      color: Colors.white,
+      color: AppColors.white,
       fontSize: size,
       fontWeight: FontWeight.w800,
       height: 1.35,
@@ -427,7 +427,7 @@ class _StoryContent extends StatelessWidget {
           ? const [
               Shadow(
                 blurRadius: 12,
-                color: Colors.black87,
+                color: AppColors.black87,
                 offset: Offset(0, 2),
               ),
             ]
@@ -451,20 +451,20 @@ class _StoryImage extends StatelessWidget {
         fit: BoxFit.cover,
         memCacheWidth: 1200,
         placeholder: (_, __) => const ColoredBox(
-          color: Colors.black,
+          color: AppColors.black,
           child: Center(
             child: CircularProgressIndicator(
-              color: Colors.white,
+              color: AppColors.white,
               strokeWidth: 2,
             ),
           ),
         ),
         errorWidget: (_, __, ___) => const ColoredBox(
-          color: Colors.black,
+          color: AppColors.black,
           child: Center(
             child: Icon(
               Icons.broken_image_outlined,
-              color: Colors.white70,
+              color: AppColors.white70,
               size: 48,
             ),
           ),
@@ -477,11 +477,11 @@ class _StoryImage extends StatelessWidget {
       fit: BoxFit.cover,
       errorBuilder: (_, __, ___) {
         return const ColoredBox(
-          color: Colors.black,
+          color: AppColors.black,
           child: Center(
             child: Icon(
               Icons.broken_image_outlined,
-              color: Colors.white70,
+              color: AppColors.white70,
               size: 48,
             ),
           ),
@@ -588,11 +588,11 @@ class _StoryVideoState extends State<_StoryVideo> {
   Widget build(BuildContext context) {
     if (_error) {
       return const ColoredBox(
-        color: Colors.black,
+        color: AppColors.black,
         child: Center(
           child: Icon(
             Icons.video_library_outlined,
-            color: Colors.white70,
+            color: AppColors.white70,
             size: 56,
           ),
         ),
@@ -601,10 +601,10 @@ class _StoryVideoState extends State<_StoryVideo> {
 
     if (!_ready || _controller == null) {
       return const ColoredBox(
-        color: Colors.black,
+        color: AppColors.black,
         child: Center(
           child: CircularProgressIndicator(
-            color: Colors.white,
+            color: AppColors.white,
             strokeWidth: 2,
           ),
         ),
@@ -615,10 +615,10 @@ class _StoryVideoState extends State<_StoryVideo> {
 
     if (size.width <= 0 || size.height <= 0) {
       return const ColoredBox(
-        color: Colors.black,
+        color: AppColors.black,
         child: Center(
           child: CircularProgressIndicator(
-            color: Colors.white,
+            color: AppColors.white,
             strokeWidth: 2,
           ),
         ),
@@ -649,8 +649,8 @@ class _StoryGradient extends StatelessWidget {
           stops: [0, 0.28, 0.72, 1],
           colors: [
             Color.fromRGBO(0, 0, 0, 0.55),
-            Colors.transparent,
-            Colors.transparent,
+            AppColors.transparent,
+            AppColors.transparent,
             Color.fromRGBO(0, 0, 0, 0.70),
           ],
         ),

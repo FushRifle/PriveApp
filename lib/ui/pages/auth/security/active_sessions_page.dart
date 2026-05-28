@@ -61,11 +61,11 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Session logged out'),
-                  backgroundColor: Colors.green,
+                  backgroundColor: AppColors.green,
                 ),
               );
             },
-            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+            child: const Text('Logout', style: TextStyle(color: AppColors.red)),
           ),
         ],
       ),
@@ -94,12 +94,12 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Logged out from all other devices'),
-                  backgroundColor: Colors.green,
+                  backgroundColor: AppColors.green,
                 ),
               );
             },
-            child:
-                const Text('Logout All', style: TextStyle(color: Colors.red)),
+            child: const Text('Logout All',
+                style: TextStyle(color: AppColors.red)),
           ),
         ],
       ),
@@ -118,13 +118,13 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_new,
-              color: isDarkMode ? Colors.white : Colors.black),
+              color: isDarkMode ? AppColors.white : AppColors.black),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Active Sessions',
           style: TextStyle(
-            color: isDarkMode ? Colors.white : Colors.black,
+            color: isDarkMode ? AppColors.white : AppColors.black,
             fontWeight: FontWeight.w600,
             fontSize: 18,
           ),
@@ -136,8 +136,9 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
             child: Text(
               'Logout All',
               style: TextStyle(
-                  color:
-                      _sessions.length > 1 ? Colors.red : AppColors.greyColor,
+                  color: _sessions.length > 1
+                      ? AppColors.red
+                      : AppColors.greyColor,
                   fontWeight: FontWeight.bold,
                   fontSize: 12),
             ),
@@ -233,7 +234,8 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
                       ),
                       if (!session['current'])
                         IconButton(
-                          icon: Icon(Icons.logout, color: Colors.red, size: 20),
+                          icon: Icon(Icons.logout,
+                              color: AppColors.red, size: 20),
                           onPressed: () => _logoutSession(index),
                         ),
                     ],

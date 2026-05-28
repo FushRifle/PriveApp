@@ -23,7 +23,7 @@ class MatchDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       insetPadding: const EdgeInsets.all(20),
       child: SingleChildScrollView(
         child: Container(
@@ -90,7 +90,7 @@ class MatchDialog extends StatelessWidget {
                       margin: const EdgeInsets.symmetric(horizontal: 16),
                       child: const Icon(
                         Icons.favorite,
-                        color: Colors.white,
+                        color: AppColors.white,
                         size: 40,
                       ),
                     ),
@@ -109,7 +109,7 @@ class MatchDialog extends StatelessWidget {
                       ElevatedButton(
                         onPressed: onStartChat,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
+                          backgroundColor: AppColors.white,
                           foregroundColor: AppColors.primary,
                           minimumSize: const Size(double.infinity, 50),
                           shape: RoundedRectangleBorder(
@@ -129,7 +129,7 @@ class MatchDialog extends StatelessWidget {
                       TextButton(
                         onPressed: onKeepSwiping,
                         style: TextButton.styleFrom(
-                          foregroundColor: Colors.white,
+                          foregroundColor: AppColors.white,
                         ),
                         child: const Text(
                           'Keep Swiping',
@@ -158,12 +158,12 @@ class MatchDialog extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: Colors.white,
+          color: AppColors.white,
           width: 3,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: AppColors.black.withOpacity(0.2),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -189,11 +189,11 @@ class MatchDialog extends StatelessWidget {
 
   Widget _profileFallback() {
     return Container(
-      color: Colors.grey[300],
+      color: AppColors.grey[300],
       child: const Icon(
         Icons.person,
         size: 50,
-        color: Colors.grey,
+        color: AppColors.grey,
       ),
     );
   }

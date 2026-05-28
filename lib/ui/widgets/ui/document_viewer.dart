@@ -99,16 +99,16 @@ class _DocumentViewerState extends State<DocumentViewer> {
   Color _getFileColor() {
     switch (_fileExtension) {
       case 'pdf':
-        return Colors.red;
+        return AppColors.red;
       case 'doc':
       case 'docx':
-        return Colors.blue;
+        return AppColors.blue;
       case 'xls':
       case 'xlsx':
-        return Colors.green;
+        return AppColors.green;
       case 'ppt':
       case 'pptx':
-        return Colors.orange;
+        return AppColors.orange;
       default:
         return AppColors.primary;
     }
@@ -117,7 +117,7 @@ class _DocumentViewerState extends State<DocumentViewer> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.black,
       body: SafeArea(
         child: Column(
           children: [
@@ -131,12 +131,12 @@ class _DocumentViewerState extends State<DocumentViewer> {
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
+                        color: AppColors.white.withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
                         Icons.close,
-                        color: Colors.white,
+                        color: AppColors.white,
                         size: 24,
                       ),
                     ),
@@ -146,7 +146,7 @@ class _DocumentViewerState extends State<DocumentViewer> {
                     child: Text(
                       widget.fileName ?? 'Document Viewer',
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -172,7 +172,7 @@ class _DocumentViewerState extends State<DocumentViewer> {
                           Text(
                             'Downloading document...',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.7),
+                              color: AppColors.white.withOpacity(0.7),
                             ),
                           ),
                         ],
@@ -184,13 +184,13 @@ class _DocumentViewerState extends State<DocumentViewer> {
                               Icon(
                                 Icons.error_outline,
                                 size: 64,
-                                color: Colors.white.withOpacity(0.5),
+                                color: AppColors.white.withOpacity(0.5),
                               ),
                               const SizedBox(height: 16),
                               Text(
                                 _error!,
                                 style: TextStyle(
-                                  color: Colors.white.withOpacity(0.7),
+                                  color: AppColors.white.withOpacity(0.7),
                                 ),
                                 textAlign: TextAlign.center,
                               ),
@@ -211,7 +211,7 @@ class _DocumentViewerState extends State<DocumentViewer> {
                                 width: 120,
                                 height: 120,
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.1),
+                                  color: AppColors.white.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(24),
                                 ),
                                 child: Icon(
@@ -224,7 +224,7 @@ class _DocumentViewerState extends State<DocumentViewer> {
                               Text(
                                 _fileExtension?.toUpperCase() ?? 'DOCUMENT',
                                 style: TextStyle(
-                                  color: Colors.white.withOpacity(0.6),
+                                  color: AppColors.white.withOpacity(0.6),
                                   fontSize: 14,
                                 ),
                               ),
@@ -254,13 +254,13 @@ class _DocumentViewerState extends State<DocumentViewer> {
                 padding: const EdgeInsets.all(16),
                 margin: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
+                  color: AppColors.white.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   widget.caption!,
                   style: const TextStyle(
-                    color: Colors.white70,
+                    color: AppColors.white70,
                     fontSize: 14,
                   ),
                   textAlign: TextAlign.center,

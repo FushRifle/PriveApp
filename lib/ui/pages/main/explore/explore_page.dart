@@ -60,7 +60,7 @@ class _DiscoverPageState extends State<DiscoverPage>
 
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
+        statusBarColor: AppColors.transparent,
         statusBarIconBrightness: Brightness.dark,
       ),
     );
@@ -133,7 +133,7 @@ class _DiscoverPageState extends State<DiscoverPage>
     final newFilters = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       builder: (_) {
         return FilterBottomSheet(
           currentFilters: currentFilters,
@@ -494,7 +494,7 @@ class _DiscoverPageState extends State<DiscoverPage>
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error: $error'),
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.red,
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -770,7 +770,7 @@ class _ExploreError extends StatelessWidget {
             const Icon(
               Icons.error_outline,
               size: 64,
-              color: Colors.grey,
+              color: AppColors.grey,
             ),
             const SizedBox(height: 16),
             Text(

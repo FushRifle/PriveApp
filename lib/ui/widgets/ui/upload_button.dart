@@ -2,6 +2,8 @@ import 'package:clique/bloc/cloudinary/cloudinary_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:clique/app/configs/colors.dart';
+
 class CloudinaryUploadButton extends StatelessWidget {
   final UploadType uploadType;
   final Widget child;
@@ -30,7 +32,7 @@ class CloudinaryUploadButton extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('${_getTypeName()} uploaded successfully!'),
-              backgroundColor: Colors.green,
+              backgroundColor: AppColors.green,
             ),
           );
         } else if (state.status == UploadStatus.error) {
@@ -38,7 +40,7 @@ class CloudinaryUploadButton extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.errorMessage ?? 'Upload failed'),
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.red,
             ),
           );
         }
@@ -75,7 +77,7 @@ class CloudinaryUploadButton extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        color: Colors.blue.withOpacity(0.1),
+        color: AppColors.blue.withOpacity(0.1),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

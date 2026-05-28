@@ -98,13 +98,13 @@ class _StatusViewPageState extends State<StatusViewPage>
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
+        statusBarColor: AppColors.transparent,
         statusBarIconBrightness: Brightness.light,
       ),
     );
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.black,
       body: GestureDetector(
         onTapDown: (details) {
           final screenWidth = MediaQuery.of(context).size.width;
@@ -151,11 +151,11 @@ class _StatusViewPageState extends State<StatusViewPage>
             // Pause Indicator
             if (_isPaused)
               Container(
-                color: Colors.black.withOpacity(0.6),
+                color: AppColors.black.withOpacity(0.6),
                 child: const Center(
                   child: Icon(
                     Icons.pause_circle_filled,
-                    color: Colors.white,
+                    color: AppColors.white,
                     size: 60,
                   ),
                 ),
@@ -195,9 +195,9 @@ class _StatusViewPageState extends State<StatusViewPage>
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withOpacity(0.3),
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.5),
+                    AppColors.black.withOpacity(0.3),
+                    AppColors.transparent,
+                    AppColors.black.withOpacity(0.5),
                   ],
                 ),
               )
@@ -253,7 +253,7 @@ class _StatusViewPageState extends State<StatusViewPage>
     }
 
     return TextStyle(
-      color: Colors.white,
+      color: AppColors.white,
       fontSize: fontSize,
       fontWeight: FontWeight.w600,
       height: 1.5,
@@ -262,7 +262,7 @@ class _StatusViewPageState extends State<StatusViewPage>
           ? [
               const Shadow(
                 blurRadius: 10,
-                color: Colors.black45,
+                color: AppColors.black45,
                 offset: Offset(2, 2),
               ),
             ]
@@ -291,7 +291,7 @@ class _StatusViewPageState extends State<StatusViewPage>
       }
     }
 
-    return const Color(0xFF1D1B20);
+    return AppColors.storyTextBackground;
   }
 
   Widget _buildHeader() {
@@ -307,7 +307,7 @@ class _StatusViewPageState extends State<StatusViewPage>
             height: 40,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2),
+              border: Border.all(color: AppColors.white, width: 2),
             ),
             child: ClipOval(
               child: _buildAvatar(story.user.avatar),
@@ -321,7 +321,7 @@ class _StatusViewPageState extends State<StatusViewPage>
                 Text(
                   story.user.name,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -331,7 +331,7 @@ class _StatusViewPageState extends State<StatusViewPage>
                 Text(
                   story.time,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
+                    color: AppColors.white.withOpacity(0.7),
                     fontSize: 12,
                   ),
                 ),
@@ -339,7 +339,7 @@ class _StatusViewPageState extends State<StatusViewPage>
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.close, color: Colors.white, size: 28),
+            icon: const Icon(Icons.close, color: AppColors.white, size: 28),
             onPressed: () {
               HapticFeedback.lightImpact();
               Navigator.pushReplacementNamed(context, NamedRoutes.homeScreen);
@@ -353,8 +353,8 @@ class _StatusViewPageState extends State<StatusViewPage>
   Widget _buildAvatar(String avatarUrl) {
     if (avatarUrl.isEmpty) {
       return Container(
-        color: Colors.grey,
-        child: const Icon(Icons.person, color: Colors.white, size: 20),
+        color: AppColors.grey,
+        child: const Icon(Icons.person, color: AppColors.white, size: 20),
       );
     }
 
@@ -363,8 +363,8 @@ class _StatusViewPageState extends State<StatusViewPage>
         avatarUrl,
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => Container(
-          color: Colors.grey,
-          child: const Icon(Icons.person, color: Colors.white, size: 20),
+          color: AppColors.grey,
+          child: const Icon(Icons.person, color: AppColors.white, size: 20),
         ),
       );
     }
@@ -373,8 +373,8 @@ class _StatusViewPageState extends State<StatusViewPage>
       avatarUrl,
       fit: BoxFit.cover,
       errorBuilder: (_, __, ___) => Container(
-        color: Colors.grey,
-        child: const Icon(Icons.person, color: Colors.white, size: 20),
+        color: AppColors.grey,
+        child: const Icon(Icons.person, color: AppColors.white, size: 20),
       ),
     );
   }
@@ -392,13 +392,13 @@ class _StatusViewPageState extends State<StatusViewPage>
               height: 3,
               margin: const EdgeInsets.symmetric(horizontal: 2),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.3),
+                color: AppColors.white.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
               child: index < currentIndex
                   ? Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.white,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     )
@@ -410,7 +410,7 @@ class _StatusViewPageState extends State<StatusViewPage>
                             child: Container(
                               height: 3,
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: AppColors.white,
                                 borderRadius: BorderRadius.circular(2),
                               ),
                             ),
@@ -438,20 +438,20 @@ class _StatusViewPageState extends State<StatusViewPage>
             child: Container(
               height: 44,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
+                color: AppColors.white.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(30),
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.3),
+                  color: AppColors.white.withOpacity(0.3),
                   width: 1,
                 ),
               ),
               child: TextField(
                 controller: replyController,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: AppColors.white),
                 decoration: InputDecoration(
                   hintText: 'Send message',
                   hintStyle: TextStyle(
-                    color: Colors.white.withOpacity(0.6),
+                    color: AppColors.white.withOpacity(0.6),
                   ),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(
@@ -473,15 +473,15 @@ class _StatusViewPageState extends State<StatusViewPage>
             onPressed: () => _likeStory(story),
             icon: const Icon(
               Icons.favorite_border,
-              color: Colors.white,
+              color: AppColors.white,
               size: 22,
             ),
             style: IconButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              foregroundColor: Colors.white,
+              backgroundColor: AppColors.transparent,
+              foregroundColor: AppColors.white,
               shape: const CircleBorder(),
               side: BorderSide(
-                color: Colors.white.withOpacity(0.3),
+                color: AppColors.white.withOpacity(0.3),
                 width: 1,
               ),
               padding: const EdgeInsets.all(10),
@@ -504,7 +504,7 @@ class _StatusViewPageState extends State<StatusViewPage>
               ),
               child: const Icon(
                 Icons.send,
-                color: Colors.white,
+                color: AppColors.white,
                 size: 20,
               ),
             ),

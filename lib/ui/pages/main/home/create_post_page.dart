@@ -76,7 +76,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
         }
       },
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.black,
         body: SafeArea(
           child: Stack(
             children: [
@@ -535,7 +535,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
+        backgroundColor: isError ? AppColors.red : AppColors.green,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),
@@ -576,7 +576,7 @@ class _Header extends StatelessWidget {
               title,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                color: Colors.white,
+                color: AppColors.white,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -595,7 +595,8 @@ class _Header extends StatelessWidget {
                   height: 40,
                   padding: const EdgeInsets.symmetric(horizontal: 18),
                   decoration: BoxDecoration(
-                    color: canSubmit ? AppColors.primary : Colors.grey.shade800,
+                    color:
+                        canSubmit ? AppColors.primary : AppColors.grey.shade800,
                     borderRadius: BorderRadius.circular(22),
                   ),
                   child: Center(
@@ -605,15 +606,15 @@ class _Header extends StatelessWidget {
                             height: 18,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Colors.white,
+                              color: AppColors.white,
                             ),
                           )
                         : Text(
                             'Post',
                             style: TextStyle(
                               color: canSubmit
-                                  ? Colors.white
-                                  : Colors.grey.shade500,
+                                  ? AppColors.white
+                                  : AppColors.grey.shade500,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -640,7 +641,7 @@ class _CircleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.grey.shade900,
+      color: AppColors.grey.shade900,
       shape: const CircleBorder(),
       child: InkWell(
         onTap: onTap,
@@ -650,7 +651,7 @@ class _CircleButton extends StatelessWidget {
           height: 42,
           child: Icon(
             icon,
-            color: Colors.white,
+            color: AppColors.white,
             size: 20,
           ),
         ),
@@ -686,42 +687,42 @@ class _OptionsGrid extends StatelessWidget {
         icon: Icons.text_fields_rounded,
         title: 'Text',
         subtitle: 'Share your thoughts',
-        color: Colors.orange,
+        color: AppColors.orange,
         onTap: onText,
       ),
       _PostOption(
         icon: Icons.photo_library_rounded,
         title: 'Image',
         subtitle: 'Choose a photo',
-        color: Colors.purple,
+        color: AppColors.purple,
         onTap: onImage,
       ),
       _PostOption(
         icon: Icons.camera_alt_rounded,
         title: 'Camera',
         subtitle: 'Take a photo',
-        color: Colors.blue,
+        color: AppColors.blue,
         onTap: onCamera,
       ),
       _PostOption(
         icon: Icons.videocam_rounded,
         title: 'Video',
         subtitle: 'Share a video',
-        color: Colors.green,
+        color: AppColors.green,
         onTap: onVideo,
       ),
       _PostOption(
         icon: Icons.insert_drive_file_rounded,
         title: 'Document',
         subtitle: 'Upload a file',
-        color: Colors.red,
+        color: AppColors.red,
         onTap: onDocument,
       ),
       _PostOption(
         icon: Icons.music_note_rounded,
         title: 'Audio',
         subtitle: 'Coming soon',
-        color: Colors.teal,
+        color: AppColors.teal,
         onTap: onAudio,
       ),
     ];
@@ -747,7 +748,7 @@ class _OptionsGrid extends StatelessWidget {
         if (isPicking)
           Positioned.fill(
             child: Container(
-              color: Colors.black.withOpacity(0.45),
+              color: AppColors.black.withOpacity(0.45),
               child: const Center(
                 child: CircularProgressIndicator(
                   color: AppColors.primary,
@@ -770,7 +771,7 @@ class _OptionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.grey,
+      color: AppColors.grey,
       borderRadius: BorderRadius.circular(24),
       child: InkWell(
         onTap: () {
@@ -782,7 +783,7 @@ class _OptionCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: Colors.white.withOpacity(0.06),
+              color: AppColors.white.withOpacity(0.06),
             ),
           ),
           padding: const EdgeInsets.all(18),
@@ -806,7 +807,7 @@ class _OptionCard extends StatelessWidget {
               Text(
                 option.title,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.white,
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
@@ -816,7 +817,7 @@ class _OptionCard extends StatelessWidget {
                 option.subtitle,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.grey.shade500,
+                  color: AppColors.grey.shade500,
                   fontSize: 12,
                 ),
               ),
@@ -860,14 +861,14 @@ class _TextPostComposer extends StatelessWidget {
               maxLines: null,
               keyboardType: TextInputType.multiline,
               style: const TextStyle(
-                color: Colors.white,
+                color: AppColors.white,
                 fontSize: 22,
                 height: 1.35,
               ),
               decoration: InputDecoration(
                 hintText: "What's on your mind?",
                 hintStyle: TextStyle(
-                  color: Colors.grey.shade600,
+                  color: AppColors.grey.shade600,
                   fontSize: 22,
                 ),
                 border: InputBorder.none,
@@ -957,10 +958,10 @@ class _MediaPreview extends StatelessWidget {
         maxHeight: 460,
       ),
       decoration: BoxDecoration(
-        color: Colors.grey,
+        color: AppColors.grey,
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: Colors.white.withOpacity(0.07),
+          color: AppColors.white.withOpacity(0.07),
         ),
       ),
       child: ClipRRect(
@@ -974,7 +975,7 @@ class _MediaPreview extends StatelessWidget {
               top: 12,
               right: 12,
               child: Material(
-                color: Colors.black.withOpacity(0.55),
+                color: AppColors.black.withOpacity(0.55),
                 borderRadius: BorderRadius.circular(22),
                 child: InkWell(
                   onTap: onChangeMedia,
@@ -989,14 +990,14 @@ class _MediaPreview extends StatelessWidget {
                       children: [
                         Icon(
                           Icons.swap_horiz_rounded,
-                          color: Colors.white,
+                          color: AppColors.white,
                           size: 16,
                         ),
                         SizedBox(width: 5),
                         Text(
                           'Change',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: AppColors.white,
                             fontWeight: FontWeight.w600,
                             fontSize: 12,
                           ),
@@ -1079,7 +1080,7 @@ class _LargeFilePreview extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.white,
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
@@ -1089,7 +1090,7 @@ class _LargeFilePreview extends StatelessWidget {
                 subtitle,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.grey.shade500,
+                  color: AppColors.grey.shade500,
                   fontSize: 13,
                 ),
               ),
@@ -1114,10 +1115,10 @@ class _CaptionInput extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey,
+        color: AppColors.grey,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: Colors.white.withOpacity(0.07),
+          color: AppColors.white.withOpacity(0.07),
         ),
       ),
       child: TextField(
@@ -1126,14 +1127,14 @@ class _CaptionInput extends StatelessWidget {
         maxLines: 4,
         minLines: 2,
         style: const TextStyle(
-          color: Colors.white,
+          color: AppColors.white,
           fontSize: 15,
           height: 1.35,
         ),
         decoration: InputDecoration(
           hintText: 'Write a caption...',
           hintStyle: TextStyle(
-            color: Colors.grey.shade600,
+            color: AppColors.grey.shade600,
           ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.all(16),
@@ -1167,10 +1168,10 @@ class _HashtagInput extends StatelessWidget {
         Container(
           decoration: compact
               ? BoxDecoration(
-                  color: Colors.grey,
+                  color: AppColors.grey,
                   borderRadius: BorderRadius.circular(22),
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.07),
+                    color: AppColors.white.withOpacity(0.07),
                   ),
                 )
               : null,
@@ -1178,14 +1179,14 @@ class _HashtagInput extends StatelessWidget {
             controller: controller,
             enabled: enabled,
             style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.white,
               fontSize: 15,
             ),
             textInputAction: TextInputAction.done,
             decoration: InputDecoration(
               hintText: 'Add hashtags',
               hintStyle: TextStyle(
-                color: Colors.grey.shade600,
+                color: AppColors.grey.shade600,
               ),
               border: InputBorder.none,
               prefixIcon: const Icon(
@@ -1283,16 +1284,16 @@ class _UploadOverlay extends StatelessWidget {
 
     return Positioned.fill(
       child: Container(
-        color: Colors.black.withOpacity(0.78),
+        color: AppColors.black.withOpacity(0.78),
         child: Center(
           child: Container(
             width: 280,
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
-              color: Colors.grey,
+              color: AppColors.grey,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: Colors.white.withOpacity(0.08),
+                color: AppColors.white.withOpacity(0.08),
               ),
             ),
             child: Column(
@@ -1301,7 +1302,7 @@ class _UploadOverlay extends StatelessWidget {
                 const Text(
                   'Publishing post',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.white,
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
                   ),
@@ -1310,7 +1311,7 @@ class _UploadOverlay extends StatelessWidget {
                 LinearProgressIndicator(
                   value: progress <= 0 ? null : progress,
                   color: AppColors.primary,
-                  backgroundColor: Colors.grey.shade800,
+                  backgroundColor: AppColors.grey.shade800,
                   minHeight: 6,
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -1318,7 +1319,7 @@ class _UploadOverlay extends StatelessWidget {
                 Text(
                   progress <= 0 ? 'Preparing...' : '$percentage%',
                   style: TextStyle(
-                    color: Colors.grey.shade500,
+                    color: AppColors.grey.shade500,
                     fontSize: 13,
                   ),
                 ),

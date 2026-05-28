@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
+import 'package:clique/app/configs/colors.dart';
+
 class LoadingShimmer extends StatelessWidget {
   const LoadingShimmer({super.key});
 
@@ -11,8 +13,8 @@ class LoadingShimmer extends StatelessWidget {
         .toDouble();
 
     return Shimmer.fromColors(
-      baseColor: Colors.grey[300]!,
-      highlightColor: Colors.grey[100]!,
+      baseColor: AppColors.grey[300]!,
+      highlightColor: AppColors.grey[100]!,
       child: Column(
         children: [
           _buildShimmerCard(cardHeight),
@@ -27,7 +29,7 @@ class LoadingShimmer extends StatelessWidget {
     return Container(
       height: height,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
@@ -39,7 +41,7 @@ class LoadingShimmer extends StatelessWidget {
             child: Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: AppColors.grey[300],
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(20)),
               ),
@@ -56,27 +58,27 @@ class LoadingShimmer extends StatelessWidget {
                   Container(
                     width: 150,
                     height: 24,
-                    color: Colors.grey[300],
+                    color: AppColors.grey[300],
                   ),
                   const SizedBox(height: 8),
                   // Location
                   Container(
                     width: 100,
                     height: 16,
-                    color: Colors.grey[300],
+                    color: AppColors.grey[300],
                   ),
                   const SizedBox(height: 12),
                   // Bio lines
                   Container(
                     width: double.infinity,
                     height: 14,
-                    color: Colors.grey[300],
+                    color: AppColors.grey[300],
                   ),
                   const SizedBox(height: 6),
                   Container(
                     width: 200,
                     height: 14,
-                    color: Colors.grey[300],
+                    color: AppColors.grey[300],
                   ),
                   const SizedBox(height: 12),
                   // Interests
@@ -88,7 +90,7 @@ class LoadingShimmer extends StatelessWidget {
                         width: 60,
                         height: 30,
                         decoration: BoxDecoration(
-                          color: Colors.grey[300],
+                          color: AppColors.grey[300],
                           borderRadius: BorderRadius.circular(15),
                         ),
                       ),

@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:clique/app/configs/colors.dart';
 import 'package:clique/data/models/status_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -32,7 +33,7 @@ class StoryHeader extends StatelessWidget {
           },
           icon: const Icon(
             Icons.close_rounded,
-            color: Colors.white,
+            color: AppColors.white,
             size: 28,
           ),
         ),
@@ -61,7 +62,7 @@ class _StoryAvatar extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: Colors.white,
+          color: AppColors.white,
           width: 2,
         ),
       ),
@@ -97,12 +98,12 @@ class _AvatarFallback extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.white.withOpacity(0.18),
+      color: AppColors.white.withOpacity(0.18),
       alignment: Alignment.center,
       child: Text(
         text,
         style: const TextStyle(
-          color: Colors.white,
+          color: AppColors.white,
           fontWeight: FontWeight.w800,
           fontSize: 16,
         ),
@@ -128,7 +129,7 @@ class _StoryUserInfo extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
-            color: Colors.white,
+            color: AppColors.white,
             fontWeight: FontWeight.w800,
             fontSize: 15,
           ),
@@ -139,7 +140,7 @@ class _StoryUserInfo extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.72),
+            color: AppColors.white.withOpacity(0.72),
             fontSize: 12,
             fontWeight: FontWeight.w500,
           ),

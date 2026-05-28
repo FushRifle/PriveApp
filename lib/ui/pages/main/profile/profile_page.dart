@@ -58,7 +58,7 @@ class _ProfilePageState extends State<ProfilePage>
 
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
+        statusBarColor: AppColors.transparent,
         statusBarIconBrightness: Brightness.dark,
       ),
     );
@@ -315,7 +315,7 @@ class _ProfileSliverAppBar extends StatelessWidget {
         onPressed: () => Navigator.maybePop(context),
         icon: const Icon(
           Icons.arrow_back_ios_new,
-          color: Colors.black,
+          color: AppColors.black,
           size: 20,
         ),
       ),
@@ -334,7 +334,7 @@ class _ProfileSliverAppBar extends StatelessWidget {
             },
             icon: const Icon(
               Icons.settings_outlined,
-              color: Colors.black,
+              color: AppColors.black,
             ),
           ),
       ],
@@ -395,7 +395,7 @@ class _CoverImage extends StatelessWidget {
                 end: Alignment.bottomCenter,
                 stops: const [0.62, 1],
                 colors: [
-                  Colors.transparent,
+                  AppColors.transparent,
                   AppColors.card.withOpacity(0.96),
                 ],
               ),
@@ -835,7 +835,7 @@ class _ActionButtons extends StatelessWidget {
               child: _ActionButton(
                 text: 'EDIT PROFILE',
                 backgroundColor: AppColors.primary,
-                textColor: Colors.white,
+                textColor: AppColors.white,
                 onTap: () {
                   Navigator.push(
                     context,
@@ -875,8 +875,8 @@ class _ActionButtons extends StatelessWidget {
             child: _ActionButton(
               text: isFollowing ? 'FOLLOWING' : 'FOLLOW',
               backgroundColor:
-                  isFollowing ? Colors.transparent : AppColors.primary,
-              textColor: isFollowing ? AppColors.text : Colors.white,
+                  isFollowing ? AppColors.transparent : AppColors.primary,
+              textColor: isFollowing ? AppColors.text : AppColors.white,
               hasBorder: isFollowing,
               onTap: onToggleFollow,
             ),
@@ -1225,14 +1225,14 @@ class _GalleryItem extends StatelessWidget {
                   children: [
                     const Icon(
                       Icons.favorite,
-                      color: Colors.white,
+                      color: AppColors.white,
                       size: 12,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       gallery.like,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.white,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
@@ -1252,7 +1252,7 @@ class _GalleryItem extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.white,
                       fontSize: 10,
                     ),
                   ),
@@ -1401,13 +1401,13 @@ class _Badge extends StatelessWidget {
         vertical: 4,
       ),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
+        color: AppColors.black.withOpacity(0.5),
         borderRadius: BorderRadius.circular(12),
       ),
       child: child ??
           Icon(
             icon,
-            color: Colors.white,
+            color: AppColors.white,
             size: 16,
           ),
     );

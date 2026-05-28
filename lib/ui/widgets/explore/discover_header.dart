@@ -30,7 +30,7 @@ class DiscoverHeader extends StatelessWidget {
             ),
             child: const Icon(
               Icons.explore,
-              color: Colors.white,
+              color: AppColors.white,
               size: 20,
             ),
           ),
@@ -40,7 +40,7 @@ class DiscoverHeader extends StatelessWidget {
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A2E),
+              color: AppColors.exploreHeaderText,
             ),
           ),
           const Spacer(),
@@ -64,11 +64,11 @@ class DiscoverHeader extends StatelessWidget {
           // Filter button
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.white,
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: AppColors.black.withOpacity(0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 2),
                 ),

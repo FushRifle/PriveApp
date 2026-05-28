@@ -36,7 +36,7 @@ class _InboxPageState extends State<InboxPage> {
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
+        statusBarColor: AppColors.transparent,
         statusBarIconBrightness: Brightness.dark,
       ),
     );
@@ -106,7 +106,7 @@ class _InboxPageState extends State<InboxPage> {
             style: ElevatedButton.styleFrom(
               minimumSize: const Size(120, 48),
               backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
               ),
@@ -186,7 +186,7 @@ class _InboxPageState extends State<InboxPage> {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: AppColors.black,
               ),
             ),
             const Spacer(),
@@ -264,7 +264,7 @@ class _InboxPageState extends State<InboxPage> {
         ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
-        child: const Icon(Icons.delete_outline, color: Colors.white),
+        child: const Icon(Icons.delete_outline, color: AppColors.white),
       ),
       confirmDismiss: (direction) async {
         return await showDialog(
@@ -279,8 +279,8 @@ class _InboxPageState extends State<InboxPage> {
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                child:
-                    const Text('Delete', style: TextStyle(color: Colors.red)),
+                child: const Text('Delete',
+                    style: TextStyle(color: AppColors.red)),
               ),
             ],
           ),
@@ -290,7 +290,7 @@ class _InboxPageState extends State<InboxPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Conversation with ${message.name} deleted'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.red,
           ),
         );
       },
@@ -321,7 +321,7 @@ class _InboxPageState extends State<InboxPage> {
           decoration: BoxDecoration(
             color: message.isUnread
                 ? AppColors.primary.withOpacity(0.05)
-                : Colors.transparent,
+                : AppColors.transparent,
             borderRadius: BorderRadius.circular(16),
             border: message.isUnread
                 ? Border.all(
@@ -361,7 +361,7 @@ class _InboxPageState extends State<InboxPage> {
                           shape: BoxShape.circle,
                           color: AppColors.greenColor,
                           border: Border.all(
-                            color: Colors.white,
+                            color: AppColors.white,
                             width: 2,
                           ),
                         ),
@@ -492,7 +492,7 @@ class _InboxPageState extends State<InboxPage> {
             style: const TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: AppColors.white,
             ),
           ),
         ),

@@ -48,7 +48,7 @@ class _HomePageState extends State<HomePage>
 
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
+        statusBarColor: AppColors.transparent,
         statusBarIconBrightness: Brightness.dark,
       ),
     );
@@ -363,7 +363,7 @@ class _HomeAppBar extends StatelessWidget {
                           width: 8,
                           height: 8,
                           decoration: const BoxDecoration(
-                            color: Colors.red,
+                            color: AppColors.red,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -571,12 +571,12 @@ class _Avatar extends StatelessWidget {
 
   Widget _fallback() {
     return Container(
-      color: Colors.white.withOpacity(0.2),
+      color: AppColors.white.withOpacity(0.2),
       alignment: Alignment.center,
       child: Text(
         fallback,
         style: const TextStyle(
-          color: Colors.white,
+          color: AppColors.white,
           fontWeight: FontWeight.bold,
         ),
       ),

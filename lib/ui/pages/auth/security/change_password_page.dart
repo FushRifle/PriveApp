@@ -60,7 +60,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
+        backgroundColor: isError ? AppColors.red : AppColors.green,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -78,13 +78,13 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_new,
-              color: isDarkMode ? Colors.white : Colors.black),
+              color: isDarkMode ? AppColors.white : AppColors.black),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Change Password',
           style: TextStyle(
-            color: isDarkMode ? Colors.white : Colors.black,
+            color: isDarkMode ? AppColors.white : AppColors.black,
             fontWeight: FontWeight.w600,
             fontSize: 18,
           ),
@@ -154,7 +154,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: Colors.white,
+                                color: AppColors.white,
                               ),
                             )
                           : const Text('Update Password'),

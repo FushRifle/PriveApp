@@ -23,7 +23,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   StreamSubscription<StoriesState>? _createStorySubscription;
 
   File? _selectedImageFile;
-  Color _selectedColor = const Color(0xFF1D1B20);
+  Color _selectedColor = AppColors.storyTextBackground;
   double _fontSize = 28;
   TextAlign _textAlign = TextAlign.center;
   bool _isEditingText = false;
@@ -32,16 +32,16 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   bool _showFontControls = false;
 
   static const List<Color> _backgroundColors = [
-    Color(0xFF1D1B20),
-    Color(0xFF6750A4),
-    Color(0xFFB3261E),
-    Color(0xFF21005D),
-    Color(0xFF006A6A),
-    Color(0xFF434948),
-    Color(0xFFFF6B6B),
-    Color(0xFF4ECDC4),
-    Color(0xFFFFE66D),
-    Color(0xFF95E77E),
+    AppColors.storyTextBackground,
+    AppColors.storyPurple,
+    AppColors.storyRed,
+    AppColors.storyDeepPurple,
+    AppColors.storyTeal,
+    AppColors.storyMuted,
+    AppColors.primary,
+    AppColors.secondary,
+    AppColors.storyYellow,
+    AppColors.storyGreen,
   ];
 
   @override
@@ -59,7 +59,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBodyBehindAppBar: true,
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.black,
       appBar: _isEditingText ? null : _buildTransparentAppBar(),
       body: Stack(
         children: [
@@ -78,7 +78,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
     return Container(
       width: double.infinity,
       height: double.infinity,
-      color: _hasImage ? Colors.black : _selectedColor,
+      color: _hasImage ? AppColors.black : _selectedColor,
       child: _hasImage
           ? Image.file(
               _selectedImageFile!,
@@ -102,14 +102,14 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                       _hasText ? _textController.text : "What's happening?",
                       textAlign: _textAlign,
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AppColors.white,
                         fontSize: _hasText ? _fontSize : 20,
                         fontWeight: FontWeight.w800,
                         height: 1.4,
                         shadows: const [
                           Shadow(
                             blurRadius: 10,
-                            color: Colors.black45,
+                            color: AppColors.black45,
                             offset: Offset(2, 2),
                           ),
                         ],
@@ -124,7 +124,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
 
   Widget _buildTextInput() {
     return Container(
-      color: Colors.black.withOpacity(0.95),
+      color: AppColors.black.withOpacity(0.95),
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -189,7 +189,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
               const SizedBox(width: 20),
               _buildControlButton(
                 icon: Icons.close,
-                backgroundColor: Colors.white.withOpacity(0.1),
+                backgroundColor: AppColors.white.withOpacity(0.1),
                 onTap: () => setState(() => _isEditingText = false),
               ),
               _buildControlButton(
@@ -212,10 +212,10 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Icon(Icons.format_size, color: Colors.white70, size: 20),
+              const Icon(Icons.format_size, color: AppColors.white70, size: 20),
               Text(
                 'Font Size: ${_fontSize.round()}',
-                style: const TextStyle(color: Colors.white70, fontSize: 14),
+                style: const TextStyle(color: AppColors.white70, fontSize: 14),
               ),
             ],
           ),
@@ -224,7 +224,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
             min: 20,
             max: 48,
             activeColor: AppColors.primary,
-            inactiveColor: Colors.white30,
+            inactiveColor: AppColors.white30,
             onChanged: (value) => setState(() => _fontSize = value),
           ),
         ],
@@ -245,10 +245,10 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: backgroundColor ??
-            (isActive ? AppColors.primary : Colors.white.withOpacity(0.1)),
+            (isActive ? AppColors.primary : AppColors.white.withOpacity(0.1)),
       ),
       child: IconButton(
-        icon: Icon(icon, color: Colors.white, size: 22),
+        icon: Icon(icon, color: AppColors.white, size: 22),
         onPressed: onTap,
         padding: EdgeInsets.zero,
       ),
@@ -257,11 +257,11 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
 
   PreferredSizeWidget _buildTransparentAppBar() {
     return AppBar(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       elevation: 0,
       systemOverlayStyle: SystemUiOverlayStyle.light,
       leading: IconButton(
-        icon: const Icon(Icons.close, color: Colors.white, size: 28),
+        icon: const Icon(Icons.close, color: AppColors.white, size: 28),
         onPressed: () => Navigator.pop(context),
       ),
       actions: [
@@ -271,7 +271,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
             onPressed: _isSubmitting ? null : _shareStatus,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.white,
               shape: const StadiumBorder(),
               elevation: 0,
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -283,7 +283,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                     height: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.white,
+                      color: AppColors.white,
                     ),
                   )
                 : const Text(
@@ -298,7 +298,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
 
   Widget _buildLoadingOverlay() {
     return Container(
-      color: Colors.black.withOpacity(0.8),
+      color: AppColors.black.withOpacity(0.8),
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -308,7 +308,8 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
               height: 60,
               child: CircularProgressIndicator(
                 value: _uploadProgress > 0 ? _uploadProgress : null,
-                valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                valueColor:
+                    const AlwaysStoppedAnimation<Color>(AppColors.white),
                 strokeWidth: 3,
               ),
             ),
@@ -317,7 +318,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
               _uploadProgress > 0
                   ? 'Uploading story... ${(_uploadProgress * 100).toStringAsFixed(0)}%'
                   : 'Creating your story...',
-              style: const TextStyle(color: Colors.white, fontSize: 16),
+              style: const TextStyle(color: AppColors.white, fontSize: 16),
             ),
           ],
         ),
@@ -365,10 +366,10 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.white.withOpacity(0.15),
-            border: Border.all(color: Colors.white24),
+            color: AppColors.white.withOpacity(0.15),
+            border: Border.all(color: AppColors.white24),
           ),
-          child: Icon(icon, color: Colors.white, size: 24),
+          child: Icon(icon, color: AppColors.white, size: 24),
         ),
       ),
     );
@@ -382,7 +383,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
       child: Text(
         "Tap to add your story\nor choose background",
         textAlign: TextAlign.center,
-        style: TextStyle(color: Colors.white54, letterSpacing: 1),
+        style: TextStyle(color: AppColors.white54, letterSpacing: 1),
       ),
     );
   }
@@ -390,11 +391,11 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   void _showColorPicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       builder: (context) => Container(
         height: 160,
         decoration: const BoxDecoration(
-          color: Colors.black87,
+          color: AppColors.black87,
           borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
         ),
         child: Column(
@@ -403,7 +404,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
               padding: EdgeInsets.all(16),
               child: Text(
                 'Choose Background Color',
-                style: TextStyle(color: Colors.white, fontSize: 16),
+                style: TextStyle(color: AppColors.white, fontSize: 16),
               ),
             ),
             Expanded(
@@ -438,7 +439,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
         decoration: BoxDecoration(
           color: color,
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.white, width: 2),
+          border: Border.all(color: AppColors.white, width: 2),
         ),
       ),
     );
@@ -447,10 +448,10 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   void _showMediaPicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       builder: (context) => Container(
         decoration: const BoxDecoration(
-          color: Colors.black87,
+          color: AppColors.black87,
           borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
         ),
         child: SafeArea(
@@ -461,19 +462,20 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                 padding: EdgeInsets.all(16),
                 child: Text(
                   'Choose Media',
-                  style: TextStyle(color: Colors.white, fontSize: 18),
+                  style: TextStyle(color: AppColors.white, fontSize: 18),
                 ),
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library, color: Colors.white),
+                leading:
+                    const Icon(Icons.photo_library, color: AppColors.white),
                 title: const Text('Choose from Gallery',
-                    style: TextStyle(color: Colors.white)),
+                    style: TextStyle(color: AppColors.white)),
                 onTap: () => _pickImage(ImageSource.gallery),
               ),
               ListTile(
-                leading: const Icon(Icons.camera_alt, color: Colors.white),
+                leading: const Icon(Icons.camera_alt, color: AppColors.white),
                 title: const Text('Take a Photo',
-                    style: TextStyle(color: Colors.white)),
+                    style: TextStyle(color: AppColors.white)),
                 onTap: () => _pickImage(ImageSource.camera),
               ),
               const SizedBox(height: 20),
@@ -494,7 +496,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
       if (pickedFile != null) {
         setState(() {
           _selectedImageFile = File(pickedFile.path);
-          _selectedColor = Colors.transparent;
+          _selectedColor = AppColors.transparent;
         });
       }
     } catch (e) {
@@ -586,7 +588,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
     setState(() {
       _textController.clear();
       _selectedImageFile = null;
-      _selectedColor = const Color(0xFF1D1B20);
+      _selectedColor = AppColors.storyTextBackground;
       _textAlign = TextAlign.center;
       _fontSize = 28;
     });
@@ -597,7 +599,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
+        backgroundColor: isError ? AppColors.red : AppColors.green,
         behavior: SnackBarBehavior.floating,
         duration: Duration(seconds: isError ? 3 : 2),
       ),

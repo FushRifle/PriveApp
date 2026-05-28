@@ -17,7 +17,7 @@ class ImageViewer extends StatelessWidget {
     return GestureDetector(
       onTap: () => Navigator.pop(context),
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.black,
         body: Stack(
           children: [
             Center(
@@ -35,7 +35,7 @@ class ImageViewer extends StatelessWidget {
                   errorWidget: (context, url, error) => const Center(
                     child: Icon(
                       Icons.broken_image,
-                      color: Colors.white54,
+                      color: AppColors.white54,
                       size: 64,
                     ),
                   ),
@@ -50,12 +50,12 @@ class ImageViewer extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.5),
+                    color: AppColors.black.withOpacity(0.5),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.close,
-                    color: Colors.white,
+                    color: AppColors.white,
                     size: 24,
                   ),
                 ),
@@ -69,13 +69,13 @@ class ImageViewer extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
+                    color: AppColors.black.withOpacity(0.7),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     caption!,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.white,
                       fontSize: 14,
                     ),
                     textAlign: TextAlign.center,

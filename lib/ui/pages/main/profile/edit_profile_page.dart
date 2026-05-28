@@ -407,7 +407,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
+        backgroundColor: isError ? AppColors.red : AppColors.green,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),
@@ -796,7 +796,7 @@ class _CameraBadge extends StatelessWidget {
         color: AppColors.primary,
         shape: BoxShape.circle,
         border: Border.all(
-          color: Colors.white,
+          color: AppColors.white,
           width: 2,
         ),
         boxShadow: [
@@ -810,11 +810,11 @@ class _CameraBadge extends StatelessWidget {
       child: isLoading
           ? const CircularProgressIndicator(
               strokeWidth: 2,
-              color: Colors.white,
+              color: AppColors.white,
             )
           : const Icon(
               Icons.camera_alt,
-              color: Colors.white,
+              color: AppColors.white,
               size: 18,
             ),
     );

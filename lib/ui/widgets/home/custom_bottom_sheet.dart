@@ -9,7 +9,7 @@ import 'package:clique/data/models/feeds_models.dart';
 void customBottomSheetComments(BuildContext context, {required int postId}) =>
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (builder) => BlocProvider<FeedBloc>.value(
         value: context.read<FeedBloc>(),
@@ -132,7 +132,7 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.generalError!),
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.red,
             ),
           );
           if (mounted) {
@@ -362,12 +362,12 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
                       height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        color: AppColors.white,
                       ),
                     )
                   : const Icon(
                       Icons.send,
-                      color: Colors.white,
+                      color: AppColors.white,
                       size: 20,
                     ),
             ),

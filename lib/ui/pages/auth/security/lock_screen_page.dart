@@ -239,7 +239,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
+        backgroundColor: isError ? AppColors.red : AppColors.green,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),
@@ -258,13 +258,13 @@ class _LockScreenPageState extends State<LockScreenPage> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_new,
-              color: isDarkMode ? Colors.white : Colors.black),
+              color: isDarkMode ? AppColors.white : AppColors.black),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'App Lock',
           style: TextStyle(
-            color: isDarkMode ? Colors.white : Colors.black,
+            color: isDarkMode ? AppColors.white : AppColors.black,
             fontWeight: FontWeight.w600,
             fontSize: 18,
           ),
@@ -341,8 +341,8 @@ class _LockScreenPageState extends State<LockScreenPage> {
                         padding: const EdgeInsets.only(top: 12),
                         child: Text(
                           _error!,
-                          style:
-                              const TextStyle(color: Colors.red, fontSize: 12),
+                          style: const TextStyle(
+                              color: AppColors.red, fontSize: 12),
                         ),
                       ),
                   ],

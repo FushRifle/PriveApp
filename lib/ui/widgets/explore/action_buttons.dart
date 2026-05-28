@@ -42,7 +42,7 @@ class ActionButtons extends StatelessWidget {
         ),
         _ActionButton(
           icon: Icons.send,
-          color: Colors.blue,
+          color: AppColors.blue,
           onTap: onMessage,
           label: 'Message',
         ),
@@ -78,7 +78,7 @@ class _ActionButton extends StatelessWidget {
             width: size,
             height: size,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.white,
               borderRadius: BorderRadius.circular(30),
               boxShadow: [
                 BoxShadow(

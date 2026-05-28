@@ -51,7 +51,7 @@ class _InsightsPageState extends State<InsightsPage>
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.error!),
-                backgroundColor: Colors.red,
+                backgroundColor: AppColors.red,
               ),
             );
             context.read<InsightsBloc>().add(ClearInsightsError());
@@ -232,7 +232,7 @@ class _InsightsPageState extends State<InsightsPage>
                 change: insights.totalViewsChange,
                 isPositive: insights.totalViewsChange >= 0,
                 icon: Icons.visibility,
-                color: Colors.blue,
+                color: AppColors.blue,
               ),
             ),
             const SizedBox(width: 12),
@@ -269,7 +269,7 @@ class _InsightsPageState extends State<InsightsPage>
                 change: insights.totalReachChange,
                 isPositive: insights.totalReachChange >= 0,
                 icon: Icons.trending_up,
-                color: Colors.orange,
+                color: AppColors.orange,
               ),
             ),
           ],
@@ -293,7 +293,7 @@ class _InsightsPageState extends State<InsightsPage>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: AppColors.black.withOpacity(0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -356,7 +356,7 @@ class _InsightsPageState extends State<InsightsPage>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: AppColors.black.withOpacity(0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -422,15 +422,16 @@ class _InsightsPageState extends State<InsightsPage>
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppColors.primary : Colors.transparent,
+                  color: isSelected ? AppColors.primary : AppColors.transparent,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Center(
                   child: Text(
                     tabs[index],
                     style: TextStyle(
-                      color:
-                          isSelected ? Colors.white : AppColors.textSecondary,
+                      color: isSelected
+                          ? AppColors.white
+                          : AppColors.textSecondary,
                       fontWeight:
                           isSelected ? FontWeight.w600 : FontWeight.w500,
                       fontSize: 13,
@@ -516,7 +517,7 @@ class _InsightsPageState extends State<InsightsPage>
               radius: 4,
               color: AppColors.primary,
               strokeWidth: 2,
-              strokeColor: Colors.white,
+              strokeColor: AppColors.white,
             ),
           ),
           belowBarData: BarAreaData(
@@ -575,7 +576,7 @@ class _InsightsPageState extends State<InsightsPage>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: AppColors.black.withOpacity(0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -640,7 +641,7 @@ class _InsightsPageState extends State<InsightsPage>
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
+                color: AppColors.black.withOpacity(0.03),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -706,7 +707,7 @@ class _InsightsPageState extends State<InsightsPage>
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
+                color: AppColors.black.withOpacity(0.03),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -765,7 +766,7 @@ class _InsightsPageState extends State<InsightsPage>
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
+                color: AppColors.black.withOpacity(0.03),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),

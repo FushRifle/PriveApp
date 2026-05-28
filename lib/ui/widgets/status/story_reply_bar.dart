@@ -76,18 +76,19 @@ class _StoryReplyBarState extends State<StoryReplyBar> {
             height: widget.isReplying ? 50 : 46,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(widget.isReplying ? 0.20 : 0.14),
+              color:
+                  AppColors.white.withOpacity(widget.isReplying ? 0.20 : 0.14),
               borderRadius: BorderRadius.circular(30),
               border: Border.all(
-                color:
-                    Colors.white.withOpacity(widget.isReplying ? 0.42 : 0.28),
+                color: AppColors.white
+                    .withOpacity(widget.isReplying ? 0.42 : 0.28),
               ),
             ),
             child: TextField(
               controller: widget.controller,
               focusNode: _focusNode,
               style: const TextStyle(
-                color: Colors.white,
+                color: AppColors.white,
                 fontSize: 15,
               ),
               minLines: 1,
@@ -96,7 +97,7 @@ class _StoryReplyBarState extends State<StoryReplyBar> {
               decoration: InputDecoration(
                 hintText: 'Send message',
                 hintStyle: TextStyle(
-                  color: Colors.white.withOpacity(0.65),
+                  color: AppColors.white.withOpacity(0.65),
                 ),
                 border: InputBorder.none,
                 isDense: true,
@@ -109,8 +110,8 @@ class _StoryReplyBarState extends State<StoryReplyBar> {
         const SizedBox(width: 10),
         _RoundButton(
           icon: Icons.favorite_border_rounded,
-          backgroundColor: Colors.white.withOpacity(0.12),
-          borderColor: Colors.white.withOpacity(0.28),
+          backgroundColor: AppColors.white.withOpacity(0.12),
+          borderColor: AppColors.white.withOpacity(0.28),
           onTap: () {
             HapticFeedback.mediumImpact();
             widget.onLike();
@@ -120,9 +121,9 @@ class _StoryReplyBarState extends State<StoryReplyBar> {
         _RoundButton(
           icon: Icons.send_rounded,
           backgroundColor:
-              _canSend ? AppColors.primary : Colors.white.withOpacity(0.12),
+              _canSend ? AppColors.primary : AppColors.white.withOpacity(0.12),
           borderColor:
-              _canSend ? AppColors.primary : Colors.white.withOpacity(0.28),
+              _canSend ? AppColors.primary : AppColors.white.withOpacity(0.28),
           onTap: _canSend
               ? () {
                   HapticFeedback.lightImpact();
@@ -165,7 +166,7 @@ class _RoundButton extends StatelessWidget {
           height: 46,
           child: Icon(
             icon,
-            color: Colors.white,
+            color: AppColors.white,
             size: 21,
           ),
         ),

@@ -2,6 +2,7 @@ import 'package:clique/ui/pages/main/reels/create_reel_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:clique/app/configs/colors.dart';
 import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/bloc/reels/reel_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
@@ -38,7 +39,7 @@ class _ReelsPageState extends State<ReelsPage> {
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
+        statusBarColor: AppColors.transparent,
         statusBarIconBrightness: Brightness.light,
       ),
     );
@@ -55,7 +56,7 @@ class _ReelsPageState extends State<ReelsPage> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.error!),
-                backgroundColor: Colors.red,
+                backgroundColor: AppColors.red,
               ),
             );
             context.read<ReelBloc>().add(ClearReelError());
@@ -73,13 +74,13 @@ class _ReelsPageState extends State<ReelsPage> {
               final currentUserId = userState.currentUser?['id'] ?? 0;
 
               return Scaffold(
-                backgroundColor: Colors.black,
+                backgroundColor: AppColors.black,
                 body: Stack(
                   children: [
                     reels.isEmpty && isLoading
                         ? const Center(
                             child: CircularProgressIndicator(
-                              color: Colors.white,
+                              color: AppColors.white,
                               strokeWidth: 2,
                             ),
                           )
@@ -100,7 +101,7 @@ class _ReelsPageState extends State<ReelsPage> {
                                 if (hasMore) {
                                   return const Center(
                                     child: CircularProgressIndicator(
-                                      color: Colors.white,
+                                      color: AppColors.white,
                                       strokeWidth: 2,
                                     ),
                                   );
@@ -108,14 +109,16 @@ class _ReelsPageState extends State<ReelsPage> {
                                   return const Center(
                                     child: Text(
                                       'No reels available',
-                                      style: TextStyle(color: Colors.white54),
+                                      style:
+                                          TextStyle(color: AppColors.white54),
                                     ),
                                   );
                                 } else {
                                   return const Center(
                                     child: Text(
                                       'No more reels',
-                                      style: TextStyle(color: Colors.white54),
+                                      style:
+                                          TextStyle(color: AppColors.white54),
                                     ),
                                   );
                                 }
@@ -127,7 +130,7 @@ class _ReelsPageState extends State<ReelsPage> {
                                   await Future.delayed(
                                       const Duration(milliseconds: 500));
                                 },
-                                color: Colors.white,
+                                color: AppColors.white,
                                 child: ReelItem(
                                   reel: reels[index],
                                   isActive: true,
@@ -166,12 +169,12 @@ class _ReelsPageState extends State<ReelsPage> {
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: Colors.blueGrey.withOpacity(0.3),
+                                color: AppColors.blueGrey.withOpacity(0.3),
                                 borderRadius: BorderRadius.circular(15),
                               ),
                               child: const Icon(
                                 Icons.arrow_back_ios_new,
-                                color: Colors.white,
+                                color: AppColors.white,
                                 size: 20,
                               ),
                             ),
@@ -190,12 +193,12 @@ class _ReelsPageState extends State<ReelsPage> {
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: Colors.blueGrey.withOpacity(0.3),
+                                color: AppColors.blueGrey.withOpacity(0.3),
                                 borderRadius: BorderRadius.circular(14),
                               ),
                               child: const Icon(
                                 Icons.add,
-                                color: Colors.white,
+                                color: AppColors.white,
                                 size: 20,
                               ),
                             ),

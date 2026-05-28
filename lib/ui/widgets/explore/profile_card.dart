@@ -137,14 +137,14 @@ class _PlaceholderImage extends StatelessWidget {
             Icon(
               Icons.person,
               size: 96,
-              color: Colors.white.withOpacity(0.48),
+              color: AppColors.white.withOpacity(0.48),
             ),
             const SizedBox(height: 8),
             Text(
               firstLetter,
               style: TextStyle(
                 fontSize: 40,
-                color: Colors.white.withOpacity(0.55),
+                color: AppColors.white.withOpacity(0.55),
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -167,7 +167,7 @@ class _GradientOverlay extends StatelessWidget {
           end: Alignment.bottomCenter,
           stops: [0.48, 0.7, 1.0],
           colors: [
-            Colors.transparent,
+            AppColors.transparent,
             Color.fromRGBO(0, 0, 0, 0.15),
             Color.fromRGBO(0, 0, 0, 0.78),
           ],
@@ -192,7 +192,7 @@ class _DistanceBadge extends StatelessWidget {
         children: [
           Icon(
             Icons.location_on,
-            color: Colors.white.withOpacity(0.9),
+            color: AppColors.white.withOpacity(0.9),
             size: 14,
           ),
           const SizedBox(width: 4),
@@ -231,7 +231,7 @@ class _OnlineBadge extends StatelessWidget {
             height: 8,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.white,
                 shape: BoxShape.circle,
               ),
             ),
@@ -285,7 +285,7 @@ class _MatchScoreBadge extends StatelessWidget {
         children: [
           const Icon(
             Icons.favorite,
-            color: Colors.white,
+            color: AppColors.white,
             size: 14,
           ),
           const SizedBox(width: 6),
@@ -377,7 +377,7 @@ class _NameRow extends StatelessWidget {
                 const SizedBox(width: 4),
                 const Icon(
                   Icons.verified,
-                  color: Colors.blue,
+                  color: AppColors.blue,
                   size: 20,
                 ),
               ],
@@ -387,7 +387,7 @@ class _NameRow extends StatelessWidget {
         const SizedBox(width: 8),
         Icon(
           Icons.location_on,
-          color: Colors.white.withOpacity(0.8),
+          color: AppColors.white.withOpacity(0.8),
           size: 18,
         ),
         const SizedBox(width: 4),
@@ -419,7 +419,7 @@ class _OccupationRow extends StatelessWidget {
       children: [
         Icon(
           Icons.work_outline,
-          color: Colors.white.withOpacity(0.8),
+          color: AppColors.white.withOpacity(0.8),
           size: 14,
         ),
         const SizedBox(width: 4),
@@ -429,7 +429,7 @@ class _OccupationRow extends StatelessWidget {
             style: AppTheme.whiteTextStyle.copyWith(
               fontSize: 12,
               fontWeight: AppTheme.medium,
-              color: Colors.white.withOpacity(0.82),
+              color: AppColors.white.withOpacity(0.82),
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -459,10 +459,10 @@ class _InterestTags extends StatelessWidget {
             vertical: 6,
           ),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
+            color: AppColors.white.withOpacity(0.2),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: Colors.white.withOpacity(0.3),
+              color: AppColors.white.withOpacity(0.3),
             ),
           ),
           child: Text(
@@ -493,10 +493,10 @@ class _GlassBadge extends StatelessWidget {
         vertical: 6,
       ),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
+        color: AppColors.black.withOpacity(0.5),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.white.withOpacity(0.3),
+          color: AppColors.white.withOpacity(0.3),
         ),
       ),
       child: child,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:clique/app/configs/colors.dart';
+
 enum SwipeActionType {
   like,
   pass,
@@ -85,14 +87,14 @@ class _FeedbackContent extends StatelessWidget {
         children: [
           Icon(
             data.icon,
-            color: Colors.white,
+            color: AppColors.white,
             size: 32,
           ),
           const SizedBox(width: 12),
           Text(
             data.text,
             style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.white,
               fontSize: 23,
               fontWeight: FontWeight.bold,
               letterSpacing: 1,
@@ -108,21 +110,21 @@ class _FeedbackContent extends StatelessWidget {
       case SwipeActionType.like:
         return const _FeedbackData(
           icon: Icons.favorite,
-          color: Colors.green,
+          color: AppColors.green,
           text: 'LIKED!',
         );
 
       case SwipeActionType.pass:
         return const _FeedbackData(
           icon: Icons.close,
-          color: Colors.red,
+          color: AppColors.red,
           text: 'PASSED',
         );
 
       case SwipeActionType.superLike:
         return const _FeedbackData(
           icon: Icons.star,
-          color: Colors.blue,
+          color: AppColors.blue,
           text: 'SUPER LIKE!',
         );
 

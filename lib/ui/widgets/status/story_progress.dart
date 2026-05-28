@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:clique/app/configs/colors.dart';
+
 class StoryProgress extends StatelessWidget {
   final int count;
   final int currentIndex;
@@ -58,9 +60,9 @@ class _ProgressSegment extends StatelessWidget {
       borderRadius: BorderRadius.circular(10),
       child: Container(
         height: 3,
-        color: Colors.white.withOpacity(0.28),
+        color: AppColors.white.withOpacity(0.28),
         child: isPast
-            ? const ColoredBox(color: Colors.white)
+            ? const ColoredBox(color: AppColors.white)
             : isCurrent
                 ? AnimatedBuilder(
                     animation: animation,
@@ -68,7 +70,7 @@ class _ProgressSegment extends StatelessWidget {
                       return FractionallySizedBox(
                         alignment: Alignment.centerLeft,
                         widthFactor: animation.value.clamp(0.0, 1.0),
-                        child: const ColoredBox(color: Colors.white),
+                        child: const ColoredBox(color: AppColors.white),
                       );
                     },
                   )

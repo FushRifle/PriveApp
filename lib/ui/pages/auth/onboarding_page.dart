@@ -56,7 +56,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
+        statusBarColor: AppColors.transparent,
         statusBarIconBrightness: Brightness.dark,
       ),
     );
@@ -164,7 +164,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         child: TextButton(
           onPressed: _completeOnboarding,
           style: TextButton.styleFrom(
-            overlayColor: Colors.transparent,
+            overlayColor: AppColors.transparent,
           ),
           child: Text(
             'Skip',

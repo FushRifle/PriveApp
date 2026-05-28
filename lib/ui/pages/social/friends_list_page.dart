@@ -103,7 +103,7 @@ class _FriendsListPageState extends State<FriendsListPage>
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.error!),
-                backgroundColor: Colors.red,
+                backgroundColor: AppColors.red,
               ),
             );
             context.read<FriendsBloc>().add(ClearFriendsError());
@@ -323,16 +323,16 @@ class _FriendsListPageState extends State<FriendsListPage>
                       imageUrl: friend.avatar!,
                       fit: BoxFit.cover,
                       placeholder: (context, url) => Container(
-                        color: Colors.grey.shade200,
-                        child: const Icon(Icons.person, color: Colors.grey),
+                        color: AppColors.grey.shade200,
+                        child: const Icon(Icons.person, color: AppColors.grey),
                       ),
                       errorWidget: (context, url, error) => Container(
-                        color: Colors.grey.shade200,
-                        child: const Icon(Icons.person, color: Colors.grey),
+                        color: AppColors.grey.shade200,
+                        child: const Icon(Icons.person, color: AppColors.grey),
                       ),
                     )
                   : Container(
-                      color: Colors.grey.shade200,
+                      color: AppColors.grey.shade200,
                       child: Center(
                         child: Text(
                           friend.name.isNotEmpty
@@ -401,7 +401,7 @@ class _FriendsListPageState extends State<FriendsListPage>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: isFollowing ? Colors.transparent : AppColors.primary,
+                color: isFollowing ? AppColors.transparent : AppColors.primary,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: isFollowing ? AppColors.border : AppColors.primary,
@@ -410,7 +410,7 @@ class _FriendsListPageState extends State<FriendsListPage>
               child: Text(
                 isFollowing ? 'Following' : 'Follow',
                 style: TextStyle(
-                  color: isFollowing ? AppColors.text : Colors.white,
+                  color: isFollowing ? AppColors.text : AppColors.white,
                   fontWeight: FontWeight.w600,
                   fontSize: 13,
                 ),

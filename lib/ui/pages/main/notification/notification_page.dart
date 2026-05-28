@@ -159,7 +159,7 @@ class _NotificationPageState extends State<NotificationPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('All notifications marked as read'),
-          backgroundColor: Colors.green,
+          backgroundColor: AppColors.green,
           duration: Duration(seconds: 2),
         ),
       );
@@ -169,7 +169,7 @@ class _NotificationPageState extends State<NotificationPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to mark all as read: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.red,
         ),
       );
     }
@@ -189,7 +189,7 @@ class _NotificationPageState extends State<NotificationPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to delete notification: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.red,
         ),
       );
     }
@@ -237,7 +237,7 @@ class _NotificationPageState extends State<NotificationPage> {
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
+        statusBarColor: AppColors.transparent,
         statusBarIconBrightness: Brightness.dark,
       ),
     );
@@ -245,7 +245,7 @@ class _NotificationPageState extends State<NotificationPage> {
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.white,
         elevation: 1,
         title: Text(
           'Notifications',
@@ -258,7 +258,8 @@ class _NotificationPageState extends State<NotificationPage> {
         actions: [
           if (_notifications.any((n) => n['isUnread'] == true))
             IconButton(
-              icon: const Icon(Icons.done_all_rounded, color: Colors.black87),
+              icon:
+                  const Icon(Icons.done_all_rounded, color: AppColors.black87),
               onPressed: _markAllAsRead,
             ),
           const SizedBox(width: 8),
@@ -279,7 +280,7 @@ class _NotificationPageState extends State<NotificationPage> {
                         const Icon(
                           Icons.error_outline,
                           size: 64,
-                          color: Colors.grey,
+                          color: AppColors.grey,
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -428,12 +429,12 @@ class _NotificationPageState extends State<NotificationPage> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isUnread ? Colors.white : Colors.transparent,
+        color: isUnread ? AppColors.white : AppColors.transparent,
         borderRadius: BorderRadius.circular(20),
         boxShadow: isUnread
             ? [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: AppColors.black.withOpacity(0.04),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 )
@@ -465,7 +466,7 @@ class _NotificationPageState extends State<NotificationPage> {
                     border: Border.all(
                       color: isUnread
                           ? AppColors.primary.withOpacity(0.3)
-                          : Colors.transparent,
+                          : AppColors.transparent,
                       width: 2,
                     ),
                   ),
@@ -490,7 +491,7 @@ class _NotificationPageState extends State<NotificationPage> {
                       decoration: BoxDecoration(
                         color: AppColors.primary,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
+                        border: Border.all(color: AppColors.white, width: 2),
                       ),
                     ),
                   ),

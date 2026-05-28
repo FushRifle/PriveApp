@@ -75,7 +75,7 @@ class _MatchesPageState extends State<MatchesPage>
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.error!),
-                backgroundColor: Colors.red,
+                backgroundColor: AppColors.red,
               ),
             );
             context.read<MatchBloc>().add(ClearMatchError());
@@ -342,13 +342,13 @@ class _MatchesPageState extends State<MatchesPage>
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: AppColors.white,
                           ),
                         )
                       : const Text(
                           'Like',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: AppColors.white,
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
                           ),
@@ -406,7 +406,7 @@ class _MatchesPageState extends State<MatchesPage>
         child: Text(
           fallbackText,
           style: TextStyle(
-            color: Colors.white,
+            color: AppColors.white,
             fontSize: size * 0.4,
             fontWeight: FontWeight.bold,
           ),

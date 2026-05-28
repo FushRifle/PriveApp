@@ -303,7 +303,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1,
-                  color: Colors.white,
+                  color: AppColors.white,
                 ),
               ),
             ),
@@ -358,7 +358,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       },
       backgroundColor: AppColors.whiteColor,
       selectedColor: AppColors.primary,
-      checkmarkColor: Colors.white,
+      checkmarkColor: AppColors.white,
       side: BorderSide(
         color: isSelected
             ? AppColors.primary
@@ -369,7 +369,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
         borderRadius: BorderRadius.circular(8),
       ),
       labelStyle: TextStyle(
-        color: isSelected ? Colors.white : AppColors.blackTextColor,
+        color: isSelected ? AppColors.white : AppColors.blackTextColor,
       ),
     );
   }

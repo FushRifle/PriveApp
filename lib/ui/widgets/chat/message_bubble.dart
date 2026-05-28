@@ -72,7 +72,7 @@ class MessageBubble extends StatelessWidget {
               ),
             Flexible(
               child: Material(
-                color: Colors.transparent,
+                color: AppColors.transparent,
                 child: InkWell(
                   onLongPress: () => _showMessageOptions(context),
                   borderRadius: BorderRadius.circular(20),
@@ -110,13 +110,14 @@ class MessageBubble extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: isMe ? Colors.white.withOpacity(0.15) : Colors.grey.shade100,
+        color:
+            isMe ? AppColors.white.withOpacity(0.15) : AppColors.grey.shade100,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
           Icon(Icons.reply,
-              size: 12, color: isMe ? Colors.white70 : AppColors.primary),
+              size: 12, color: isMe ? AppColors.white70 : AppColors.primary),
           const SizedBox(width: 6),
           Expanded(
             child: Column(
@@ -127,14 +128,14 @@ class MessageBubble extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w500,
-                    color: isMe ? Colors.white70 : AppColors.primary,
+                    color: isMe ? AppColors.white70 : AppColors.primary,
                   ),
                 ),
                 Text(
                   message.replyToMessage ?? '',
                   style: TextStyle(
                     fontSize: 11,
-                    color: isMe ? Colors.white60 : Colors.grey.shade600,
+                    color: isMe ? AppColors.white60 : AppColors.grey.shade600,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -164,15 +165,15 @@ class MessageBubble extends StatelessWidget {
             fit: BoxFit.cover,
             placeholder: (_, __) => Container(
               height: 180,
-              color: Colors.grey.shade200,
+              color: AppColors.grey.shade200,
               child: const Center(
                   child: CircularProgressIndicator(strokeWidth: 2)),
             ),
             errorWidget: (_, __, ___) => Container(
               height: 180,
-              color: Colors.grey.shade200,
+              color: AppColors.grey.shade200,
               child: const Center(
-                  child: Icon(Icons.error_outline, color: Colors.red)),
+                  child: Icon(Icons.error_outline, color: AppColors.red)),
             ),
           ),
         ),
@@ -194,26 +195,26 @@ class MessageBubble extends StatelessWidget {
                 fit: BoxFit.cover,
                 placeholder: (_, __) => Container(
                   height: 180,
-                  color: Colors.grey.shade200,
+                  color: AppColors.grey.shade200,
                   child: const Center(
                       child: CircularProgressIndicator(strokeWidth: 2)),
                 ),
                 errorWidget: (_, __, ___) => Container(
                   height: 180,
-                  color: Colors.grey.shade200,
+                  color: AppColors.grey.shade200,
                   child: const Center(
-                      child: Icon(Icons.error_outline, color: Colors.red)),
+                      child: Icon(Icons.error_outline, color: AppColors.red)),
                 ),
               ),
             ),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.5),
+                color: AppColors.black.withOpacity(0.5),
                 shape: BoxShape.circle,
               ),
-              child:
-                  const Icon(Icons.play_arrow, color: Colors.white, size: 40),
+              child: const Icon(Icons.play_arrow,
+                  color: AppColors.white, size: 40),
             ),
           ],
         ),
@@ -233,7 +234,7 @@ class MessageBubble extends StatelessWidget {
     return Text(
       message.message,
       style: TextStyle(
-        color: isMe ? Colors.white : otherTextColor,
+        color: isMe ? AppColors.white : otherTextColor,
         fontSize: 14,
         height: 1.4,
       ),
@@ -248,7 +249,7 @@ class MessageBubble extends StatelessWidget {
           _formatTime(message.createdAt),
           style: TextStyle(
             fontSize: 9,
-            color: isMe ? Colors.white60 : Colors.grey.shade500,
+            color: isMe ? AppColors.white60 : AppColors.grey.shade500,
           ),
         ),
         if (isMe) ...[
@@ -264,7 +265,7 @@ class MessageBubble extends StatelessWidget {
       return const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.schedule, size: 12, color: Colors.white60),
+          Icon(Icons.schedule, size: 12, color: AppColors.white60),
         ],
       );
     }
@@ -275,7 +276,7 @@ class MessageBubble extends StatelessWidget {
       return const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.done_all, size: 12, color: Colors.white70),
+          Icon(Icons.done_all, size: 12, color: AppColors.white70),
         ],
       );
     }
@@ -286,7 +287,7 @@ class MessageBubble extends StatelessWidget {
     return const Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.done, size: 12, color: Colors.white60),
+        Icon(Icons.done, size: 12, color: AppColors.white60),
       ],
     );
   }
@@ -338,7 +339,7 @@ class MessageBubble extends StatelessWidget {
               _buildOptionTile(
                 icon: Icons.delete_outline,
                 label: 'Delete',
-                color: Colors.red,
+                color: AppColors.red,
                 onTap: () {
                   Navigator.pop(context);
                   _showDeleteDialog(context);
@@ -348,7 +349,7 @@ class MessageBubble extends StatelessWidget {
               _buildOptionTile(
                 icon: Icons.flag_outlined,
                 label: 'Report',
-                color: Colors.red,
+                color: AppColors.red,
                 onTap: () {
                   Navigator.pop(context);
                   _showReportDialog(context);
@@ -392,10 +393,10 @@ class MessageBubble extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                     content: Text('Message deleted'),
-                    backgroundColor: Colors.green),
+                    backgroundColor: AppColors.green),
               );
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: const Text('Delete', style: TextStyle(color: AppColors.red)),
           ),
         ],
       ),
@@ -445,11 +446,11 @@ class MessageBubble extends StatelessWidget {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                       content: Text('Message reported'),
-                      backgroundColor: Colors.red),
+                      backgroundColor: AppColors.red),
                 );
               }
             },
-            child: const Text('Report', style: TextStyle(color: Colors.red)),
+            child: const Text('Report', style: TextStyle(color: AppColors.red)),
           ),
         ],
       ),
@@ -460,7 +461,8 @@ class MessageBubble extends StatelessWidget {
     Clipboard.setData(ClipboardData(text: message.message));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-          content: Text('Copied to clipboard'), backgroundColor: Colors.green),
+          content: Text('Copied to clipboard'),
+          backgroundColor: AppColors.green),
     );
   }
 

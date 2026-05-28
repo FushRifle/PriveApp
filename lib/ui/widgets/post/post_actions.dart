@@ -35,7 +35,7 @@ class PostActions extends StatelessWidget {
                 ? Icons.favorite_rounded
                 : Icons.favorite_border_rounded,
             label: _formatCount(likeCount),
-            color: isLiked ? Colors.redAccent : actionColor,
+            color: isLiked ? AppColors.redAccent : actionColor,
             onTap: onLike,
           ),
           const SizedBox(width: 10),

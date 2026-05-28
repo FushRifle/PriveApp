@@ -163,10 +163,10 @@ class _CardPostState extends State<CardPost> {
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.3),
+              color: AppColors.black.withOpacity(0.3),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: Colors.white.withOpacity(0.1),
+                color: AppColors.white.withOpacity(0.1),
                 width: 0.5,
               ),
             ),
@@ -176,21 +176,21 @@ class _CardPostState extends State<CardPost> {
                 _buildActionButton(
                   icon: isLiked ? Icons.favorite : Icons.favorite_border,
                   count: likeCount,
-                  color: isLiked ? Colors.redAccent : Colors.white,
+                  color: isLiked ? AppColors.redAccent : AppColors.white,
                   onTap: _toggleLike,
                 ),
                 const SizedBox(height: 20),
                 _buildActionButton(
                   icon: Icons.chat_bubble_outline,
                   count: commentCount,
-                  color: Colors.white,
+                  color: AppColors.white,
                   onTap: _openComments,
                 ),
                 const SizedBox(height: 20),
                 _buildActionButton(
                   icon: Icons.bookmark_border,
                   count: null,
-                  color: Colors.white,
+                  color: AppColors.white,
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -204,7 +204,7 @@ class _CardPostState extends State<CardPost> {
                 _buildActionButton(
                   icon: Icons.share_outlined,
                   count: null,
-                  color: Colors.white,
+                  color: AppColors.white,
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -240,11 +240,11 @@ class _CardPostState extends State<CardPost> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: AppColors.white.withOpacity(0.15),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
+                      color: AppColors.black.withOpacity(0.2),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
@@ -267,14 +267,14 @@ class _CardPostState extends State<CardPost> {
                       color: AppColors.backgroundColorDark,
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(
-                        color: Colors.white,
+                        color: AppColors.white,
                         width: 0.1,
                       ),
                     ),
                     child: Text(
                       _formatCount(count),
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.white,
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
@@ -310,7 +310,7 @@ class _CardPostState extends State<CardPost> {
         ],
       ),
       child: Material(
-        color: Colors.transparent,
+        color: AppColors.transparent,
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           onTap: () {
@@ -388,7 +388,8 @@ class _CardPostState extends State<CardPost> {
                     _buildInlineButton(
                       icon: isLiked ? Icons.favorite : Icons.favorite_border,
                       label: likeCount > 0 ? _formatCount(likeCount) : '',
-                      color: isLiked ? Colors.redAccent : AppColors.greyColor,
+                      color:
+                          isLiked ? AppColors.redAccent : AppColors.greyColor,
                       onTap: _toggleLike,
                     ),
                     const SizedBox(width: 16),
@@ -485,28 +486,28 @@ class _CardPostState extends State<CardPost> {
                 width: double.infinity,
                 height: double.infinity,
                 errorWidget: (_, __, ___) => Container(
-                  color: Colors.grey.shade900,
+                  color: AppColors.grey.shade900,
                   child: const Center(
-                    child:
-                        Icon(Icons.video_library, size: 40, color: Colors.grey),
+                    child: Icon(Icons.video_library,
+                        size: 40, color: AppColors.grey),
                   ),
                 ),
               )
             else
               Container(
-                color: Colors.grey.shade900,
+                color: AppColors.grey.shade900,
                 child: const Center(
-                  child:
-                      Icon(Icons.video_library, size: 40, color: Colors.grey),
+                  child: Icon(Icons.video_library,
+                      size: 40, color: AppColors.grey),
                 ),
               ),
             Positioned.fill(
               child: Container(
-                color: Colors.black.withOpacity(0.2),
+                color: AppColors.black.withOpacity(0.2),
                 child: const Center(
                   child: Icon(
                     Icons.play_circle_filled,
-                    color: Colors.white,
+                    color: AppColors.white,
                     size: 50,
                   ),
                 ),
@@ -539,7 +540,7 @@ class _CardPostState extends State<CardPost> {
             width: double.infinity,
             height: double.infinity,
             errorWidget: (_, __, ___) => Container(
-              color: Colors.grey.shade200,
+              color: AppColors.grey.shade200,
               child: const Icon(Icons.broken_image, size: 40),
             ),
           ),
@@ -589,9 +590,9 @@ class _CardPostState extends State<CardPost> {
     }
 
     return Container(
-      color: Colors.grey.shade200,
+      color: AppColors.grey.shade200,
       child: const Center(
-        child: Icon(Icons.image, size: 40, color: Colors.grey),
+        child: Icon(Icons.image, size: 40, color: AppColors.grey),
       ),
     );
   }
@@ -603,10 +604,10 @@ class _CardPostState extends State<CardPost> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.black.withOpacity(0.3),
-            Colors.transparent,
-            Colors.transparent,
-            Colors.black.withOpacity(0.4),
+            AppColors.black.withOpacity(0.3),
+            AppColors.transparent,
+            AppColors.transparent,
+            AppColors.black.withOpacity(0.4),
           ],
           stops: const [0.0, 0.3, 0.6, 1.0],
         ),
@@ -692,7 +693,7 @@ class _UserAvatar extends StatelessWidget {
     return CircleAvatar(
       radius: radius,
       backgroundColor: AppColors.greyColor.withOpacity(0.2),
-      child: Icon(Icons.person, size: iconSize, color: Colors.grey),
+      child: Icon(Icons.person, size: iconSize, color: AppColors.grey),
     );
   }
 }

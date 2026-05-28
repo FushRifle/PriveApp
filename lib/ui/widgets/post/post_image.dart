@@ -102,7 +102,7 @@ class _ImageGradient extends StatelessWidget {
           stops: [0, 0.55, 1],
           colors: [
             Color.fromRGBO(0, 0, 0, 0.10),
-            Colors.transparent,
+            AppColors.transparent,
             Color.fromRGBO(0, 0, 0, 0.16),
           ],
         ),

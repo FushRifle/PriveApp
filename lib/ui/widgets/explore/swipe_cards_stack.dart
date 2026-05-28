@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:clique/app/configs/colors.dart';
 import 'package:clique/data/models/profile_model.dart';
 import 'package:clique/ui/widgets/explore/profile_card.dart';
 import 'package:clique/ui/widgets/explore/swipeable_card.dart';
@@ -120,24 +121,24 @@ class _TopSwipeCard extends StatelessWidget {
     double dislikeOpacity = 0.0;
     double superLikeOpacity = 0.0;
 
-    Color backgroundColor = Colors.white;
+    Color backgroundColor = AppColors.white;
 
     switch (swipeDirection) {
       case SwipeDirection.right:
         likeOpacity = swipeProgress.abs().clamp(0.0, 1.0);
-        backgroundColor = Colors.green.withOpacity(likeOpacity * 0.18);
+        backgroundColor = AppColors.green.withOpacity(likeOpacity * 0.18);
         break;
 
       case SwipeDirection.left:
         dislikeOpacity = swipeProgress.abs().clamp(0.0, 1.0);
-        backgroundColor = Colors.red.withOpacity(dislikeOpacity * 0.18);
+        backgroundColor = AppColors.red.withOpacity(dislikeOpacity * 0.18);
         break;
 
       case SwipeDirection.up:
         superLikeOpacity = verticalSwipeProgress.clamp(0.0, 1.0);
         horizontalOffset = 0;
         rotation = 0;
-        backgroundColor = Colors.purple.withOpacity(superLikeOpacity * 0.18);
+        backgroundColor = AppColors.purple.withOpacity(superLikeOpacity * 0.18);
         break;
 
       case SwipeDirection.none:
