@@ -261,7 +261,7 @@ class MessageBubble extends StatelessWidget {
   }
 
   Widget _buildStatusIcon() {
-    if (message.id.toString().startsWith('999')) {
+    if (message.isPending) {
       return const Row(
         mainAxisSize: MainAxisSize.min,
         children: [

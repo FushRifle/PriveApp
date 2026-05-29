@@ -1,9 +1,12 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../../../core/api_service.dart';
 import '../../models/feeds_models.dart';
+import '../cache/feed_cache_service.dart';
 
 class FeedService {
   final ApiService _api = ApiService();
+  final FeedCacheService _feedCacheService = FeedCacheService();
 
   void setAuthToken(String token) {
     _api.setAuthToken(token);
@@ -20,28 +23,46 @@ class FeedService {
         queryParameters: {'page': page},
       );
 
-      print('Posts response status: ${response.statusCode}');
+      debugPrint('Posts response status: ${response.statusCode}');
 
       if (response.data is Map) {
-        return PostsResponse.fromJson(response.data);
+        final postsResponse = PostsResponse.fromJson(response.data);
+        if (page == 1) {
+          await _feedCacheService.saveLatestFeed(postsResponse);
+        }
+        return postsResponse;
       }
 
       if (response.data is List) {
         final posts = (response.data as List)
             .map((json) => FeedPost.fromJson(json))
             .toList();
-        return PostsResponse(
+        final postsResponse = PostsResponse(
           posts: posts,
           hasMore: posts.length == 10,
           page: page,
         );
+        if (page == 1) {
+          await _feedCacheService.saveLatestFeed(postsResponse);
+        }
+        return postsResponse;
       }
 
       return PostsResponse(posts: [], hasMore: false, page: page);
     } on DioException catch (e) {
-      print('Get posts error: ${e.response?.data}');
+      debugPrint('Get posts error: ${e.response?.data}');
+      if (page == 1) {
+        final cached = _feedCacheService.readLatestFeed();
+        if (cached != null && cached.posts.isNotEmpty) {
+          return cached;
+        }
+      }
       throw e.response?.data['message'] ?? 'Failed to get posts';
     }
+  }
+
+  PostsResponse? getCachedPosts() {
+    return _feedCacheService.readLatestFeed();
   }
 
   // Create post
@@ -58,7 +79,7 @@ class FeedService {
       final response = await _api.post('/api/feed/posts', data: data);
       return response.data;
     } on DioException catch (e) {
-      print('Create post error: ${e.response?.data}');
+      debugPrint('Create post error: ${e.response?.data}');
       throw e.response?.data['message'] ?? 'Failed to create post';
     }
   }
@@ -69,7 +90,7 @@ class FeedService {
       final response = await _api.post('/api/feed/posts/$postId/like');
       return response.data;
     } on DioException catch (e) {
-      print('Like post error: ${e.response?.data}');
+      debugPrint('Like post error: ${e.response?.data}');
       throw e.response?.data['message'] ?? 'Failed to like post';
     }
   }
@@ -80,7 +101,7 @@ class FeedService {
       final response = await _api.delete('/api/feed/posts/$postId/like');
       return response.data;
     } on DioException catch (e) {
-      print('Unlike post error: ${e.response?.data}');
+      debugPrint('Unlike post error: ${e.response?.data}');
       throw e.response?.data['message'] ?? 'Failed to unlike post';
     }
   }
@@ -97,20 +118,34 @@ class FeedService {
         final comments = (response.data as List)
             .map((json) => Comment.fromJson(json))
             .toList();
-        return CommentsResponse(
+        final commentsResponse = CommentsResponse(
           comments: comments,
           hasMore: comments.length == 20,
           page: page,
         );
+        if (page == 1) {
+          await _feedCacheService.saveComments(postId, commentsResponse);
+        }
+        return commentsResponse;
       }
 
       if (response.data is Map) {
-        return CommentsResponse.fromJson(response.data);
+        final commentsResponse = CommentsResponse.fromJson(response.data);
+        if (page == 1) {
+          await _feedCacheService.saveComments(postId, commentsResponse);
+        }
+        return commentsResponse;
       }
 
       return CommentsResponse(comments: [], hasMore: false, page: page);
     } on DioException catch (e) {
-      print('Get comments error: ${e.response?.data}');
+      debugPrint('Get comments error: ${e.response?.data}');
+      if (page == 1) {
+        final cached = _feedCacheService.readComments(postId);
+        if (cached != null && cached.comments.isNotEmpty) {
+          return cached;
+        }
+      }
       throw e.response?.data['message'] ?? 'Failed to get comments';
     }
   }
@@ -127,7 +162,7 @@ class FeedService {
       );
       return Comment.fromJson(response.data);
     } on DioException catch (e) {
-      print('Add comment error: ${e.response?.data}');
+      debugPrint('Add comment error: ${e.response?.data}');
       throw e.response?.data['message'] ?? 'Failed to add comment';
     }
   }
@@ -135,7 +170,9 @@ class FeedService {
   Future<void> deletePost(int postId) async {
     try {
       await _api.delete('/api/feed/posts/$postId');
-    } on DioException {}
+    } on DioException {
+      // Delete failures are intentionally non-blocking for the feed UI.
+    }
   }
 
   // Get user media (for profile gallery)
@@ -155,26 +192,40 @@ class FeedService {
         queryParameters: queryParams,
       );
 
-      print('User media response status: ${response.statusCode}');
+      debugPrint('User media response status: ${response.statusCode}');
 
       if (response.data is Map) {
-        return UserMediaResponse.fromJson(response.data);
+        final mediaResponse = UserMediaResponse.fromJson(response.data);
+        if (page == 1) {
+          await _feedCacheService.saveUserMedia(userId, type, mediaResponse);
+        }
+        return mediaResponse;
       }
 
       if (response.data is List) {
         final media = (response.data as List)
             .map((json) => UserMedia.fromJson(json))
             .toList();
-        return UserMediaResponse(
+        final mediaResponse = UserMediaResponse(
           media: media,
           hasMore: media.length == 10,
           page: page,
         );
+        if (page == 1) {
+          await _feedCacheService.saveUserMedia(userId, type, mediaResponse);
+        }
+        return mediaResponse;
       }
 
       return UserMediaResponse(media: [], hasMore: false, page: page);
     } on DioException catch (e) {
-      print('Get user media error: ${e.response?.data}');
+      debugPrint('Get user media error: ${e.response?.data}');
+      if (page == 1) {
+        final cached = _feedCacheService.readUserMedia(userId, type);
+        if (cached != null && cached.media.isNotEmpty) {
+          return cached;
+        }
+      }
       throw e.response?.data['message'] ?? 'Failed to get user media';
     }
   }
@@ -200,7 +251,7 @@ class FeedService {
 
       return 0;
     } on DioException catch (e) {
-      print('Get user media count error: ${e.response?.data}');
+      debugPrint('Get user media count error: ${e.response?.data}');
       return 0;
     }
   }

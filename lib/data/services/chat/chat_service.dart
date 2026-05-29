@@ -42,6 +42,8 @@ class ChatService {
     try {
       final response = await _api.get(
         '/api/chat/conversations',
+        forceRefresh: true,
+        useCache: false,
       );
 
       return response.data is List
@@ -58,6 +60,8 @@ class ChatService {
     try {
       final response = await _api.get(
         '/api/chat/conversations/$conversationId',
+        forceRefresh: true,
+        useCache: false,
       );
 
       return Map<String, dynamic>.from(response.data);
@@ -87,6 +91,8 @@ class ChatService {
         queryParameters: {
           'page': page,
         },
+        forceRefresh: forceRefresh,
+        useCache: false,
         cancelToken: _createCancelToken(
           'messages_$conversationId',
         ),
@@ -131,6 +137,9 @@ class ChatService {
         data: data,
       );
 
+      clearAllCache();
+      _api.removeCacheByPath('/api/chat');
+
       if (response.data is Map<String, dynamic>) {
         return Map<String, dynamic>.from(response.data);
       }
@@ -146,6 +155,8 @@ class ChatService {
       await _api.delete(
         '/api/chat/messages/$messageId',
       );
+      clearAllCache();
+      _api.removeCacheByPath('/api/chat');
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -208,6 +219,8 @@ class ChatService {
     try {
       final response = await _api.get(
         '/api/chat/settings/$conversationId',
+        forceRefresh: true,
+        useCache: false,
       );
 
       return Map<String, dynamic>.from(response.data);
@@ -246,6 +259,8 @@ class ChatService {
         '/api/chat/settings/$conversationId',
         data: data,
       );
+      _api.removeCacheByPath('/api/chat/settings/$conversationId');
+      _api.removeCacheByPath('/api/chat/conversations');
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -259,6 +274,8 @@ class ChatService {
     try {
       final response = await _api.get(
         '/api/chat/preferences',
+        forceRefresh: true,
+        useCache: false,
       );
 
       return Map<String, dynamic>.from(response.data);
@@ -314,6 +331,7 @@ class ChatService {
         '/api/chat/preferences',
         data: data,
       );
+      _api.removeCacheByPath('/api/chat/preferences');
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -353,6 +371,7 @@ class ChatService {
       );
 
       clearMessagesCache(conversationId);
+      _api.removeCacheByPath('/api/chat');
     } on DioException catch (e) {
       throw _handleError(e);
     }

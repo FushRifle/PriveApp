@@ -17,6 +17,7 @@ import 'package:clique/data/providers/theme_provider.dart';
 import 'package:clique/bloc/cloudinary/cloudinary_cubit.dart';
 import 'package:clique/bloc/profile/profile_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
+import 'package:clique/core/local_cache/local_cache_service.dart';
 import 'package:clique/data/services/notification/push_notification_service.dart';
 
 import 'package:clique/core/router/app_router.dart';
@@ -53,6 +54,8 @@ Future<void> _initializeApp() async {
   CloudinaryContext.cloudinary = Cloudinary.fromCloudName(
     cloudName: 'dug6225go',
   );
+
+  await LocalCacheService.initialize();
 
   await PushNotificationService.instance.initialize();
 
@@ -154,6 +157,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
               }
               if (state.status == AuthStatus.unauthenticated) {
                 PushNotificationService.instance.deleteDeviceToken();
+                LocalCacheService.clearAll();
               }
             },
             child: MaterialApp(

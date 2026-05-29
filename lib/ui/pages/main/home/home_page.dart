@@ -14,6 +14,7 @@ import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/data/models/status_model.dart';
 
 import 'package:clique/ui/pages/main/status/create_status_page.dart';
+import 'package:clique/ui/pages/main/home/create_post_page.dart';
 import 'package:clique/ui/pages/main/status/status_page.dart';
 import 'package:clique/ui/pages/main/status/status_view_page.dart';
 
@@ -145,6 +146,11 @@ class _HomePageState extends State<HomePage>
                   },
                 ),
               ),
+              SliverToBoxAdapter(
+                child: _QuickComposer(
+                  onTap: () => _openCreatePost(context),
+                ),
+              ),
               BlocBuilder<FeedBloc, FeedState>(
                 buildWhen: (previous, current) {
                   return previous.posts != current.posts ||
@@ -220,6 +226,24 @@ class _HomePageState extends State<HomePage>
         ),
       ),
     );
+  }
+
+  Future<void> _openCreatePost(BuildContext context) async {
+    HapticFeedback.lightImpact();
+
+    final created = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: context.read<FeedBloc>(),
+          child: const CreatePostPage(),
+        ),
+      ),
+    );
+
+    if (created == true && context.mounted) {
+      context.read<FeedBloc>().add(RefreshFeed());
+    }
   }
 
   List<_StoryGroup> _getGroupedStories(List<Story> stories) {
@@ -523,6 +547,106 @@ class _StoriesSection extends StatelessWidget {
         ),
         const SizedBox(height: 12),
       ],
+    );
+  }
+}
+
+class _QuickComposer extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _QuickComposer({
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<UserBloc, UserState, Map<String, dynamic>?>(
+      selector: (state) => state.currentUser,
+      builder: (context, user) {
+        final avatar = user?['avatar']?.toString() ?? '';
+        final name = user?['name']?.toString() ??
+            user?['username']?.toString() ??
+            'User';
+        final fallback =
+            name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'U';
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 2, 16, 16),
+          child: Material(
+            color: AppColors.cardColor,
+            borderRadius: BorderRadius.circular(22),
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(22),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: AppColors.cardBorderColor),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.shadowElevated,
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    _Avatar(avatar: avatar, fallback: fallback),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        "What's on your mind?",
+                        style: AppTheme.greyTextStyle.copyWith(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    _ComposerAction(
+                      icon: Icons.image_rounded,
+                      color: AppColors.secondary,
+                    ),
+                    const SizedBox(width: 8),
+                    _ComposerAction(
+                      icon: Icons.edit_rounded,
+                      color: AppColors.primary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ComposerAction extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+
+  const _ComposerAction({
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(13),
+      ),
+      child: Icon(
+        icon,
+        color: color,
+        size: 21,
+      ),
     );
   }
 }

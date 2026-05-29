@@ -46,6 +46,7 @@ class _ChatPageState extends State<ChatPage>
   bool _isSending = false;
 
   Timer? _typingTimer;
+  Timer? _messageSyncTimer;
   bool _isTyping = false;
 
   @override
@@ -57,6 +58,7 @@ class _ChatPageState extends State<ChatPage>
     _setupAuth();
     _loadInitialData();
     _setupScrollListener();
+    _startMessageSync();
   }
 
   void _setupAuth() {
@@ -70,6 +72,7 @@ class _ChatPageState extends State<ChatPage>
   void dispose() {
     _scrollController.dispose();
     _typingTimer?.cancel();
+    _messageSyncTimer?.cancel();
     super.dispose();
   }
 
@@ -118,10 +121,27 @@ class _ChatPageState extends State<ChatPage>
 
   void _loadInitialData() {
     final chatBloc = context.read<ChatBloc>();
-    chatBloc.add(LoadMessages(conversationId: widget.conversationId, page: 1));
+    chatBloc.add(LoadMessages(
+      conversationId: widget.conversationId,
+      page: 1,
+      forceRefresh: true,
+    ));
     chatBloc.add(LoadConversationInfo(conversationId: widget.conversationId));
     chatBloc.add(LoadChatSettings(conversationId: widget.conversationId));
     chatBloc.add(MarkMessagesAsRead(conversationId: widget.conversationId));
+  }
+
+  void _startMessageSync() {
+    _messageSyncTimer?.cancel();
+    _messageSyncTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (!mounted) return;
+      context.read<ChatBloc>().add(LoadMessages(
+            conversationId: widget.conversationId,
+            page: 1,
+            forceRefresh: true,
+            silent: true,
+          ));
+    });
   }
 
   Future<void> _loadMoreMessages() async {
@@ -138,6 +158,7 @@ class _ChatPageState extends State<ChatPage>
     if (text.trim().isEmpty || _isSending) return;
 
     _sendTyping(false);
+    _isSending = true;
 
     context.read<ChatBloc>().add(
           SendMessage(
@@ -252,8 +273,9 @@ class _ChatPageState extends State<ChatPage>
         ],
         child: BlocBuilder<ChatBloc, ChatState>(
           builder: (context, state) {
-            final messages =
-                List<MessageModel>.from(state.messages).reversed.toList();
+            final messages = state.activeConversationId == widget.conversationId
+                ? List<MessageModel>.from(state.messages).reversed.toList()
+                : const <MessageModel>[];
             final isLoading =
                 state.messagesStatus == ChatStatus.loading && messages.isEmpty;
             final isUploading = context.watch<CloudinaryCubit>().state.status ==

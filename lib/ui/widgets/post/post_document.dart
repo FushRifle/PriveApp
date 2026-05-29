@@ -23,6 +23,17 @@ class PostDocument extends StatelessWidget {
       onTap: () {
         HapticFeedback.lightImpact();
 
+        if (attachment.url.trim().isEmpty) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Document link is unavailable'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          return;
+        }
+
         Navigator.push(
           context,
           MaterialPageRoute(

@@ -51,94 +51,109 @@ class StatusWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
+    return Material(
+      color: AppColors.transparent,
       child: SizedBox(
-        width: 68,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Stack(
-              alignment: Alignment.center,
+        width: 72,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Avatar Container
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: _getAvatarGradient(),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(2),
-                    child: ClipOval(
-                      child: Container(
-                        color: AppColors.white,
-                        child: _buildAvatar(),
-                      ),
-                    ),
-                  ),
-                ),
-                // Status Count Badge
-                if (!isAddStatus && statusCount > 1)
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      width: 18,
-                      height: 18,
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: 62,
+                      height: 62,
                       decoration: BoxDecoration(
-                        color: AppColors.primary,
                         shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.white, width: 1.5),
+                        gradient: _getAvatarGradient(),
+                        border: isAddStatus
+                            ? Border.all(
+                                color: AppColors.cardBorderColor,
+                                width: 1.2,
+                              )
+                            : null,
                       ),
-                      child: Center(
-                        child: Text(
-                          statusCount > 9 ? '9+' : '$statusCount',
-                          style: const TextStyle(
-                            color: AppColors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
+                      child: Padding(
+                        padding: const EdgeInsets.all(2),
+                        child: ClipOval(
+                          child: Container(
+                            color: AppColors.cardColor,
+                            child: _buildAvatar(),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                // Add Story Button
-                if (isAddStatus)
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      width: 20,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.white, width: 1.5),
+                    if (!isAddStatus && statusCount > 1)
+                      Positioned(
+                        bottom: 0,
+                        right: 1,
+                        child: Container(
+                          width: 20,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.cardColor,
+                              width: 1.6,
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              statusCount > 9 ? '9+' : '$statusCount',
+                              style: const TextStyle(
+                                color: AppColors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.add,
-                        color: AppColors.white,
-                        size: 12,
+                    if (isAddStatus)
+                      Positioned(
+                        bottom: 0,
+                        right: 1,
+                        child: Container(
+                          width: 21,
+                          height: 21,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.cardColor,
+                              width: 1.6,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.add,
+                            color: AppColors.white,
+                            size: 13,
+                          ),
+                        ),
                       ),
-                    ),
+                  ],
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  isAddStatus ? 'Your Story' : name,
+                  style: AppTheme.blackTextStyle.copyWith(
+                    fontSize: 11,
+                    fontWeight: hasUnviewed ? FontWeight.w700 : FontWeight.w500,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
               ],
             ),
-            const SizedBox(height: 4),
-            // Name
-            Text(
-              isAddStatus ? 'Your Story' : name,
-              style: AppTheme.blackTextStyle.copyWith(
-                fontSize: 11,
-                fontWeight: hasUnviewed ? FontWeight.w600 : FontWeight.w400,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -174,11 +189,11 @@ class StatusWidget extends StatelessWidget {
 
     if (!hasValidAvatar) {
       return Container(
-        color: AppColors.grey[100],
+        color: AppColors.backgroundColor,
         child: Center(
           child: Icon(
             isAddStatus ? Icons.add_a_photo : Icons.person,
-            color: AppColors.grey[400],
+            color: AppColors.textSecondary,
             size: 28,
           ),
         ),
@@ -190,7 +205,7 @@ class StatusWidget extends StatelessWidget {
         imageUrl: avatar,
         fit: BoxFit.cover,
         placeholder: (context, url) => Container(
-          color: AppColors.grey[100],
+          color: AppColors.backgroundColor,
           child: const Center(
             child: SizedBox(
               width: 20,
@@ -203,8 +218,8 @@ class StatusWidget extends StatelessWidget {
           ),
         ),
         errorWidget: (context, url, error) => Container(
-          color: AppColors.grey[100],
-          child: Icon(Icons.person, color: AppColors.grey[400], size: 28),
+          color: AppColors.backgroundColor,
+          child: Icon(Icons.person, color: AppColors.textSecondary, size: 28),
         ),
       );
     }
@@ -214,8 +229,8 @@ class StatusWidget extends StatelessWidget {
         avatar,
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => Container(
-          color: AppColors.grey[100],
-          child: Icon(Icons.person, color: AppColors.grey[400], size: 28),
+          color: AppColors.backgroundColor,
+          child: Icon(Icons.person, color: AppColors.textSecondary, size: 28),
         ),
       ),
     );

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/core/cloudinary_service.dart';
 import 'package:clique/data/models/feeds_models.dart';
@@ -37,11 +38,24 @@ class _CreatePostPageState extends State<CreatePostPage> {
   PostCreationStep _currentStep = PostCreationStep.options;
 
   @override
+  void initState() {
+    super.initState();
+
+    _textController.addListener(_onComposerChanged);
+  }
+
+  @override
   void dispose() {
+    _textController.removeListener(_onComposerChanged);
     _textController.dispose();
     _hashtagController.dispose();
     _cloudinaryService.cancelAllUploads();
     super.dispose();
+  }
+
+  void _onComposerChanged() {
+    if (!mounted) return;
+    setState(() {});
   }
 
   bool get _hasMedia => _mediaItems.isNotEmpty;
@@ -76,7 +90,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.black,
+        backgroundColor: AppColors.backgroundColor,
         body: SafeArea(
           child: Stack(
             children: [
@@ -302,11 +316,11 @@ class _CreatePostPageState extends State<CreatePostPage> {
         isError: true,
       );
     } finally {
-      if (!mounted) return;
-
-      setState(() {
-        _isPicking = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isPicking = false;
+        });
+      }
     }
   }
 
@@ -366,11 +380,11 @@ class _CreatePostPageState extends State<CreatePostPage> {
         isError: true,
       );
     } finally {
-      if (!mounted) return;
-
-      setState(() {
-        _isPicking = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isPicking = false;
+        });
+      }
     }
   }
 
@@ -449,6 +463,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
     try {
       final attachment = await _uploadMedia(media);
+
+      if (!mounted) return;
 
       final content = _contentWithHashtags();
 
@@ -563,7 +579,7 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
       child: Row(
         children: [
           _CircleButton(
@@ -575,10 +591,9 @@ class _Header extends StatelessWidget {
             child: Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.white,
+              style: AppTheme.blackTextStyle.copyWith(
                 fontSize: 18,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ),
@@ -595,9 +610,10 @@ class _Header extends StatelessWidget {
                   height: 40,
                   padding: const EdgeInsets.symmetric(horizontal: 18),
                   decoration: BoxDecoration(
-                    color:
-                        canSubmit ? AppColors.primary : AppColors.grey.shade800,
-                    borderRadius: BorderRadius.circular(22),
+                    color: canSubmit
+                        ? AppColors.primary
+                        : AppColors.dynamicBorder.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                   child: Center(
                     child: isSubmitting
@@ -614,7 +630,7 @@ class _Header extends StatelessWidget {
                             style: TextStyle(
                               color: canSubmit
                                   ? AppColors.white
-                                  : AppColors.grey.shade500,
+                                  : AppColors.textSecondary,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -641,7 +657,7 @@ class _CircleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.grey.shade900,
+      color: AppColors.cardColor,
       shape: const CircleBorder(),
       child: InkWell(
         onTap: onTap,
@@ -651,7 +667,7 @@ class _CircleButton extends StatelessWidget {
           height: 42,
           child: Icon(
             icon,
-            color: AppColors.white,
+            color: AppColors.blackTextColor,
             size: 20,
           ),
         ),
@@ -685,8 +701,8 @@ class _OptionsGrid extends StatelessWidget {
     final options = [
       _PostOption(
         icon: Icons.text_fields_rounded,
-        title: 'Text',
-        subtitle: 'Share your thoughts',
+        title: 'Write',
+        subtitle: 'Start with text',
         color: AppColors.orange,
         onTap: onText,
       ),
@@ -727,23 +743,47 @@ class _OptionsGrid extends StatelessWidget {
       ),
     ];
 
+    final primaryOptions = options.take(4).toList();
+    final secondaryOptions = options.skip(4).toList();
+
     return Stack(
       children: [
-        GridView.builder(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+        ListView(
+          padding: const EdgeInsets.fromLTRB(18, 10, 18, 32),
           physics: const BouncingScrollPhysics(),
-          itemCount: options.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 16,
-            crossAxisSpacing: 16,
-            childAspectRatio: 1.1,
-          ),
-          itemBuilder: (context, index) {
-            final option = options[index];
-
-            return _OptionCard(option: option);
-          },
+          children: [
+            _ComposerPromptCard(onTap: onText),
+            const SizedBox(height: 18),
+            Text(
+              'Add media',
+              style: AppTheme.blackTextStyle.copyWith(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 10),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: primaryOptions.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 1.32,
+              ),
+              itemBuilder: (context, index) {
+                return _OptionCard(option: primaryOptions[index]);
+              },
+            ),
+            const SizedBox(height: 12),
+            ...secondaryOptions.map(
+              (option) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _OptionListTile(option: option),
+              ),
+            ),
+          ],
         ),
         if (isPicking)
           Positioned.fill(
@@ -771,55 +811,198 @@ class _OptionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.grey,
-      borderRadius: BorderRadius.circular(24),
+      color: AppColors.cardColor,
+      borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: () {
           HapticFeedback.lightImpact();
           option.onTap();
         },
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(18),
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: AppColors.white.withOpacity(0.06),
+              color: AppColors.cardBorderColor,
             ),
           ),
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(14),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 58,
-                height: 58,
+                width: 46,
+                height: 46,
                 decoration: BoxDecoration(
                   color: option.color.withOpacity(0.14),
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
                   option.icon,
                   color: option.color,
-                  size: 30,
+                  size: 25,
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
               Text(
                 option.title,
-                style: const TextStyle(
-                  color: AppColors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
+                style: AppTheme.blackTextStyle.copyWith(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-              const SizedBox(height: 5),
+              const SizedBox(height: 3),
               Text(
                 option.subtitle,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.grey.shade500,
+                style: AppTheme.greyTextStyle.copyWith(
                   fontSize: 12,
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ComposerPromptCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _ComposerPromptCard({
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.cardColor,
+      borderRadius: BorderRadius.circular(22),
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onTap();
+        },
+        borderRadius: BorderRadius.circular(22),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: AppColors.cardBorderColor),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.shadowElevated,
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.edit_note_rounded,
+                  color: AppColors.primary,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "What's happening?",
+                      style: AppTheme.blackTextStyle.copyWith(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Share a thought, photo, video, or document.',
+                      style: AppTheme.greyTextStyle.copyWith(fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.arrow_forward_rounded,
+                color: AppColors.primary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OptionListTile extends StatelessWidget {
+  final _PostOption option;
+
+  const _OptionListTile({
+    required this.option,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.cardColor,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          option.onTap();
+        },
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColors.cardBorderColor),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: option.color.withOpacity(0.13),
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: Icon(option.icon, color: option.color, size: 23),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      option.title,
+                      style: AppTheme.blackTextStyle.copyWith(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      option.subtitle,
+                      style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.textSecondary,
               ),
             ],
           ),
@@ -850,31 +1033,41 @@ class _TextPostComposer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       child: Column(
         children: [
           Expanded(
-            child: TextField(
-              controller: textController,
-              enabled: enabled,
-              autofocus: true,
-              maxLines: null,
-              keyboardType: TextInputType.multiline,
-              style: const TextStyle(
-                color: AppColors.white,
-                fontSize: 22,
-                height: 1.35,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
+              decoration: BoxDecoration(
+                color: AppColors.cardColor,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: AppColors.cardBorderColor),
               ),
-              decoration: InputDecoration(
-                hintText: "What's on your mind?",
-                hintStyle: TextStyle(
-                  color: AppColors.grey.shade600,
-                  fontSize: 22,
+              child: TextField(
+                controller: textController,
+                enabled: enabled,
+                autofocus: true,
+                maxLines: null,
+                keyboardType: TextInputType.multiline,
+                style: AppTheme.blackTextStyle.copyWith(
+                  fontSize: 20,
+                  height: 1.38,
+                  fontWeight: FontWeight.w500,
                 ),
-                border: InputBorder.none,
+                decoration: InputDecoration(
+                  hintText: "What's on your mind?",
+                  hintStyle: AppTheme.greyTextStyle.copyWith(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  border: InputBorder.none,
+                ),
               ),
             ),
           ),
+          const SizedBox(height: 14),
           _HashtagInput(
             controller: hashtagController,
             hashtags: hashtags,
@@ -917,6 +1110,7 @@ class _MediaPostComposer extends StatelessWidget {
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 36),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _MediaPreview(
             media: media,
@@ -956,16 +1150,17 @@ class _MediaPreview extends StatelessWidget {
     return Container(
       constraints: const BoxConstraints(
         maxHeight: 460,
+        minHeight: 260,
       ),
       decoration: BoxDecoration(
-        color: AppColors.grey,
-        borderRadius: BorderRadius.circular(28),
+        color: AppColors.cardColor,
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: AppColors.white.withOpacity(0.07),
+          color: AppColors.cardBorderColor,
         ),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(22),
         child: Stack(
           children: [
             Positioned.fill(
@@ -975,11 +1170,11 @@ class _MediaPreview extends StatelessWidget {
               top: 12,
               right: 12,
               child: Material(
-                color: AppColors.black.withOpacity(0.55),
-                borderRadius: BorderRadius.circular(22),
+                color: AppColors.black.withOpacity(0.58),
+                borderRadius: BorderRadius.circular(14),
                 child: InkWell(
                   onTap: onChangeMedia,
-                  borderRadius: BorderRadius.circular(22),
+                  borderRadius: BorderRadius.circular(14),
                   child: const Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: 12,
@@ -1079,8 +1274,7 @@ class _LargeFilePreview extends StatelessWidget {
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.white,
+                style: AppTheme.blackTextStyle.copyWith(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
@@ -1089,8 +1283,7 @@ class _LargeFilePreview extends StatelessWidget {
               Text(
                 subtitle,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.grey.shade500,
+                style: AppTheme.greyTextStyle.copyWith(
                   fontSize: 13,
                 ),
               ),
@@ -1115,10 +1308,10 @@ class _CaptionInput extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.grey,
-        borderRadius: BorderRadius.circular(22),
+        color: AppColors.cardColor,
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: AppColors.white.withOpacity(0.07),
+          color: AppColors.cardBorderColor,
         ),
       ),
       child: TextField(
@@ -1126,15 +1319,14 @@ class _CaptionInput extends StatelessWidget {
         enabled: enabled,
         maxLines: 4,
         minLines: 2,
-        style: const TextStyle(
-          color: AppColors.white,
+        style: AppTheme.blackTextStyle.copyWith(
           fontSize: 15,
           height: 1.35,
         ),
         decoration: InputDecoration(
           hintText: 'Write a caption...',
-          hintStyle: TextStyle(
-            color: AppColors.grey.shade600,
+          hintStyle: AppTheme.greyTextStyle.copyWith(
+            fontSize: 15,
           ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.all(16),
@@ -1168,25 +1360,30 @@ class _HashtagInput extends StatelessWidget {
         Container(
           decoration: compact
               ? BoxDecoration(
-                  color: AppColors.grey,
-                  borderRadius: BorderRadius.circular(22),
+                  color: AppColors.cardColor,
+                  borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    color: AppColors.white.withOpacity(0.07),
+                    color: AppColors.cardBorderColor,
                   ),
                 )
-              : null,
+              : BoxDecoration(
+                  color: AppColors.cardColor,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: AppColors.cardBorderColor,
+                  ),
+                ),
           child: TextField(
             controller: controller,
             enabled: enabled,
-            style: const TextStyle(
-              color: AppColors.white,
+            style: AppTheme.blackTextStyle.copyWith(
               fontSize: 15,
             ),
             textInputAction: TextInputAction.done,
             decoration: InputDecoration(
               hintText: 'Add hashtags',
-              hintStyle: TextStyle(
-                color: AppColors.grey.shade600,
+              hintStyle: AppTheme.greyTextStyle.copyWith(
+                fontSize: 14,
               ),
               border: InputBorder.none,
               prefixIcon: const Icon(
@@ -1194,12 +1391,10 @@ class _HashtagInput extends StatelessWidget {
                 color: AppColors.primary,
                 size: 20,
               ),
-              contentPadding: compact
-                  ? const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    )
-                  : EdgeInsets.zero,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
             ),
             onSubmitted: onAddHashtag,
           ),
@@ -1240,7 +1435,7 @@ class _HashtagChip extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 7, 8, 7),
       decoration: BoxDecoration(
         color: AppColors.primary.withOpacity(0.14),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: AppColors.primary.withOpacity(0.18),
         ),
@@ -1284,42 +1479,40 @@ class _UploadOverlay extends StatelessWidget {
 
     return Positioned.fill(
       child: Container(
-        color: AppColors.black.withOpacity(0.78),
+        color: AppColors.black.withOpacity(0.45),
         child: Center(
           child: Container(
             width: 280,
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
-              color: AppColors.grey,
-              borderRadius: BorderRadius.circular(24),
+              color: AppColors.cardColor,
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: AppColors.white.withOpacity(0.08),
+                color: AppColors.cardBorderColor,
               ),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
+                Text(
                   'Publishing post',
-                  style: TextStyle(
-                    color: AppColors.white,
+                  style: AppTheme.blackTextStyle.copyWith(
                     fontSize: 17,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 18),
                 LinearProgressIndicator(
                   value: progress <= 0 ? null : progress,
                   color: AppColors.primary,
-                  backgroundColor: AppColors.grey.shade800,
+                  backgroundColor: AppColors.dynamicBorder,
                   minHeight: 6,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   progress <= 0 ? 'Preparing...' : '$percentage%',
-                  style: TextStyle(
-                    color: AppColors.grey.shade500,
+                  style: AppTheme.greyTextStyle.copyWith(
                     fontSize: 13,
                   ),
                 ),

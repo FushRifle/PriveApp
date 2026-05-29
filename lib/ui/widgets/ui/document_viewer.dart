@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:open_file/open_file.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:clique/app/configs/colors.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DocumentViewer extends StatefulWidget {
   final String documentUrl;
@@ -24,23 +26,45 @@ class _DocumentViewerState extends State<DocumentViewer> {
   bool _isLoading = false;
   String? _error;
   String? _fileExtension;
+  bool _hasAutoOpened = false;
 
   @override
   void initState() {
     super.initState();
     _extractFileExtension();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_hasAutoOpened) {
+        _hasAutoOpened = true;
+        _openDocument();
+      }
+    });
   }
 
   void _extractFileExtension() {
-    final url = widget.documentUrl;
-    if (url.contains('.')) {
-      final extension = url.split('.').last.split('?').first.toLowerCase();
-      _fileExtension = extension;
+    final uri = Uri.tryParse(widget.documentUrl);
+    final fileName = widget.fileName ??
+        (uri != null && uri.pathSegments.isNotEmpty
+            ? uri.pathSegments.last
+            : '');
+
+    if (fileName.contains('.')) {
+      final extension = fileName.split('.').last.split('?').first.toLowerCase();
+      if (extension.length <= 6) {
+        _fileExtension = extension;
+      }
     }
   }
 
   Future<void> _openDocument() async {
     if (_isLoading) return;
+
+    final documentUri = Uri.tryParse(widget.documentUrl);
+    if (documentUri == null || !documentUri.hasScheme) {
+      setState(() {
+        _error = 'Invalid document link';
+      });
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -48,24 +72,39 @@ class _DocumentViewerState extends State<DocumentViewer> {
     });
 
     try {
+      if (kIsWeb) {
+        await _openExternal(documentUri);
+        return;
+      }
+
       final dio = Dio();
       final tempDir = await getTemporaryDirectory();
-      final fileName = widget.fileName ?? 'document.${_fileExtension ?? 'pdf'}';
+      final fileName = _safeFileName(
+        widget.fileName ?? 'document.${_fileExtension ?? 'pdf'}',
+      );
       final filePath = '${tempDir.path}/$fileName';
 
-      await dio.download(widget.documentUrl, filePath);
+      await dio.downloadUri(documentUri, filePath);
 
       final result = await OpenFile.open(filePath);
       if (result.type != ResultType.done) {
+        await _openExternal(documentUri);
+
         if (!mounted) return;
         setState(() {
-          _error = 'Failed to open document';
+          _error = result.message.isNotEmpty
+              ? result.message
+              : 'No app found to open this document';
         });
       }
     } catch (e) {
+      try {
+        await _openExternal(documentUri);
+      } catch (_) {}
+
       if (!mounted) return;
       setState(() {
-        _error = 'Error downloading document: $e';
+        _error = 'Unable to open document';
       });
     } finally {
       if (mounted) {
@@ -74,6 +113,32 @@ class _DocumentViewerState extends State<DocumentViewer> {
         });
       }
     }
+  }
+
+  Future<void> _openExternal(Uri uri) async {
+    final launched = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!launched) {
+      throw Exception('Could not open document link');
+    }
+  }
+
+  String _safeFileName(String fileName) {
+    final trimmed = fileName.trim();
+    final fallback = 'document.${_fileExtension ?? 'pdf'}';
+    final safeName = (trimmed.isEmpty ? fallback : trimmed)
+        .split(RegExp(r'[/\\]'))
+        .last
+        .replaceAll(RegExp(r'[^\w.\- ]'), '_');
+
+    if (safeName.contains('.')) {
+      return safeName;
+    }
+
+    return '$safeName.${_fileExtension ?? 'pdf'}';
   }
 
   IconData _getFileIcon() {

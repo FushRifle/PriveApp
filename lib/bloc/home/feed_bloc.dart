@@ -65,6 +65,22 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
 
     try {
       if (event.refresh || state.posts.isEmpty) {
+        final cachedResponse = event.page == 1 && state.posts.isEmpty
+            ? _feedService.getCachedPosts()
+            : null;
+
+        if (cachedResponse != null && cachedResponse.posts.isNotEmpty) {
+          emit(
+            state.copyWith(
+              postsStatus: FeedStatus.loaded,
+              posts: cachedResponse.posts,
+              hasMorePosts: cachedResponse.hasMore,
+              currentPage: cachedResponse.page,
+              clearPostsError: true,
+            ),
+          );
+        }
+
         emit(
           state.copyWith(
             postsStatus: FeedStatus.loading,

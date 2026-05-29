@@ -22,9 +22,16 @@ class LoadConversationInfo extends ChatEvent {
 class LoadMessages extends ChatEvent {
   final int conversationId;
   final int page;
-  const LoadMessages({required this.conversationId, this.page = 1});
+  final bool forceRefresh;
+  final bool silent;
+  const LoadMessages({
+    required this.conversationId,
+    this.page = 1,
+    this.forceRefresh = false,
+    this.silent = false,
+  });
   @override
-  List<Object?> get props => [conversationId, page];
+  List<Object?> get props => [conversationId, page, forceRefresh, silent];
 }
 
 class SendMessage extends ChatEvent {

@@ -42,22 +42,23 @@ class ConversationModel {
   factory ConversationModel.fromJson(Map<String, dynamic> json) {
     return ConversationModel(
       id: json['id'] ?? 0,
-      userId: json['userId'] ?? 0,
+      userId: json['userId'] ?? json['user_id'] ?? 0,
       name: json['name'] ?? 'User',
       username: json['username'] ?? '',
       avatar: json['avatar'] ?? '',
       age: json['age'] ?? 0,
       verified: json['verified'] ?? false,
-      lastMessage: json['lastMessage'] ?? '',
-      lastMessageType: json['lastMessageType'] ?? 'text',
+      lastMessage: json['lastMessage'] ?? json['last_message'] ?? '',
+      lastMessageType:
+          json['lastMessageType'] ?? json['last_message_type'] ?? 'text',
       timestamp: json['timestamp'] ?? '',
-      unreadCount: json['unreadCount'] ?? 0,
-      isOnline: json['isOnline'] ?? false,
-      isTyping: json['isTyping'] ?? false,
-      isPinned: json['isPinned'] ?? false,
-      isMuted: json['isMuted'] ?? false,
-      muteUntil: json['muteUntil'] != null
-          ? DateTime.tryParse(json['muteUntil'])
+      unreadCount: json['unreadCount'] ?? json['unread_count'] ?? 0,
+      isOnline: json['isOnline'] ?? json['is_online'] ?? false,
+      isTyping: json['isTyping'] ?? json['is_typing'] ?? false,
+      isPinned: json['isPinned'] ?? json['is_pinned'] ?? false,
+      isMuted: json['isMuted'] ?? json['is_muted'] ?? false,
+      muteUntil: (json['muteUntil'] ?? json['mute_until']) != null
+          ? DateTime.tryParse(json['muteUntil'] ?? json['mute_until'])
           : null,
     );
   }
@@ -158,17 +159,17 @@ class MessageModel {
     return MessageModel(
       id: json['id'] ?? 0,
       conversationId: json['conversationId'] ?? json['conversation_id'] ?? 0,
-      senderId: json['senderId'] ?? 0,
-      receiverId: json['receiverId'] ?? 0,
+      senderId: json['senderId'] ?? json['sender_id'] ?? 0,
+      receiverId: json['receiverId'] ?? json['receiver_id'] ?? 0,
       message: json['message'] ?? '',
-      messageType: json['messageType'] ?? 'text',
-      mediaUrl: json['mediaUrl'],
-      replyToId: json['replyToId'],
-      replyToMessage: json['replyToMessage'],
-      replyToSender: json['replyToSender'],
-      isRead: json['isRead'] ?? false,
+      messageType: json['messageType'] ?? json['message_type'] ?? 'text',
+      mediaUrl: json['mediaUrl'] ?? json['media_url'],
+      replyToId: json['replyToId'] ?? json['reply_to_id'],
+      replyToMessage: json['replyToMessage'] ?? json['reply_to_message'],
+      replyToSender: json['replyToSender'] ?? json['reply_to_sender'],
+      isRead: json['isRead'] ?? json['is_read'] ?? false,
       isOwn: json['isOwn'] ?? false,
-      createdAt: DateTime.parse(json['createdAt']),
+      createdAt: DateTime.parse(json['createdAt'] ?? json['created_at']),
     );
   }
 
@@ -221,6 +222,8 @@ class MessageModel {
       createdAt: createdAt ?? this.createdAt,
     );
   }
+
+  bool get isPending => id < 0 || id.toString().startsWith('999');
 }
 
 class ConversationInfoModel {
@@ -277,14 +280,15 @@ class ChatSettingsModel {
   factory ChatSettingsModel.fromJson(Map<String, dynamic> json) {
     return ChatSettingsModel(
       id: json['id'] ?? 0,
-      isPinned: json['isPinned'] ?? false,
-      isMuted: json['isMuted'] ?? false,
-      muteUntil: json['muteUntil'] != null
-          ? DateTime.tryParse(json['muteUntil'])
+      isPinned: json['isPinned'] ?? json['is_pinned'] ?? false,
+      isMuted: json['isMuted'] ?? json['is_muted'] ?? false,
+      muteUntil: (json['muteUntil'] ?? json['mute_until']) != null
+          ? DateTime.tryParse(json['muteUntil'] ?? json['mute_until'])
           : null,
       wallpaper: json['wallpaper'] ?? 'default',
-      chatColor: json['chatColor'] ?? 'default',
-      notificationSound: json['notificationSound'] ?? 'default',
+      chatColor: json['chatColor'] ?? json['chat_color'] ?? 'default',
+      notificationSound:
+          json['notificationSound'] ?? json['notification_sound'] ?? 'default',
     );
   }
 
@@ -362,6 +366,7 @@ class ChatState extends Equatable {
 
   final int currentPage;
   final bool hasMoreMessages;
+  final int? activeConversationId;
   final String? error;
 
   const ChatState({
@@ -376,6 +381,7 @@ class ChatState extends Equatable {
     this.userPreferences,
     this.currentPage = 1,
     this.hasMoreMessages = true,
+    this.activeConversationId,
     this.error,
   });
 
@@ -391,6 +397,7 @@ class ChatState extends Equatable {
     UserPreferencesModel? userPreferences,
     int? currentPage,
     bool? hasMoreMessages,
+    int? activeConversationId,
     String? error,
     bool clearError = false,
   }) {
@@ -406,6 +413,7 @@ class ChatState extends Equatable {
       userPreferences: userPreferences ?? this.userPreferences,
       currentPage: currentPage ?? this.currentPage,
       hasMoreMessages: hasMoreMessages ?? this.hasMoreMessages,
+      activeConversationId: activeConversationId ?? this.activeConversationId,
       error: clearError ? null : error ?? this.error,
     );
   }
@@ -423,6 +431,7 @@ class ChatState extends Equatable {
         userPreferences,
         currentPage,
         hasMoreMessages,
+        activeConversationId,
         error,
       ];
 }

@@ -81,7 +81,7 @@ class _StatusPageState extends State<StatusPage> {
           actions: [
             Padding(
               padding: const EdgeInsets.only(right: 10),
-              child: TextButton(
+              child: IconButton.filled(
                 onPressed: () {
                   HapticFeedback.lightImpact();
 
@@ -95,12 +95,13 @@ class _StatusPageState extends State<StatusPage> {
                     ),
                   );
                 },
-                child: Text(
-                  'Create',
-                  style: AppTheme.blackTextStyle.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w800,
-                  ),
+                style: IconButton.styleFrom(
+                  backgroundColor: AppColors.primary.withOpacity(0.12),
+                  foregroundColor: AppColors.primary,
+                ),
+                icon: const Icon(
+                  Icons.add_rounded,
+                  size: 24,
                 ),
               ),
             ),
@@ -268,18 +269,19 @@ class _CreateStoryBanner extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
       child: Material(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(24),
+        color: AppColors.cardColor,
+        borderRadius: BorderRadius.circular(20),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(20),
           child: Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.cardBorderColor),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.black.withOpacity(0.035),
+                  color: AppColors.shadowElevated,
                   blurRadius: 18,
                   offset: const Offset(0, 6),
                 ),
@@ -353,18 +355,19 @@ class _StoryListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.white,
-      borderRadius: BorderRadius.circular(24),
+      color: AppColors.cardColor,
+      borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.cardBorderColor),
             boxShadow: [
               BoxShadow(
-                color: AppColors.black.withOpacity(0.025),
+                color: AppColors.shadowElevated,
                 blurRadius: 16,
                 offset: const Offset(0, 6),
               ),
@@ -386,7 +389,7 @@ class _StoryListItem extends StatelessWidget {
               const SizedBox(width: 8),
               Icon(
                 Icons.arrow_forward_ios_rounded,
-                color: AppColors.grey.shade400,
+                color: AppColors.textSecondary.withOpacity(0.65),
                 size: 15,
               ),
             ],
@@ -430,7 +433,7 @@ class _StoryAvatar extends StatelessWidget {
         border: hasUnseen
             ? null
             : Border.all(
-                color: AppColors.grey.shade300,
+                color: AppColors.cardBorderColor,
                 width: 1.3,
               ),
       ),
@@ -498,7 +501,7 @@ class _StoryInfo extends StatelessWidget {
               : 'Viewed ${_formatTimeAgo(group.latestStory)}',
           style: AppTheme.greyTextStyle.copyWith(
             color:
-                group.hasUnseen ? AppColors.primary : AppColors.grey.shade600,
+                group.hasUnseen ? AppColors.primary : AppColors.textSecondary,
             fontSize: 13,
             fontWeight: group.hasUnseen ? FontWeight.w700 : FontWeight.w500,
           ),
