@@ -32,6 +32,7 @@ class PushNotificationService with WidgetsBindingObserver {
 
   bool _initialized = false;
   bool _firebaseReady = false;
+  bool _syncInProgress = false;
   String? _registeredToken;
 
   Future<void> initialize() async {
@@ -74,6 +75,19 @@ class PushNotificationService with WidgetsBindingObserver {
   }
 
   Future<void> syncDeviceToken() async {
+    if (_syncInProgress) {
+      return;
+    }
+
+    _syncInProgress = true;
+    try {
+      await _syncDeviceToken();
+    } finally {
+      _syncInProgress = false;
+    }
+  }
+
+  Future<void> _syncDeviceToken() async {
     await initialize();
     if (!_firebaseReady) {
       return;
@@ -93,7 +107,12 @@ class PushNotificationService with WidgetsBindingObserver {
       return;
     }
 
-    final token = await FirebaseMessaging.instance.getToken();
+    if (!await _isApnsReady()) {
+      debugPrint('Push token sync deferred: APNS token is not ready yet');
+      return;
+    }
+
+    final token = await _getMessagingToken();
     if (token == null || token.trim().isEmpty) {
       return;
     }
@@ -104,6 +123,36 @@ class PushNotificationService with WidgetsBindingObserver {
         FirebaseMessaging.instance.onTokenRefresh.listen((token) async {
       await _registerToken(token);
     });
+  }
+
+  Future<bool> _isApnsReady() async {
+    if (defaultTargetPlatform != TargetPlatform.iOS &&
+        defaultTargetPlatform != TargetPlatform.macOS) {
+      return true;
+    }
+
+    try {
+      final apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+      return apnsToken != null && apnsToken.trim().isNotEmpty;
+    } on FirebaseException catch (error) {
+      debugPrint('APNS token not ready: ${error.code}');
+      return false;
+    } catch (error) {
+      debugPrint('APNS token check failed: $error');
+      return false;
+    }
+  }
+
+  Future<String?> _getMessagingToken() async {
+    try {
+      return await FirebaseMessaging.instance.getToken();
+    } on FirebaseException catch (error) {
+      debugPrint('Push token sync skipped: ${error.code}');
+      return null;
+    } catch (error) {
+      debugPrint('Push token sync failed: $error');
+      return null;
+    }
   }
 
   Future<void> deleteDeviceToken() async {
