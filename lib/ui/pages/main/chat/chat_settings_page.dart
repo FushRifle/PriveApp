@@ -30,6 +30,13 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
   String _notificationSound = 'default';
   String _muteDuration = '8 hours';
 
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _surface => AppColors.getCardColor(_isDark);
+  Color get _border => AppColors.getCardBorderColor(_isDark);
+  Color get _text => AppColors.getTextColor(_isDark);
+  Color get _mutedText => AppColors.getTextSecondaryColor(_isDark);
+  Color get _divider => AppColors.getDividerColor(_isDark);
+
   // Wallpaper assets
   final List<WallpaperItem> _wallpapers = [
     WallpaperItem(id: 'default', name: 'Default', asset: null, color: null),
@@ -191,13 +198,20 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        statusBarColor: AppColors.transparent,
+        statusBarIconBrightness: _isDark ? Brightness.light : Brightness.dark,
+      ),
+    );
+
     return Scaffold(
-      backgroundColor: AppColors.backgroundColor,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.white,
+        backgroundColor: AppColors.background,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.black),
+          icon: Icon(Icons.arrow_back_ios_new, color: _text),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -208,19 +222,31 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
         centerTitle: true,
       ),
       body: BlocConsumer<ChatBloc, ChatState>(
+        listenWhen: (previous, current) =>
+            previous.chatSettings != current.chatSettings,
         listener: (context, state) {
-          if (state.chatSettings != null) {
+          final settings = state.chatSettings;
+          if (settings != null &&
+              (_isPinned != settings.isPinned ||
+                  _isMuted != settings.isMuted ||
+                  _wallpaper != settings.wallpaper ||
+                  _chatColor != settings.chatColor ||
+                  _notificationSound != settings.notificationSound)) {
             setState(() {
-              _isPinned = state.chatSettings!.isPinned;
-              _isMuted = state.chatSettings!.isMuted;
-              _wallpaper = state.chatSettings!.wallpaper;
-              _chatColor = state.chatSettings!.chatColor;
-              _notificationSound = state.chatSettings!.notificationSound;
+              _isPinned = settings.isPinned;
+              _isMuted = settings.isMuted;
+              _wallpaper = settings.wallpaper;
+              _chatColor = settings.chatColor;
+              _notificationSound = settings.notificationSound;
             });
           }
         },
+        buildWhen: (previous, current) =>
+            previous.settingsStatus != current.settingsStatus ||
+            previous.chatSettings != current.chatSettings,
         builder: (context, state) {
           return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -287,7 +313,8 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
         height: 40,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
-          color: AppColors.grey.shade200,
+          color: AppColors.primary.withOpacity(0.08),
+          border: Border.all(color: _border),
           image: currentWallpaper.asset != null
               ? DecorationImage(
                   image: AssetImage(currentWallpaper.asset!), fit: BoxFit.cover)
@@ -302,8 +329,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
               .copyWith(fontWeight: FontWeight.w500, fontSize: 15)),
       subtitle: Text(_capitalize(_wallpaper),
           style: AppTheme.greyTextStyle.copyWith(fontSize: 12)),
-      trailing:
-          const Icon(Icons.chevron_right, color: AppColors.primary, size: 20),
+      trailing: Icon(Icons.chevron_right, color: _mutedText, size: 20),
       onTap: () => _showWallpaperPicker(),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
     );
@@ -320,7 +346,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: currentColor.color,
-          border: Border.all(color: AppColors.grey.shade300, width: 2),
+          border: Border.all(color: _border, width: 2),
         ),
         child: _chatColor == 'default'
             ? const Icon(Icons.palette, color: AppColors.white, size: 20)
@@ -331,8 +357,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
               .copyWith(fontWeight: FontWeight.w500, fontSize: 15)),
       subtitle: Text(_capitalize(_chatColor),
           style: AppTheme.greyTextStyle.copyWith(fontSize: 12)),
-      trailing:
-          const Icon(Icons.chevron_right, color: AppColors.primary, size: 20),
+      trailing: Icon(Icons.chevron_right, color: _mutedText, size: 20),
       onTap: () => _showColorPicker(),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
     );
@@ -346,8 +371,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
               .copyWith(fontWeight: FontWeight.w500, fontSize: 15)),
       subtitle: Text(_capitalize(_notificationSound),
           style: AppTheme.greyTextStyle.copyWith(fontSize: 12)),
-      trailing:
-          const Icon(Icons.chevron_right, color: AppColors.primary, size: 20),
+      trailing: Icon(Icons.chevron_right, color: _mutedText, size: 20),
       onTap: () => _showSoundPicker(),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
     );
@@ -380,8 +404,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
               .copyWith(fontWeight: FontWeight.w500, fontSize: 15)),
       subtitle: Text(_muteDuration,
           style: AppTheme.greyTextStyle.copyWith(fontSize: 12)),
-      trailing:
-          const Icon(Icons.chevron_right, color: AppColors.primary, size: 20),
+      trailing: Icon(Icons.chevron_right, color: _mutedText, size: 20),
       onTap: () => _showMuteDurationPicker(),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
     );
@@ -413,8 +436,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
               .copyWith(fontWeight: FontWeight.w500, fontSize: 15)),
       subtitle: Text('Move chat to archive',
           style: AppTheme.greyTextStyle.copyWith(fontSize: 12)),
-      trailing:
-          const Icon(Icons.chevron_right, color: AppColors.primary, size: 20),
+      trailing: Icon(Icons.chevron_right, color: _mutedText, size: 20),
       onTap: () {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -434,8 +456,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
               .copyWith(fontWeight: FontWeight.w500, fontSize: 15)),
       subtitle: Text('Find messages in this chat',
           style: AppTheme.greyTextStyle.copyWith(fontSize: 12)),
-      trailing:
-          const Icon(Icons.chevron_right, color: AppColors.primary, size: 20),
+      trailing: Icon(Icons.chevron_right, color: _mutedText, size: 20),
       onTap: () {
         HapticFeedback.lightImpact();
         // TODO: Implement search
@@ -483,8 +504,8 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
         style: AppTheme.blackTextStyle.copyWith(
           fontWeight: FontWeight.w600,
           fontSize: 14,
-          color: AppColors.greyColor,
-          letterSpacing: 0.5,
+          color: _mutedText,
+          letterSpacing: 0,
         ),
       ),
     );
@@ -493,12 +514,13 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
   Widget _buildSettingsCard(List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: _surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _border),
         boxShadow: [
           BoxShadow(
-              color: AppColors.black.withOpacity(0.03),
-              blurRadius: 8,
+              color: AppColors.getShadowColor(_isDark),
+              blurRadius: 10,
               offset: const Offset(0, 2))
         ],
       ),
@@ -506,13 +528,13 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
     );
   }
 
-  Widget _buildDivider() => const Divider(height: 1, indent: 56);
+  Widget _buildDivider() => Divider(height: 1, indent: 56, color: _divider);
 
   void _showWallpaperPicker() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.white,
+      backgroundColor: _surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => StatefulBuilder(
@@ -604,7 +626,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
                                   ],
                                 )
                               : Container(
-                                  color: AppColors.primary.withOpacity(0.1),
+                                  color: AppColors.primary.withOpacity(0.08),
                                   child: Stack(
                                     children: [
                                       const Center(
@@ -657,7 +679,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
   void _showColorPicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.white,
+      backgroundColor: _surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => Container(
@@ -726,7 +748,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
     final sounds = ['default', 'classic', 'gentle', 'pop', 'ping'];
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.white,
+      backgroundColor: _surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => SafeArea(
@@ -768,7 +790,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
     final durations = ['1 hour', '8 hours', '24 hours', '7 days', 'Forever'];
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.white,
+      backgroundColor: _surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => SafeArea(

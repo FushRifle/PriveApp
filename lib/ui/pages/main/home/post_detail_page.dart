@@ -1135,7 +1135,7 @@ class _EmptyComments extends StatelessWidget {
       ),
       padding: const EdgeInsets.all(36),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: AppColors.card,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Column(

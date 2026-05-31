@@ -30,6 +30,13 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
   late int _conversationId;
   bool _isMuted = false;
 
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _surface => AppColors.getCardColor(_isDark);
+  Color get _border => AppColors.getCardBorderColor(_isDark);
+  Color get _text => AppColors.getTextColor(_isDark);
+  Color get _mutedText => AppColors.getTextSecondaryColor(_isDark);
+  Color get _divider => AppColors.getDividerColor(_isDark);
+
   @override
   void initState() {
     super.initState();
@@ -47,19 +54,20 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
   }
 
   void _toggleMute() async {
-    setState(() => _isMuted = !_isMuted);
+    final nextMuted = !_isMuted;
+    setState(() => _isMuted = nextMuted);
 
     context.read<ChatBloc>().add(UpdateChatSettings(
           conversationId: _conversationId,
-          isMuted: _isMuted,
+          isMuted: nextMuted,
           muteUntil:
-              _isMuted ? DateTime.now().add(const Duration(days: 365)) : null,
+              nextMuted ? DateTime.now().add(const Duration(days: 365)) : null,
         ));
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content:
-            Text(_isMuted ? 'Notifications muted' : 'Notifications unmuted'),
+            Text(nextMuted ? 'Notifications muted' : 'Notifications unmuted'),
         backgroundColor: AppColors.greenColor,
         duration: const Duration(seconds: 1),
       ),
@@ -80,19 +88,19 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
   @override
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
+      SystemUiOverlayStyle(
         statusBarColor: AppColors.transparent,
-        statusBarIconBrightness: Brightness.dark,
+        statusBarIconBrightness: _isDark ? Brightness.light : Brightness.dark,
       ),
     );
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundColor,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.white,
+        backgroundColor: AppColors.background,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.black),
+          icon: Icon(Icons.arrow_back_ios_new, color: _text),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -105,7 +113,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_outlined, color: AppColors.black),
+            icon: Icon(Icons.settings_outlined, color: _text),
             onPressed: () {
               HapticFeedback.lightImpact();
               Navigator.push(
@@ -126,6 +134,9 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
         ],
       ),
       body: BlocBuilder<ChatBloc, ChatState>(
+        buildWhen: (previous, current) =>
+            previous.conversations != current.conversations ||
+            previous.chatSettings != current.chatSettings,
         builder: (context, chatState) {
           final conversation = chatState.conversations.firstWhere(
             (c) => c.userId == widget.userId,
@@ -149,9 +160,12 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
             ),
           );
 
-          _isMuted = conversation.isMuted;
+          final effectiveMuted =
+              chatState.chatSettings?.isMuted ?? conversation.isMuted;
+          _isMuted = effectiveMuted;
 
           return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -162,7 +176,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                   const SizedBox(height: 16),
                   _buildSharedFilesSection(),
                   const SizedBox(height: 16),
-                  _buildPrivacySection(context, conversation.isMuted),
+                  _buildPrivacySection(context, effectiveMuted),
                   const SizedBox(height: 32),
                 ],
               ),
@@ -180,16 +194,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
 
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-              color: AppColors.black.withOpacity(0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 2)),
-        ],
-      ),
+      decoration: _cardDecoration(),
       child: Column(
         children: [
           _buildAvatar(firstLetter),
@@ -208,7 +213,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                 height: 8,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isOnline ? AppColors.greenColor : AppColors.grey,
+                  color: isOnline ? AppColors.greenColor : _mutedText,
                 ),
               ),
               const SizedBox(width: 6),
@@ -216,7 +221,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                 isOnline ? 'Active now' : 'Offline',
                 style: AppTheme.greyTextStyle.copyWith(
                   fontSize: 13,
-                  color: isOnline ? AppColors.greenColor : AppColors.grey,
+                  color: isOnline ? AppColors.greenColor : _mutedText,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -261,12 +266,15 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(color: AppColors.primary, width: 3),
+        color: _surface,
       ),
       child: ClipOval(
         child: avatar.isNotEmpty && avatar.startsWith('http')
             ? CachedNetworkImage(
                 imageUrl: avatar,
                 fit: BoxFit.cover,
+                fadeInDuration: const Duration(milliseconds: 120),
+                memCacheWidth: 220,
                 placeholder: (context, url) => Container(
                   color: AppColors.primary.withOpacity(0.1),
                   child: const Center(child: CircularProgressIndicator()),
@@ -334,16 +342,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
       builder: (context, state) {
         return Container(
           padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                  color: AppColors.black.withOpacity(0.03),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2)),
-            ],
-          ),
+          decoration: _cardDecoration(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -351,8 +350,10 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('Shared Media',
-                      style: AppTheme.blackTextStyle
-                          .copyWith(fontWeight: FontWeight.bold, fontSize: 16)),
+                      style: AppTheme.blackTextStyle.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: _text)),
                   if (state is ChatGalleryLoaded && state.images.isNotEmpty)
                     TextButton(
                       onPressed: () => _showAllMedia(context, state.images),
@@ -426,22 +427,13 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
 
         return Container(
           padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                  color: AppColors.black.withOpacity(0.03),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2)),
-            ],
-          ),
+          decoration: _cardDecoration(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Shared Files',
-                  style: AppTheme.blackTextStyle
-                      .copyWith(fontWeight: FontWeight.bold, fontSize: 16)),
+                  style: AppTheme.blackTextStyle.copyWith(
+                      fontWeight: FontWeight.bold, fontSize: 16, color: _text)),
               const SizedBox(height: 16),
               if (state is ChatGalleryLoading)
                 const Center(
@@ -513,16 +505,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
 
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-              color: AppColors.black.withOpacity(0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 2)),
-        ],
-      ),
+      decoration: _cardDecoration(),
       child: Column(
         children: [
           _buildInfoTile(
@@ -533,7 +516,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
             onTap: _toggleMute,
           ),
           if (!_isBot) ...[
-            const Divider(height: 1, indent: 56),
+            Divider(height: 1, indent: 56, color: _divider),
             _buildInfoTile(
               icon: Icons.block_outlined,
               title: 'Block User',
@@ -541,7 +524,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
               titleColor: AppColors.redColor,
               onTap: () => _showBlockDialog(context),
             ),
-            const Divider(height: 1, indent: 56),
+            Divider(height: 1, indent: 56, color: _divider),
             _buildInfoTile(
               icon: Icons.report_outlined,
               title: 'Report User',
@@ -563,15 +546,30 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
     required VoidCallback onTap,
   }) {
     return ListTile(
-      leading: Icon(icon, color: titleColor ?? AppColors.blackColor, size: 24),
+      leading: Icon(icon, color: titleColor ?? _mutedText, size: 24),
       title: Text(title,
           style: AppTheme.blackTextStyle.copyWith(
               fontWeight: FontWeight.w600, fontSize: 15, color: titleColor)),
       subtitle:
           Text(subtitle, style: AppTheme.greyTextStyle.copyWith(fontSize: 12)),
-      trailing: Icon(Icons.chevron_right, color: AppColors.greyColor, size: 20),
+      trailing: Icon(Icons.chevron_right, color: _mutedText, size: 20),
       onTap: onTap,
       contentPadding: EdgeInsets.zero,
+    );
+  }
+
+  BoxDecoration _cardDecoration() {
+    return BoxDecoration(
+      color: _surface,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: _border),
+      boxShadow: [
+        BoxShadow(
+          color: AppColors.getShadowColor(_isDark),
+          blurRadius: 10,
+          offset: const Offset(0, 2),
+        ),
+      ],
     );
   }
 
@@ -582,8 +580,8 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
       backgroundColor: AppColors.transparent,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.8,
-        decoration: const BoxDecoration(
-            color: AppColors.white,
+        decoration: BoxDecoration(
+            color: _surface,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
         child: Column(
           children: [
@@ -595,11 +593,13 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                   color: AppColors.greyColor.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(2)),
             ),
-            const Padding(
-                padding: EdgeInsets.all(16),
+            Padding(
+                padding: const EdgeInsets.all(16),
                 child: Text('All Media',
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
+                    style: AppTheme.blackTextStyle.copyWith(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: _text))),
             Expanded(
               child: GridView.builder(
                 padding: const EdgeInsets.all(8),
@@ -613,7 +613,11 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                 itemBuilder: (context, index) => GestureDetector(
                   onTap: () => _showImageViewer(images[index].url),
                   child: CachedNetworkImage(
-                      imageUrl: images[index].url, fit: BoxFit.cover),
+                    imageUrl: images[index].url,
+                    fit: BoxFit.cover,
+                    fadeInDuration: const Duration(milliseconds: 120),
+                    memCacheWidth: 360,
+                  ),
                 ),
               ),
             ),
