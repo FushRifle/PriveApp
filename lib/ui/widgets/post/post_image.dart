@@ -48,42 +48,39 @@ class PostImage extends StatelessWidget {
           ),
         );
       },
-      child: Hero(
-        tag: 'post_image_${post.id}',
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            CachedNetworkImage(
-              imageUrl: imageUrl,
-              fit: BoxFit.cover,
-              memCacheWidth: 1080,
-              placeholder: (_, __) {
-                return ColoredBox(
-                  color: AppColors.backgroundColor,
-                  child: const Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.primary,
-                      strokeWidth: 2,
-                    ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          CachedNetworkImage(
+            imageUrl: imageUrl,
+            fit: BoxFit.cover,
+            memCacheWidth: 1080,
+            placeholder: (_, __) {
+              return ColoredBox(
+                color: AppColors.backgroundColor,
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.primary,
+                    strokeWidth: 2,
                   ),
-                );
-              },
-              errorWidget: (_, __, ___) {
-                return ColoredBox(
-                  color: AppColors.backgroundColor,
-                  child: Center(
-                    child: Icon(
-                      Icons.broken_image_outlined,
-                      size: 42,
-                      color: AppColors.textHint,
-                    ),
+                ),
+              );
+            },
+            errorWidget: (_, __, ___) {
+              return ColoredBox(
+                color: AppColors.backgroundColor,
+                child: Center(
+                  child: Icon(
+                    Icons.broken_image_outlined,
+                    size: 42,
+                    color: AppColors.textHint,
                   ),
-                );
-              },
-            ),
-            const _ImageGradient(),
-          ],
-        ),
+                ),
+              );
+            },
+          ),
+          const _ImageGradient(),
+        ],
       ),
     );
   }

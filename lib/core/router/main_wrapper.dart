@@ -156,7 +156,7 @@ class _MainWrapperState extends State<MainWrapper>
               ),
             if (_showBottomBar)
               Positioned(
-                bottom: 65,
+                bottom: 70,
                 left: 0,
                 right: 0,
                 child: Center(

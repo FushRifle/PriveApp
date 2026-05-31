@@ -126,6 +126,19 @@ class DeleteFeedPost extends FeedEvent {
   List<Object?> get props => [postId];
 }
 
+class UpdateFeedPost extends FeedEvent {
+  final int postId;
+  final String content;
+
+  const UpdateFeedPost({
+    required this.postId,
+    required this.content,
+  });
+
+  @override
+  List<Object?> get props => [postId, content];
+}
+
 // Clear errors
 class ClearFeedError extends FeedEvent {}
 

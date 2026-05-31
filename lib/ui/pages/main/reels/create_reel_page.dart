@@ -542,11 +542,11 @@ class _CreateReelPageState extends State<CreateReelPage> {
         isError: true,
       );
     } finally {
-      if (!mounted) return;
-
-      setState(() {
-        _isPickingVideo = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isPickingVideo = false;
+        });
+      }
     }
   }
 

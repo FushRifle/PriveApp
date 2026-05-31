@@ -7,7 +7,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:video_player/video_player.dart';
 
 import 'package:clique/app/configs/colors.dart';
+import 'package:clique/bloc/chat/chat_bloc.dart';
+import 'package:clique/bloc/friends/friends_bloc.dart';
 import 'package:clique/bloc/reels/reel_bloc.dart';
+import 'package:clique/data/services/chat/chat_service.dart';
+import 'package:clique/data/services/friends/friends_service.dart';
+import 'package:clique/data/services/reel/reel_service.dart';
+import 'package:clique/ui/pages/main/chat/chat_page.dart';
 
 class ReelItem extends StatefulWidget {
   final Map<String, dynamic> reel;
@@ -40,6 +46,7 @@ class _ReelItemState extends State<ReelItem>
   bool _isLiked = false;
 
   int _localLikeDelta = 0;
+  int _localCommentDelta = 0;
   int _localShareDelta = 0;
 
   String get _videoUrl {
@@ -106,6 +113,7 @@ class _ReelItemState extends State<ReelItem>
     );
 
     _localLikeDelta = 0;
+    _localCommentDelta = 0;
     _localShareDelta = 0;
   }
 
@@ -245,23 +253,72 @@ class _ReelItemState extends State<ReelItem>
     }
   }
 
+  void _handleComment() {
+    final reelId = _reelId;
+
+    if (reelId == null) return;
+
+    _pauseVideo();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.transparent,
+      builder: (_) {
+        return _ReelCommentsSheet(
+          reelId: reelId,
+          onCommentAdded: () {
+            if (!mounted) return;
+
+            setState(() {
+              _localCommentDelta += 1;
+            });
+          },
+        );
+      },
+    ).whenComplete(() {
+      if (widget.isActive) {
+        _playVideo();
+      }
+    });
+  }
+
   void _handleShare() {
     final reelId = widget.reel['id']?.toString();
 
     if (reelId == null || reelId.isEmpty) return;
 
-    if (!mounted) return;
+    _pauseVideo();
 
-    setState(() {
-      _localShareDelta += 1;
-    });
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.transparent,
+      builder: (_) {
+        return _ReelShareSheet(
+          reel: widget.reel,
+          reelId: reelId,
+          onShared: () {
+            if (!mounted) return;
 
-    context.read<ReelBloc>().add(
-          ShareReel(
-            reelId: reelId,
-            index: widget.index,
-          ),
+            setState(() {
+              _localShareDelta += 1;
+            });
+
+            context.read<ReelBloc>().add(
+                  ShareReel(
+                    reelId: reelId,
+                    index: widget.index,
+                  ),
+                );
+          },
         );
+      },
+    ).whenComplete(() {
+      if (widget.isActive) {
+        _playVideo();
+      }
+    });
   }
 
   void _toggleFollow() {
@@ -281,6 +338,15 @@ class _ReelItemState extends State<ReelItem>
     }
 
     return false;
+  }
+
+  String? get _reelId {
+    final id = widget.reel['id'] ?? widget.reel['_id'];
+    final value = id?.toString();
+
+    if (value == null || value.isEmpty) return null;
+
+    return value;
   }
 
   @override
@@ -394,8 +460,9 @@ class _ReelItemState extends State<ReelItem>
   Widget _buildRightActions() {
     final likeCount = _readInt(widget.reel['likes']) + _localLikeDelta;
     final commentCount = _readInt(
-      widget.reel['commentCount'] ?? widget.reel['comments'],
-    );
+          widget.reel['commentCount'] ?? widget.reel['comments'],
+        ) +
+        _localCommentDelta;
     final shareCount = _readInt(
           widget.reel['shareCount'] ?? widget.reel['shares'],
         ) +
@@ -418,8 +485,8 @@ class _ReelItemState extends State<ReelItem>
             const SizedBox(height: 20),
             _ActionButton(
               icon: Icons.mode_comment_outlined,
-              label: _formatCount(commentCount),
-              onTap: () {},
+              label: _formatCount(commentCount < 0 ? 0 : commentCount),
+              onTap: _handleComment,
             ),
             const SizedBox(height: 20),
             _ActionButton(
@@ -506,8 +573,8 @@ class _ReelItemState extends State<ReelItem>
               const SizedBox(height: 12),
               Text(
                 caption,
-                style: const TextStyle(
-                  color: AppColors.white,
+                style: TextStyle(
+                  color: AppColors.text,
                   fontSize: 14,
                   height: 1.25,
                 ),
@@ -914,4 +981,905 @@ class _FollowButton extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ReelCommentsSheet extends StatefulWidget {
+  final String reelId;
+  final VoidCallback onCommentAdded;
+
+  const _ReelCommentsSheet({
+    required this.reelId,
+    required this.onCommentAdded,
+  });
+
+  @override
+  State<_ReelCommentsSheet> createState() => _ReelCommentsSheetState();
+}
+
+class _ReelCommentsSheetState extends State<_ReelCommentsSheet> {
+  final ReelService _reelService = ReelService();
+  final TextEditingController _controller = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+
+  List<dynamic> _comments = const [];
+  bool _isLoading = true;
+  bool _isSending = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadComments();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadComments() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final comments = await _reelService.getReelComments(widget.reelId);
+
+      if (!mounted) return;
+
+      setState(() {
+        _comments = comments;
+        _isLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _error = error.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _sendComment() async {
+    final text = _controller.text.trim();
+
+    if (text.isEmpty || _isSending) return;
+
+    setState(() {
+      _isSending = true;
+    });
+
+    try {
+      final comment = await _reelService.addReelComment(
+        reelId: widget.reelId,
+        data: {
+          'content': text,
+          'comment': text,
+          'text': text,
+        },
+      );
+
+      if (!mounted) return;
+
+      _controller.clear();
+      widget.onCommentAdded();
+
+      setState(() {
+        _comments = [
+          if (comment.isNotEmpty) comment else {'content': text},
+          ..._comments,
+        ];
+        _isSending = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _isSending = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString()),
+          backgroundColor: AppColors.red,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.72,
+      minChildSize: 0.45,
+      maxChildSize: 0.92,
+      builder: (context, sheetController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.cardColor,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(24),
+            ),
+          ),
+          child: Padding(
+            padding: EdgeInsets.only(bottom: bottomInset),
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.divider,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 8, 10),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Comments',
+                          style: TextStyle(
+                            color: AppColors.text,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(
+                          Icons.close,
+                          color: AppColors.text,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: _buildComments(sheetController),
+                ),
+                _buildCommentInput(),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildComments(ScrollController controller) {
+    if (_isLoading) {
+      return Center(
+        child: CircularProgressIndicator(
+          color: AppColors.primary,
+          strokeWidth: 2,
+        ),
+      );
+    }
+
+    if (_error != null) {
+      return _SheetMessage(
+        icon: Icons.error_outline,
+        title: 'Could not load comments',
+        subtitle: _error!,
+        actionLabel: 'Retry',
+        onAction: _loadComments,
+      );
+    }
+
+    if (_comments.isEmpty) {
+      return const _SheetMessage(
+        icon: Icons.mode_comment_outlined,
+        title: 'No comments yet',
+        subtitle: 'Start the conversation.',
+      );
+    }
+
+    return ListView.separated(
+      controller: controller,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      itemCount: _comments.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 14),
+      itemBuilder: (context, index) {
+        return _CommentTile(comment: _comments[index]);
+      },
+    );
+  }
+
+  Widget _buildCommentInput() {
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+        decoration: BoxDecoration(
+          color: AppColors.cardColor,
+          border: Border(
+            top: BorderSide(
+              color: AppColors.divider,
+            ),
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _controller,
+                enabled: !_isSending,
+                minLines: 1,
+                maxLines: 4,
+                style: TextStyle(
+                  color: AppColors.text,
+                  fontSize: 14,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Add a comment...',
+                  hintStyle: TextStyle(
+                    color: AppColors.textHint,
+                  ),
+                  filled: true,
+                  fillColor: AppColors.backgroundColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(22),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 11,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            IconButton.filled(
+              onPressed: _isSending ? null : _sendComment,
+              style: IconButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                disabledBackgroundColor: AppColors.divider,
+              ),
+              icon: _isSending
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        color: AppColors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.arrow_upward,
+                      color: AppColors.white,
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReelShareSheet extends StatefulWidget {
+  final Map<String, dynamic> reel;
+  final String reelId;
+  final VoidCallback onShared;
+
+  const _ReelShareSheet({
+    required this.reel,
+    required this.reelId,
+    required this.onShared,
+  });
+
+  @override
+  State<_ReelShareSheet> createState() => _ReelShareSheetState();
+}
+
+class _ReelShareSheetState extends State<_ReelShareSheet> {
+  late final ChatService _chatService;
+  final TextEditingController _searchController = TextEditingController();
+
+  int? _sendingToUserId;
+
+  @override
+  void initState() {
+    super.initState();
+    _chatService = ChatService();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => FriendsBloc()..add(const LoadFriends()),
+        ),
+        BlocProvider(
+          create: (_) => ChatBloc()..add(LoadConversations()),
+        ),
+      ],
+      child: Builder(
+        builder: (context) {
+          return DraggableScrollableSheet(
+            initialChildSize: 0.68,
+            minChildSize: 0.42,
+            maxChildSize: 0.9,
+            builder: (context, sheetController) {
+              return Container(
+                decoration: BoxDecoration(
+                  color: AppColors.cardColor,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24),
+                  ),
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 10),
+                      Container(
+                        width: 42,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.divider,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 14, 8, 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Send to',
+                                style: TextStyle(
+                                  color: AppColors.text,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () => Navigator.pop(context),
+                              icon: Icon(
+                                Icons.close,
+                                color: AppColors.text,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      _buildSearchField(),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: _buildFriendsList(context, sheetController),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSearchField() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: TextField(
+        controller: _searchController,
+        style: TextStyle(
+          color: AppColors.text,
+          fontSize: 14,
+        ),
+        onChanged: (_) => setState(() {}),
+        decoration: InputDecoration(
+          hintText: 'Search friends',
+          hintStyle: TextStyle(
+            color: AppColors.textHint,
+          ),
+          prefixIcon: Icon(
+            Icons.search,
+            color: AppColors.icon,
+          ),
+          filled: true,
+          fillColor: AppColors.backgroundColor,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFriendsList(
+    BuildContext context,
+    ScrollController controller,
+  ) {
+    return BlocBuilder<FriendsBloc, FriendsState>(
+      builder: (context, friendsState) {
+        if (friendsState.friendsStatus == FriendsStatus.loading &&
+            friendsState.friends.isEmpty) {
+          return Center(
+            child: CircularProgressIndicator(
+              color: AppColors.primary,
+              strokeWidth: 2,
+            ),
+          );
+        }
+
+        if (friendsState.friendsStatus == FriendsStatus.error &&
+            friendsState.friends.isEmpty) {
+          return _SheetMessage(
+            icon: Icons.people_outline,
+            title: 'Could not load friends',
+            subtitle: friendsState.error ?? 'Please try again.',
+            actionLabel: 'Retry',
+            onAction: () {
+              context.read<FriendsBloc>().add(const LoadFriends());
+            },
+          );
+        }
+
+        final friends = _filteredFriends(friendsState.friends);
+
+        if (friends.isEmpty) {
+          return const _SheetMessage(
+            icon: Icons.people_outline,
+            title: 'No friends found',
+            subtitle: 'Mutual friends will show up here.',
+          );
+        }
+
+        return BlocBuilder<ChatBloc, ChatState>(
+          builder: (context, chatState) {
+            return ListView.separated(
+              controller: controller,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+              itemCount: friends.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 6),
+              itemBuilder: (context, index) {
+                final friend = friends[index];
+                final conversation = _conversationFor(
+                  chatState.conversations,
+                  friend.id,
+                );
+
+                return _ShareFriendTile(
+                  friend: friend,
+                  isSending: _sendingToUserId == friend.id,
+                  onTap: () => _shareToFriend(
+                    context: context,
+                    friend: friend,
+                    conversationId: conversation?.id,
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  List<FriendUser> _filteredFriends(List<FriendUser> friends) {
+    final query = _searchController.text.trim().toLowerCase();
+
+    if (query.isEmpty) return friends;
+
+    return friends.where((friend) {
+      return friend.name.toLowerCase().contains(query) ||
+          friend.username.toLowerCase().contains(query);
+    }).toList();
+  }
+
+  ConversationModel? _conversationFor(
+    List<ConversationModel> conversations,
+    int userId,
+  ) {
+    for (final conversation in conversations) {
+      if (conversation.userId == userId) return conversation;
+    }
+
+    return null;
+  }
+
+  Future<void> _shareToFriend({
+    required BuildContext context,
+    required FriendUser friend,
+    required int? conversationId,
+  }) async {
+    if (_sendingToUserId != null) return;
+
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
+    setState(() {
+      _sendingToUserId = friend.id;
+    });
+
+    try {
+      final response = await _chatService.sendMessage(
+        receiverId: friend.id,
+        message: _shareText,
+        messageType: 'reel',
+        mediaUrl: _videoUrl,
+      );
+
+      if (!mounted) return;
+
+      widget.onShared();
+
+      final resolvedConversationId = _readInt(
+        response?['conversationId'] ?? response?['conversation_id'],
+      );
+      final targetConversationId =
+          resolvedConversationId > 0 ? resolvedConversationId : conversationId;
+
+      navigator.pop();
+
+      if (targetConversationId != null && targetConversationId > 0) {
+        navigator.push(
+          MaterialPageRoute(
+            builder: (_) => BlocProvider(
+              create: (_) => ChatBloc(),
+              child: ChatPage(
+                conversationId: targetConversationId,
+                userName: friend.name,
+                userAvatar: friend.avatar ?? '',
+                userId: friend.id,
+              ),
+            ),
+          ),
+        );
+      } else {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Reel sent to ${friend.name}'),
+            backgroundColor: AppColors.green,
+          ),
+        );
+      }
+    } catch (error) {
+      if (!mounted) return;
+
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(error.toString()),
+          backgroundColor: AppColors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _sendingToUserId = null;
+        });
+      }
+    }
+  }
+
+  String get _videoUrl {
+    final url = widget.reel['videoUrl'] ?? widget.reel['url'];
+    return url?.toString() ?? '';
+  }
+
+  String get _caption {
+    return widget.reel['caption']?.toString().trim() ?? '';
+  }
+
+  String get _shareText {
+    final buffer = StringBuffer('Shared a reel');
+
+    if (_caption.isNotEmpty) {
+      buffer.write(': $_caption');
+    }
+
+    if (_videoUrl.isNotEmpty) {
+      buffer.write('\n$_videoUrl');
+    }
+
+    return buffer.toString();
+  }
+}
+
+class _CommentTile extends StatelessWidget {
+  final dynamic comment;
+
+  const _CommentTile({
+    required this.comment,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final data = _asMap(comment);
+    final user = _asMap(data['user']);
+    final name = data['username']?.toString() ??
+        user['username']?.toString() ??
+        user['name']?.toString() ??
+        'User';
+    final avatar =
+        data['avatar']?.toString() ?? user['avatar']?.toString() ?? '';
+    final text = data['content']?.toString() ??
+        data['comment']?.toString() ??
+        data['text']?.toString() ??
+        '';
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _MiniAvatar(
+          imageUrl: avatar,
+          fallback: name,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: AppColors.text,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                text,
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                  height: 1.25,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ShareFriendTile extends StatelessWidget {
+  final FriendUser friend;
+  final bool isSending;
+  final VoidCallback onTap;
+
+  const _ShareFriendTile({
+    required this.friend,
+    required this.isSending,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.transparent,
+      child: InkWell(
+        onTap: isSending ? null : onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 4,
+            vertical: 8,
+          ),
+          child: Row(
+            children: [
+              _MiniAvatar(
+                imageUrl: friend.avatar ?? '',
+                fallback: friend.name,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            friend.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: AppColors.text,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        if (friend.isVerified) ...[
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.verified,
+                            color: AppColors.blue,
+                            size: 15,
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '@${friend.username}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 42,
+                height: 34,
+                child: isSending
+                    ? const Center(
+                        child: SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            color: AppColors.primary,
+                            strokeWidth: 2,
+                          ),
+                        ),
+                      )
+                    : const Icon(
+                        Icons.send_rounded,
+                        color: AppColors.primary,
+                        size: 22,
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniAvatar extends StatelessWidget {
+  final String imageUrl;
+  final String fallback;
+
+  const _MiniAvatar({
+    required this.imageUrl,
+    required this.fallback,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final initial =
+        fallback.trim().isNotEmpty ? fallback.trim()[0].toUpperCase() : 'U';
+
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: AppColors.backgroundColor,
+        shape: BoxShape.circle,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: imageUrl.startsWith('http')
+          ? CachedNetworkImage(
+              imageUrl: imageUrl,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => _fallback(initial),
+              errorWidget: (_, __, ___) => _fallback(initial),
+            )
+          : _fallback(initial),
+    );
+  }
+
+  Widget _fallback(String initial) {
+    return Center(
+      child: Text(
+        initial,
+        style: TextStyle(
+          color: AppColors.text,
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+}
+
+class _SheetMessage extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  const _SheetMessage({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: AppColors.textHint,
+              size: 46,
+            ),
+            const SizedBox(height: 14),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.text,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+              ),
+            ),
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: onAction,
+                child: Text(actionLabel!),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+Map<String, dynamic> _asMap(dynamic value) {
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) return Map<String, dynamic>.from(value);
+  return {};
+}
+
+int _readInt(dynamic value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? 0;
+
+  return 0;
 }

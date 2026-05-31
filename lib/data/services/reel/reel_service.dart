@@ -10,9 +10,9 @@ class ReelService {
       final response = await _api.get('/api/reels', queryParameters: {
         'page': page,
       });
-      return response.data is List ? response.data : [];
+      return _readList(response.data);
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to get reels';
+      throw _readErrorMessage(e, 'Failed to get reels');
     }
   }
 
@@ -20,9 +20,9 @@ class ReelService {
   Future<Map<String, dynamic>> createReel(Map<String, dynamic> data) async {
     try {
       final response = await _api.post('/api/reels', data: data);
-      return response.data;
+      return _readMap(response.data);
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to create reel';
+      throw _readErrorMessage(e, 'Failed to create reel');
     }
   }
 
@@ -30,9 +30,9 @@ class ReelService {
   Future<Map<String, dynamic>> likeReel(String reelId) async {
     try {
       final response = await _api.post('/api/reels/$reelId/like');
-      return response.data;
+      return _readMap(response.data);
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to like reel';
+      throw _readErrorMessage(e, 'Failed to like reel');
     }
   }
 
@@ -40,9 +40,9 @@ class ReelService {
   Future<Map<String, dynamic>> unlikeReel(String reelId) async {
     try {
       final response = await _api.delete('/api/reels/$reelId/like');
-      return response.data;
+      return _readMap(response.data);
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to unlike reel';
+      throw _readErrorMessage(e, 'Failed to unlike reel');
     }
   }
 
@@ -50,9 +50,9 @@ class ReelService {
   Future<Map<String, dynamic>> shareReel(String reelId) async {
     try {
       final response = await _api.post('/api/reels/$reelId/share');
-      return response.data;
+      return _readMap(response.data);
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to share reel';
+      throw _readErrorMessage(e, 'Failed to share reel');
     }
   }
 
@@ -63,9 +63,9 @@ class ReelService {
         '/api/reels/$reelId/comments',
         queryParameters: {'page': page},
       );
-      return response.data is List ? response.data : [];
+      return _readList(response.data);
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to get comments';
+      throw _readErrorMessage(e, 'Failed to get comments');
     }
   }
 
@@ -79,9 +79,46 @@ class ReelService {
         '/api/reels/$reelId/comments',
         data: data,
       );
-      return response.data;
+      return _readMap(response.data);
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to add comment';
+      throw _readErrorMessage(e, 'Failed to add comment');
     }
+  }
+
+  List<dynamic> _readList(dynamic data) {
+    if (data is List) return data;
+
+    if (data is Map) {
+      for (final key in ['data', 'reels', 'comments', 'items', 'results']) {
+        final value = data[key];
+        if (value is List) return value;
+        if (value is Map) {
+          final nested = _readList(value);
+          if (nested.isNotEmpty) return nested;
+        }
+      }
+    }
+
+    return [];
+  }
+
+  Map<String, dynamic> _readMap(dynamic data) {
+    if (data is Map<String, dynamic>) return data;
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {};
+  }
+
+  String _readErrorMessage(DioException error, String fallback) {
+    final data = error.response?.data;
+
+    if (data is Map && data['message'] != null) {
+      return data['message'].toString();
+    }
+
+    if (data is String && data.trim().isNotEmpty) {
+      return data;
+    }
+
+    return fallback;
   }
 }

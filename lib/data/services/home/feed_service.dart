@@ -175,6 +175,31 @@ class FeedService {
     }
   }
 
+  Future<FeedPost> updatePost({
+    required int postId,
+    required String content,
+  }) async {
+    try {
+      final response = await _api.put(
+        '/api/feed/posts/$postId',
+        data: {'content': content},
+      );
+
+      if (response.data is Map<String, dynamic>) {
+        return FeedPost.fromJson(response.data);
+      }
+
+      if (response.data is Map) {
+        return FeedPost.fromJson(Map<String, dynamic>.from(response.data));
+      }
+
+      throw 'Invalid update response';
+    } on DioException catch (e) {
+      debugPrint('Update post error: ${e.response?.data}');
+      throw e.response?.data['message'] ?? 'Failed to update post';
+    }
+  }
+
   // Get user media (for profile gallery)
   Future<UserMediaResponse> getUserMedia({
     required int userId,

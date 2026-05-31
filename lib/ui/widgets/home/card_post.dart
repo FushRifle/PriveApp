@@ -532,17 +532,14 @@ class _CardPostState extends State<CardPost> {
             ),
           );
         },
-        child: Hero(
-          tag: 'post_image_${widget.post.id}',
-          child: CachedNetworkImage(
-            imageUrl: imageAttachment.url,
-            fit: BoxFit.cover,
-            width: double.infinity,
-            height: double.infinity,
-            errorWidget: (_, __, ___) => Container(
-              color: AppColors.grey.shade200,
-              child: const Icon(Icons.broken_image, size: 40),
-            ),
+        child: CachedNetworkImage(
+          imageUrl: imageAttachment.url,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+          errorWidget: (_, __, ___) => Container(
+            color: AppColors.grey.shade200,
+            child: const Icon(Icons.broken_image, size: 40),
           ),
         ),
       );

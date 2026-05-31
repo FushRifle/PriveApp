@@ -111,6 +111,158 @@ class _CardPostState extends State<CardPost> {
     );
   }
 
+  void _showPostOptions() {
+    HapticFeedback.lightImpact();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.transparent,
+      builder: (_) {
+        return _PostOptionsSheet(
+          canEdit: !_hasMedia,
+          onEdit: () {
+            Navigator.pop(context);
+            _showEditDialog();
+          },
+          onDelete: () {
+            Navigator.pop(context);
+            _confirmDelete();
+          },
+          onRepost: () {
+            Navigator.pop(context);
+            _showComingSoon('Repost coming soon');
+          },
+          onShare: () {
+            Navigator.pop(context);
+            _showComingSoon('Share coming soon');
+          },
+          onReport: () {
+            Navigator.pop(context);
+            _showComingSoon('Report submitted');
+          },
+        );
+      },
+    );
+  }
+
+  void _confirmDelete() {
+    showDialog(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          backgroundColor: AppColors.cardColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Text(
+            'Delete Post',
+            style: TextStyle(color: AppColors.text),
+          ),
+          content: Text(
+            'Are you sure you want to delete this post? This action cannot be undone.',
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: AppColors.greyColor,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                context.read<FeedBloc>().add(
+                      DeleteFeedPost(postId: widget.post.id),
+                    );
+                _showComingSoon('Post deleted');
+              },
+              child: Text(
+                'Delete',
+                style: TextStyle(
+                  color: AppColors.redColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showEditDialog() {
+    final controller = TextEditingController(text: widget.post.content);
+
+    showDialog(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          backgroundColor: AppColors.cardColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Text(
+            'Edit Post',
+            style: TextStyle(color: AppColors.text),
+          ),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            minLines: 3,
+            maxLines: 8,
+            maxLength: 2200,
+            style: TextStyle(color: AppColors.text),
+            decoration: InputDecoration(
+              hintText: 'Update your post...',
+              hintStyle: TextStyle(color: AppColors.textHint),
+              filled: true,
+              fillColor: AppColors.backgroundColor,
+              border: const OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: AppColors.greyColor,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                final content = controller.text.trim();
+
+                if (content.isEmpty) return;
+
+                Navigator.pop(context);
+                context.read<FeedBloc>().add(
+                      UpdateFeedPost(
+                        postId: widget.post.id,
+                        content: content,
+                      ),
+                    );
+                _showComingSoon('Post updated');
+              },
+              child: Text(
+                'Save',
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    ).whenComplete(controller.dispose);
+  }
+
   void _showComingSoon(String message) {
     if (!mounted) return;
 
@@ -155,7 +307,7 @@ class _CardPostState extends State<CardPost> {
             children: [
               PostHeader(
                 post: widget.post,
-                onMoreTap: () => _showComingSoon('Post options coming soon'),
+                onMoreTap: _showPostOptions,
               ),
               if (_hasMedia)
                 PostMedia(
@@ -181,6 +333,122 @@ class _CardPostState extends State<CardPost> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _PostOptionsSheet extends StatelessWidget {
+  final bool canEdit;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  final VoidCallback onRepost;
+  final VoidCallback onShare;
+  final VoidCallback onReport;
+
+  const _PostOptionsSheet({
+    required this.canEdit,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onRepost,
+    required this.onShare,
+    required this.onReport,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cardColor,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(28),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 12),
+              width: 42,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.greyColor.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            if (canEdit)
+              _PostOptionTile(
+                icon: Icons.edit_outlined,
+                title: 'Edit Post',
+                onTap: onEdit,
+              ),
+            _PostOptionTile(
+              icon: Icons.delete_outline,
+              title: 'Delete Post',
+              color: AppColors.redColor,
+              onTap: onDelete,
+            ),
+            Divider(height: 1, color: AppColors.divider),
+            _PostOptionTile(
+              icon: Icons.repeat_rounded,
+              title: 'Repost',
+              onTap: onRepost,
+            ),
+            _PostOptionTile(
+              icon: Icons.share_outlined,
+              title: 'Share',
+              onTap: onShare,
+            ),
+            Divider(height: 1, color: AppColors.divider),
+            _PostOptionTile(
+              icon: Icons.flag_outlined,
+              title: 'Report Post',
+              color: AppColors.redColor,
+              onTap: onReport,
+            ),
+            const SizedBox(height: 10),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PostOptionTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final Color? color;
+  final VoidCallback onTap;
+
+  const _PostOptionTile({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveColor = color ?? AppColors.text;
+
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: effectiveColor,
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: effectiveColor,
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
     );
   }
 }

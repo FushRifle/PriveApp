@@ -180,14 +180,22 @@ class _ReelsPageState extends State<ReelsPage> {
                             ),
                           ),
                           GestureDetector(
-                            onTap: () {
+                            onTap: () async {
                               HapticFeedback.lightImpact();
-                              Navigator.push(
+                              final reelBloc = context.read<ReelBloc>();
+                              final created = await Navigator.push<bool>(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const CreateReelPage(),
+                                  builder: (_) => BlocProvider.value(
+                                    value: reelBloc,
+                                    child: const CreateReelPage(),
+                                  ),
                                 ),
                               );
+
+                              if (!mounted || created != true) return;
+
+                              reelBloc.add(RefreshReels());
                             },
                             child: Container(
                               width: 40,

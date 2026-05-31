@@ -7,6 +7,7 @@ import 'package:clique/bloc/friends/friends_bloc.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/bloc/insights/insights_bloc.dart';
 import 'package:clique/bloc/match/match_bloc.dart';
+import 'package:clique/bloc/reels/reel_bloc.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
 
 import 'package:clique/ui/pages/auth/demographic_page.dart';
@@ -20,6 +21,7 @@ import 'package:clique/ui/pages/auth/success_page.dart';
 
 import 'package:clique/ui/pages/main/home/create_post_page.dart';
 import 'package:clique/ui/pages/main/home/post_detail_page.dart';
+import 'package:clique/ui/pages/main/reels/create_reel_page.dart';
 
 import 'package:clique/ui/pages/main/match/matches_page.dart';
 
@@ -124,6 +126,14 @@ class AppRouter {
           BlocProvider(
             create: (_) => StoriesBloc(),
             child: const CreateStatusPage(),
+          ),
+        );
+
+      case NamedRoutes.createReelScreen:
+        return _page(
+          BlocProvider(
+            create: (_) => ReelBloc(),
+            child: const CreateReelPage(),
           ),
         );
 

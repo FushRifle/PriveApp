@@ -33,6 +33,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     on<ClearFeedError>(_onClearFeedError);
     on<ResetFeedState>(_onResetFeedState);
     on<DeleteFeedPost>(_onDeleteFeedPost);
+    on<UpdateFeedPost>(_onUpdateFeedPost);
   }
 
   void setAuthToken(String token) {
@@ -597,6 +598,49 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     try {
       await _feedService.deletePost(
         event.postId,
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          posts: originalPosts,
+          generalError: e.toString(),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onUpdateFeedPost(
+    UpdateFeedPost event,
+    Emitter<FeedState> emit,
+  ) async {
+    final originalPosts = state.posts;
+
+    final updatedPosts = state.posts.map((post) {
+      if (post.id != event.postId) return post;
+
+      return post.copyWith(content: event.content);
+    }).toList();
+
+    emit(
+      state.copyWith(
+        posts: updatedPosts,
+        clearGeneralError: true,
+      ),
+    );
+
+    try {
+      final updatedPost = await _feedService.updatePost(
+        postId: event.postId,
+        content: event.content,
+      );
+
+      emit(
+        state.copyWith(
+          posts: state.posts.map((post) {
+            return post.id == event.postId ? updatedPost : post;
+          }).toList(),
+          clearGeneralError: true,
+        ),
       );
     } catch (e) {
       emit(

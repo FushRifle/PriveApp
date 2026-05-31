@@ -65,46 +65,43 @@ class _PostAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final fallback = name.isNotEmpty ? name[0].toUpperCase() : 'U';
 
-    return Hero(
-      tag: 'post_avatar_$name',
-      child: Container(
-        width: 46,
-        height: 46,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: const LinearGradient(
-            colors: [
-              AppColors.primary,
-              AppColors.secondary,
-            ],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withOpacity(0.18),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
+    return Container(
+      width: 46,
+      height: 46,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const LinearGradient(
+          colors: [
+            AppColors.primary,
+            AppColors.secondary,
           ],
         ),
-        padding: const EdgeInsets.all(2),
-        child: ClipOval(
-          child: avatar.isNotEmpty && avatar.startsWith('http')
-              ? CachedNetworkImage(
-                  imageUrl: avatar,
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => _AvatarFallback(text: fallback),
-                  errorWidget: (_, __, ___) => _AvatarFallback(text: fallback),
-                )
-              : avatar.isNotEmpty
-                  ? Image.asset(
-                      avatar,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) {
-                        return _AvatarFallback(text: fallback);
-                      },
-                    )
-                  : _AvatarFallback(text: fallback),
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.18),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(2),
+      child: ClipOval(
+        child: avatar.isNotEmpty && avatar.startsWith('http')
+            ? CachedNetworkImage(
+                imageUrl: avatar,
+                fit: BoxFit.cover,
+                placeholder: (_, __) => _AvatarFallback(text: fallback),
+                errorWidget: (_, __, ___) => _AvatarFallback(text: fallback),
+              )
+            : avatar.isNotEmpty
+                ? Image.asset(
+                    avatar,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) {
+                      return _AvatarFallback(text: fallback);
+                    },
+                  )
+                : _AvatarFallback(text: fallback),
       ),
     );
   }
