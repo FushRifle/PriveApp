@@ -58,6 +58,36 @@ class SendMessage extends ChatEvent {
       [conversationId, receiverId, message, messageType, mediaUrl, replyToId];
 }
 
+class LoadCliqueBotMessages extends ChatEvent {
+  final int conversationId;
+  const LoadCliqueBotMessages({required this.conversationId});
+  @override
+  List<Object?> get props => [conversationId];
+}
+
+class SendCliqueBotMessage extends ChatEvent {
+  final int conversationId;
+  final String message;
+  final int? replyToId;
+  final String? replyToMessage;
+  final String? replyToSender;
+  const SendCliqueBotMessage({
+    required this.conversationId,
+    required this.message,
+    this.replyToId,
+    this.replyToMessage,
+    this.replyToSender,
+  });
+  @override
+  List<Object?> get props => [
+        conversationId,
+        message,
+        replyToId,
+        replyToMessage,
+        replyToSender,
+      ];
+}
+
 class DeleteMessage extends ChatEvent {
   final int messageId;
   const DeleteMessage({required this.messageId});

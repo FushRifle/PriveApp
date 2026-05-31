@@ -181,12 +181,12 @@ class _InboxPageState extends State<InboxPage> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            const Text(
+            Text(
               "Chats",
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: AppColors.black,
+                color: AppColors.text,
               ),
             ),
             const Spacer(),

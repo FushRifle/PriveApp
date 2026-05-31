@@ -18,6 +18,7 @@ class LocalCacheService {
       await Future.wait([
         Hive.openBox<dynamic>(HiveCacheKeys.feedBox),
         Hive.openBox<dynamic>(HiveCacheKeys.metaBox),
+        Hive.openBox<dynamic>(HiveCacheKeys.chatBox),
       ]);
       _initialized = true;
     } catch (e, stackTrace) {
@@ -39,6 +40,7 @@ class LocalCacheService {
     await Future.wait([
       box(HiveCacheKeys.feedBox)?.clear() ?? Future.value(0),
       box(HiveCacheKeys.metaBox)?.clear() ?? Future.value(0),
+      box(HiveCacheKeys.chatBox)?.clear() ?? Future.value(0),
     ]);
   }
 }

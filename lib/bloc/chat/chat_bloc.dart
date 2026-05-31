@@ -21,6 +21,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<LoadConversationInfo>(_onLoadConversationInfo);
     on<LoadMessages>(_onLoadMessages);
     on<SendMessage>(_onSendMessage);
+    on<LoadCliqueBotMessages>(_onLoadCliqueBotMessages);
+    on<SendCliqueBotMessage>(_onSendCliqueBotMessage);
     on<DeleteMessage>(_onDeleteMessage);
     on<ReportMessage>(_onReportMessage);
     on<MarkMessagesAsRead>(_onMarkMessagesAsRead);
@@ -390,6 +392,73 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     } finally {
       _inFlightMessageKeys.remove(sendKey);
     }
+  }
+
+  Future<void> _onLoadCliqueBotMessages(
+    LoadCliqueBotMessages event,
+    Emitter<ChatState> emit,
+  ) async {
+    await _loadCurrentUserId();
+    if (_currentUserId == null) return;
+
+    if (state.activeConversationId != event.conversationId) {
+      emit(state.copyWith(
+        messages: const [],
+        messagesStatus: ChatStatus.loading,
+        currentPage: 1,
+        hasMoreMessages: false,
+        activeConversationId: event.conversationId,
+      ));
+    }
+
+    final data = await _chatService.ensureCliqueBotWelcome(
+      conversationId: event.conversationId,
+      currentUserId: _currentUserId!,
+    );
+    final messages =
+        data.map((json) => _ownMessage(MessageModel.fromJson(json))).toList();
+    final merged = _mergeMessages(messages);
+
+    _messageCache[event.conversationId] = merged;
+    emit(state.copyWith(
+      messages: merged,
+      currentPage: 1,
+      hasMoreMessages: false,
+      messagesStatus: ChatStatus.success,
+      activeConversationId: event.conversationId,
+      clearError: true,
+    ));
+  }
+
+  Future<void> _onSendCliqueBotMessage(
+    SendCliqueBotMessage event,
+    Emitter<ChatState> emit,
+  ) async {
+    await _loadCurrentUserId();
+    if (_currentUserId == null) {
+      emit(state.copyWith(error: 'You must be signed in to send messages'));
+      return;
+    }
+
+    final data = await _chatService.saveCliqueBotExchange(
+      conversationId: event.conversationId,
+      currentUserId: _currentUserId!,
+      message: event.message.trim(),
+      replyToId: event.replyToId,
+      replyToMessage: event.replyToMessage,
+      replyToSender: event.replyToSender,
+    );
+    final messages =
+        data.map((json) => _ownMessage(MessageModel.fromJson(json))).toList();
+    final merged = _mergeMessages(messages);
+
+    _messageCache[event.conversationId] = merged;
+    emit(state.copyWith(
+      messages: merged,
+      messagesStatus: ChatStatus.success,
+      activeConversationId: event.conversationId,
+      clearError: true,
+    ));
   }
 
   Future<void> _onRetryPendingMessages(

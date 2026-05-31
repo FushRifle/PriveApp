@@ -1,4 +1,6 @@
 import 'package:dio/dio.dart';
+import 'package:clique/core/local_cache/hive_cache_keys.dart';
+import 'package:clique/core/local_cache/local_cache_service.dart';
 import '../../../core/api_service.dart';
 
 class ChatService {
@@ -148,6 +150,113 @@ class ChatService {
     } on DioException catch (e) {
       throw _handleError(e);
     }
+  }
+
+  Future<List<Map<String, dynamic>>> getCliqueBotMessages(
+    int conversationId,
+  ) async {
+    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
+    final raw = box?.get(_cliqueBotKey(conversationId));
+    if (raw is! List) return [];
+
+    return raw
+        .whereType<Map>()
+        .map((message) => Map<String, dynamic>.from(message))
+        .toList();
+  }
+
+  Future<List<Map<String, dynamic>>> ensureCliqueBotWelcome({
+    required int conversationId,
+    required int currentUserId,
+  }) async {
+    final saved = await getCliqueBotMessages(conversationId);
+    if (saved.isNotEmpty) return saved;
+
+    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
+    final now = DateTime.now();
+    final welcome = {
+      'id': now.microsecondsSinceEpoch,
+      'conversationId': conversationId,
+      'senderId': 0,
+      'receiverId': currentUserId,
+      'message': 'Welcome to Clique. I am always here when you need a quick chat.',
+      'messageType': 'text',
+      'isRead': true,
+      'isOwn': false,
+      'createdAt': now.toIso8601String(),
+    };
+    final updated = [welcome];
+    await box?.put(_cliqueBotKey(conversationId), updated);
+    return updated;
+  }
+
+  Future<List<Map<String, dynamic>>> saveCliqueBotExchange({
+    required int conversationId,
+    required int currentUserId,
+    required String message,
+    int? replyToId,
+    String? replyToMessage,
+    String? replyToSender,
+  }) async {
+    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
+    final saved = await getCliqueBotMessages(conversationId);
+    final now = DateTime.now();
+    final userMessage = {
+      'id': now.microsecondsSinceEpoch,
+      'conversationId': conversationId,
+      'senderId': currentUserId,
+      'receiverId': 0,
+      'message': message,
+      'messageType': 'text',
+      'replyToId': replyToId,
+      'replyToMessage': replyToMessage,
+      'replyToSender': replyToSender,
+      'isRead': true,
+      'isOwn': true,
+      'createdAt': now.toIso8601String(),
+    };
+    final botMessage = {
+      'id': now.microsecondsSinceEpoch + 1,
+      'conversationId': conversationId,
+      'senderId': 0,
+      'receiverId': currentUserId,
+      'message': _buildCliqueReply(message),
+      'messageType': 'text',
+      'isRead': true,
+      'isOwn': false,
+      'createdAt': now.add(const Duration(milliseconds: 450)).toIso8601String(),
+    };
+    final updated = [
+      userMessage,
+      botMessage,
+      ...saved,
+    ];
+
+    await box?.put(_cliqueBotKey(conversationId), updated);
+    return updated;
+  }
+
+  String _cliqueBotKey(int conversationId) {
+    return '${HiveCacheKeys.cliqueBotMessagesPrefix}_$conversationId';
+  }
+
+  String _buildCliqueReply(String input) {
+    final text = input.trim().toLowerCase();
+    if (text.contains('hello') ||
+        text.contains('hi') ||
+        text.contains('hey')) {
+      return 'Hey, I am Clique. I can keep you company here and help you get started.';
+    }
+    if (text.contains('match') || text.contains('profile')) {
+      return 'I can help you tune your profile. Try adding a clear photo and a short prompt that makes replies easy.';
+    }
+    if (text.contains('help') || text.contains('support')) {
+      return 'I am here. Tell me what is stuck and I will point you in the right direction.';
+    }
+    if (text.contains('thanks') || text.contains('thank you')) {
+      return 'Anytime. I will keep this chat saved so you can come back to it.';
+    }
+    return 'Got it. I saved this here and I am listening.';
   }
 
   Future<void> deleteMessage(int messageId) async {

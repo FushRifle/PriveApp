@@ -52,6 +52,9 @@ class _ChatPageState extends State<ChatPage>
   @override
   bool get wantKeepAlive => true;
 
+  bool get _isCliqueBot =>
+      widget.userId == 0 || widget.userName.toLowerCase() == 'clique';
+
   @override
   void initState() {
     super.initState();
@@ -78,8 +81,12 @@ class _ChatPageState extends State<ChatPage>
 
   void _setupScrollListener() {
     _scrollController.addListener(() {
-      if (_scrollController.position.pixels <= 200 &&
+      final position = _scrollController.position;
+      final isNearTop =
+          position.maxScrollExtent - position.pixels <= 200;
+      if (isNearTop &&
           !_isLoadingMore &&
+          !_isCliqueBot &&
           context.read<ChatBloc>().state.hasMoreMessages) {
         _loadMoreMessages();
       }
@@ -121,6 +128,13 @@ class _ChatPageState extends State<ChatPage>
 
   void _loadInitialData() {
     final chatBloc = context.read<ChatBloc>();
+    if (_isCliqueBot) {
+      chatBloc.add(LoadCliqueBotMessages(
+        conversationId: widget.conversationId,
+      ));
+      return;
+    }
+
     chatBloc.add(LoadMessages(
       conversationId: widget.conversationId,
       page: 1,
@@ -132,8 +146,9 @@ class _ChatPageState extends State<ChatPage>
   }
 
   void _startMessageSync() {
+    if (_isCliqueBot) return;
     _messageSyncTimer?.cancel();
-    _messageSyncTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+    _messageSyncTimer = Timer.periodic(const Duration(seconds: 8), (_) {
       if (!mounted) return;
       context.read<ChatBloc>().add(LoadMessages(
             conversationId: widget.conversationId,
@@ -159,6 +174,25 @@ class _ChatPageState extends State<ChatPage>
 
     _sendTyping(false);
     _isSending = true;
+
+    if (_isCliqueBot) {
+      context.read<ChatBloc>().add(
+            SendCliqueBotMessage(
+              conversationId: widget.conversationId,
+              message: text.trim(),
+              replyToId: _replyingTo?.id,
+              replyToMessage: _replyingTo?.message,
+              replyToSender:
+                  _replyingTo?.isOwn == true ? 'You' : widget.userName,
+            ),
+          );
+      setState(() {
+        _replyingTo = null;
+      });
+      _isSending = false;
+      _scrollToBottom();
+      return;
+    }
 
     context.read<ChatBloc>().add(
           SendMessage(
@@ -193,8 +227,8 @@ class _ChatPageState extends State<ChatPage>
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients &&
-          _scrollController.position.maxScrollExtent > 0) {
-        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+          _scrollController.position.maxScrollExtent >= 0) {
+        _scrollController.jumpTo(0);
       }
     });
   }
@@ -274,7 +308,7 @@ class _ChatPageState extends State<ChatPage>
         child: BlocBuilder<ChatBloc, ChatState>(
           builder: (context, state) {
             final messages = state.activeConversationId == widget.conversationId
-                ? List<MessageModel>.from(state.messages).reversed.toList()
+                ? state.messages
                 : const <MessageModel>[];
             final isLoading =
                 state.messagesStatus == ChatStatus.loading && messages.isEmpty;
@@ -292,7 +326,10 @@ class _ChatPageState extends State<ChatPage>
                             ? _buildEmptyState()
                             : ListView.builder(
                                 controller: _scrollController,
-                                reverse: false,
+                                reverse: true,
+                                cacheExtent: 900,
+                                addAutomaticKeepAlives: false,
+                                addRepaintBoundaries: true,
                                 keyboardDismissBehavior:
                                     ScrollViewKeyboardDismissBehavior.onDrag,
                                 padding: const EdgeInsets.symmetric(
