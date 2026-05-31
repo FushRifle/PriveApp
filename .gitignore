@@ -13,6 +13,7 @@
 migrate_working_dir/
 *.dart_tool
 *.cursor
+*.plist
 
 # IntelliJ related
 *.iml
@@ -23,6 +24,26 @@ migrate_working_dir/
 # env
 *.env
 *.env.local
+.env
+.env.*
+!.env.example
+!.env.sample
+requirements.env
+
+# Secrets and local config
+android/local.properties
+android/key.properties
+android/**/key.properties
+android/google-services.json
+android/**/google-services.json
+android/**/*.jks
+android/**/*.keystore
+ios/Runner/GoogleService-Info.plist
+**/firebase_options.dart
+**/api_config.dart
+*.pem
+*.p12
+*.mobileprovision
 
 # Flutter/Dart/Pub related
 **/doc/api/
