@@ -179,7 +179,8 @@ class ChatService {
       'conversationId': conversationId,
       'senderId': 0,
       'receiverId': currentUserId,
-      'message': 'Welcome to Clique. I am always here when you need a quick chat.',
+      'message':
+          'Welcome to Clique. I am always here when you need a quick chat.',
       'messageType': 'text',
       'isRead': true,
       'isOwn': false,
@@ -242,9 +243,7 @@ class ChatService {
 
   String _buildCliqueReply(String input) {
     final text = input.trim().toLowerCase();
-    if (text.contains('hello') ||
-        text.contains('hi') ||
-        text.contains('hey')) {
+    if (text.contains('hello') || text.contains('hi') || text.contains('hey')) {
       return 'Hey, I am Clique. I can keep you company here and help you get started.';
     }
     if (text.contains('match') || text.contains('profile')) {

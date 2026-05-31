@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import 'package:cloudinary_flutter/cloudinary_context.dart';
 import 'package:cloudinary_url_gen/cloudinary.dart';
@@ -19,6 +20,7 @@ import 'package:clique/bloc/profile/profile_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/core/local_cache/local_cache_service.dart';
 import 'package:clique/data/services/notification/push_notification_service.dart';
+import 'package:clique/firebase_options.dart';
 
 import 'package:clique/core/router/app_router.dart';
 
@@ -55,11 +57,25 @@ Future<void> _initializeApp() async {
     cloudName: 'dug6225go',
   );
 
+  await _initializeFirebase();
+
   await LocalCacheService.initialize();
 
   await PushNotificationService.instance.initialize();
 
   FlutterError.onError = FlutterError.presentError;
+}
+
+Future<void> _initializeFirebase() async {
+  if (kIsWeb || Firebase.apps.isNotEmpty) return;
+
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (error) {
+    debugPrint('Firebase initialization skipped: $error');
+  }
 }
 
 class MyApp extends ConsumerStatefulWidget {

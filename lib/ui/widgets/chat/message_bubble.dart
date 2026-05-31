@@ -29,64 +29,73 @@ class MessageBubble extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final otherBubbleColor = isDark ? AppColors.darkCard : AppColors.lightCard;
     final otherTextColor = isDark ? AppColors.darkText : AppColors.lightText;
+    final borderRadius = BorderRadius.only(
+      topLeft: const Radius.circular(18),
+      topRight: const Radius.circular(18),
+      bottomLeft: Radius.circular(isMe ? 18 : 6),
+      bottomRight: Radius.circular(isMe ? 6 : 18),
+    );
 
-    return Dismissible(
-      key: Key(
-          'message_${message.id}_${message.createdAt.millisecondsSinceEpoch}'),
-      direction:
-          isMe ? DismissDirection.endToStart : DismissDirection.startToEnd,
-      background: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(20),
+    return RepaintBoundary(
+      child: Dismissible(
+        key: ValueKey(
+            'message_${message.id}_${message.createdAt.millisecondsSinceEpoch}'),
+        direction:
+            isMe ? DismissDirection.endToStart : DismissDirection.startToEnd,
+        background: Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.1),
+            borderRadius: borderRadius,
+          ),
+          alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+          padding: EdgeInsets.only(right: isMe ? 20 : 0, left: !isMe ? 20 : 0),
+          child: const Icon(Icons.reply, color: AppColors.primary, size: 24),
         ),
-        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-        padding: EdgeInsets.only(right: isMe ? 20 : 0, left: !isMe ? 20 : 0),
-        child: const Icon(Icons.reply, color: AppColors.primary, size: 24),
-      ),
-      confirmDismiss: (_) async {
-        onReply?.call();
-        return false;
-      },
-      child: Padding(
-        padding: EdgeInsets.only(
-            bottom: 8, top: 5, left: isMe ? 0 : 2, right: isMe ? 2 : 0),
-        child: Row(
-          mainAxisAlignment:
-              isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (!isMe)
-              Padding(
-                padding: const EdgeInsets.only(right: 10),
-                child: CircleAvatar(
-                  radius: 18,
-                  backgroundImage: userAvatar.startsWith('http')
-                      ? CachedNetworkImageProvider(userAvatar)
-                      : null,
-                  child: !userAvatar.startsWith('http')
-                      ? const Icon(Icons.person, size: 18)
-                      : null,
-                ),
-              ),
-            Flexible(
-              child: Material(
-                color: AppColors.transparent,
-                child: InkWell(
+        confirmDismiss: (_) async {
+          onReply?.call();
+          return false;
+        },
+        child: Padding(
+          padding: EdgeInsets.only(
+              bottom: 8, top: 4, left: isMe ? 42 : 2, right: isMe ? 2 : 42),
+          child: Row(
+            mainAxisAlignment:
+                isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (!isMe) ...[
+                _Avatar(userAvatar: userAvatar),
+                const SizedBox(width: 8),
+              ],
+              Flexible(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onLongPress: () => _showMessageOptions(context),
-                  borderRadius: BorderRadius.circular(20),
                   child: Container(
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(context).size.width * 0.72,
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                     decoration: BoxDecoration(
                       color: isMe ? chatColor : otherBubbleColor,
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: borderRadius,
+                      border: isMe
+                          ? null
+                          : Border.all(
+                              color: isDark
+                                  ? AppColors.darkCardBorder
+                                  : AppColors.lightCardBorder,
+                            ),
+                      boxShadow: [
+                        BoxShadow(
+                          color:
+                              AppColors.black.withOpacity(isDark ? 0.16 : 0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (message.replyToId != null) _buildReplyPreview(isMe),
@@ -98,8 +107,8 @@ class MessageBubble extends StatelessWidget {
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -236,8 +245,10 @@ class MessageBubble extends StatelessWidget {
       style: TextStyle(
         color: isMe ? AppColors.white : otherTextColor,
         fontSize: 14,
-        height: 1.4,
+        height: 1.35,
       ),
+      softWrap: true,
+      textWidthBasis: TextWidthBasis.longestLine,
     );
   }
 
@@ -497,5 +508,27 @@ class MessageBubble extends StatelessWidget {
     if (diff.inHours < 24) return '${diff.inHours}h';
     if (diff.inDays < 7) return '${diff.inDays}d';
     return '${diff.inDays ~/ 7}w';
+  }
+}
+
+class _Avatar extends StatelessWidget {
+  final String userAvatar;
+
+  const _Avatar({required this.userAvatar});
+
+  @override
+  Widget build(BuildContext context) {
+    if (userAvatar.startsWith('http')) {
+      return CircleAvatar(
+        radius: 16,
+        backgroundImage: CachedNetworkImageProvider(userAvatar),
+      );
+    }
+
+    return CircleAvatar(
+      radius: 16,
+      backgroundColor: AppColors.primary.withOpacity(0.1),
+      child: const Icon(Icons.person, size: 16, color: AppColors.primary),
+    );
   }
 }

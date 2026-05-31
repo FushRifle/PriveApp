@@ -82,8 +82,7 @@ class _ChatPageState extends State<ChatPage>
   void _setupScrollListener() {
     _scrollController.addListener(() {
       final position = _scrollController.position;
-      final isNearTop =
-          position.maxScrollExtent - position.pixels <= 200;
+      final isNearTop = position.maxScrollExtent - position.pixels <= 200;
       if (isNearTop &&
           !_isLoadingMore &&
           !_isCliqueBot &&
@@ -94,6 +93,7 @@ class _ChatPageState extends State<ChatPage>
   }
 
   void _sendTyping(bool typing) {
+    if (_isCliqueBot) return;
     if (_isTyping == typing) return;
 
     _isTyping = typing;
@@ -467,6 +467,10 @@ class _ChatPageState extends State<ChatPage>
                         .copyWith(fontWeight: FontWeight.w600, fontSize: 16)),
                 BlocBuilder<ChatBloc, ChatState>(
                   builder: (context, state) {
+                    if (_isCliqueBot) {
+                      return Text('Always here',
+                          style: AppTheme.greyTextStyle.copyWith(fontSize: 11));
+                    }
                     final conv = state.conversations.firstWhere(
                       (c) => c.userId == widget.userId,
                       orElse: () => ConversationModel(
@@ -534,6 +538,20 @@ class _ChatPageState extends State<ChatPage>
   Widget _buildAvatar() {
     final fallback =
         widget.userName.isNotEmpty ? widget.userName[0].toUpperCase() : 'U';
+    if (_isCliqueBot) {
+      return const CircleAvatar(
+        radius: 18,
+        backgroundColor: AppColors.primary,
+        child: Text(
+          'C',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AppColors.white,
+          ),
+        ),
+      );
+    }
     if (widget.userAvatar.isNotEmpty && widget.userAvatar.startsWith('http')) {
       return CircleAvatar(
           radius: 18,
@@ -558,11 +576,14 @@ class _ChatPageState extends State<ChatPage>
           Icon(Icons.chat_bubble_outline,
               size: 64, color: AppColors.greyColor.withOpacity(0.5)),
           const SizedBox(height: 16),
-          Text('No messages yet',
+          Text(_isCliqueBot ? 'Say hi to Clique' : 'No messages yet',
               style: AppTheme.greyTextStyle
                   .copyWith(fontSize: 16, fontWeight: FontWeight.w500)),
           const SizedBox(height: 8),
-          Text('Start the conversation',
+          Text(
+              _isCliqueBot
+                  ? 'Your chat is saved on this device'
+                  : 'Start the conversation',
               style: AppTheme.greyTextStyle.copyWith(fontSize: 14)),
         ],
       ),
@@ -570,6 +591,7 @@ class _ChatPageState extends State<ChatPage>
   }
 
   bool _buildTypingIndicator(ChatState state) {
+    if (_isCliqueBot) return false;
     final conv = state.conversations.firstWhere(
       (c) => c.userId == widget.userId,
       orElse: () => ConversationModel(
