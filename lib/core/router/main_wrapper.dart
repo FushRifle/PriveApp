@@ -64,6 +64,10 @@ class _MainWrapperState extends State<MainWrapper>
 
     _loadedInitialData = true;
 
+    if (context.read<UserBloc>().state.currentUser != null) {
+      return;
+    }
+
     context.read<UserBloc>().add(
           LoadCurrentUser(),
         );

@@ -8,7 +8,6 @@ class AuthInterceptor extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
-    // Don't add token for auth endpoints
     if (options.path.contains('/auth/')) {
       return handler.next(options);
     }

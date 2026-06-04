@@ -22,6 +22,11 @@ Reviewed high-risk shared paths for performance, stability, and state consistenc
 - Added in-flight guards for reels initial load, refresh, and pagination.
 - Added request sequencing for community list/detail loads to prevent stale responses from overwriting newer UI state.
 - Switched community remote images to `CachedNetworkImageProvider`.
+- Serialized app API calls through `ApiService` so feature requests run one at a time instead of bursting into backend rate limits.
+- Routed auth backend sync through `ApiService` instead of a separate Dio client.
+- Added 429-aware retry delay handling that honors `Retry-After` when the backend sends it.
+- Deferred duplicate current-user loading when the authenticated user was already bootstrapped.
+- Corrected the backend auth/onboarding migrations to align `users` and `profiles` with the Supabase-backed repositories used during signup.
 
 ## Current Architecture Risks
 
@@ -32,6 +37,8 @@ Reviewed high-risk shared paths for performance, stability, and state consistenc
 - Backend and frontend pagination response shapes are not fully standardized across modules. Some endpoints return lists while others return `{data, page}`.
 - Cache invalidation is now improved for feed/reels, but should be centralized by feature namespace so future modules do not forget it.
 - Some optimistic updates roll back entire lists. Per-entity rollback is safer when multiple actions happen quickly.
+- Supabase SDK auth calls still happen outside the app API queue because they target Supabase directly. Backend app API sync now uses the queue.
+- The backend migrations must be applied in the deployed database before signup profile sync can succeed against older Clerk-shaped `users` tables.
 
 ## Recommended Next Pass
 

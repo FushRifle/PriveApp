@@ -2,23 +2,11 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:clique/app/configs/api_config.dart';
+import 'package:clique/core/clients/api_service.dart';
 import 'package:clique/core/clients/supabase_client.dart';
 
 class AuthService {
-  final Dio _dio = Dio(
-    BaseOptions(
-      baseUrl: ApiConfig.baseUrl,
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
-      sendTimeout: const Duration(seconds: 30),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      validateStatus: (status) => status != null && status < 600,
-    ),
-  );
+  final ApiService _api = ApiService();
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage(
     aOptions: AndroidOptions(
@@ -60,7 +48,7 @@ class AuthService {
 
       // Backend sync (optional, don't fail if backend is down)
       try {
-        await _dio.post(
+        await _api.post(
           '/api/auth/signin',
           data: {
             'email': normalizedEmail,
@@ -138,7 +126,7 @@ class AuthService {
 
       // Backend sync creates/correlates the local app user row by Supabase ID.
       try {
-        final syncResponse = await _dio.post(
+        await _api.post(
           '/api/auth/signup',
           data: {
             'email': normalizedEmail,
@@ -148,17 +136,15 @@ class AuthService {
             'supabaseUserId': user.id,
           },
         );
-
-        final statusCode = syncResponse.statusCode ?? 0;
-        if (statusCode < 200 || statusCode >= 300) {
-          return AuthResult(
-            success: false,
-            error: _readBackendError(
-              syncResponse.data,
-              'Account created, but profile setup failed. Please try signing in after verifying your email.',
-            ),
-          );
-        }
+      } on DioException catch (e) {
+        debugPrint('Backend sync failed: $e');
+        return AuthResult(
+          success: false,
+          error: _readBackendError(
+            e.response?.data,
+            'Account created, but profile setup failed. Please try signing in after verifying your email.',
+          ),
+        );
       } catch (e) {
         debugPrint('Backend sync failed: $e');
         return AuthResult(

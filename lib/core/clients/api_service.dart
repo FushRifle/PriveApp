@@ -24,6 +24,8 @@ class ApiService {
 
   final Map<String, DateTime> _cacheTimestamps = {};
 
+  Future<void> _requestQueue = Future.value();
+
   static const Duration _cacheDuration = Duration(seconds: 60);
   static const int _maxCacheEntries = 120;
 
@@ -130,10 +132,6 @@ class ApiService {
   }
 
   CancelToken _createCancelToken(String key) {
-    if (_cancelTokens.containsKey(key)) {
-      _cancelTokens[key]?.cancel();
-    }
-
     final token = CancelToken();
 
     _cancelTokens[key] = token;
@@ -156,33 +154,56 @@ class ApiService {
   ) async {
     int retries = 0;
 
-    while (retries < 3) {
+    while (retries <= 3) {
       try {
         return await request();
       } on DioException catch (e) {
-        retries++;
-
         if (CancelToken.isCancel(e)) {
           rethrow;
         }
 
         final status = e.response?.statusCode ?? 0;
 
-        if (status >= 400 && status < 500 && status != 401) {
+        final shouldRetry = status == 429 || status >= 500 || status == 0;
+
+        if (!shouldRetry || retries >= 3) {
           rethrow;
         }
 
-        if (retries >= 3) {
-          rethrow;
-        }
+        retries++;
 
-        await Future.delayed(
-          Duration(milliseconds: 400 * retries),
-        );
+        await Future.delayed(_retryDelay(e, retries));
       }
     }
 
     throw Exception('Request failed');
+  }
+
+  Duration _retryDelay(DioException error, int retryCount) {
+    final retryAfter = error.response?.headers.value('retry-after');
+    final retryAfterSeconds = int.tryParse(retryAfter ?? '');
+
+    if (retryAfterSeconds != null && retryAfterSeconds > 0) {
+      return Duration(seconds: retryAfterSeconds);
+    }
+
+    return Duration(milliseconds: 600 * retryCount);
+  }
+
+  Future<T> _enqueueRequest<T>(Future<T> Function() request) async {
+    final previous = _requestQueue;
+    final completer = Completer<void>();
+
+    _requestQueue = completer.future;
+
+    try {
+      await previous.catchError((_) {});
+      return await request();
+    } finally {
+      if (!completer.isCompleted) {
+        completer.complete();
+      }
+    }
   }
 
   // =========================================================
@@ -216,11 +237,15 @@ class ApiService {
       return await _pendingRequests[key]!;
     }
 
+    final token = cancelToken ?? _createCancelToken(key);
+
     final future = _withRetry(
-      () => dio.get(
-        path,
-        queryParameters: queryParameters,
-        cancelToken: cancelToken ?? _createCancelToken(key),
+      () => _enqueueRequest(
+        () => dio.get(
+          path,
+          queryParameters: queryParameters,
+          cancelToken: token,
+        ),
       ),
     );
 
@@ -259,11 +284,15 @@ class ApiService {
       data: data,
     );
 
+    final token = cancelToken ?? _createCancelToken(key);
+
     return _withRetry(
-      () => dio.post(
-        path,
-        data: data,
-        cancelToken: cancelToken ?? _createCancelToken(key),
+      () => _enqueueRequest(
+        () => dio.post(
+          path,
+          data: data,
+          cancelToken: token,
+        ),
       ),
     ).whenComplete(() => _cancelTokens.remove(key));
   }
@@ -283,11 +312,15 @@ class ApiService {
       data: data,
     );
 
+    final token = cancelToken ?? _createCancelToken(key);
+
     return _withRetry(
-      () => dio.put(
-        path,
-        data: data,
-        cancelToken: cancelToken ?? _createCancelToken(key),
+      () => _enqueueRequest(
+        () => dio.put(
+          path,
+          data: data,
+          cancelToken: token,
+        ),
       ),
     ).whenComplete(() => _cancelTokens.remove(key));
   }
@@ -307,11 +340,15 @@ class ApiService {
       data: data,
     );
 
+    final token = cancelToken ?? _createCancelToken(key);
+
     return _withRetry(
-      () => dio.patch(
-        path,
-        data: data,
-        cancelToken: cancelToken ?? _createCancelToken(key),
+      () => _enqueueRequest(
+        () => dio.patch(
+          path,
+          data: data,
+          cancelToken: token,
+        ),
       ),
     ).whenComplete(() => _cancelTokens.remove(key));
   }
@@ -331,11 +368,15 @@ class ApiService {
       data: data,
     );
 
+    final token = cancelToken ?? _createCancelToken(key);
+
     return _withRetry(
-      () => dio.delete(
-        path,
-        data: data,
-        cancelToken: cancelToken ?? _createCancelToken(key),
+      () => _enqueueRequest(
+        () => dio.delete(
+          path,
+          data: data,
+          cancelToken: token,
+        ),
       ),
     ).whenComplete(() => _cancelTokens.remove(key));
   }
