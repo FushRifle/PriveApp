@@ -57,7 +57,8 @@ class Profile {
       bio: json['bio']?.toString(),
       avatar: json['avatar']?.toString(),
       coverImage: json['coverImage']?.toString() ??
-          json['cover_image']?.toString(), // Added cover image
+          json['cover_image']?.toString() ??
+          json['cover']?.toString(),
       photos: json['photos'] != null ? List<String>.from(json['photos']) : [],
       interests:
           json['interests'] != null ? List<String>.from(json['interests']) : [],
@@ -90,7 +91,7 @@ class Profile {
         if (displayName != null) 'displayName': displayName,
         if (bio != null) 'bio': bio,
         if (avatar != null) 'avatar': avatar,
-        if (coverImage != null) 'coverImage': coverImage, // Added cover image
+        if (coverImage != null) 'coverImage': coverImage,
         'photos': photos,
         'interests': interests,
         'age': age,
@@ -115,7 +116,7 @@ class Profile {
     String? displayName,
     String? bio,
     String? avatar,
-    String? coverImage, // Added cover image
+    String? coverImage,
     List<String>? photos,
     List<String>? interests,
     int? age,
@@ -139,7 +140,7 @@ class Profile {
       displayName: displayName ?? this.displayName,
       bio: bio ?? this.bio,
       avatar: avatar ?? this.avatar,
-      coverImage: coverImage ?? this.coverImage, // Added cover image
+      coverImage: coverImage ?? this.coverImage,
       photos: photos ?? this.photos,
       interests: interests ?? this.interests,
       age: age ?? this.age,

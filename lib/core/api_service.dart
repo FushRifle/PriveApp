@@ -25,6 +25,7 @@ class ApiService {
   final Map<String, DateTime> _cacheTimestamps = {};
 
   static const Duration _cacheDuration = Duration(seconds: 60);
+  static const int _maxCacheEntries = 120;
 
   ApiService._internal() {
     dio = Dio(
@@ -108,9 +109,24 @@ class ApiService {
     return [
       method,
       path,
-      queryParameters.toString(),
-      data.toString(),
+      _stableEncode(queryParameters),
+      _stableEncode(data),
     ].join('_');
+  }
+
+  String _stableEncode(dynamic value) {
+    if (value == null) return '';
+    if (value is Map) {
+      final entries = value.entries.toList()
+        ..sort((a, b) => a.key.toString().compareTo(b.key.toString()));
+      return entries
+          .map((entry) => '${entry.key}:${_stableEncode(entry.value)}')
+          .join(',');
+    }
+    if (value is Iterable) {
+      return value.map(_stableEncode).join(',');
+    }
+    return value.toString();
   }
 
   CancelToken _createCancelToken(String key) {
@@ -196,7 +212,7 @@ class ApiService {
       );
     }
 
-    if (_pendingRequests.containsKey(key)) {
+    if (!forceRefresh && _pendingRequests.containsKey(key)) {
       return await _pendingRequests[key]!;
     }
 
@@ -217,11 +233,14 @@ class ApiService {
         _memoryCache[key] = response.data;
 
         _cacheTimestamps[key] = DateTime.now();
+
+        _trimCache();
       }
 
       return response;
     } finally {
       _pendingRequests.remove(key);
+      _cancelTokens.remove(key);
     }
   }
 
@@ -246,7 +265,7 @@ class ApiService {
         data: data,
         cancelToken: cancelToken ?? _createCancelToken(key),
       ),
-    );
+    ).whenComplete(() => _cancelTokens.remove(key));
   }
 
   // =========================================================
@@ -270,7 +289,7 @@ class ApiService {
         data: data,
         cancelToken: cancelToken ?? _createCancelToken(key),
       ),
-    );
+    ).whenComplete(() => _cancelTokens.remove(key));
   }
 
   // =========================================================
@@ -294,7 +313,7 @@ class ApiService {
         data: data,
         cancelToken: cancelToken ?? _createCancelToken(key),
       ),
-    );
+    ).whenComplete(() => _cancelTokens.remove(key));
   }
 
   // =========================================================
@@ -318,7 +337,7 @@ class ApiService {
         data: data,
         cancelToken: cancelToken ?? _createCancelToken(key),
       ),
-    );
+    ).whenComplete(() => _cancelTokens.remove(key));
   }
 
   // =========================================================
@@ -339,6 +358,20 @@ class ApiService {
     _memoryCache.clear();
 
     _cacheTimestamps.clear();
+  }
+
+  void _trimCache() {
+    if (_memoryCache.length <= _maxCacheEntries) return;
+
+    final keysByAge = _cacheTimestamps.entries.toList()
+      ..sort((a, b) => a.value.compareTo(b.value));
+
+    final removeCount = _memoryCache.length - _maxCacheEntries;
+
+    for (final entry in keysByAge.take(removeCount)) {
+      _memoryCache.remove(entry.key);
+      _cacheTimestamps.remove(entry.key);
+    }
   }
 
   // =========================================================

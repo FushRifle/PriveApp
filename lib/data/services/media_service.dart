@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 
 class MediaService {
@@ -18,7 +19,7 @@ class MediaService {
         imageQuality: imageQuality ?? 85,
       );
     } catch (e) {
-      print('Error picking image: $e');
+      debugPrint('Error picking image: $e');
       return null;
     }
   }
@@ -34,7 +35,7 @@ class MediaService {
         maxWidth: maxWidth,
       );
     } catch (e) {
-      print('Error picking images: $e');
+      debugPrint('Error picking images: $e');
       return [];
     }
   }
@@ -50,7 +51,7 @@ class MediaService {
         maxDuration: maxDuration,
       );
     } catch (e) {
-      print('Error picking video: $e');
+      debugPrint('Error picking video: $e');
       return null;
     }
   }

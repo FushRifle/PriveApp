@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
+import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/data/models/feeds_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,21 +20,41 @@ class PostHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final avatar = post.user.avatar;
     final name = post.user.name.trim().isNotEmpty ? post.user.name : 'User';
+    final canOpenProfile = post.user.id > 0;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 12, 12),
       child: Row(
         children: [
-          _PostAvatar(
-            avatar: avatar,
-            name: name,
-          ),
-          const SizedBox(width: 12),
           Expanded(
-            child: _PostUserInfo(
-              name: name,
-              time: post.time,
-              isVerified: post.user.verified,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: canOpenProfile
+                  ? () {
+                      HapticFeedback.lightImpact();
+                      Navigator.pushNamed(
+                        context,
+                        NamedRoutes.otherProfileScreen,
+                        arguments: post.user.id,
+                      );
+                    }
+                  : null,
+              child: Row(
+                children: [
+                  _PostAvatar(
+                    avatar: avatar,
+                    name: name,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _PostUserInfo(
+                      name: name,
+                      time: post.time,
+                      isVerified: post.user.verified,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           IconButton(

@@ -49,6 +49,8 @@ class UserService {
         if (languages != null) 'languages': languages,
         if (avatar != null) 'avatar': avatar,
         if (coverImage != null) 'coverImage': coverImage,
+        if (coverImage != null) 'cover_image': coverImage,
+        if (coverImage != null) 'cover': coverImage,
       };
 
       final response = await _api.put('/api/users/me', data: data);

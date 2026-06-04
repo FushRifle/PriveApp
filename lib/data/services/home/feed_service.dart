@@ -16,11 +16,15 @@ class FeedService {
     _api.clearAuthToken();
   }
 
-  Future<PostsResponse> getPosts({int page = 1}) async {
+  Future<PostsResponse> getPosts({
+    int page = 1,
+    bool forceRefresh = false,
+  }) async {
     try {
       final response = await _api.get(
         '/api/feed/posts',
         queryParameters: {'page': page},
+        forceRefresh: forceRefresh,
       );
 
       debugPrint('Posts response status: ${response.statusCode}');
@@ -77,6 +81,7 @@ class FeedService {
       }
 
       final response = await _api.post('/api/feed/posts', data: data);
+      _invalidateFeedCaches();
       return response.data;
     } on DioException catch (e) {
       debugPrint('Create post error: ${e.response?.data}');
@@ -88,6 +93,7 @@ class FeedService {
   Future<Map<String, dynamic>> likePost(int postId) async {
     try {
       final response = await _api.post('/api/feed/posts/$postId/like');
+      _invalidatePostCaches(postId);
       return response.data;
     } on DioException catch (e) {
       debugPrint('Like post error: ${e.response?.data}');
@@ -99,6 +105,7 @@ class FeedService {
   Future<Map<String, dynamic>> unlikePost(int postId) async {
     try {
       final response = await _api.delete('/api/feed/posts/$postId/like');
+      _invalidatePostCaches(postId);
       return response.data;
     } on DioException catch (e) {
       debugPrint('Unlike post error: ${e.response?.data}');
@@ -109,6 +116,7 @@ class FeedService {
   Future<Map<String, dynamic>> savePost(int postId) async {
     try {
       final response = await _api.post('/api/feed/posts/$postId/save');
+      _invalidatePostCaches(postId);
       return _readMap(response.data);
     } on DioException catch (e) {
       debugPrint('Save post error: ${e.response?.data}');
@@ -121,6 +129,7 @@ class FeedService {
   Future<Map<String, dynamic>> unsavePost(int postId) async {
     try {
       final response = await _api.delete('/api/feed/posts/$postId/save');
+      _invalidatePostCaches(postId);
       return _readMap(response.data);
     } on DioException catch (e) {
       debugPrint('Unsave post error: ${e.response?.data}');
@@ -133,6 +142,7 @@ class FeedService {
   Future<Map<String, dynamic>> sharePost(int postId) async {
     try {
       final response = await _api.post('/api/feed/posts/$postId/share');
+      _invalidatePostCaches(postId);
       return _readMap(response.data);
     } on DioException catch (e) {
       debugPrint('Share post error: ${e.response?.data}');
@@ -151,6 +161,7 @@ class FeedService {
         '/api/feed/posts/$postId/repost',
         data: {'content': content},
       );
+      _invalidateFeedCaches();
       return _readMap(response.data);
     } on DioException catch (e) {
       debugPrint('Repost error: ${e.response?.data}');
@@ -196,11 +207,16 @@ class FeedService {
   }
 
   // Get post comments - returns typed List<Comment>
-  Future<CommentsResponse> getComments(int postId, {int page = 1}) async {
+  Future<CommentsResponse> getComments(
+    int postId, {
+    int page = 1,
+    bool forceRefresh = false,
+  }) async {
     try {
       final response = await _api.get(
         '/api/feed/posts/$postId/comments',
         queryParameters: {'page': page},
+        forceRefresh: forceRefresh,
       );
 
       if (response.data is List) {
@@ -249,6 +265,7 @@ class FeedService {
         '/api/feed/posts/$postId/comments',
         data: {'content': content},
       );
+      _invalidatePostCaches(postId);
       return Comment.fromJson(response.data);
     } on DioException catch (e) {
       debugPrint('Add comment error: ${e.response?.data}');
@@ -259,6 +276,7 @@ class FeedService {
   Future<void> deletePost(int postId) async {
     try {
       await _api.delete('/api/feed/posts/$postId');
+      _invalidateFeedCaches();
     } on DioException {
       // Delete failures are intentionally non-blocking for the feed UI.
     }
@@ -275,10 +293,12 @@ class FeedService {
       );
 
       if (response.data is Map<String, dynamic>) {
+        _invalidatePostCaches(postId);
         return FeedPost.fromJson(response.data);
       }
 
       if (response.data is Map) {
+        _invalidatePostCaches(postId);
         return FeedPost.fromJson(Map<String, dynamic>.from(response.data));
       }
 
@@ -294,6 +314,7 @@ class FeedService {
     required int userId,
     int page = 1,
     String? type,
+    bool forceRefresh = false,
   }) async {
     try {
       final queryParams = <String, dynamic>{'page': page};
@@ -304,6 +325,7 @@ class FeedService {
       final response = await _api.get(
         '/api/feed/users/$userId/media',
         queryParameters: queryParams,
+        forceRefresh: forceRefresh,
       );
 
       debugPrint('User media response status: ${response.statusCode}');
@@ -374,5 +396,17 @@ class FeedService {
     if (data is Map<String, dynamic>) return data;
     if (data is Map) return Map<String, dynamic>.from(data);
     return {};
+  }
+
+  void _invalidatePostCaches(int postId) {
+    _api.removeCacheByPath('/api/feed/posts');
+    _api.removeCacheByPath('/api/feed/posts/$postId');
+    _api.removeCacheByPath('/api/feed/posts/$postId/comments');
+    _api.removeCacheByPath('/api/feed/users');
+  }
+
+  void _invalidateFeedCaches() {
+    _api.removeCacheByPath('/api/feed/posts');
+    _api.removeCacheByPath('/api/feed/users');
   }
 }

@@ -64,7 +64,10 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         'avatar': userData['avatar'] ?? profileData['avatar'],
         'coverImage': userData['coverImage'] ??
             userData['cover_image'] ??
-            profileData['coverImage'],
+            userData['cover'] ??
+            profileData['coverImage'] ??
+            profileData['cover_image'] ??
+            profileData['cover'],
         'name': userData['name'] ?? profileData['displayName'],
         'email': userData['email'],
         'username': userData['username'],
@@ -113,7 +116,10 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         'avatar': userData['avatar'] ?? profileData['avatar'],
         'coverImage': userData['coverImage'] ??
             userData['cover_image'] ??
-            profileData['coverImage'],
+            userData['cover'] ??
+            profileData['coverImage'] ??
+            profileData['cover_image'] ??
+            profileData['cover'],
         'name': userData['name'] ?? profileData['displayName'],
         'email': userData['email'],
         'username': userData['username'],
@@ -145,6 +151,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     emit(state.copyWith(
       viewedStatus: ProfileStatus.loading,
       isLoading: true,
+      clearViewedProfile: true,
       clearError: true,
     ));
 
@@ -162,7 +169,10 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         'avatar': userData['avatar'] ?? profileData['avatar'],
         'coverImage': userData['coverImage'] ??
             userData['cover_image'] ??
-            profileData['coverImage'],
+            userData['cover'] ??
+            profileData['coverImage'] ??
+            profileData['cover_image'] ??
+            profileData['cover'],
         'name': userData['name'] ?? profileData['displayName'],
         'username': userData['username'],
         'verified': userData['verified'] ?? false,
@@ -206,7 +216,10 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
               currentProfile.displayName,
           bio: event.data['bio'] ?? currentProfile.bio,
           avatar: event.data['avatar'] ?? currentProfile.avatar,
-          coverImage: event.data['coverImage'] ?? currentProfile.coverImage,
+          coverImage: event.data['coverImage'] ??
+              event.data['cover_image'] ??
+              event.data['cover'] ??
+              currentProfile.coverImage,
           interests: event.data['interests'] ?? currentProfile.interests,
           gender: event.data['gender'] ?? currentProfile.gender,
           lookingFor: event.data['lookingFor'] ?? currentProfile.lookingFor,
@@ -221,7 +234,11 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
 
       // Send update to API
       final result = await _profileService.updateMyProfile(event.data);
-      final updatedProfile = Profile.fromJson(result);
+      final updatedProfile = Profile.fromJson({
+        ...?currentProfile?.toJson(),
+        ...event.data,
+        ...result,
+      });
 
       // Also update user data if needed
       if (event.data['avatar'] != null ||
@@ -230,7 +247,9 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         await _userService.updateUser(
           name: event.data['displayName'],
           avatar: event.data['avatar'],
-          coverImage: event.data['coverImage'],
+          coverImage: event.data['coverImage'] ??
+              event.data['cover_image'] ??
+              event.data['cover'],
         );
       }
 
@@ -264,7 +283,11 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     UpdateProfileCoverImage event,
     Emitter<ProfileState> emit,
   ) async {
-    add(UpdateProfile(data: {'coverImage': event.coverImageUrl}));
+    add(UpdateProfile(data: {
+      'coverImage': event.coverImageUrl,
+      'cover_image': event.coverImageUrl,
+      'cover': event.coverImageUrl,
+    }));
   }
 
   Future<void> _onUpdateProfileDisplayName(

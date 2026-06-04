@@ -49,7 +49,10 @@ class _RegisterPageState extends State<RegisterPage> {
           if (state.status == AuthStatus.authenticated) {
             Navigator.pushReplacementNamed(context, NamedRoutes.homeScreen);
           } else if (state.status == AuthStatus.verificationRequired) {
-            _showSnack(state.error ?? 'Verification email sent.');
+            _showSnack(
+              state.error ?? 'Check your email to verify your account.',
+              isError: false,
+            );
           } else if (state.status == AuthStatus.error && state.error != null) {
             _showSnack(state.error!);
             context.read<AuthBloc>().add(const ClearAuthError());
@@ -169,7 +172,7 @@ class _RegisterPageState extends State<RegisterPage> {
           const SizedBox(height: 16),
           if (state.status == AuthStatus.verificationRequired &&
               state.error != null)
-            _buildErrorBox(state.error!),
+            _buildVerificationBox(state),
           Row(
             children: [
               GestureDetector(
@@ -300,26 +303,131 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  Widget _buildErrorBox(String message) {
+  Widget _buildVerificationBox(AuthState state) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: AppColors.redColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.greenColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.greenColor.withOpacity(0.25)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.error_outline, color: AppColors.red2, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              message,
-              style: AppTheme.blackTextStyle.copyWith(
-                color: AppColors.redColor,
-                fontSize: 13,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.mark_email_read_outlined,
+                color: AppColors.green,
+                size: 22,
               ),
-            ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Verify your email',
+                      style: AppTheme.blackTextStyle.copyWith(
+                        fontWeight: AppTheme.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      state.error ??
+                          'Account created. Check your email before signing in.',
+                      style: AppTheme.greyTextStyle.copyWith(
+                        fontSize: 13,
+                        height: 1.35,
+                      ),
+                    ),
+                    if (state.email.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        state.email,
+                        style: AppTheme.blackTextStyle.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: AppTheme.medium,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: state.isLoading
+                      ? null
+                      : () {
+                          context
+                              .read<AuthBloc>()
+                              .add(const ResendVerificationCode());
+                        },
+                  child: Container(
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: AppColors.backgroundColor,
+                      borderRadius: BorderRadius.circular(21),
+                    ),
+                    child: Center(
+                      child: state.isLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.primary,
+                              ),
+                            )
+                          : Text(
+                              'Resend email',
+                              style: AppTheme.blackTextStyle.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: AppTheme.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.pushReplacementNamed(
+                      context,
+                      NamedRoutes.loginScreen,
+                    );
+                  },
+                  child: Container(
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(21),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'Go to sign in',
+                        style: AppTheme.whiteTextStyle.copyWith(
+                          fontWeight: AppTheme.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -386,11 +494,17 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     final fullName = _nameController.text.trim();
+    final email = _emailController.text.trim().toLowerCase();
     final password = _passwordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
 
     if (fullName.isEmpty) {
       _showSnack('Please enter your full name');
+      return;
+    }
+
+    if (email.isEmpty || !_isValidEmail(email)) {
+      _showSnack('Please enter a valid email address');
       return;
     }
 
@@ -410,7 +524,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
     context.read<AuthBloc>().add(
           SignUpRequested(
-            email: _emailController.text.trim(),
+            email: email,
             password: password,
             firstName: firstName,
             lastName: lastName,
@@ -418,11 +532,15 @@ class _RegisterPageState extends State<RegisterPage> {
         );
   }
 
-  void _showSnack(String message) {
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email);
+  }
+
+  void _showSnack(String message, {bool isError = true}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: AppColors.redColor,
+        backgroundColor: isError ? AppColors.redColor : AppColors.greenColor,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),

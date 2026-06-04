@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/friends/friends_bloc.dart';
+import 'package:clique/core/router/named_routes.dart';
 
 class FriendsListPage extends StatefulWidget {
   final bool isFollowers;
@@ -306,86 +307,107 @@ class _FriendsListPageState extends State<FriendsListPage>
       ),
       child: Row(
         children: [
-          // Avatar
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.primary.withOpacity(0.3),
-                width: 2,
-              ),
-            ),
-            child: ClipOval(
-              child: friend.avatar != null && friend.avatar!.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: friend.avatar!,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
-                        color: AppColors.grey.shade200,
-                        child: const Icon(Icons.person, color: AppColors.grey),
-                      ),
-                      errorWidget: (context, url, error) => Container(
-                        color: AppColors.grey.shade200,
-                        child: const Icon(Icons.person, color: AppColors.grey),
-                      ),
-                    )
-                  : Container(
-                      color: AppColors.grey.shade200,
-                      child: Center(
-                        child: Text(
-                          friend.name.isNotEmpty
-                              ? friend.name[0].toUpperCase()
-                              : 'U',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Info
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      friend.name,
-                      style: AppTheme.blackTextStyle.copyWith(
-                        fontWeight: AppTheme.bold,
-                        fontSize: 15,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                HapticFeedback.lightImpact();
+                Navigator.pushNamed(
+                  context,
+                  NamedRoutes.otherProfileScreen,
+                  arguments: friend.id,
+                );
+              },
+              child: Row(
+                children: [
+                  // Avatar
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.primary.withOpacity(0.3),
+                        width: 2,
                       ),
                     ),
-                    if (friend.isVerified) ...[
-                      const SizedBox(width: 4),
-                      Icon(Icons.verified, size: 14, color: AppColors.primary),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '@${friend.username}',
-                  style: AppTheme.greyTextStyle.copyWith(fontSize: 13),
-                ),
-                if (friend.bio != null && friend.bio!.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    friend.bio!,
-                    style: AppTheme.greyTextStyle.copyWith(
-                      fontSize: 11,
-                      overflow: TextOverflow.ellipsis,
+                    child: ClipOval(
+                      child: friend.avatar != null && friend.avatar!.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: friend.avatar!,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Container(
+                                color: AppColors.grey.shade200,
+                                child: const Icon(Icons.person,
+                                    color: AppColors.grey),
+                              ),
+                              errorWidget: (context, url, error) => Container(
+                                color: AppColors.grey.shade200,
+                                child: const Icon(Icons.person,
+                                    color: AppColors.grey),
+                              ),
+                            )
+                          : Container(
+                              color: AppColors.grey.shade200,
+                              child: Center(
+                                child: Text(
+                                  friend.name.isNotEmpty
+                                      ? friend.name[0].toUpperCase()
+                                      : 'U',
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              friend.name,
+                              style: AppTheme.blackTextStyle.copyWith(
+                                fontWeight: AppTheme.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            if (friend.isVerified) ...[
+                              const SizedBox(width: 4),
+                              Icon(Icons.verified,
+                                  size: 14, color: AppColors.primary),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '@${friend.username}',
+                          style: AppTheme.greyTextStyle.copyWith(fontSize: 13),
+                        ),
+                        if (friend.bio != null && friend.bio!.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            friend.bio!,
+                            style: AppTheme.greyTextStyle.copyWith(
+                              fontSize: 11,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ],
-              ],
+              ),
             ),
           ),
+          const SizedBox(width: 12),
           // Action button
           GestureDetector(
             onTap: () {

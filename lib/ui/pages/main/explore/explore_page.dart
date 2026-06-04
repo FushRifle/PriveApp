@@ -143,7 +143,7 @@ class _DiscoverPageState extends State<DiscoverPage>
 
     if (!mounted || newFilters == null) return;
 
-    context.read<ExploreBloc>().add(
+    this.context.read<ExploreBloc>().add(
           UpdateExploreFilters(
             filters: {
               ...newFilters,

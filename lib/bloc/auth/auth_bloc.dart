@@ -203,7 +203,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   void _onClearAuthError(ClearAuthError event, Emitter<AuthState> emit) {
-    emit(state.copyWith(clearError: true, status: AuthStatus.unauthenticated));
+    emit(state.copyWith(clearError: true));
   }
 
   Future<void> _onVerifyEmailRequested(

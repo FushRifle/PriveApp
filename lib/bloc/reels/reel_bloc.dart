@@ -9,6 +9,10 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
   final ReelService _reelService = ReelService();
   static const int _pageSize = 10;
 
+  bool _isLoadingInitial = false;
+  bool _isRefreshing = false;
+  bool _isLoadingMore = false;
+
   ReelBloc() : super(const ReelState()) {
     on<LoadReels>(_onLoadReels);
     on<RefreshReels>(_onRefreshReels);
@@ -26,6 +30,10 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     LoadReels event,
     Emitter<ReelState> emit,
   ) async {
+    if (_isLoadingInitial || _isRefreshing) return;
+
+    _isLoadingInitial = true;
+
     if (state.reels.isEmpty || event.page == 1) {
       emit(state.copyWith(
         status: ReelStatus.loading,
@@ -35,7 +43,10 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     }
 
     try {
-      final reels = await _reelService.getReels(page: event.page);
+      final reels = await _reelService.getReels(
+        page: event.page,
+        forceRefresh: event.page == 1,
+      );
 
       emit(state.copyWith(
         reels: _dedupeReels(reels),
@@ -51,6 +62,8 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
         isLoading: false,
         error: e.toString(),
       ));
+    } finally {
+      _isLoadingInitial = false;
     }
   }
 
@@ -58,6 +71,10 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     RefreshReels event,
     Emitter<ReelState> emit,
   ) async {
+    if (_isRefreshing || _isLoadingInitial) return;
+
+    _isRefreshing = true;
+
     emit(state.copyWith(
       status: ReelStatus.refreshing,
       isRefreshing: true,
@@ -65,7 +82,10 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     ));
 
     try {
-      final reels = await _reelService.getReels(page: 1);
+      final reels = await _reelService.getReels(
+        page: 1,
+        forceRefresh: true,
+      );
 
       emit(state.copyWith(
         reels: _dedupeReels(reels),
@@ -81,6 +101,8 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
         isRefreshing: false,
         error: e.toString(),
       ));
+    } finally {
+      _isRefreshing = false;
     }
   }
 
@@ -88,7 +110,16 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     LoadMoreReels event,
     Emitter<ReelState> emit,
   ) async {
-    if (!state.hasMore || state.isLoadingMore || state.isRefreshing) return;
+    if (!state.hasMore ||
+        state.isLoadingMore ||
+        state.isRefreshing ||
+        _isLoadingMore ||
+        _isRefreshing ||
+        _isLoadingInitial) {
+      return;
+    }
+
+    _isLoadingMore = true;
 
     emit(state.copyWith(
       status: ReelStatus.loadingMore,
@@ -115,6 +146,8 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
         isLoadingMore: false,
         error: e.toString(),
       ));
+    } finally {
+      _isLoadingMore = false;
     }
   }
 

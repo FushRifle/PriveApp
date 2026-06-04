@@ -11,7 +11,6 @@ class TwoFactorPage extends StatefulWidget {
 
 class _TwoFactorPageState extends State<TwoFactorPage> {
   bool _isEnabled = false;
-  final bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {

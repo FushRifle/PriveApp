@@ -43,7 +43,7 @@ class _ProfilePageState extends State<ProfilePage>
   bool _isFollowing = false;
   bool _profileRequested = false;
 
-  int? _loadedMediaUserId;
+  String? _loadedMediaKey;
 
   @override
   bool get wantKeepAlive => true;
@@ -53,6 +53,7 @@ class _ProfilePageState extends State<ProfilePage>
     super.initState();
 
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(_handleTabChanged);
     _scrollController = ScrollController();
     _galleryCubit = GalleryProfileCubit();
 
@@ -75,7 +76,7 @@ class _ProfilePageState extends State<ProfilePage>
     if (oldWidget.userId != widget.userId ||
         oldWidget.isOwnProfile != widget.isOwnProfile) {
       _profileRequested = false;
-      _loadedMediaUserId = null;
+      _loadedMediaKey = null;
       _loadProfile();
     }
   }
@@ -110,27 +111,54 @@ class _ProfilePageState extends State<ProfilePage>
 
   void _reloadProfile() {
     _profileRequested = false;
-    _loadedMediaUserId = null;
+    _loadedMediaKey = null;
     _loadProfile();
   }
 
-  void _loadUserMedia(int userId) {
-    if (_loadedMediaUserId == userId) return;
+  void _handleTabChanged() {
+    if (_tabController.indexIsChanging) return;
 
-    _loadedMediaUserId = userId;
+    final profile = _currentProfile(context.read<ProfileBloc>().state);
+    if (profile == null) return;
+
+    final userId = _profileUserId(profile);
+    if (userId == null) return;
+
+    final type = _tabTypeForIndex(_tabController.index);
+    if (type == null) return;
+
+    _loadUserMedia(userId, type);
+  }
+
+  void _loadUserMedia(int userId, _GalleryTabType type) {
+    final mediaType = _mediaType(type);
+    final key = '$userId:${mediaType ?? 'all'}';
+    if (_loadedMediaKey == key) return;
+
+    _loadedMediaKey = key;
 
     _galleryCubit.getUserMedia(
       userId: userId,
-      type: null,
+      type: mediaType,
       page: 1,
     );
   }
 
-  void _loadMoreMedia(int userId) {
+  void _loadMoreMedia(int userId, _GalleryTabType type) {
     _galleryCubit.loadMoreMedia(
       userId: userId,
-      type: null,
+      type: _mediaType(type),
     );
+  }
+
+  _GalleryTabType? _tabTypeForIndex(int index) {
+    if (index == 0) return _GalleryTabType.photos;
+    if (index == 1) return _GalleryTabType.videos;
+    return null;
+  }
+
+  String? _mediaType(_GalleryTabType type) {
+    return type == _GalleryTabType.videos ? 'video' : 'image';
   }
 
   Profile? _currentProfile(ProfileState state) {
@@ -155,22 +183,30 @@ class _ProfilePageState extends State<ProfilePage>
             final currentProfile = _currentProfile(current);
 
             return previous.status != current.status ||
+                previous.viewedStatus != current.viewedStatus ||
                 previousProfile?.userId != currentProfile?.userId ||
                 previousProfile?.id != currentProfile?.id;
           },
           listener: (context, state) {
-            if (state.status != ProfileStatus.success) return;
+            final status =
+                widget.isOwnProfile ? state.status : state.viewedStatus;
+            if (status != ProfileStatus.success) return;
 
             final profile = _currentProfile(state);
             if (profile == null) return;
 
             final userId = _profileUserId(profile);
             if (userId != null) {
-              _loadUserMedia(userId);
+              _loadUserMedia(
+                userId,
+                _tabTypeForIndex(_tabController.index) ??
+                    _GalleryTabType.photos,
+              );
             }
           },
           buildWhen: (previous, current) {
             return previous.status != current.status ||
+                previous.viewedStatus != current.viewedStatus ||
                 previous.error != current.error ||
                 _currentProfile(previous) != _currentProfile(current);
           },
@@ -208,7 +244,7 @@ class _ProfileBody extends StatelessWidget {
   final ScrollController scrollController;
   final VoidCallback onRetry;
   final VoidCallback onToggleFollow;
-  final ValueChanged<int> onLoadMoreMedia;
+  final void Function(int userId, _GalleryTabType type) onLoadMoreMedia;
 
   const _ProfileBody({
     required this.state,
@@ -228,7 +264,7 @@ class _ProfileBody extends StatelessWidget {
       return const _LoadingState();
     }
 
-    if (state.status == ProfileStatus.error && state.error != null) {
+    if (_effectiveStatus == ProfileStatus.error && state.error != null) {
       return _ErrorState(
         message: state.error!,
         onRetry: onRetry,
@@ -273,12 +309,12 @@ class _ProfileBody extends StatelessWidget {
           _GalleryTab(
             userId: userId,
             type: _GalleryTabType.photos,
-            onLoadMore: onLoadMoreMedia,
+            onLoadMore: () => onLoadMoreMedia(userId, _GalleryTabType.photos),
           ),
           _GalleryTab(
             userId: userId,
             type: _GalleryTabType.videos,
-            onLoadMore: onLoadMoreMedia,
+            onLoadMore: () => onLoadMoreMedia(userId, _GalleryTabType.videos),
           ),
           const _TaggedTab(),
         ],
@@ -287,8 +323,14 @@ class _ProfileBody extends StatelessWidget {
   }
 
   bool get _isInitialLoading {
-    return state.status == ProfileStatus.loading ||
-        (state.status == ProfileStatus.initial && profile == null);
+    final effectiveStatus = isOwnProfile ? state.status : state.viewedStatus;
+
+    return effectiveStatus == ProfileStatus.loading ||
+        (effectiveStatus == ProfileStatus.initial && profile == null);
+  }
+
+  ProfileStatus get _effectiveStatus {
+    return isOwnProfile ? state.status : state.viewedStatus;
   }
 }
 
@@ -463,7 +505,18 @@ class _ProfileHeader extends StatelessWidget {
           const SizedBox(height: 8),
           _BioSection(profile: profile),
           const SizedBox(height: 16),
-          const _StatsRow(),
+          BlocBuilder<GalleryProfileCubit, GalleryProfileState>(
+            builder: (context, state) {
+              final totalLikes = state is GalleryProfileLoaded
+                  ? state.galleryProfiles.fold<int>(
+                      0,
+                      (total, item) => total + item.likesCount,
+                    )
+                  : 0;
+
+              return _StatsRow(totalLikes: totalLikes);
+            },
+          ),
           const SizedBox(height: 24),
           if (isOwnProfile) const _InsightsButton(),
           if (isOwnProfile) const SizedBox(height: 12),
@@ -653,7 +706,11 @@ class _InfoChip extends StatelessWidget {
 }
 
 class _StatsRow extends StatelessWidget {
-  const _StatsRow();
+  final int totalLikes;
+
+  const _StatsRow({
+    required this.totalLikes,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -695,7 +752,7 @@ class _StatsRow extends StatelessWidget {
           },
         ),
         _StatItem(
-          value: '0',
+          value: _formatCount(totalLikes),
           label: 'Likes',
           onTap: () {
             Navigator.push(
@@ -711,6 +768,16 @@ class _StatsRow extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  String _formatCount(int value) {
+    if (value >= 1000000) {
+      return '${(value / 1000000).toStringAsFixed(1)}M';
+    }
+    if (value >= 1000) {
+      return '${(value / 1000).toStringAsFixed(1)}K';
+    }
+    return value.toString();
   }
 }
 
@@ -1022,7 +1089,7 @@ enum _GalleryTabType {
 class _GalleryTab extends StatelessWidget {
   final int userId;
   final _GalleryTabType type;
-  final ValueChanged<int> onLoadMore;
+  final VoidCallback onLoadMore;
 
   const _GalleryTab({
     required this.userId,
@@ -1076,7 +1143,7 @@ class _GalleryTab extends StatelessWidget {
             onRetry: () {
               context.read<GalleryProfileCubit>().getUserMedia(
                     userId: userId,
-                    type: null,
+                    type: type == _GalleryTabType.videos ? 'video' : 'image',
                     page: 1,
                   );
             },
@@ -1102,7 +1169,7 @@ class _GalleryGrid extends StatelessWidget {
   final List<GalleryModel> items;
   final bool hasMore;
   final bool isLoadingMore;
-  final ValueChanged<int> onLoadMore;
+  final VoidCallback onLoadMore;
   final IconData emptyIcon;
   final String emptyText;
 
@@ -1131,7 +1198,7 @@ class _GalleryGrid extends StatelessWidget {
 
         if (scrollInfo.metrics.pixels >=
             scrollInfo.metrics.maxScrollExtent - 350) {
-          onLoadMore(userId);
+          onLoadMore();
         }
 
         return false;

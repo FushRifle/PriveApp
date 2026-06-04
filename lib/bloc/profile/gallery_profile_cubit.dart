@@ -41,14 +41,18 @@ class GalleryProfileCubit extends Cubit<GalleryProfileState> {
       // Convert UserMedia to GalleryModel
       final galleryItems = mediaList
           .map((media) => GalleryModel(
-                id: media.postId.toString(),
-                image: media.url,
+                id: media.id.toString(),
+                postId: media.postId,
+                image: media.thumbnail ?? media.url,
                 thumbnail: media.thumbnail ?? media.url,
                 videoUrl: media.type == 'video' ? media.url : null,
                 type: media.type,
                 like: _formatLikes(media.likes),
+                likesCount: media.likes,
+                commentsCount: media.comments,
                 caption: media.caption,
                 createdAt: media.createdAt,
+                createdAtDate: media.createdAt,
               ))
           .toList();
 

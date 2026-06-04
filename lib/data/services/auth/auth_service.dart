@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:clique/app/configs/api_config.dart';
@@ -68,7 +69,7 @@ class AuthService {
         );
       } catch (e) {
         // Log but don't fail - Supabase is the source of truth
-        print('Backend sync failed: $e');
+        debugPrint('Backend sync failed: $e');
       }
 
       return AuthResult(
@@ -108,53 +109,86 @@ class AuthService {
   }) async {
     try {
       final normalizedEmail = email.trim().toLowerCase();
+      final trimmedFirstName = firstName.trim();
+      final trimmedLastName = lastName.trim();
 
       final authResponse = await SupabaseConfig.client.auth.signUp(
         email: normalizedEmail,
         password: password,
+        emailRedirectTo: 'com.clique.app://verify-email',
         data: {
-          'first_name': firstName,
-          'last_name': lastName,
+          'first_name': trimmedFirstName,
+          'last_name': trimmedLastName,
+          'full_name': [
+            trimmedFirstName,
+            trimmedLastName,
+          ].where((part) => part.isNotEmpty).join(' '),
         },
       );
 
       final session = authResponse.session;
       final user = authResponse.user;
 
-      // Email verification required
-      if (session == null || user?.confirmedAt == null) {
+      if (user == null) {
+        return AuthResult(
+          success: false,
+          error: 'Unable to create account. Please try again.',
+        );
+      }
+
+      // Backend sync creates/correlates the local app user row by Supabase ID.
+      try {
+        final syncResponse = await _dio.post(
+          '/api/auth/signup',
+          data: {
+            'email': normalizedEmail,
+            'password': password,
+            'firstName': trimmedFirstName,
+            'lastName': trimmedLastName,
+            'supabaseUserId': user.id,
+          },
+        );
+
+        final statusCode = syncResponse.statusCode ?? 0;
+        if (statusCode < 200 || statusCode >= 300) {
+          return AuthResult(
+            success: false,
+            error: _readBackendError(
+              syncResponse.data,
+              'Account created, but profile setup failed. Please try signing in after verifying your email.',
+            ),
+          );
+        }
+      } catch (e) {
+        debugPrint('Backend sync failed: $e');
+        return AuthResult(
+          success: false,
+          error:
+              'Account created, but profile setup failed. Please try signing in after verifying your email.',
+        );
+      }
+
+      // Most production Supabase projects require email confirmation. That is
+      // a successful account creation, but not an authenticated session yet.
+      if (session == null || user.confirmedAt == null) {
         return AuthResult(
           success: false,
           needsVerification: true,
-          error: 'Verification email sent. Please verify your email.',
+          error:
+              'Account created. Check your email to verify your account before signing in.',
         );
       }
 
       final token = session.accessToken;
 
-      // Backend sync (optional)
-      try {
-        await _dio.post(
-          '/api/auth/signup',
-          data: {
-            'email': normalizedEmail,
-            'password': password,
-            'firstName': firstName,
-            'lastName': lastName,
-          },
-        );
-      } catch (e) {
-        print('Backend sync failed: $e');
-      }
-
       return AuthResult(
         success: true,
         token: token,
         user: {
-          'id': user?.id,
-          'email': user?.email,
-          'firstName': firstName,
-          'lastName': lastName,
+          'id': user.id,
+          'email': user.email,
+          'firstName': trimmedFirstName,
+          'lastName': trimmedLastName,
         },
       );
     } on AuthException catch (e) {
@@ -190,10 +224,10 @@ class AuthService {
       if (e.message.contains('already registered')) {
         return false;
       }
-      print('Resend verification error: $e');
+      debugPrint('Resend verification error: $e');
       return false;
     } catch (e) {
-      print('Failed to resend verification: $e');
+      debugPrint('Failed to resend verification: $e');
       return false;
     }
   }
@@ -303,16 +337,25 @@ class AuthService {
         );
       }
     } catch (e) {
-      print('Error saving credentials: $e');
+      debugPrint('Error saving credentials: $e');
     }
   }
 
   String _handleAuthError(AuthException e) {
+    final message = e.message.toLowerCase();
     if (e.message.contains('Invalid login credentials')) {
       return 'Invalid email or password';
     }
     if (e.message.contains('Email not confirmed')) {
       return 'Please verify your email first';
+    }
+    if (message.contains('already registered') ||
+        message.contains('already exists') ||
+        message.contains('user already registered')) {
+      return 'An account already exists for this email. Please sign in instead.';
+    }
+    if (message.contains('password')) {
+      return e.message;
     }
     return e.message;
   }
@@ -323,6 +366,15 @@ class AuthService {
       return 'Network error. Please check your connection.';
     }
     return 'Service temporarily unavailable. Please try again.';
+  }
+
+  String _readBackendError(dynamic data, String fallback) {
+    if (data is Map) {
+      final message = data['message'] ?? data['error'];
+      if (message != null) return message.toString();
+    }
+    if (data is String && data.isNotEmpty) return data;
+    return fallback;
   }
 
   Future<Object?> verifyEmail(String email, String code) async {

@@ -37,17 +37,24 @@ class FeedPost {
   factory FeedPost.fromJson(Map<String, dynamic> json) {
     return FeedPost(
       id: _toInt(json['id']),
-      user: UserInfo.fromJson(_asMap(json['user'])),
+      user: UserInfo.fromJson({
+        ..._asMap(json['user']),
+        'id': json['userId'] ?? json['user_id'] ?? _asMap(json['user'])['id'],
+      }),
       content: json['content']?.toString() ?? '',
       attachments: _parseAttachments(json['attachments']),
       time: json['time']?.toString() ?? '',
       likes: _toInt(json['likes'] ??
           json['likesCount'] ??
+          json['likes_count'] ??
           json['likeCount'] ??
+          json['like_count'] ??
           json['_count']?['likes']),
       comments: _toInt(json['comments'] ??
           json['commentsCount'] ??
+          json['comments_count'] ??
           json['commentCount'] ??
+          json['comment_count'] ??
           json['_count']?['comments']),
       shares: _toInt(json['shares'] ?? json['shareCount']),
       saves: _toInt(json['saves'] ?? json['saveCount']),
@@ -117,12 +124,14 @@ class FeedPost {
 
 // UserInfo Model
 class UserInfo {
+  final int id;
   final String name;
   final String handle;
   final String avatar;
   final bool verified;
 
   const UserInfo({
+    this.id = 0,
     required this.name,
     required this.handle,
     required this.avatar,
@@ -131,6 +140,7 @@ class UserInfo {
 
   factory UserInfo.fromJson(Map<String, dynamic> json) {
     return UserInfo(
+      id: _toInt(json['id'] ?? json['userId'] ?? json['user_id']),
       name: json['name']?.toString() ?? 'User',
       handle: json['handle']?.toString() ?? json['username']?.toString() ?? '',
       avatar: json['avatar']?.toString() ?? '',
@@ -139,6 +149,7 @@ class UserInfo {
   }
 
   Map<String, dynamic> toJson() => {
+        'id': id,
         'name': name,
         'handle': handle,
         'avatar': avatar,
@@ -146,12 +157,14 @@ class UserInfo {
       };
 
   UserInfo copyWith({
+    int? id,
     String? name,
     String? handle,
     String? avatar,
     bool? verified,
   }) {
     return UserInfo(
+      id: id ?? this.id,
       name: name ?? this.name,
       handle: handle ?? this.handle,
       avatar: avatar ?? this.avatar,
@@ -341,11 +354,15 @@ class UserMedia {
       caption: json['caption']?.toString(),
       likes: _toInt(json['likes'] ??
           json['likesCount'] ??
+          json['likes_count'] ??
           json['likeCount'] ??
+          json['like_count'] ??
           json['_count']?['likes']),
       comments: _toInt(json['comments'] ??
           json['commentsCount'] ??
+          json['comments_count'] ??
           json['commentCount'] ??
+          json['comment_count'] ??
           json['_count']?['comments']),
       createdAt: _parseDateTime(json['createdAt'] ?? json['created_at']),
     );
@@ -381,19 +398,9 @@ class UserMediaResponse {
   factory UserMediaResponse.fromJson(Map<String, dynamic> json) {
     List<UserMedia> mediaList = [];
 
-    if (json['media'] != null && json['media'] is List) {
-      mediaList = (json['media'] as List)
-          .map((item) => UserMedia.fromJson(_asMap(item)))
-          .toList();
-    } else if (json['data'] != null && json['data'] is List) {
-      mediaList = (json['data'] as List)
-          .map((item) => UserMedia.fromJson(_asMap(item)))
-          .toList();
-    } else if (json['items'] != null && json['items'] is List) {
-      mediaList = (json['items'] as List)
-          .map((item) => UserMedia.fromJson(_asMap(item)))
-          .toList();
-    }
+    final mediaSource = _findList(json, ['media', 'data', 'items', 'results']);
+    mediaList =
+        mediaSource.map((item) => UserMedia.fromJson(_asMap(item))).toList();
 
     return UserMediaResponse(
       media: mediaList,
@@ -538,7 +545,27 @@ int _toInt(dynamic value, {int defaultValue = 0}) {
   if (value is int) return value;
   if (value is num) return value.toInt();
   if (value is String) return int.tryParse(value) ?? defaultValue;
+  if (value is List) return value.length;
+  if (value is Map) {
+    return _toInt(
+      value['count'] ?? value['_count'] ?? value['total'],
+      defaultValue: defaultValue,
+    );
+  }
   return defaultValue;
+}
+
+List<dynamic> _findList(Map<String, dynamic> json, List<String> keys) {
+  for (final key in keys) {
+    final value = json[key];
+    if (value is List) return value;
+    if (value is Map) {
+      final nested = _findList(_asMap(value), keys);
+      if (nested.isNotEmpty) return nested;
+    }
+  }
+
+  return const [];
 }
 
 int? _toIntOrNull(dynamic value) {

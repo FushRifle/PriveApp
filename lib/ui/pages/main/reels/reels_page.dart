@@ -9,7 +9,12 @@ import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/ui/widgets/reels/reel_item.dart';
 
 class ReelsPage extends StatefulWidget {
-  const ReelsPage({super.key});
+  final VoidCallback? onBack;
+
+  const ReelsPage({
+    super.key,
+    this.onBack,
+  });
 
   @override
   State<ReelsPage> createState() => _ReelsPageState();
@@ -17,12 +22,14 @@ class ReelsPage extends StatefulWidget {
 
 class _ReelsPageState extends State<ReelsPage> {
   late PageController _pageController;
+  late final ReelBloc _reelBloc;
   int _currentIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
+    _reelBloc = ReelBloc()..add(const LoadReels());
     _loadCurrentUser();
   }
 
@@ -33,6 +40,7 @@ class _ReelsPageState extends State<ReelsPage> {
   @override
   void dispose() {
     _pageController.dispose();
+    _reelBloc.close();
     super.dispose();
   }
 
@@ -45,12 +53,8 @@ class _ReelsPageState extends State<ReelsPage> {
       ),
     );
 
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider(
-          create: (context) => ReelBloc()..add(const LoadReels()),
-        ),
-      ],
+    return BlocProvider.value(
+      value: _reelBloc,
       child: BlocConsumer<ReelBloc, ReelState>(
         listener: (context, state) {
           if (state.error != null) {
@@ -69,156 +73,164 @@ class _ReelsPageState extends State<ReelsPage> {
           final isLoadingMore = state.isLoadingMore;
           final hasMore = state.hasMore;
           final isRefreshing = state.isRefreshing;
+          final showInitialLoader = reels.isEmpty && isLoading;
 
           return BlocBuilder<UserBloc, UserState>(
             builder: (context, userState) {
               final currentUserId = userState.currentUser?['id'] ?? 0;
 
-              return Scaffold(
-                backgroundColor: AppColors.black,
-                body: Stack(
-                  children: [
-                    reels.isEmpty && isLoading
-                        ? const Center(
-                            child: CircularProgressIndicator(
-                              color: AppColors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : PageView.builder(
-                            controller: _pageController,
-                            scrollDirection: Axis.vertical,
-                            itemCount: reels.length + 1,
-                            onPageChanged: (index) {
-                              setState(() {
-                                _currentIndex = index;
-                              });
-                              if (index >= reels.length - 2 &&
-                                  hasMore &&
-                                  !isLoadingMore &&
-                                  !isRefreshing) {
-                                context.read<ReelBloc>().add(LoadMoreReels());
-                              }
-                            },
-                            itemBuilder: (context, index) {
-                              if (index == reels.length) {
-                                if (hasMore) {
-                                  return const Center(
-                                    child: CircularProgressIndicator(
-                                      color: AppColors.white,
-                                      strokeWidth: 2,
-                                    ),
-                                  );
-                                } else if (reels.isEmpty) {
-                                  return const Center(
-                                    child: Text(
-                                      'No reels available',
-                                      style:
-                                          TextStyle(color: AppColors.white54),
-                                    ),
-                                  );
-                                } else {
-                                  return const Center(
-                                    child: Text(
-                                      'No more reels',
-                                      style:
-                                          TextStyle(color: AppColors.white54),
-                                    ),
-                                  );
+              return PopScope(
+                canPop: false,
+                onPopInvokedWithResult: (didPop, result) {
+                  if (didPop) return;
+                  _handleBack();
+                },
+                child: Scaffold(
+                  backgroundColor: AppColors.black,
+                  body: Stack(
+                    children: [
+                      showInitialLoader
+                          ? const Center(
+                              child: CircularProgressIndicator(
+                                color: AppColors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : PageView.builder(
+                              controller: _pageController,
+                              scrollDirection: Axis.vertical,
+                              itemCount: reels.length + 1,
+                              onPageChanged: (index) {
+                                setState(() {
+                                  _currentIndex = index;
+                                });
+                                if (index >= reels.length - 2 &&
+                                    hasMore &&
+                                    !isLoadingMore &&
+                                    !isRefreshing) {
+                                  context.read<ReelBloc>().add(LoadMoreReels());
                                 }
-                              }
+                              },
+                              itemBuilder: (context, index) {
+                                if (index == reels.length) {
+                                  if (hasMore) {
+                                    return const Center(
+                                      child: CircularProgressIndicator(
+                                        color: AppColors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    );
+                                  } else if (reels.isEmpty) {
+                                    return const Center(
+                                      child: Text(
+                                        'No reels available',
+                                        style:
+                                            TextStyle(color: AppColors.white54),
+                                      ),
+                                    );
+                                  } else {
+                                    return const Center(
+                                      child: Text(
+                                        'No more reels',
+                                        style:
+                                            TextStyle(color: AppColors.white54),
+                                      ),
+                                    );
+                                  }
+                                }
 
-                              return RefreshIndicator(
-                                onRefresh: () async {
-                                  context.read<ReelBloc>().add(RefreshReels());
-                                  await Future.delayed(
-                                      const Duration(milliseconds: 500));
-                                },
-                                color: AppColors.white,
-                                child: ReelItem(
-                                  reel: reels[index],
-                                  isActive: index == _currentIndex,
-                                  onNextReel: () {
-                                    if (index < reels.length - 1) {
-                                      _pageController.nextPage(
-                                        duration:
-                                            const Duration(milliseconds: 300),
-                                        curve: Curves.easeInOut,
-                                      );
-                                    }
+                                return RefreshIndicator(
+                                  onRefresh: () async {
+                                    context
+                                        .read<ReelBloc>()
+                                        .add(RefreshReels());
+                                    await Future.delayed(
+                                        const Duration(milliseconds: 500));
                                   },
-                                  index: index,
-                                  currentUserId: currentUserId,
-                                ),
-                              );
-                            },
-                          ),
-                    // Header
-                    Positioned(
-                      top: MediaQuery.of(context).padding.top + 10,
-                      left: 16,
-                      right: 16,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              HapticFeedback.lightImpact();
-                              Navigator.pushReplacementNamed(
-                                context,
-                                NamedRoutes.homeScreen,
-                              );
-                            },
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: AppColors.blueGrey.withOpacity(0.3),
-                                borderRadius: BorderRadius.circular(15),
-                              ),
-                              child: const Icon(
-                                Icons.arrow_back_ios_new,
-                                color: AppColors.white,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () async {
-                              HapticFeedback.lightImpact();
-                              final reelBloc = context.read<ReelBloc>();
-                              final created = await Navigator.push<bool>(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => BlocProvider.value(
-                                    value: reelBloc,
-                                    child: const CreateReelPage(),
+                                  color: AppColors.white,
+                                  child: ReelItem(
+                                    reel: reels[index],
+                                    isActive: index == _currentIndex,
+                                    onNextReel: () {
+                                      if (index < reels.length - 1) {
+                                        _pageController.nextPage(
+                                          duration:
+                                              const Duration(milliseconds: 300),
+                                          curve: Curves.easeInOut,
+                                        );
+                                      }
+                                    },
+                                    index: index,
+                                    currentUserId: currentUserId,
                                   ),
+                                );
+                              },
+                            ),
+                      // Header
+                      Positioned(
+                        top: MediaQuery.of(context).padding.top + 10,
+                        left: 16,
+                        right: 16,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                HapticFeedback.lightImpact();
+                                _handleBack();
+                              },
+                              child: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: AppColors.blueGrey.withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(15),
                                 ),
-                              );
-
-                              if (!mounted || created != true) return;
-
-                              reelBloc.add(RefreshReels());
-                            },
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: AppColors.blueGrey.withOpacity(0.3),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: const Icon(
-                                Icons.add,
-                                color: AppColors.white,
-                                size: 20,
+                                child: const Icon(
+                                  Icons.arrow_back_ios_new,
+                                  color: AppColors.white,
+                                  size: 20,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                            GestureDetector(
+                              onTap: () async {
+                                HapticFeedback.lightImpact();
+                                final reelBloc = context.read<ReelBloc>();
+                                final created = await Navigator.push<bool>(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => BlocProvider.value(
+                                      value: reelBloc,
+                                      child: const CreateReelPage(),
+                                    ),
+                                  ),
+                                );
+
+                                if (!mounted || created != true) return;
+
+                                reelBloc.add(RefreshReels());
+                                _jumpToFirstReel();
+                              },
+                              child: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: AppColors.blueGrey.withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: const Icon(
+                                  Icons.add,
+                                  color: AppColors.white,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             },
@@ -226,5 +238,29 @@ class _ReelsPageState extends State<ReelsPage> {
         },
       ),
     );
+  }
+
+  void _handleBack() {
+    if (widget.onBack != null) {
+      widget.onBack!();
+      return;
+    }
+
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+      return;
+    }
+
+    Navigator.pushReplacementNamed(context, NamedRoutes.homeScreen);
+  }
+
+  void _jumpToFirstReel() {
+    if (!_pageController.hasClients) return;
+
+    setState(() {
+      _currentIndex = 0;
+    });
+
+    _pageController.jumpToPage(0);
   }
 }

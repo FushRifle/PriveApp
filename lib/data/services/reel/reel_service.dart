@@ -5,11 +5,16 @@ class ReelService {
   final ApiService _api = ApiService();
 
   // Get reels with pagination
-  Future<List<dynamic>> getReels({int page = 1}) async {
+  Future<List<dynamic>> getReels({
+    int page = 1,
+    bool forceRefresh = false,
+  }) async {
     try {
-      final response = await _api.get('/api/reels', queryParameters: {
-        'page': page,
-      });
+      final response = await _api.get('/api/reels',
+          queryParameters: {
+            'page': page,
+          },
+          forceRefresh: forceRefresh);
       return _readList(response.data);
     } on DioException catch (e) {
       throw _readErrorMessage(e, 'Failed to get reels');
@@ -20,6 +25,7 @@ class ReelService {
   Future<Map<String, dynamic>> createReel(Map<String, dynamic> data) async {
     try {
       final response = await _api.post('/api/reels', data: data);
+      _invalidateReelCaches();
       return _readMap(response.data);
     } on DioException catch (e) {
       throw _readErrorMessage(e, 'Failed to create reel');
@@ -30,6 +36,7 @@ class ReelService {
   Future<Map<String, dynamic>> likeReel(String reelId) async {
     try {
       final response = await _api.post('/api/reels/$reelId/like');
+      _invalidateReelCaches(reelId);
       return _readMap(response.data);
     } on DioException catch (e) {
       throw _readErrorMessage(e, 'Failed to like reel');
@@ -40,6 +47,7 @@ class ReelService {
   Future<Map<String, dynamic>> unlikeReel(String reelId) async {
     try {
       final response = await _api.delete('/api/reels/$reelId/like');
+      _invalidateReelCaches(reelId);
       return _readMap(response.data);
     } on DioException catch (e) {
       throw _readErrorMessage(e, 'Failed to unlike reel');
@@ -50,6 +58,7 @@ class ReelService {
   Future<Map<String, dynamic>> shareReel(String reelId) async {
     try {
       final response = await _api.post('/api/reels/$reelId/share');
+      _invalidateReelCaches(reelId);
       return _readMap(response.data);
     } on DioException catch (e) {
       throw _readErrorMessage(e, 'Failed to share reel');
@@ -57,11 +66,16 @@ class ReelService {
   }
 
   // Get reel comments
-  Future<List<dynamic>> getReelComments(String reelId, {int page = 1}) async {
+  Future<List<dynamic>> getReelComments(
+    String reelId, {
+    int page = 1,
+    bool forceRefresh = false,
+  }) async {
     try {
       final response = await _api.get(
         '/api/reels/$reelId/comments',
         queryParameters: {'page': page},
+        forceRefresh: forceRefresh,
       );
       return _readList(response.data);
     } on DioException catch (e) {
@@ -79,6 +93,7 @@ class ReelService {
         '/api/reels/$reelId/comments',
         data: data,
       );
+      _invalidateReelCaches(reelId);
       return _readMap(response.data);
     } on DioException catch (e) {
       throw _readErrorMessage(e, 'Failed to add comment');
@@ -127,5 +142,12 @@ class ReelService {
     }
 
     return fallback;
+  }
+
+  void _invalidateReelCaches([String? reelId]) {
+    _api.removeCacheByPath('/api/reels');
+    if (reelId != null && reelId.isNotEmpty) {
+      _api.removeCacheByPath('/api/reels/$reelId');
+    }
   }
 }

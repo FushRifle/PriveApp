@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../../../core/api_service.dart';
 
 class UploadService {
@@ -16,16 +17,16 @@ class UploadService {
         'resourceType': resourceType,
       });
 
-      print('Signature response: ${response.statusCode}');
-      print('Signature data: ${response.data}');
+      debugPrint('Signature response: ${response.statusCode}');
+      debugPrint('Signature data: ${response.data}');
 
       return response.data;
     } on DioException catch (e) {
-      print('Upload sign error: ${e.response?.data}');
-      print('Upload sign error status: ${e.response?.statusCode}');
+      debugPrint('Upload sign error: ${e.response?.data}');
+      debugPrint('Upload sign error status: ${e.response?.statusCode}');
       return null;
     } catch (e) {
-      print('Upload sign unexpected error: $e');
+      debugPrint('Upload sign unexpected error: $e');
       return null;
     }
   }

@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/match/match_bloc.dart';
+import 'package:clique/core/router/named_routes.dart';
 
 class MatchesPage extends StatefulWidget {
   const MatchesPage({super.key});
@@ -194,74 +195,79 @@ class _MatchesPageState extends State<MatchesPage>
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.border),
       ),
-      child: Row(
-        children: [
-          _buildAvatar(match.avatar, match.name, size: 55),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _openProfile(match.id),
+        child: Row(
+          children: [
+            _buildAvatar(match.avatar, match.name, size: 55),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        match.name,
+                        style: AppTheme.blackTextStyle.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      if (match.isVerified) ...[
+                        const SizedBox(width: 4),
+                        Icon(Icons.verified,
+                            size: 14, color: AppColors.primary),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '@${match.username}',
+                    style: AppTheme.greyTextStyle.copyWith(fontSize: 13),
+                  ),
+                  if (match.age > 0)
                     Text(
-                      match.name,
-                      style: AppTheme.blackTextStyle.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                      '${match.age} years old',
+                      style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
+                    ),
+                  if (match.bio != null && match.bio!.isNotEmpty)
+                    Text(
+                      match.bio!,
+                      style: AppTheme.greyTextStyle.copyWith(
+                        fontSize: 12,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    if (match.isVerified) ...[
-                      const SizedBox(width: 4),
-                      Icon(Icons.verified, size: 14, color: AppColors.primary),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '@${match.username}',
-                  style: AppTheme.greyTextStyle.copyWith(fontSize: 13),
-                ),
-                if (match.age > 0)
-                  Text(
-                    '${match.age} years old',
-                    style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
-                  ),
-                if (match.bio != null && match.bio!.isNotEmpty)
-                  Text(
-                    match.bio!,
-                    style: AppTheme.greyTextStyle.copyWith(
-                      fontSize: 12,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          if (match.isMutual)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.favorite, size: 12, color: AppColors.primary),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Match!',
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
                 ],
               ),
             ),
-        ],
+            if (match.isMutual)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.favorite, size: 12, color: AppColors.primary),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Match!',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -277,48 +283,61 @@ class _MatchesPageState extends State<MatchesPage>
       ),
       child: Row(
         children: [
-          _buildAvatar(user.avatar, user.name, size: 55),
-          const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      user.name,
-                      style: AppTheme.blackTextStyle.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _openProfile(user.id),
+              child: Row(
+                children: [
+                  _buildAvatar(user.avatar, user.name, size: 55),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              user.name,
+                              style: AppTheme.blackTextStyle.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            if (user.isVerified) ...[
+                              const SizedBox(width: 4),
+                              Icon(Icons.verified,
+                                  size: 14, color: AppColors.primary),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '@${user.username}',
+                          style: AppTheme.greyTextStyle.copyWith(fontSize: 13),
+                        ),
+                        if (user.age > 0)
+                          Text(
+                            '${user.age} years old',
+                            style:
+                                AppTheme.greyTextStyle.copyWith(fontSize: 12),
+                          ),
+                        if (user.bio != null && user.bio!.isNotEmpty)
+                          Text(
+                            user.bio!,
+                            style: AppTheme.greyTextStyle.copyWith(
+                              fontSize: 12,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
                     ),
-                    if (user.isVerified) ...[
-                      const SizedBox(width: 4),
-                      Icon(Icons.verified, size: 14, color: AppColors.primary),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '@${user.username}',
-                  style: AppTheme.greyTextStyle.copyWith(fontSize: 13),
-                ),
-                if (user.age > 0)
-                  Text(
-                    '${user.age} years old',
-                    style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
                   ),
-                if (user.bio != null && user.bio!.isNotEmpty)
-                  Text(
-                    user.bio!,
-                    style: AppTheme.greyTextStyle.copyWith(
-                      fontSize: 12,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
+          const SizedBox(width: 12),
           BlocBuilder<MatchBloc, MatchState>(
             builder: (context, state) {
               return GestureDetector(
@@ -359,6 +378,16 @@ class _MatchesPageState extends State<MatchesPage>
           ),
         ],
       ),
+    );
+  }
+
+  void _openProfile(int userId) {
+    if (userId <= 0) return;
+
+    Navigator.pushNamed(
+      context,
+      NamedRoutes.otherProfileScreen,
+      arguments: userId,
     );
   }
 

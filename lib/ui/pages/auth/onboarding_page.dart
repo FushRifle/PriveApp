@@ -10,8 +10,11 @@ import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/data/models/onboarding_model.dart';
 
 class OnboardingPage extends StatefulWidget {
+  final String completionRoute;
+
   const OnboardingPage({
     super.key,
+    this.completionRoute = NamedRoutes.loginScreen,
   });
 
   @override
@@ -87,7 +90,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
     Navigator.pushReplacementNamed(
       context,
-      NamedRoutes.loginScreen,
+      widget.completionRoute,
     );
   }
 

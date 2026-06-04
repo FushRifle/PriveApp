@@ -13,8 +13,8 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
 
   bool _isFetchingPosts = false;
   bool _isFetchingMorePosts = false;
-  bool _isFetchingComments = false;
-  bool _isFetchingMedia = false;
+  final Set<int> _fetchingComments = {};
+  final Set<String> _fetchingMedia = {};
 
   bool _disposed = false;
 
@@ -96,6 +96,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
 
       final response = await _feedService.getPosts(
         page: event.page,
+        forceRefresh: event.refresh,
       );
 
       final existingIds = state.posts.map((e) => e.id).toSet();
@@ -433,9 +434,9 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
   ) async {
     if (_disposed) return;
 
-    if (_isFetchingComments) return;
+    if (_fetchingComments.contains(event.postId)) return;
 
-    _isFetchingComments = true;
+    _fetchingComments.add(event.postId);
 
     try {
       final updatedStatus = Map<int, CommentsStatus>.from(
@@ -455,6 +456,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
       final response = await _feedService.getComments(
         event.postId,
         page: event.page,
+        forceRefresh: event.page == 1,
       );
 
       final existingComments = state.comments[event.postId] ?? [];
@@ -517,7 +519,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
         ),
       );
     } finally {
-      _isFetchingComments = false;
+      _fetchingComments.remove(event.postId);
     }
   }
 
@@ -601,9 +603,11 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
   ) async {
     if (_disposed) return;
 
-    if (_isFetchingMedia) return;
+    final mediaKey = '${event.userId}:${event.type ?? 'all'}';
 
-    _isFetchingMedia = true;
+    if (_fetchingMedia.contains(mediaKey)) return;
+
+    _fetchingMedia.add(mediaKey);
 
     try {
       emit(
@@ -618,6 +622,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
         userId: event.userId,
         page: event.page,
         type: event.type,
+        forceRefresh: event.page == 1,
       );
 
       final existingIds = state.media.map((e) => e.id).toSet();
@@ -650,7 +655,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
         ),
       );
     } finally {
-      _isFetchingMedia = false;
+      _fetchingMedia.remove(mediaKey);
     }
   }
 

@@ -41,7 +41,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
         _isBiometricEnabled = isAvailable && isDeviceSupported;
       });
     } catch (e) {
-      print('Biometric check error: $e');
+      debugPrint('Biometric check error: $e');
     }
   }
 

@@ -42,6 +42,20 @@ class FeatureAccessCubit extends Cubit<FeatureAccessState> {
 
   bool can(String permission) => state.access.can(permission);
 
+  bool isLocked(String permission) => state.access.isLocked(permission);
+
+  int limit(String key, {int fallback = 0}) {
+    return state.access.limit(key, fallback: fallback);
+  }
+
+  int remaining(String key, {int fallback = 0}) {
+    return state.access.remaining(key, fallback: fallback);
+  }
+
+  bool hasLimitReached(String key, {int fallback = 0}) {
+    return state.access.hasLimitReached(key, fallback: fallback);
+  }
+
   Future<List<Package>> packages() => _revenueCatService.getPackages();
 
   Future<void> purchase(Package package) async {

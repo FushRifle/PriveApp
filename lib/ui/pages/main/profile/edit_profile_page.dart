@@ -175,11 +175,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
         isError: true,
       );
     } finally {
-      if (!mounted) return;
-
-      setState(() {
-        _isPickingImage = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isPickingImage = false;
+        });
+      }
     }
   }
 
@@ -230,17 +230,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
         isError: true,
       );
     } finally {
-      if (!mounted) return;
-
-      setState(() {
-        if (isAvatar) {
-          _isUploadingAvatar = false;
-          _selectedAvatarFile = null;
-        } else {
-          _isUploadingCover = false;
-          _selectedCoverFile = null;
-        }
-      });
+      if (mounted) {
+        setState(() {
+          if (isAvatar) {
+            _isUploadingAvatar = false;
+            _selectedAvatarFile = null;
+          } else {
+            _isUploadingCover = false;
+            _selectedCoverFile = null;
+          }
+        });
+      }
     }
   }
 

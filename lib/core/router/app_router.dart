@@ -12,6 +12,7 @@ import 'package:clique/bloc/status/stories_bloc.dart';
 
 import 'package:clique/ui/pages/auth/demographic_page.dart';
 import 'package:clique/ui/pages/auth/login_page.dart';
+import 'package:clique/ui/pages/auth/onboarding_page.dart';
 import 'package:clique/ui/pages/auth/register_page.dart';
 import 'package:clique/ui/pages/auth/security/active_sessions_page.dart';
 import 'package:clique/ui/pages/auth/security/change_password_page.dart';
@@ -51,6 +52,7 @@ class AppRouter {
     switch (settings.name) {
       case NamedRoutes.homeScreen:
       case NamedRoutes.discoverScreen:
+      case NamedRoutes.communityScreen:
       case NamedRoutes.inboxScreen:
       case NamedRoutes.reelsScreen:
         return _page(
@@ -67,6 +69,11 @@ class AppRouter {
           const RegisterPage(),
         );
 
+      case NamedRoutes.onboardingScreen:
+        return _page(
+          const OnboardingPage(),
+        );
+
       case NamedRoutes.demographicScreen:
         return _page(
           const OnboardingDemographicPage(),
@@ -81,6 +88,19 @@ class AppRouter {
         return _page(
           const ProfilePage(
             isOwnProfile: true,
+          ),
+        );
+
+      case NamedRoutes.otherProfileScreen:
+        final userId = _readUserId(settings.arguments);
+        if (userId == null || userId.isEmpty) {
+          return _errorRoute('Invalid user ID');
+        }
+
+        return _page(
+          ProfilePage(
+            isOwnProfile: false,
+            userId: userId,
           ),
         );
 
@@ -251,5 +271,18 @@ class AppRouter {
         ),
       ),
     );
+  }
+
+  static String? _readUserId(Object? arguments) {
+    if (arguments == null) return null;
+    if (arguments is int) return arguments.toString();
+    if (arguments is String) return arguments;
+    if (arguments is Map) {
+      final value =
+          arguments['userId'] ?? arguments['user_id'] ?? arguments['id'];
+      return value?.toString();
+    }
+
+    return null;
   }
 }

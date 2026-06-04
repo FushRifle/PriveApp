@@ -8,7 +8,7 @@ import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
 import 'package:clique/bloc/subscription/feature_access_cubit.dart';
 import 'package:clique/data/models/feature_access_model.dart';
-import 'package:clique/ui/pages/settings/subscribe_page.dart';
+import 'package:clique/ui/widgets/premium/feature_gate.dart';
 
 class ChatInputBar extends StatefulWidget {
   final Function(String) onSendMessage;
@@ -131,10 +131,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
     final accessCubit = context.read<FeatureAccessCubit>();
     if (!accessCubit.can(PremiumPermission.canUseVoiceNotes)) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const SubscribePage()),
-      );
+      FeatureGate.openSubscribePage(context);
       return;
     }
 
@@ -212,6 +209,11 @@ class _ChatInputBarState extends State<ChatInputBar> {
     if (!_isRecording) return;
 
     final fallbackPath = _recordingPath;
+    final recordedDuration = _recordingDuration;
+    final maxDuration = context.read<FeatureAccessCubit>().limit(
+          PremiumLimit.voiceNoteDurationSeconds,
+          fallback: 30,
+        );
     final path = await _recorderController.stop();
     _recorderController.reset();
 
@@ -230,11 +232,24 @@ class _ChatInputBarState extends State<ChatInputBar> {
     final file = File(resolvedPath);
     if (!await file.exists()) return;
 
-    if (_recordingDuration < const Duration(seconds: 1)) {
+    if (recordedDuration < const Duration(seconds: 1)) {
       await file.delete();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Voice note is too short')),
+      );
+      return;
+    }
+
+    if (maxDuration != FeatureAccess.unlimited &&
+        recordedDuration > Duration(seconds: maxDuration)) {
+      await file.delete();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Voice notes are limited to ${maxDuration}s.'),
+          backgroundColor: AppColors.red,
+        ),
       );
       return;
     }
