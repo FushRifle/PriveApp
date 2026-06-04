@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:clique/app/configs/api_config.dart';
 import 'package:clique/core/clients/supabase_client.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'retrofit_client.dart';
 
@@ -25,6 +26,8 @@ class ApiService {
   final Map<String, DateTime> _cooldowns = {};
 
   int _requestId = 0;
+
+  Future<Session?>? _refreshSessionFuture;
 
   static const Duration _cacheDuration = Duration(seconds: 60);
   static const int _maxCacheEntries = 120;
@@ -80,7 +83,7 @@ class ApiService {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          final session = SupabaseConfig.client.auth.currentSession;
+          final session = await _getFreshSession();
 
           final token = session?.accessToken ?? _authToken;
 
@@ -98,6 +101,41 @@ class ApiService {
         },
       ),
     );
+  }
+
+  Future<Session?> _getFreshSession() async {
+    final session = SupabaseConfig.client.auth.currentSession;
+    if (session == null) return null;
+
+    final expiresAt = session.expiresAt;
+    if (expiresAt == null) return session;
+
+    final expiresAtDate = DateTime.fromMillisecondsSinceEpoch(
+      expiresAt * 1000,
+    );
+
+    if (expiresAtDate.isAfter(DateTime.now().add(const Duration(minutes: 2)))) {
+      return session;
+    }
+
+    final existingRefresh = _refreshSessionFuture;
+    if (existingRefresh != null) {
+      return existingRefresh;
+    }
+
+    final refresh = SupabaseConfig.client.auth.refreshSession().then(
+          (response) => response.session,
+        );
+
+    _refreshSessionFuture = refresh;
+
+    try {
+      return await refresh;
+    } finally {
+      if (_refreshSessionFuture == refresh) {
+        _refreshSessionFuture = null;
+      }
+    }
   }
 
   // =========================================================

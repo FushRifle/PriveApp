@@ -231,7 +231,7 @@ class AuthService {
   // GET CURRENT TOKEN
   Future<String?> getToken() async {
     try {
-      final session = SupabaseConfig.client.auth.currentSession;
+      final session = await _getFreshSession();
       return session?.accessToken;
     } catch (e) {
       return null;
@@ -241,7 +241,7 @@ class AuthService {
   // AUTH CHECK
   Future<bool> isAuthenticated() async {
     try {
-      final session = SupabaseConfig.client.auth.currentSession;
+      final session = await _getFreshSession();
       return session != null && session.accessToken.isNotEmpty;
     } catch (e) {
       return false;
@@ -263,6 +263,25 @@ class AuthService {
     } catch (e) {
       return null;
     }
+  }
+
+  Future<Session?> _getFreshSession() async {
+    final session = SupabaseConfig.client.auth.currentSession;
+    if (session == null) return null;
+
+    final expiresAt = session.expiresAt;
+    if (expiresAt == null) return session;
+
+    final expiresAtDate = DateTime.fromMillisecondsSinceEpoch(
+      expiresAt * 1000,
+    );
+
+    if (expiresAtDate.isAfter(DateTime.now().add(const Duration(minutes: 2)))) {
+      return session;
+    }
+
+    final response = await SupabaseConfig.client.auth.refreshSession();
+    return response.session;
   }
 
   // GET SAVED CREDENTIALS

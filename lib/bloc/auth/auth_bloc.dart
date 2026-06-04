@@ -9,6 +9,8 @@ part 'auth_state.dart';
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthService _authService = AuthService();
 
+  bool _isCheckingAuth = false;
+
   AuthBloc() : super(const AuthState()) {
     on<SignInRequested>(_onSignInRequested);
     on<SignUpRequested>(_onSignUpRequested);
@@ -156,30 +158,42 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     CheckAuthStatus event,
     Emitter<AuthState> emit,
   ) async {
-    final isAuthenticated = await _authService.isAuthenticated();
-    final token = await _authService.getToken();
-    final user = await _authService.getCurrentUser();
+    if (_isCheckingAuth) return;
 
-    if (isAuthenticated && token != null) {
-      emit(
-        state.copyWith(
-          status: AuthStatus.authenticated,
-          isAuthenticated: true,
-          token: token,
-          user: user,
-          isLoading: false,
-        ),
-      );
-    } else {
-      emit(
-        state.copyWith(
-          status: AuthStatus.unauthenticated,
-          isAuthenticated: false,
-          clearToken: true,
-          clearUser: true,
-          isLoading: false,
-        ),
-      );
+    _isCheckingAuth = true;
+
+    if (state.status == AuthStatus.initial) {
+      emit(state.copyWith(status: AuthStatus.loading, isLoading: true));
+    }
+
+    try {
+      final isAuthenticated = await _authService.isAuthenticated();
+      final token = await _authService.getToken();
+      final user = await _authService.getCurrentUser();
+
+      if (isAuthenticated && token != null) {
+        emit(
+          state.copyWith(
+            status: AuthStatus.authenticated,
+            isAuthenticated: true,
+            token: token,
+            user: user,
+            isLoading: false,
+          ),
+        );
+      } else {
+        emit(
+          state.copyWith(
+            status: AuthStatus.unauthenticated,
+            isAuthenticated: false,
+            clearToken: true,
+            clearUser: true,
+            isLoading: false,
+          ),
+        );
+      }
+    } finally {
+      _isCheckingAuth = false;
     }
   }
 

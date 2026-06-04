@@ -8,6 +8,9 @@ part 'user_state.dart';
 class UserBloc extends Bloc<UserEvent, UserState> {
   final UserService _userService = UserService();
 
+  bool _isLoadingCurrentUser = false;
+  bool _isRefreshingCurrentUser = false;
+
   UserBloc() : super(const UserState()) {
     on<LoadCurrentUser>(_onLoadCurrentUser);
     on<RefreshCurrentUser>(_onRefreshCurrentUser);
@@ -35,6 +38,10 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     LoadCurrentUser event,
     Emitter<UserState> emit,
   ) async {
+    if (_isLoadingCurrentUser || _isRefreshingCurrentUser) return;
+
+    _isLoadingCurrentUser = true;
+
     if (state.currentUser == null) {
       emit(state.copyWith(
         status: UserStatus.loading,
@@ -59,6 +66,8 @@ class UserBloc extends Bloc<UserEvent, UserState> {
         isLoading: false,
         error: e.toString(),
       ));
+    } finally {
+      _isLoadingCurrentUser = false;
     }
   }
 
@@ -66,6 +75,10 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     RefreshCurrentUser event,
     Emitter<UserState> emit,
   ) async {
+    if (_isLoadingCurrentUser || _isRefreshingCurrentUser) return;
+
+    _isRefreshingCurrentUser = true;
+
     emit(state.copyWith(
       status: UserStatus.refreshing,
       isRefreshing: true,
@@ -88,6 +101,8 @@ class UserBloc extends Bloc<UserEvent, UserState> {
         isRefreshing: false,
         error: e.toString(),
       ));
+    } finally {
+      _isRefreshingCurrentUser = false;
     }
   }
 

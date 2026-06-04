@@ -10,7 +10,6 @@ import 'package:clique/bloc/community/community_bloc.dart';
 import 'package:clique/bloc/explore/explore_bloc.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
-import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/ui/pages/main/home/create_post_page.dart';
 
 import 'package:clique/ui/pages/main/chat/inbox_page.dart';
@@ -36,8 +35,6 @@ class _MainWrapperState extends State<MainWrapper>
 
   int _currentIndex = 0;
 
-  bool _loadedInitialData = false;
-
   @override
   bool get wantKeepAlive => true;
 
@@ -48,8 +45,6 @@ class _MainWrapperState extends State<MainWrapper>
     super.initState();
 
     _pageController = PageController();
-
-    _loadInitialData();
   }
 
   @override
@@ -57,20 +52,6 @@ class _MainWrapperState extends State<MainWrapper>
     _pageController.dispose();
 
     super.dispose();
-  }
-
-  void _loadInitialData() {
-    if (_loadedInitialData) return;
-
-    _loadedInitialData = true;
-
-    if (context.read<UserBloc>().state.currentUser != null) {
-      return;
-    }
-
-    context.read<UserBloc>().add(
-          LoadCurrentUser(),
-        );
   }
 
   void _onTabChanged(int index) {

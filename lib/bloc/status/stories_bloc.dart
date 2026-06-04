@@ -9,6 +9,9 @@ part 'stories_state.dart';
 class StoriesBloc extends Bloc<StoriesEvent, StoriesState> {
   final StatusService _statusService = StatusService();
 
+  bool _isLoadingStories = false;
+  DateTime? _lastStoriesRequest;
+
   StoriesBloc() : super(const StoriesState()) {
     on<GetStories>(_onGetStories);
     on<CreateStoryEvent>(_onCreateStory);
@@ -33,6 +36,17 @@ class StoriesBloc extends Bloc<StoriesEvent, StoriesState> {
     GetStories event,
     Emitter<StoriesState> emit,
   ) async {
+    if (_isLoadingStories) return;
+
+    final now = DateTime.now();
+    if (_lastStoriesRequest != null &&
+        now.difference(_lastStoriesRequest!) < const Duration(seconds: 2)) {
+      return;
+    }
+
+    _isLoadingStories = true;
+    _lastStoriesRequest = now;
+
     emit(state.copyWith(status: StoriesStatus.loading, clearError: true));
 
     try {
@@ -46,6 +60,8 @@ class StoriesBloc extends Bloc<StoriesEvent, StoriesState> {
         status: StoriesStatus.error,
         error: e.toString(),
       ));
+    } finally {
+      _isLoadingStories = false;
     }
   }
 

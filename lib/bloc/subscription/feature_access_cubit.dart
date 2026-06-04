@@ -12,6 +12,9 @@ class FeatureAccessCubit extends Cubit<FeatureAccessState> {
   final SubscriptionService _subscriptionService;
   final RevenueCatService _revenueCatService;
 
+  Future<void>? _loadFuture;
+  Future<void>? _configureFuture;
+
   FeatureAccessCubit({
     SubscriptionService? subscriptionService,
     RevenueCatService? revenueCatService,
@@ -20,6 +23,38 @@ class FeatureAccessCubit extends Cubit<FeatureAccessState> {
         super(FeatureAccessState.initial());
 
   Future<void> load() async {
+    final existingLoad = _loadFuture;
+    if (existingLoad != null) return existingLoad;
+
+    final future = _load();
+    _loadFuture = future;
+
+    try {
+      await future;
+    } finally {
+      if (_loadFuture == future) {
+        _loadFuture = null;
+      }
+    }
+  }
+
+  Future<void> configureRevenueCat(String appUserId) async {
+    final existingConfigure = _configureFuture;
+    if (existingConfigure != null) return existingConfigure;
+
+    final future = _configureRevenueCat(appUserId);
+    _configureFuture = future;
+
+    try {
+      await future;
+    } finally {
+      if (_configureFuture == future) {
+        _configureFuture = null;
+      }
+    }
+  }
+
+  Future<void> _load() async {
     emit(state.copyWith(status: FeatureAccessStatus.loading, clearError: true));
     try {
       final access = await _subscriptionService.getFeatureAccess();
@@ -35,7 +70,7 @@ class FeatureAccessCubit extends Cubit<FeatureAccessState> {
     }
   }
 
-  Future<void> configureRevenueCat(String appUserId) async {
+  Future<void> _configureRevenueCat(String appUserId) async {
     final configured = await _revenueCatService.configure(appUserId: appUserId);
     emit(state.copyWith(isRevenueCatConfigured: configured));
   }

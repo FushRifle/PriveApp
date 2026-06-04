@@ -72,7 +72,6 @@ class _HomePageState extends State<HomePage>
 
     _initialized = true;
 
-    context.read<UserBloc>().add(LoadCurrentUser());
     context.read<FeedBloc>().add(GetFeedPosts());
     context.read<StoriesBloc>().add(GetStories());
   }

@@ -23,23 +23,28 @@ class AuthGuard extends StatefulWidget {
 }
 
 class _AuthGuardState extends State<AuthGuard> {
-  bool _initialized = false;
+  String? _configuredToken;
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
       buildWhen: (previous, current) {
         return previous.isAuthenticated != current.isAuthenticated ||
-            previous.token != current.token;
+            previous.token != current.token ||
+            previous.status != current.status;
       },
       builder: (context, authState) {
+        if (authState.status == AuthStatus.initial ||
+            authState.status == AuthStatus.loading) {
+          return const _SplashScreen();
+        }
+
         if (!authState.isAuthenticated || authState.token == null) {
           return const LoginPage();
         }
 
-        if (!_initialized) {
-          _initialized = true;
-
+        if (_configuredToken != authState.token) {
+          _configuredToken = authState.token;
           final profileBloc = context.read<ProfileBloc>();
 
           final userBloc = context.read<UserBloc>();
