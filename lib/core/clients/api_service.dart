@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:dio/dio.dart';
 import 'package:clique/app/configs/api_config.dart';
 import 'package:clique/core/clients/supabase_client.dart';
@@ -18,16 +16,20 @@ class ApiService {
 
   final Map<String, CancelToken> _cancelTokens = {};
 
-  final Map<String, Future<Response>> _pendingRequests = {};
+  final Map<String, Future<Response>> _pendingGetRequests = {};
 
   final Map<String, dynamic> _memoryCache = {};
 
   final Map<String, DateTime> _cacheTimestamps = {};
 
-  Future<void> _requestQueue = Future.value();
+  final Map<String, DateTime> _cooldowns = {};
+
+  int _requestId = 0;
 
   static const Duration _cacheDuration = Duration(seconds: 60);
   static const int _maxCacheEntries = 120;
+  static const int _maxRetries = 3;
+  static const Duration _defaultRateLimitCooldown = Duration(seconds: 30);
 
   ApiService._internal() {
     dio = Dio(
@@ -131,12 +133,20 @@ class ApiService {
     return value.toString();
   }
 
-  CancelToken _createCancelToken(String key) {
+  ({CancelToken token, String? trackingKey}) _trackCancelToken(
+    String key,
+    CancelToken? cancelToken,
+  ) {
+    if (cancelToken != null) {
+      return (token: cancelToken, trackingKey: null);
+    }
+
     final token = CancelToken();
+    final trackingKey = '${key}_${_requestId++}';
 
-    _cancelTokens[key] = token;
+    _cancelTokens[trackingKey] = token;
 
-    return token;
+    return (token: token, trackingKey: trackingKey);
   }
 
   bool _isCacheValid(String key) {
@@ -149,12 +159,54 @@ class ApiService {
     return DateTime.now().difference(timestamp) < _cacheDuration;
   }
 
-  Future<Response> _withRetry(
+  bool _isCoolingDown(String key) {
+    final cooldownUntil = _cooldowns[key];
+    if (cooldownUntil == null) {
+      return false;
+    }
+
+    if (DateTime.now().isBefore(cooldownUntil)) {
+      return true;
+    }
+
+    _cooldowns.remove(key);
+    return false;
+  }
+
+  void _startCooldown(String key, DioException error) {
+    final retryAfter = error.response?.headers.value('retry-after');
+    final retryAfterSeconds = int.tryParse(retryAfter ?? '');
+    final duration = retryAfterSeconds != null && retryAfterSeconds > 0
+        ? Duration(seconds: retryAfterSeconds)
+        : _defaultRateLimitCooldown;
+
+    _cooldowns[key] = DateTime.now().add(duration);
+  }
+
+  DioException _cooldownException(String key, String path) {
+    return DioException(
+      requestOptions: RequestOptions(path: path),
+      response: Response(
+        requestOptions: RequestOptions(path: path),
+        statusCode: 429,
+        data: {
+          'message': 'Request is cooling down after a rate limit response',
+          'key': key,
+        },
+      ),
+      type: DioExceptionType.badResponse,
+    );
+  }
+
+  Future<Response> _sendWithRetry(
     Future<Response> Function() request,
+    String key,
+    String method,
   ) async {
+    final canRetry = method == 'GET';
     int retries = 0;
 
-    while (retries <= 3) {
+    while (true) {
       try {
         return await request();
       } on DioException catch (e) {
@@ -164,9 +216,14 @@ class ApiService {
 
         final status = e.response?.statusCode ?? 0;
 
-        final shouldRetry = status == 429 || status >= 500 || status == 0;
+        if (status == 429) {
+          _startCooldown(key, e);
+          rethrow;
+        }
 
-        if (!shouldRetry || retries >= 3) {
+        final shouldRetry = status >= 500 || status == 0;
+
+        if (!canRetry || !shouldRetry || retries >= _maxRetries) {
           rethrow;
         }
 
@@ -175,8 +232,6 @@ class ApiService {
         await Future.delayed(_retryDelay(e, retries));
       }
     }
-
-    throw Exception('Request failed');
   }
 
   Duration _retryDelay(DioException error, int retryCount) {
@@ -188,22 +243,6 @@ class ApiService {
     }
 
     return Duration(milliseconds: 600 * retryCount);
-  }
-
-  Future<T> _enqueueRequest<T>(Future<T> Function() request) async {
-    final previous = _requestQueue;
-    final completer = Completer<void>();
-
-    _requestQueue = completer.future;
-
-    try {
-      await previous.catchError((_) {});
-      return await request();
-    } finally {
-      if (!completer.isCompleted) {
-        completer.complete();
-      }
-    }
   }
 
   // =========================================================
@@ -233,23 +272,38 @@ class ApiService {
       );
     }
 
-    if (!forceRefresh && _pendingRequests.containsKey(key)) {
-      return await _pendingRequests[key]!;
+    if (_isCoolingDown(key)) {
+      if (useCache && _memoryCache.containsKey(key)) {
+        return Response(
+          requestOptions: RequestOptions(path: path),
+          data: _memoryCache[key],
+        );
+      }
+
+      throw _cooldownException(key, path);
     }
 
-    final token = cancelToken ?? _createCancelToken(key);
+    final shouldSharePending = !forceRefresh;
 
-    final future = _withRetry(
-      () => _enqueueRequest(
-        () => dio.get(
-          path,
-          queryParameters: queryParameters,
-          cancelToken: token,
-        ),
+    if (shouldSharePending && _pendingGetRequests.containsKey(key)) {
+      return await _pendingGetRequests[key]!;
+    }
+
+    final trackedToken = _trackCancelToken(key, cancelToken);
+
+    final future = _sendWithRetry(
+      () => dio.get(
+        path,
+        queryParameters: queryParameters,
+        cancelToken: trackedToken.token,
       ),
+      key,
+      'GET',
     );
 
-    _pendingRequests[key] = future;
+    if (shouldSharePending) {
+      _pendingGetRequests[key] = future;
+    }
 
     try {
       final response = await future;
@@ -264,8 +318,13 @@ class ApiService {
 
       return response;
     } finally {
-      _pendingRequests.remove(key);
-      _cancelTokens.remove(key);
+      if (_pendingGetRequests[key] == future) {
+        _pendingGetRequests.remove(key);
+      }
+      final trackingKey = trackedToken.trackingKey;
+      if (trackingKey != null) {
+        _cancelTokens.remove(trackingKey);
+      }
     }
   }
 
@@ -284,17 +343,22 @@ class ApiService {
       data: data,
     );
 
-    final token = cancelToken ?? _createCancelToken(key);
+    final trackedToken = _trackCancelToken(key, cancelToken);
 
-    return _withRetry(
-      () => _enqueueRequest(
-        () => dio.post(
-          path,
-          data: data,
-          cancelToken: token,
-        ),
+    return _sendWithRetry(
+      () => dio.post(
+        path,
+        data: data,
+        cancelToken: trackedToken.token,
       ),
-    ).whenComplete(() => _cancelTokens.remove(key));
+      key,
+      'POST',
+    ).whenComplete(() {
+      final trackingKey = trackedToken.trackingKey;
+      if (trackingKey != null) {
+        _cancelTokens.remove(trackingKey);
+      }
+    });
   }
 
   // =========================================================
@@ -312,17 +376,22 @@ class ApiService {
       data: data,
     );
 
-    final token = cancelToken ?? _createCancelToken(key);
+    final trackedToken = _trackCancelToken(key, cancelToken);
 
-    return _withRetry(
-      () => _enqueueRequest(
-        () => dio.put(
-          path,
-          data: data,
-          cancelToken: token,
-        ),
+    return _sendWithRetry(
+      () => dio.put(
+        path,
+        data: data,
+        cancelToken: trackedToken.token,
       ),
-    ).whenComplete(() => _cancelTokens.remove(key));
+      key,
+      'PUT',
+    ).whenComplete(() {
+      final trackingKey = trackedToken.trackingKey;
+      if (trackingKey != null) {
+        _cancelTokens.remove(trackingKey);
+      }
+    });
   }
 
   // =========================================================
@@ -340,17 +409,22 @@ class ApiService {
       data: data,
     );
 
-    final token = cancelToken ?? _createCancelToken(key);
+    final trackedToken = _trackCancelToken(key, cancelToken);
 
-    return _withRetry(
-      () => _enqueueRequest(
-        () => dio.patch(
-          path,
-          data: data,
-          cancelToken: token,
-        ),
+    return _sendWithRetry(
+      () => dio.patch(
+        path,
+        data: data,
+        cancelToken: trackedToken.token,
       ),
-    ).whenComplete(() => _cancelTokens.remove(key));
+      key,
+      'PATCH',
+    ).whenComplete(() {
+      final trackingKey = trackedToken.trackingKey;
+      if (trackingKey != null) {
+        _cancelTokens.remove(trackingKey);
+      }
+    });
   }
 
   // =========================================================
@@ -368,17 +442,22 @@ class ApiService {
       data: data,
     );
 
-    final token = cancelToken ?? _createCancelToken(key);
+    final trackedToken = _trackCancelToken(key, cancelToken);
 
-    return _withRetry(
-      () => _enqueueRequest(
-        () => dio.delete(
-          path,
-          data: data,
-          cancelToken: token,
-        ),
+    return _sendWithRetry(
+      () => dio.delete(
+        path,
+        data: data,
+        cancelToken: trackedToken.token,
       ),
-    ).whenComplete(() => _cancelTokens.remove(key));
+      key,
+      'DELETE',
+    ).whenComplete(() {
+      final trackingKey = trackedToken.trackingKey;
+      if (trackingKey != null) {
+        _cancelTokens.remove(trackingKey);
+      }
+    });
   }
 
   // =========================================================
@@ -399,6 +478,8 @@ class ApiService {
     _memoryCache.clear();
 
     _cacheTimestamps.clear();
+
+    _cooldowns.clear();
   }
 
   void _trimCache() {
@@ -420,10 +501,13 @@ class ApiService {
   // =========================================================
 
   void cancelRequest(String key) {
-    if (_cancelTokens.containsKey(key)) {
-      _cancelTokens[key]?.cancel();
+    final matchingKeys = _cancelTokens.keys
+        .where((tokenKey) => tokenKey == key || tokenKey.startsWith('${key}_'))
+        .toList();
 
-      _cancelTokens.remove(key);
+    for (final tokenKey in matchingKeys) {
+      _cancelTokens[tokenKey]?.cancel();
+      _cancelTokens.remove(tokenKey);
     }
   }
 
@@ -434,7 +518,7 @@ class ApiService {
 
     _cancelTokens.clear();
 
-    _pendingRequests.clear();
+    _pendingGetRequests.clear();
   }
 
   // =========================================================

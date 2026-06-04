@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../firebase_options.dart';
 import 'notification_service.dart';
@@ -34,6 +35,8 @@ class PushNotificationService with WidgetsBindingObserver {
   bool _firebaseReady = false;
   bool _syncInProgress = false;
   String? _registeredToken;
+  String? _registeringToken;
+  Future<void>? _registeringFuture;
 
   Future<void> initialize() async {
     if (_initialized) {
@@ -90,6 +93,10 @@ class PushNotificationService with WidgetsBindingObserver {
   Future<void> _syncDeviceToken() async {
     await initialize();
     if (!_firebaseReady) {
+      return;
+    }
+
+    if (!_hasAuthenticatedSession) {
       return;
     }
 
@@ -192,6 +199,28 @@ class PushNotificationService with WidgetsBindingObserver {
       return;
     }
 
+    if (_registeringToken == token && _registeringFuture != null) {
+      return _registeringFuture;
+    }
+
+    if (!_hasAuthenticatedSession) {
+      return;
+    }
+
+    _registeringToken = token;
+    _registeringFuture = _sendTokenRegistration(token);
+
+    try {
+      await _registeringFuture;
+    } finally {
+      if (_registeringToken == token) {
+        _registeringToken = null;
+        _registeringFuture = null;
+      }
+    }
+  }
+
+  Future<void> _sendTokenRegistration(String token) async {
     try {
       await _notificationService.registerDeviceToken(
         token: token,
@@ -220,5 +249,10 @@ class PushNotificationService with WidgetsBindingObserver {
       default:
         return 'unknown';
     }
+  }
+
+  bool get _hasAuthenticatedSession {
+    final session = Supabase.instance.client.auth.currentSession;
+    return session != null && session.accessToken.trim().isNotEmpty;
   }
 }
