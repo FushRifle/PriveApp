@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:clique/core/cloudinary_service.dart';
+import 'package:clique/core/clients/cloudinary_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
-import 'package:clique/data/models/status_model.dart';
+import 'package:clique/core/models/status_model.dart';
 
 class CreateStatusPage extends StatefulWidget {
   const CreateStatusPage({super.key});

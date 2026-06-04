@@ -2,9 +2,9 @@ import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
-import 'package:clique/data/models/feature_access_model.dart';
-import 'package:clique/data/services/subscription/revenue_cat_service.dart';
-import 'package:clique/data/services/subscription/subscription_service.dart';
+import 'package:clique/core/models/feature_access_model.dart';
+import 'package:clique/core/services/subscription/revenue_cat_service.dart';
+import 'package:clique/core/services/subscription/subscription_service.dart';
 
 part 'feature_access_state.dart';
 

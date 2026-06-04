@@ -1,7 +1,7 @@
-import 'package:clique/data/services/status/status_services.dart';
+import 'package:clique/core/services/status/status_services.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:clique/data/models/status_model.dart';
+import 'package:clique/core/models/status_model.dart';
 
 part 'stories_event.dart';
 part 'stories_state.dart';

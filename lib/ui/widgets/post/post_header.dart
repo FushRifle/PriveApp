@@ -2,7 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/router/named_routes.dart';
-import 'package:clique/data/models/feeds_models.dart';
+import 'package:clique/core/models/feeds_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 

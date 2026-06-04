@@ -4,8 +4,8 @@ import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 
-import 'package:clique/data/models/profile_model.dart';
-import 'package:clique/data/services/explore/explore_service.dart';
+import 'package:clique/core/models/profile_model.dart';
+import 'package:clique/core/services/explore/explore_service.dart';
 
 part 'explore_event.dart';
 part 'explore_state.dart';

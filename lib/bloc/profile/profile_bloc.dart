@@ -1,7 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:clique/data/services/profile/profile_service.dart';
-import 'package:clique/data/services/user/user_service.dart';
+import 'package:clique/core/services/profile/profile_service.dart';
+import 'package:clique/core/services/user/user_service.dart';
 
 part 'profile_event.dart';
 part 'profile_state.dart';

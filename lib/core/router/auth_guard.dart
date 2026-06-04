@@ -1,0 +1,277 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import 'package:clique/app/configs/colors.dart';
+
+import 'package:clique/bloc/auth/auth_bloc.dart';
+import 'package:clique/bloc/profile/profile_bloc.dart';
+import 'package:clique/bloc/user/user_bloc.dart';
+
+import 'package:clique/ui/pages/auth/login_page.dart';
+import 'package:clique/ui/pages/auth/onboarding_page.dart';
+
+import 'main_wrapper.dart';
+import 'named_routes.dart';
+
+class AuthGuard extends StatefulWidget {
+  const AuthGuard({super.key});
+
+  @override
+  State<AuthGuard> createState() => _AuthGuardState();
+}
+
+class _AuthGuardState extends State<AuthGuard> {
+  bool _initialized = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      buildWhen: (previous, current) {
+        return previous.isAuthenticated != current.isAuthenticated ||
+            previous.token != current.token;
+      },
+      builder: (context, authState) {
+        if (!authState.isAuthenticated || authState.token == null) {
+          return const LoginPage();
+        }
+
+        if (!_initialized) {
+          _initialized = true;
+
+          final profileBloc = context.read<ProfileBloc>();
+
+          final userBloc = context.read<UserBloc>();
+
+          profileBloc.setAuthToken(
+            authState.token!,
+          );
+
+          userBloc.setAuthToken(
+            authState.token!,
+          );
+        }
+
+        return _Bootstrapper(
+          token: authState.token!,
+        );
+      },
+    );
+  }
+}
+
+class _Bootstrapper extends StatefulWidget {
+  final String token;
+
+  const _Bootstrapper({
+    required this.token,
+  });
+
+  @override
+  State<_Bootstrapper> createState() => _BootstrapperState();
+}
+
+class _BootstrapperState extends State<_Bootstrapper> {
+  bool _loading = true;
+
+  bool _hasProfile = false;
+
+  bool _hasUser = false;
+
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _bootstrap();
+    });
+  }
+
+  Future<void> _bootstrap() async {
+    try {
+      final profileBloc = context.read<ProfileBloc>();
+
+      final userBloc = context.read<UserBloc>();
+
+      final profile = profileBloc.state.myProfile;
+
+      _hasProfile = profile != null && profile.userId > 0;
+
+      _hasUser = userBloc.state.currentUser != null;
+
+      final futures = <Future>[];
+
+      if (!_hasProfile && profileBloc.state.status != ProfileStatus.loading) {
+        profileBloc.add(
+          LoadMyProfile(),
+        );
+
+        futures.add(
+          profileBloc.stream.firstWhere(
+            (state) {
+              return state.status == ProfileStatus.success ||
+                  state.status == ProfileStatus.error;
+            },
+          ),
+        );
+      }
+
+      if (!_hasUser && userBloc.state.status != UserStatus.loading) {
+        userBloc.add(
+          LoadCurrentUser(),
+        );
+
+        futures.add(
+          userBloc.stream.firstWhere(
+            (state) {
+              return state.status == UserStatus.success ||
+                  state.status == UserStatus.error;
+            },
+          ),
+        );
+      }
+
+      if (futures.isNotEmpty) {
+        await Future.wait(futures).timeout(
+          const Duration(seconds: 15),
+        );
+      }
+
+      if (!mounted) return;
+
+      final updatedProfile = profileBloc.state.myProfile;
+
+      final hasValidProfile =
+          updatedProfile != null && updatedProfile.userId > 0;
+
+      setState(() {
+        _hasProfile = hasValidProfile;
+        _loading = false;
+      });
+    } on TimeoutException {
+      if (!mounted) return;
+
+      setState(() {
+        _loading = false;
+        _error = 'Connection timeout';
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const _SplashScreen();
+    }
+
+    if (_error != null) {
+      return _ErrorScreen(
+        error: _error!,
+        onRetry: () {
+          setState(() {
+            _loading = true;
+            _error = null;
+          });
+
+          _bootstrap();
+        },
+      );
+    }
+
+    if (!_hasProfile) {
+      return const OnboardingPage(
+        completionRoute: NamedRoutes.demographicScreen,
+      );
+    }
+
+    return const MainWrapper();
+  }
+}
+
+class _SplashScreen extends StatelessWidget {
+  const _SplashScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              'images/clique.png',
+              width: 120,
+              height: 120,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(height: 24),
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorScreen extends StatelessWidget {
+  final String error;
+
+  final VoidCallback onRetry;
+
+  const _ErrorScreen({
+    required this.error,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 56,
+                color: Colors.red,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                error,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: onRetry,
+                child: const Text(
+                  'Retry',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

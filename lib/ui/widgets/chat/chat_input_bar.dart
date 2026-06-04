@@ -7,7 +7,7 @@ import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
 import 'package:clique/bloc/subscription/feature_access_cubit.dart';
-import 'package:clique/data/models/feature_access_model.dart';
+import 'package:clique/core/models/feature_access_model.dart';
 import 'package:clique/ui/widgets/premium/feature_gate.dart';
 
 class ChatInputBar extends StatefulWidget {

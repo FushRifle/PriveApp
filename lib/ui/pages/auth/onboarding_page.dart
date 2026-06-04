@@ -7,7 +7,7 @@ import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/router/named_routes.dart';
 
-import 'package:clique/data/models/onboarding_model.dart';
+import 'package:clique/core/models/onboarding_model.dart';
 
 class OnboardingPage extends StatefulWidget {
   final String completionRoute;

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
-import 'package:clique/data/models/profile_model.dart';
+import 'package:clique/core/models/profile_model.dart';
 
 class ProfileCard extends StatelessWidget {
   final ProfileModel profile;

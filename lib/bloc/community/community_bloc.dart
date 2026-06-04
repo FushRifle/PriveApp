@@ -1,8 +1,8 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 
-import 'package:clique/data/models/community_model.dart';
-import 'package:clique/data/services/community/community_service.dart';
+import 'package:clique/core/models/community_model.dart';
+import 'package:clique/core/services/community/community_service.dart';
 
 part 'community_event.dart';
 part 'community_state.dart';

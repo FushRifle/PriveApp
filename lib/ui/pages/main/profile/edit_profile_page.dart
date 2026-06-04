@@ -13,7 +13,7 @@ import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/profile/profile_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 
-import 'package:clique/core/cloudinary_service.dart';
+import 'package:clique/core/clients/cloudinary_service.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({

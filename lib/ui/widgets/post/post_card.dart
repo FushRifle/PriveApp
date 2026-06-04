@@ -1,6 +1,6 @@
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/app/configs/colors.dart';
-import 'package:clique/data/models/feeds_models.dart';
+import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/ui/pages/main/home/post_detail_page.dart';
 import 'package:clique/ui/widgets/home/custom_bottom_sheet.dart';
 import 'package:clique/ui/widgets/post/post_actions.dart';

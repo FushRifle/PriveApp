@@ -1,7 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:clique/data/services/auth/auth_service.dart';
-import 'package:clique/data/services/notification/push_notification_service.dart';
+import 'package:clique/core/services/auth/auth_service.dart';
+import 'package:clique/core/services/notification/push_notification_service.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';

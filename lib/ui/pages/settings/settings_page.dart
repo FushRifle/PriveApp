@@ -3,7 +3,7 @@ import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/bloc/profile/gallery_profile_cubit.dart';
 import 'package:clique/bloc/profile/profile_bloc.dart';
-import 'package:clique/data/providers/theme_provider.dart';
+import 'package:clique/core/providers/theme_provider.dart';
 import 'package:clique/ui/pages/main/profile/profile_page.dart';
 import 'package:clique/ui/pages/settings/subscribe_page.dart';
 import 'package:flutter/material.dart';

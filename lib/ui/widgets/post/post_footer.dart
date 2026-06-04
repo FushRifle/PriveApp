@@ -1,6 +1,6 @@
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
-import 'package:clique/data/models/feeds_models.dart';
+import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/ui/pages/main/home/hashtag_feed_page.dart';
 import 'package:flutter/material.dart';
 

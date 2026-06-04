@@ -6,7 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/community/community_bloc.dart';
-import 'package:clique/data/models/community_model.dart';
+import 'package:clique/core/models/community_model.dart';
 
 class CommunityPage extends StatefulWidget {
   const CommunityPage({super.key});

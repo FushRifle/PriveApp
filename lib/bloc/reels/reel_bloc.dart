@@ -1,6 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:clique/data/services/reel/reel_service.dart';
+import 'package:clique/core/services/reel/reel_service.dart';
 
 part 'reel_event.dart';
 part 'reel_state.dart';

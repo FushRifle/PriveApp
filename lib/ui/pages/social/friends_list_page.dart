@@ -1,4 +1,4 @@
-import 'package:clique/data/services/friends/friends_service.dart';
+import 'package:clique/core/services/friends/friends_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';

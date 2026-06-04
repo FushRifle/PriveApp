@@ -10,7 +10,7 @@ import 'package:video_player/video_player.dart';
 
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/reels/reel_bloc.dart';
-import 'package:clique/core/cloudinary_service.dart';
+import 'package:clique/core/clients/cloudinary_service.dart';
 
 class CreateReelPage extends StatefulWidget {
   const CreateReelPage({

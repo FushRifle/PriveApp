@@ -8,7 +8,7 @@ import 'package:clique/app/configs/theme.dart';
 
 import 'package:clique/bloc/status/stories_bloc.dart';
 
-import 'package:clique/data/models/status_model.dart';
+import 'package:clique/core/models/status_model.dart';
 
 import './create_status_page.dart';
 import './status_view_page.dart';

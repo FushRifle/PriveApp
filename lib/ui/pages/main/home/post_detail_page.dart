@@ -11,8 +11,8 @@ import 'package:clique/app/configs/theme.dart';
 
 import 'package:clique/bloc/home/feed_bloc.dart';
 
-import 'package:clique/data/models/feeds_models.dart';
-import 'package:clique/data/services/user/user_service.dart';
+import 'package:clique/core/models/feeds_models.dart';
+import 'package:clique/core/services/user/user_service.dart';
 
 import 'package:clique/ui/widgets/post/post_card.dart';
 

@@ -1,6 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:clique/data/services/chat/chat_service.dart';
+import 'package:clique/core/services/chat/chat_service.dart';
 
 part 'chat_gallery_state.dart';
 

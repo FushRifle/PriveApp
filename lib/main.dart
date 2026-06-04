@@ -11,16 +11,16 @@ import 'package:cloudinary_url_gen/cloudinary.dart';
 
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
-import 'package:clique/managers/auth_guard.dart';
+import 'package:clique/core/router/auth_guard.dart';
 import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/app/configs/api_config.dart';
-import 'package:clique/data/providers/theme_provider.dart';
+import 'package:clique/core/providers/theme_provider.dart';
 import 'package:clique/bloc/cloudinary/cloudinary_cubit.dart';
 import 'package:clique/bloc/profile/profile_bloc.dart';
 import 'package:clique/bloc/subscription/feature_access_cubit.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/core/local_cache/local_cache_service.dart';
-import 'package:clique/data/services/notification/push_notification_service.dart';
+import 'package:clique/core/services/notification/push_notification_service.dart';
 import 'package:clique/firebase_options.dart';
 
 import 'package:clique/core/router/app_router.dart';

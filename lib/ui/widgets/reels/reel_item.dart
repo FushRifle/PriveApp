@@ -11,9 +11,9 @@ import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
 import 'package:clique/bloc/friends/friends_bloc.dart';
 import 'package:clique/bloc/reels/reel_bloc.dart';
-import 'package:clique/data/services/chat/chat_service.dart';
-import 'package:clique/data/services/friends/friends_service.dart';
-import 'package:clique/data/services/reel/reel_service.dart';
+import 'package:clique/core/services/chat/chat_service.dart';
+import 'package:clique/core/services/friends/friends_service.dart';
+import 'package:clique/core/services/reel/reel_service.dart';
 import 'package:clique/ui/pages/main/chat/chat_page.dart';
 
 class ReelItem extends StatefulWidget {

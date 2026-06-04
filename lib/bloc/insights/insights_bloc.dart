@@ -1,7 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
-import 'package:clique/data/services/insights/insights_service.dart';
+import 'package:clique/core/services/insights/insights_service.dart';
 
 part 'insights_event.dart';
 part 'insights_state.dart';

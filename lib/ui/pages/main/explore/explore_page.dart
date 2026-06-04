@@ -8,7 +8,7 @@ import 'package:clique/app/configs/theme.dart';
 
 import 'package:clique/bloc/explore/explore_bloc.dart';
 
-import 'package:clique/data/models/profile_model.dart';
+import 'package:clique/core/models/profile_model.dart';
 
 import 'package:clique/ui/widgets/explore/action_buttons.dart';
 import 'package:clique/ui/widgets/explore/discover_header.dart';

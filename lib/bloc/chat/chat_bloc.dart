@@ -1,7 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:clique/data/services/chat/chat_service.dart';
-import 'package:clique/data/services/user/user_service.dart';
+import 'package:clique/core/services/chat/chat_service.dart';
+import 'package:clique/core/services/user/user_service.dart';
 
 part 'chat_event.dart';
 part 'chat_state.dart';

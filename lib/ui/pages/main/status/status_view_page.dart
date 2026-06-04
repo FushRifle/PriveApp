@@ -1,5 +1,5 @@
 import 'package:clique/core/router/named_routes.dart';
-import 'package:clique/data/models/status_model.dart';
+import 'package:clique/core/models/status_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';

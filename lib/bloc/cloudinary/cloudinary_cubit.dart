@@ -1,5 +1,5 @@
 import 'package:bloc/bloc.dart';
-import 'package:clique/core/cloudinary_service.dart';
+import 'package:clique/core/clients/cloudinary_service.dart';
 import 'package:equatable/equatable.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';

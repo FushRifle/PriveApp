@@ -11,7 +11,7 @@ import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 
-import 'package:clique/data/models/status_model.dart';
+import 'package:clique/core/models/status_model.dart';
 
 import 'package:clique/ui/pages/main/status/create_status_page.dart';
 import 'package:clique/ui/pages/main/home/create_post_page.dart';
@@ -332,22 +332,6 @@ class _HomeAppBar extends StatelessWidget {
                   avatar: avatar,
                   fallback: fallback,
                 ),
-              ),
-              Image.asset(
-                'assets/images/clique.png',
-                width: 72,
-                height: 72,
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) {
-                  return Text(
-                    'Clique',
-                    style: AppTheme.blackTextStyle.copyWith(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.primary,
-                    ),
-                  );
-                },
               ),
               GestureDetector(
                 onTap: () {
