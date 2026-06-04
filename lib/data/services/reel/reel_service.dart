@@ -103,8 +103,15 @@ class ReelService {
   }
 
   Map<String, dynamic> _readMap(dynamic data) {
-    if (data is Map<String, dynamic>) return data;
-    if (data is Map) return Map<String, dynamic>.from(data);
+    if (data is Map) {
+      for (final key in ['reel', 'data', 'item']) {
+        final value = data[key];
+        if (value is Map) return Map<String, dynamic>.from(value);
+      }
+
+      return Map<String, dynamic>.from(data);
+    }
+
     return {};
   }
 

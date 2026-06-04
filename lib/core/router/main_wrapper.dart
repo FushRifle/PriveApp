@@ -100,81 +100,89 @@ class _MainWrapperState extends State<MainWrapper>
           create: (_) => StoriesBloc(),
         ),
       ],
-      child: Scaffold(
-        backgroundColor: backgroundColor,
-        extendBody: true,
-        body: Stack(
-          children: [
-            PageStorage(
-              bucket: _bucket,
-              child: PageView(
-                controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(),
-                onPageChanged: (index) {
-                  if (_currentIndex == index) return;
+      child: PopScope(
+        canPop: _currentIndex == 0,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop || _currentIndex == 0) return;
 
-                  setState(() {
-                    _currentIndex = index;
-                    _visitedTabs.add(index);
-                  });
-                },
-                children: [
-                  _DeferredTab(
-                    enabled: _visitedTabs.contains(0),
-                    child: const HomePage(
-                      key: PageStorageKey('home_page'),
+          _onTabChanged(0);
+        },
+        child: Scaffold(
+          backgroundColor: backgroundColor,
+          extendBody: true,
+          body: Stack(
+            children: [
+              PageStorage(
+                bucket: _bucket,
+                child: PageView(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  onPageChanged: (index) {
+                    if (_currentIndex == index) return;
+
+                    setState(() {
+                      _currentIndex = index;
+                      _visitedTabs.add(index);
+                    });
+                  },
+                  children: [
+                    _DeferredTab(
+                      enabled: _visitedTabs.contains(0),
+                      child: const HomePage(
+                        key: PageStorageKey('home_page'),
+                      ),
                     ),
-                  ),
-                  _DeferredTab(
-                    enabled: _visitedTabs.contains(1),
-                    child: const _ExploreTabScope(
-                      key: PageStorageKey('discover_page'),
-                      child: DiscoverPage(),
+                    _DeferredTab(
+                      enabled: _visitedTabs.contains(1),
+                      child: const _ExploreTabScope(
+                        key: PageStorageKey('discover_page'),
+                        child: DiscoverPage(),
+                      ),
                     ),
-                  ),
-                  _DeferredTab(
-                    enabled: _visitedTabs.contains(2),
-                    child: const ReelsPage(
-                      key: PageStorageKey('reels_page'),
+                    _DeferredTab(
+                      enabled: _visitedTabs.contains(2),
+                      child: const ReelsPage(
+                        key: PageStorageKey('reels_page'),
+                      ),
                     ),
-                  ),
-                  _DeferredTab(
-                    enabled: _visitedTabs.contains(3),
-                    child: const _ChatTabScope(
-                      key: PageStorageKey('inbox_page'),
-                      child: InboxPage(),
+                    _DeferredTab(
+                      enabled: _visitedTabs.contains(3),
+                      child: const _ChatTabScope(
+                        key: PageStorageKey('inbox_page'),
+                        child: InboxPage(),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            if (_showBottomBar)
-              const Positioned.fill(
-                child: IgnorePointer(
-                  child: _BackgroundGradient(),
+                  ],
                 ),
               ),
-            if (_showBottomBar)
-              Positioned(
-                bottom: 77,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: _CreateButton(),
+              if (_showBottomBar)
+                const Positioned.fill(
+                  child: IgnorePointer(
+                    child: _BackgroundGradient(),
+                  ),
                 ),
-              ),
-            if (_showBottomBar)
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: _BottomNavBar(
-                  currentIndex: _currentIndex,
-                  backgroundColor: backgroundColor,
-                  onChanged: _onTabChanged,
+              if (_showBottomBar)
+                Positioned(
+                  bottom: 77,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: _CreateButton(),
+                  ),
                 ),
-              ),
-          ],
+              if (_showBottomBar)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: _BottomNavBar(
+                    currentIndex: _currentIndex,
+                    backgroundColor: backgroundColor,
+                    onChanged: _onTabChanged,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

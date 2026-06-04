@@ -58,6 +58,46 @@ class UnlikeFeedPost extends FeedEvent {
   List<Object?> get props => [postId];
 }
 
+class SaveFeedPost extends FeedEvent {
+  final int postId;
+
+  const SaveFeedPost({required this.postId});
+
+  @override
+  List<Object?> get props => [postId];
+}
+
+class UnsaveFeedPost extends FeedEvent {
+  final int postId;
+
+  const UnsaveFeedPost({required this.postId});
+
+  @override
+  List<Object?> get props => [postId];
+}
+
+class ShareFeedPost extends FeedEvent {
+  final int postId;
+
+  const ShareFeedPost({required this.postId});
+
+  @override
+  List<Object?> get props => [postId];
+}
+
+class RepostFeedPost extends FeedEvent {
+  final int postId;
+  final String content;
+
+  const RepostFeedPost({
+    required this.postId,
+    this.content = '',
+  });
+
+  @override
+  List<Object?> get props => [postId, content];
+}
+
 // Load comments for a post
 class GetPostComments extends FeedEvent {
   final int postId;

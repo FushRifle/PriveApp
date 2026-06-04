@@ -10,6 +10,11 @@ class Story extends Equatable {
   final bool isMe;
   final bool isSeen;
   final int viewCount;
+  final int likeCount;
+  final int replyCount;
+  final int reshareCount;
+  final bool isLiked;
+  final bool isReshared;
   final String? backgroundColor;
   final String? textAlign;
   final double? fontSize;
@@ -26,6 +31,11 @@ class Story extends Equatable {
     this.isMe = false,
     this.isSeen = false,
     this.viewCount = 0,
+    this.likeCount = 0,
+    this.replyCount = 0,
+    this.reshareCount = 0,
+    this.isLiked = false,
+    this.isReshared = false,
     this.backgroundColor,
     this.textAlign,
     this.fontSize,
@@ -47,6 +57,11 @@ class Story extends Equatable {
       isMe: json['isMe'] ?? false,
       isSeen: json['isSeen'] ?? false,
       viewCount: json['viewCount'] ?? 0,
+      likeCount: json['likeCount'] ?? 0,
+      replyCount: json['replyCount'] ?? 0,
+      reshareCount: json['reshareCount'] ?? 0,
+      isLiked: json['isLiked'] ?? false,
+      isReshared: json['isReshared'] ?? false,
       backgroundColor: json['backgroundColor'],
       textAlign: json['textAlign'],
       fontSize: json['fontSize']?.toDouble(),
@@ -66,6 +81,11 @@ class Story extends Equatable {
       'isMe': isMe,
       'isSeen': isSeen,
       'viewCount': viewCount,
+      'likeCount': likeCount,
+      'replyCount': replyCount,
+      'reshareCount': reshareCount,
+      'isLiked': isLiked,
+      'isReshared': isReshared,
       'backgroundColor': backgroundColor,
       'textAlign': textAlign,
       'fontSize': fontSize,
@@ -84,6 +104,11 @@ class Story extends Equatable {
     bool? isMe,
     bool? isSeen,
     int? viewCount,
+    int? likeCount,
+    int? replyCount,
+    int? reshareCount,
+    bool? isLiked,
+    bool? isReshared,
     String? backgroundColor,
     String? textAlign,
     double? fontSize,
@@ -100,6 +125,11 @@ class Story extends Equatable {
       isMe: isMe ?? this.isMe,
       isSeen: isSeen ?? this.isSeen,
       viewCount: viewCount ?? this.viewCount,
+      likeCount: likeCount ?? this.likeCount,
+      replyCount: replyCount ?? this.replyCount,
+      reshareCount: reshareCount ?? this.reshareCount,
+      isLiked: isLiked ?? this.isLiked,
+      isReshared: isReshared ?? this.isReshared,
       backgroundColor: backgroundColor ?? this.backgroundColor,
       textAlign: textAlign ?? this.textAlign,
       fontSize: fontSize ?? this.fontSize,
@@ -121,6 +151,11 @@ class Story extends Equatable {
         isMe,
         isSeen,
         viewCount,
+        likeCount,
+        replyCount,
+        reshareCount,
+        isLiked,
+        isReshared,
         backgroundColor,
         textAlign,
         fontSize,

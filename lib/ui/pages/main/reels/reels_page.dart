@@ -17,6 +17,7 @@ class ReelsPage extends StatefulWidget {
 
 class _ReelsPageState extends State<ReelsPage> {
   late PageController _pageController;
+  int _currentIndex = 0;
 
   @override
   void initState() {
@@ -89,6 +90,9 @@ class _ReelsPageState extends State<ReelsPage> {
                             scrollDirection: Axis.vertical,
                             itemCount: reels.length + 1,
                             onPageChanged: (index) {
+                              setState(() {
+                                _currentIndex = index;
+                              });
                               if (index >= reels.length - 2 &&
                                   hasMore &&
                                   !isLoadingMore &&
@@ -133,7 +137,7 @@ class _ReelsPageState extends State<ReelsPage> {
                                 color: AppColors.white,
                                 child: ReelItem(
                                   reel: reels[index],
-                                  isActive: true,
+                                  isActive: index == _currentIndex,
                                   onNextReel: () {
                                     if (index < reels.length - 1) {
                                       _pageController.nextPage(

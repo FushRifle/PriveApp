@@ -68,6 +68,44 @@ class StatusService {
     }
   }
 
+  Future<void> likeStory(String storyId) async {
+    try {
+      await _api.post('/api/stories/$storyId/like');
+    } on DioException catch (e) {
+      throw _handleError(e, 'Failed to like story');
+    }
+  }
+
+  Future<void> unlikeStory(String storyId) async {
+    try {
+      await _api.delete('/api/stories/$storyId/like');
+    } on DioException catch (e) {
+      throw _handleError(e, 'Failed to unlike story');
+    }
+  }
+
+  Future<void> replyToStory({
+    required String storyId,
+    required String content,
+  }) async {
+    try {
+      await _api.post(
+        '/api/stories/$storyId/replies',
+        data: {'content': content},
+      );
+    } on DioException catch (e) {
+      throw _handleError(e, 'Failed to reply to story');
+    }
+  }
+
+  Future<void> reshareStory(String storyId) async {
+    try {
+      await _api.post('/api/stories/$storyId/reshare');
+    } on DioException catch (e) {
+      throw _handleError(e, 'Failed to reshare story');
+    }
+  }
+
   String _handleError(DioException e, String fallback) {
     final data = e.response?.data;
     if (data is Map) {

@@ -28,7 +28,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   TextAlign _textAlign = TextAlign.center;
   bool _isEditingText = false;
   bool _isSubmitting = false;
-  final double _uploadProgress = 0.0;
+  double _uploadProgress = 0.0;
   bool _showFontControls = false;
 
   static const List<Color> _backgroundColors = [
@@ -57,19 +57,22 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      backgroundColor: AppColors.black,
-      appBar: _isEditingText ? null : _buildTransparentAppBar(),
-      body: Stack(
-        children: [
-          _buildBackground(),
-          if (_isSubmitting) _buildLoadingOverlay(),
-          if (!_isSubmitting) _buildMainContent(),
-          if (!_isEditingText && !_isSubmitting) _buildFloatingTools(),
-          if (!_isEditingText && !_isSubmitting && !_hasContent)
-            _buildInteractionHint(),
-        ],
+    return PopScope(
+      canPop: !_isSubmitting,
+      child: Scaffold(
+        extendBodyBehindAppBar: true,
+        backgroundColor: AppColors.black,
+        appBar: _isEditingText ? null : _buildTransparentAppBar(),
+        body: Stack(
+          children: [
+            _buildBackground(),
+            if (_isSubmitting) _buildLoadingOverlay(),
+            if (!_isSubmitting) _buildMainContent(),
+            if (!_isEditingText && !_isSubmitting) _buildFloatingTools(),
+            if (!_isEditingText && !_isSubmitting && !_hasContent)
+              _buildInteractionHint(),
+          ],
+        ),
       ),
     );
   }
@@ -80,9 +83,16 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
       height: double.infinity,
       color: _hasImage ? AppColors.black : _selectedColor,
       child: _hasImage
-          ? Image.file(
-              _selectedImageFile!,
-              fit: BoxFit.cover,
+          ? InteractiveViewer(
+              minScale: 1,
+              maxScale: 4,
+              clipBehavior: Clip.none,
+              child: SizedBox.expand(
+                child: Image.file(
+                  _selectedImageFile!,
+                  fit: BoxFit.cover,
+                ),
+              ),
             )
           : null,
     );
@@ -94,27 +104,32 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
           ? _buildTextInput()
           : GestureDetector(
               onTap: () => setState(() => _isEditingText = true),
+              behavior: HitTestBehavior.translucent,
               child: Padding(
                 padding: const EdgeInsets.all(40),
                 child: Center(
                   child: SingleChildScrollView(
-                    child: Text(
-                      _hasText ? _textController.text : "What's happening?",
-                      textAlign: _textAlign,
-                      style: TextStyle(
-                        color: AppColors.white,
-                        fontSize: _hasText ? _fontSize : 20,
-                        fontWeight: FontWeight.w800,
-                        height: 1.4,
-                        shadows: const [
-                          Shadow(
-                            blurRadius: 10,
-                            color: AppColors.black45,
-                            offset: Offset(2, 2),
-                          ),
-                        ],
-                      ),
-                    ),
+                    child: _hasText || !_hasImage
+                        ? Text(
+                            _hasText
+                                ? _textController.text
+                                : "What's happening?",
+                            textAlign: _textAlign,
+                            style: TextStyle(
+                              color: AppColors.white,
+                              fontSize: _hasText ? _fontSize : 20,
+                              fontWeight: FontWeight.w800,
+                              height: 1.4,
+                              shadows: const [
+                                Shadow(
+                                  blurRadius: 10,
+                                  color: AppColors.black45,
+                                  offset: Offset(2, 2),
+                                ),
+                              ],
+                            ),
+                          )
+                        : const SizedBox.shrink(),
                   ),
                 ),
               ),
@@ -508,8 +523,13 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
     if (_selectedImageFile == null) return null;
 
     try {
-      final response =
-          await _cloudinaryService.uploadImage(_selectedImageFile!);
+      final response = await _cloudinaryService.uploadImage(
+        _selectedImageFile!,
+        onProgress: (progress) {
+          if (!mounted) return;
+          setState(() => _uploadProgress = progress);
+        },
+      );
       return response;
     } catch (e) {
       debugPrint('Upload error: $e');
@@ -523,7 +543,10 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
       return;
     }
 
-    setState(() => _isSubmitting = true);
+    setState(() {
+      _isSubmitting = true;
+      _uploadProgress = 0.0;
+    });
 
     final storiesBloc = context.read<StoriesBloc>();
 
@@ -555,7 +578,10 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
           Navigator.pop(context, true);
         } else if (state.status == StoriesStatus.error && mounted) {
           _showSnackBar(state.error ?? 'Failed to share story', isError: true);
-          setState(() => _isSubmitting = false);
+          setState(() {
+            _isSubmitting = false;
+            _uploadProgress = 0.0;
+          });
         }
 
         if (state.status == StoriesStatus.loaded ||
@@ -579,7 +605,10 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
       debugPrint('Error sharing story: $e');
       if (mounted) {
         _showSnackBar('Failed to share story: ${e.toString()}', isError: true);
-        setState(() => _isSubmitting = false);
+        setState(() {
+          _isSubmitting = false;
+          _uploadProgress = 0.0;
+        });
       }
     }
   }
@@ -591,6 +620,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
       _selectedColor = AppColors.storyTextBackground;
       _textAlign = TextAlign.center;
       _fontSize = 28;
+      _uploadProgress = 0.0;
     });
     _showSnackBar('All cleared');
   }

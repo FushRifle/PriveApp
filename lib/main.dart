@@ -17,6 +17,7 @@ import 'package:clique/app/configs/api_config.dart';
 import 'package:clique/data/providers/theme_provider.dart';
 import 'package:clique/bloc/cloudinary/cloudinary_cubit.dart';
 import 'package:clique/bloc/profile/profile_bloc.dart';
+import 'package:clique/bloc/subscription/feature_access_cubit.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/core/local_cache/local_cache_service.dart';
 import 'package:clique/data/services/notification/push_notification_service.dart';
@@ -159,6 +160,9 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
         BlocProvider(
           create: (_) => ProfileBloc(),
         ),
+        BlocProvider(
+          create: (_) => FeatureAccessCubit(),
+        ),
       ],
       child: Builder(
         builder: (context) {
@@ -170,6 +174,10 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
             listener: (context, state) {
               if (state.status == AuthStatus.authenticated) {
                 PushNotificationService.instance.syncDeviceToken();
+                final userID = state.user?['id']?.toString() ?? '';
+                context.read<FeatureAccessCubit>()
+                  ..load()
+                  ..configureRevenueCat(userID);
               }
               if (state.status == AuthStatus.unauthenticated) {
                 PushNotificationService.instance.deleteDeviceToken();

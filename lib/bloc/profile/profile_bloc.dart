@@ -62,6 +62,9 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       final mergedProfile = {
         ...profileData,
         'avatar': userData['avatar'] ?? profileData['avatar'],
+        'coverImage': userData['coverImage'] ??
+            userData['cover_image'] ??
+            profileData['coverImage'],
         'name': userData['name'] ?? profileData['displayName'],
         'email': userData['email'],
         'username': userData['username'],
@@ -108,6 +111,9 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       final mergedProfile = {
         ...profileData,
         'avatar': userData['avatar'] ?? profileData['avatar'],
+        'coverImage': userData['coverImage'] ??
+            userData['cover_image'] ??
+            profileData['coverImage'],
         'name': userData['name'] ?? profileData['displayName'],
         'email': userData['email'],
         'username': userData['username'],
@@ -154,6 +160,9 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       final mergedProfile = {
         ...profileData,
         'avatar': userData['avatar'] ?? profileData['avatar'],
+        'coverImage': userData['coverImage'] ??
+            userData['cover_image'] ??
+            profileData['coverImage'],
         'name': userData['name'] ?? profileData['displayName'],
         'username': userData['username'],
         'verified': userData['verified'] ?? false,
@@ -215,10 +224,13 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       final updatedProfile = Profile.fromJson(result);
 
       // Also update user data if needed
-      if (event.data['avatar'] != null || event.data['displayName'] != null) {
+      if (event.data['avatar'] != null ||
+          event.data['coverImage'] != null ||
+          event.data['displayName'] != null) {
         await _userService.updateUser(
           name: event.data['displayName'],
           avatar: event.data['avatar'],
+          coverImage: event.data['coverImage'],
         );
       }
 

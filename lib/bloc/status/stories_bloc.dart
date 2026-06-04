@@ -14,6 +14,10 @@ class StoriesBloc extends Bloc<StoriesEvent, StoriesState> {
     on<CreateStoryEvent>(_onCreateStory);
     on<DeleteStoryEvent>(_onDeleteStory);
     on<MarkStorySeen>(_onMarkStorySeen);
+    on<LikeStoryEvent>(_onLikeStory);
+    on<UnlikeStoryEvent>(_onUnlikeStory);
+    on<ReplyToStoryEvent>(_onReplyToStory);
+    on<ReshareStoryEvent>(_onReshareStory);
     on<ClearStoriesError>(_onClearStoriesError);
   }
 
@@ -114,6 +118,105 @@ class StoriesBloc extends Bloc<StoriesEvent, StoriesState> {
         error: e.toString(),
       ));
     }
+  }
+
+  Future<void> _onLikeStory(
+    LikeStoryEvent event,
+    Emitter<StoriesState> emit,
+  ) async {
+    final previousStories = state.stories;
+    emit(state.copyWith(
+      stories: _updateStory(event.storyId, (story) {
+        if (story.isLiked) return story;
+        return story.copyWith(
+          isLiked: true,
+          likeCount: story.likeCount + 1,
+        );
+      }),
+      clearError: true,
+    ));
+
+    try {
+      await _statusService.likeStory(event.storyId);
+    } catch (e) {
+      emit(state.copyWith(stories: previousStories, error: e.toString()));
+    }
+  }
+
+  Future<void> _onUnlikeStory(
+    UnlikeStoryEvent event,
+    Emitter<StoriesState> emit,
+  ) async {
+    final previousStories = state.stories;
+    emit(state.copyWith(
+      stories: _updateStory(event.storyId, (story) {
+        if (!story.isLiked) return story;
+        return story.copyWith(
+          isLiked: false,
+          likeCount: (story.likeCount - 1).clamp(0, 2147483647).toInt(),
+        );
+      }),
+      clearError: true,
+    ));
+
+    try {
+      await _statusService.unlikeStory(event.storyId);
+    } catch (e) {
+      emit(state.copyWith(stories: previousStories, error: e.toString()));
+    }
+  }
+
+  Future<void> _onReplyToStory(
+    ReplyToStoryEvent event,
+    Emitter<StoriesState> emit,
+  ) async {
+    final previousStories = state.stories;
+    emit(state.copyWith(
+      stories: _updateStory(
+        event.storyId,
+        (story) => story.copyWith(replyCount: story.replyCount + 1),
+      ),
+      clearError: true,
+    ));
+
+    try {
+      await _statusService.replyToStory(
+        storyId: event.storyId,
+        content: event.content,
+      );
+    } catch (e) {
+      emit(state.copyWith(stories: previousStories, error: e.toString()));
+    }
+  }
+
+  Future<void> _onReshareStory(
+    ReshareStoryEvent event,
+    Emitter<StoriesState> emit,
+  ) async {
+    final previousStories = state.stories;
+    emit(state.copyWith(
+      stories: _updateStory(event.storyId, (story) {
+        if (story.isReshared) return story;
+        return story.copyWith(
+          isReshared: true,
+          reshareCount: story.reshareCount + 1,
+        );
+      }),
+      clearError: true,
+    ));
+
+    try {
+      await _statusService.reshareStory(event.storyId);
+    } catch (e) {
+      emit(state.copyWith(stories: previousStories, error: e.toString()));
+    }
+  }
+
+  List<Story> _updateStory(String storyId, Story Function(Story story) update) {
+    return state.stories.map((story) {
+      if (story.id != storyId) return story;
+      return update(story);
+    }).toList();
   }
 
   void _onClearStoriesError(

@@ -17,6 +17,7 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     on<LikeReel>(_onLikeReel);
     on<UnlikeReel>(_onUnlikeReel);
     on<ShareReel>(_onShareReel);
+    on<IncrementReelCommentCount>(_onIncrementReelCommentCount);
     on<ClearReelError>(_onClearReelError);
     on<ResetReelState>(_onResetReelState);
   }
@@ -121,13 +122,27 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     CreateReel event,
     Emitter<ReelState> emit,
   ) async {
+    emit(state.copyWith(
+      status: ReelStatus.creating,
+      isCreating: true,
+      clearError: true,
+    ));
+
     try {
-      await _reelService.createReel(event.data);
-      // Refresh after creating
-      add(RefreshReels());
+      final reel = await _reelService.createReel(event.data);
+      final updatedReels =
+          reel.isEmpty ? state.reels : _dedupeReels([reel, ...state.reels]);
+
+      emit(state.copyWith(
+        reels: updatedReels,
+        status: ReelStatus.created,
+        isCreating: false,
+        clearError: true,
+      ));
     } catch (e) {
       emit(state.copyWith(
         status: ReelStatus.error,
+        isCreating: false,
         error: e.toString(),
       ));
     }
@@ -147,7 +162,7 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     updatedReels[event.index] = {
       ...Map<String, dynamic>.from(oldReel),
       'isLiked': true,
-      'likes': (oldReel['likes'] ?? 0) + 1,
+      'likes': _readInt(oldReel['likes']) + 1,
     };
 
     emit(state.copyWith(reels: updatedReels));
@@ -179,7 +194,7 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     updatedReels[event.index] = {
       ...Map<String, dynamic>.from(oldReel),
       'isLiked': false,
-      'likes': ((oldReel['likes'] ?? 0) - 1).clamp(0, 999999),
+      'likes': (_readInt(oldReel['likes']) - 1).clamp(0, 999999).toInt(),
     };
 
     emit(state.copyWith(reels: updatedReels));
@@ -201,11 +216,47 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     ShareReel event,
     Emitter<ReelState> emit,
   ) async {
+    if (event.index < 0 || event.index >= state.reels.length) return;
+
+    final oldReel = state.reels[event.index];
+    if (oldReel is! Map) return;
+
+    final updatedReels = List<dynamic>.from(state.reels);
+    updatedReels[event.index] = {
+      ...Map<String, dynamic>.from(oldReel),
+      'shares': _readInt(oldReel['shares'] ?? oldReel['shareCount']) + 1,
+    };
+
+    emit(state.copyWith(reels: updatedReels, clearError: true));
+
     try {
       await _reelService.shareReel(event.reelId);
     } catch (e) {
-      emit(state.copyWith(error: e.toString()));
+      final rolledBackReels = List<dynamic>.from(state.reels);
+      rolledBackReels[event.index] = oldReel;
+      emit(state.copyWith(
+        reels: rolledBackReels,
+        error: e.toString(),
+      ));
     }
+  }
+
+  void _onIncrementReelCommentCount(
+    IncrementReelCommentCount event,
+    Emitter<ReelState> emit,
+  ) {
+    if (event.index < 0 || event.index >= state.reels.length) return;
+
+    final oldReel = state.reels[event.index];
+    if (oldReel is! Map) return;
+
+    final updatedReels = List<dynamic>.from(state.reels);
+    updatedReels[event.index] = {
+      ...Map<String, dynamic>.from(oldReel),
+      'comments': _readInt(oldReel['comments'] ?? oldReel['commentCount']) + 1,
+    };
+
+    emit(state.copyWith(reels: updatedReels, clearError: true));
   }
 
   void _onClearReelError(
@@ -239,5 +290,12 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     }
 
     return deduped;
+  }
+
+  int _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
   }
 }

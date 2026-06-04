@@ -5,7 +5,6 @@ import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/core/cloudinary_service.dart';
 import 'package:clique/data/models/feeds_models.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -149,7 +148,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
           onImage: () => _pickMedia(MediaType.image, ImageSource.gallery),
           onCamera: () => _pickMedia(MediaType.image, ImageSource.camera),
           onVideo: () => _pickMedia(MediaType.video, ImageSource.gallery),
-          onDocument: _pickDocument,
           onAudio: _showComingSoon,
         );
 
@@ -167,7 +165,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
       case PostCreationStep.mediaPreview:
         return _MediaPostComposer(
           key: const ValueKey('media_preview'),
-          media: _mediaItems.first,
+          mediaItems: _mediaItems,
           textController: _textController,
           hashtagController: _hashtagController,
           hashtags: _hashtags,
@@ -271,112 +269,95 @@ class _CreatePostPageState extends State<CreatePostPage> {
     });
 
     try {
-      XFile? pickedFile;
-
       if (type == MediaType.image) {
-        pickedFile = await _imagePicker.pickImage(
-          source: source,
-          imageQuality: 85,
-          maxWidth: 1800,
-        );
+        if (source == ImageSource.gallery) {
+          final pickedFiles = await _imagePicker.pickMultiImage(
+            imageQuality: 85,
+            maxWidth: 1800,
+          );
+
+          if (pickedFiles.isEmpty) return;
+
+          final selectedFiles = pickedFiles.take(4).toList();
+          final items = <MediaItem>[];
+
+          for (final pickedFile in selectedFiles) {
+            final bytes = kIsWeb ? await pickedFile.readAsBytes() : null;
+            items.add(
+              MediaItem(
+                file: kIsWeb ? null : File(pickedFile.path),
+                fileBytes: bytes,
+                fileName: pickedFile.name,
+                type: type,
+              ),
+            );
+          }
+
+          if (!mounted) return;
+
+          setState(() {
+            _mediaItems
+              ..clear()
+              ..addAll(items);
+
+            _currentStep = PostCreationStep.mediaPreview;
+          });
+          return;
+        }
+
+        final pickedFile = await _imagePicker.pickImage(
+            source: source, imageQuality: 85, maxWidth: 1800);
+
+        if (pickedFile == null) return;
+
+        final bytes = kIsWeb ? await pickedFile.readAsBytes() : null;
+
+        if (!mounted) return;
+
+        setState(() {
+          _mediaItems
+            ..clear()
+            ..add(
+              MediaItem(
+                file: kIsWeb ? null : File(pickedFile.path),
+                fileBytes: bytes,
+                fileName: pickedFile.name,
+                type: type,
+              ),
+            );
+
+          _currentStep = PostCreationStep.mediaPreview;
+        });
       } else {
-        pickedFile = await _imagePicker.pickVideo(
+        final pickedFile = await _imagePicker.pickVideo(
           source: source,
           maxDuration: const Duration(minutes: 2),
         );
+
+        if (pickedFile == null) return;
+
+        final bytes = kIsWeb ? await pickedFile.readAsBytes() : null;
+
+        if (!mounted) return;
+
+        setState(() {
+          _mediaItems
+            ..clear()
+            ..add(
+              MediaItem(
+                file: kIsWeb ? null : File(pickedFile.path),
+                fileBytes: bytes,
+                fileName: pickedFile.name,
+                type: type,
+              ),
+            );
+
+          _currentStep = PostCreationStep.mediaPreview;
+        });
       }
-
-      if (pickedFile == null) return;
-
-      Uint8List? bytes;
-
-      if (kIsWeb) {
-        bytes = await pickedFile.readAsBytes();
-      }
-
-      if (!mounted) return;
-
-      setState(() {
-        _mediaItems
-          ..clear()
-          ..add(
-            MediaItem(
-              file: kIsWeb ? null : File(pickedFile!.path),
-              fileBytes: bytes,
-              fileName: pickedFile!.name,
-              type: type,
-            ),
-          );
-
-        _currentStep = PostCreationStep.mediaPreview;
-      });
     } catch (e) {
       _showSnackBar(
         'Failed to pick media: $e',
-        isError: true,
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isPicking = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _pickDocument() async {
-    if (_isPicking || _isSubmitting) return;
-
-    setState(() {
-      _isPicking = true;
-    });
-
-    try {
-      final file = await FilePicker.pickFile(
-        type: FileType.custom,
-        allowedExtensions: const [
-          'pdf',
-          'doc',
-          'docx',
-          'txt',
-          'xls',
-          'xlsx',
-          'ppt',
-          'pptx',
-        ],
-      );
-
-      if (file == null) return;
-
-      if (!kIsWeb && file.path == null) {
-        _showSnackBar(
-          'Unable to read selected file.',
-          isError: true,
-        );
-        return;
-      }
-
-      final bytes = kIsWeb ? await file.readAsBytes() : null;
-
-      if (!mounted) return;
-
-      setState(() {
-        _mediaItems
-          ..clear()
-          ..add(
-            MediaItem(
-              file: kIsWeb ? null : File(file.path!),
-              fileBytes: bytes,
-              fileName: file.name,
-              type: MediaType.document,
-            ),
-          );
-
-        _currentStep = PostCreationStep.mediaPreview;
-      });
-    } catch (e) {
-      _showSnackBar(
-        'Failed to pick document: $e',
         isError: true,
       );
     } finally {
@@ -446,9 +427,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
     FocusScope.of(context).unfocus();
 
-    final media = _mediaItems.first;
-
-    if (kIsWeb || media.file == null) {
+    if (kIsWeb || _mediaItems.any((media) => media.file == null)) {
       _showSnackBar(
         'Media upload is only supported for local files right now.',
         isError: true,
@@ -462,7 +441,14 @@ class _CreatePostPageState extends State<CreatePostPage> {
     });
 
     try {
-      final attachment = await _uploadMedia(media);
+      final attachments = <Attachment>[];
+
+      for (final media in _mediaItems.take(4)) {
+        final attachment = await _uploadMedia(media);
+        if (attachment != null) {
+          attachments.add(attachment);
+        }
+      }
 
       if (!mounted) return;
 
@@ -471,7 +457,9 @@ class _CreatePostPageState extends State<CreatePostPage> {
       context.read<FeedBloc>().add(
             CreateFeedPost(
               content: content,
-              attachments: attachment != null ? [attachment.toJson()] : null,
+              attachments: attachments.isNotEmpty
+                  ? attachments.map((item) => item.toJson()).toList()
+                  : null,
             ),
           );
 
@@ -514,12 +502,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
     } else if (media.type == MediaType.video) {
       url = await _cloudinaryService.uploadVideo(
         file,
-        onProgress: _onUploadProgress,
-      );
-    } else if (media.type == MediaType.document) {
-      url = await _cloudinaryService.uploadDocument(
-        file,
-        media.fileName ?? 'document',
         onProgress: _onUploadProgress,
       );
     }
@@ -682,7 +664,6 @@ class _OptionsGrid extends StatelessWidget {
   final VoidCallback onImage;
   final VoidCallback onCamera;
   final VoidCallback onVideo;
-  final VoidCallback onDocument;
   final VoidCallback onAudio;
 
   const _OptionsGrid({
@@ -692,7 +673,6 @@ class _OptionsGrid extends StatelessWidget {
     required this.onImage,
     required this.onCamera,
     required this.onVideo,
-    required this.onDocument,
     required this.onAudio,
   });
 
@@ -726,13 +706,6 @@ class _OptionsGrid extends StatelessWidget {
         subtitle: 'Share a video',
         color: AppColors.green,
         onTap: onVideo,
-      ),
-      _PostOption(
-        icon: Icons.insert_drive_file_rounded,
-        title: 'Document',
-        subtitle: 'Upload a file',
-        color: AppColors.red,
-        onTap: onDocument,
       ),
       _PostOption(
         icon: Icons.music_note_rounded,
@@ -927,7 +900,7 @@ class _ComposerPromptCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Share a thought, photo, video, or document.',
+                      'Share a thought, photo, or video.',
                       style: AppTheme.greyTextStyle.copyWith(fontSize: 13),
                     ),
                   ],
@@ -1083,7 +1056,7 @@ class _TextPostComposer extends StatelessWidget {
 }
 
 class _MediaPostComposer extends StatelessWidget {
-  final MediaItem media;
+  final List<MediaItem> mediaItems;
   final TextEditingController textController;
   final TextEditingController hashtagController;
   final List<String> hashtags;
@@ -1094,7 +1067,7 @@ class _MediaPostComposer extends StatelessWidget {
 
   const _MediaPostComposer({
     super.key,
-    required this.media,
+    required this.mediaItems,
     required this.textController,
     required this.hashtagController,
     required this.hashtags,
@@ -1113,7 +1086,7 @@ class _MediaPostComposer extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _MediaPreview(
-            media: media,
+            mediaItems: mediaItems,
             onChangeMedia: onChangeMedia,
           ),
           const SizedBox(height: 18),
@@ -1137,11 +1110,11 @@ class _MediaPostComposer extends StatelessWidget {
 }
 
 class _MediaPreview extends StatelessWidget {
-  final MediaItem media;
+  final List<MediaItem> mediaItems;
   final VoidCallback onChangeMedia;
 
   const _MediaPreview({
-    required this.media,
+    required this.mediaItems,
     required this.onChangeMedia,
   });
 
@@ -1210,6 +1183,39 @@ class _MediaPreview extends StatelessWidget {
   }
 
   Widget _buildPreviewContent() {
+    if (mediaItems.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final media = mediaItems.first;
+
+    if (mediaItems.length > 1 &&
+        mediaItems.every((item) => item.type == MediaType.image)) {
+      return GridView.builder(
+        padding: EdgeInsets.zero,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: mediaItems.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 2,
+          crossAxisSpacing: 2,
+        ),
+        itemBuilder: (context, index) {
+          final item = mediaItems[index];
+
+          if (kIsWeb && item.fileBytes != null) {
+            return Image.memory(item.fileBytes!, fit: BoxFit.cover);
+          }
+
+          if (item.file != null) {
+            return Image.file(item.file!, fit: BoxFit.cover);
+          }
+
+          return const SizedBox.shrink();
+        },
+      );
+    }
+
     if (media.type == MediaType.image) {
       if (kIsWeb && media.fileBytes != null) {
         return Image.memory(
@@ -1234,11 +1240,7 @@ class _MediaPreview extends StatelessWidget {
       );
     }
 
-    return _LargeFilePreview(
-      icon: Icons.insert_drive_file_rounded,
-      title: media.fileName ?? 'Selected document',
-      subtitle: 'Document will be attached to your post',
-    );
+    return const SizedBox.shrink();
   }
 }
 
@@ -1550,7 +1552,6 @@ enum PostCreationStep {
 enum MediaType {
   image,
   video,
-  document,
 }
 
 class MediaItem {

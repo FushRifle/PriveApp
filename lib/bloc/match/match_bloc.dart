@@ -28,7 +28,11 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
 
     try {
       final data = await _matchService.getMatches();
-      final matches = (data).map((item) => MatchUser.fromJson(item)).toList();
+      final matches = data
+          .whereType<Map>()
+          .map((item) => MatchUser.fromJson(Map<String, dynamic>.from(item)))
+          .where((item) => item.id != 0)
+          .toList();
 
       emit(state.copyWith(
         matches: matches,
@@ -55,8 +59,11 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
 
     try {
       final data = await _matchService.getRecommendations();
-      final recommendations =
-          (data).map((item) => MatchUser.fromJson(item)).toList();
+      final recommendations = data
+          .whereType<Map>()
+          .map((item) => MatchUser.fromJson(Map<String, dynamic>.from(item)))
+          .where((item) => item.id != 0)
+          .toList();
 
       emit(state.copyWith(
         recommendations: recommendations,
@@ -79,6 +86,15 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
   ) async {
     emit(state.copyWith(isLiking: true, clearError: true));
 
+    final previousRecommendations = state.recommendations;
+    final updatedRecommendations = previousRecommendations
+        .where((user) => user.id != event.userId)
+        .toList();
+
+    emit(state.copyWith(
+      recommendations: updatedRecommendations,
+    ));
+
     try {
       await _matchService.likeUser(event.userId);
       // Refresh recommendations after liking
@@ -87,6 +103,7 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
     } catch (e) {
       emit(state.copyWith(
         status: MatchStatus.error,
+        recommendations: previousRecommendations,
         isLiking: false,
         error: e.toString(),
       ));

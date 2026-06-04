@@ -120,47 +120,63 @@ class InsightsBloc extends Bloc<InsightsEvent, InsightsState> {
   }
 
   InsightsData _parseInsightsData(Map<String, dynamic> data) {
-    final overview = data['overview'] as Map<String, dynamic>? ?? {};
+    final root = _unwrapInsightsPayload(data);
+
+    final overview = _readMap(root['overview'] ?? root['summary']);
     final previousOverview =
-        data['previousOverview'] as Map<String, dynamic>? ?? {};
+        _readMap(root['previousOverview'] ?? root['previous_summary']);
 
     final demographicsData =
-        _readMap(data['demographics'] ?? data['audienceDemographics']);
-    final locationsData = data['topLocations'] as List? ?? [];
-    final ageRangesData = data['ageRanges'] as List? ?? [];
-    final chartDataMap = data['chartData'] as Map<String, dynamic>? ?? {};
-    final metrics = data['metrics'] as List? ?? [];
+        _readMap(root['demographics'] ?? root['audienceDemographics']);
+    final locationsData = _readList(root['topLocations'] ?? root['locations']);
+    final ageRangesData = _readList(root['ageRanges'] ?? root['ages']);
+    final chartDataMap = _readMap(root['chartData'] ?? root['charts']);
+    final metrics = _readList(root['metrics'] ?? root['dailyMetrics']);
     final genderData = _readMap(demographicsData['genders']);
     final ageGroupData = _readMap(demographicsData['ageGroups']);
     final previousEngagementRate =
-        (data['previousEngagementRate'] as num?)?.toDouble() ?? 0;
+        _readDouble(root['previousEngagementRate']) ?? 0;
+    final totalViews = overview['totalViews'] ??
+        overview['views'] ??
+        root['totalViews'] ??
+        root['totalImpressions'] ??
+        root['views'];
+    final totalEngagement = overview['totalEngagement'] ??
+        overview['engagement'] ??
+        root['totalEngagement'] ??
+        root['engagement'];
+    final newFollowers = overview['newFollowers'] ??
+        root['newFollowers'] ??
+        root['followerGrowth'] ??
+        root['followers'];
+    final totalReach = overview['totalReach'] ??
+        overview['reach'] ??
+        root['totalReach'] ??
+        root['reach'];
 
     return InsightsData(
-      totalViews: _readInt(overview['totalViews'] ?? data['totalImpressions']),
+      totalViews: _readInt(totalViews),
       totalViewsChange: _getChangePercentage(
-        overview['totalViews'] ?? data['totalImpressions'],
+        totalViews,
         previousOverview['totalViews'],
       ),
-      totalEngagement:
-          _readInt(overview['totalEngagement'] ?? data['totalEngagement']),
+      totalEngagement: _readInt(totalEngagement),
       totalEngagementChange: _getChangePercentage(
-        overview['totalEngagement'] ?? data['totalEngagement'],
+        totalEngagement,
         previousOverview['totalEngagement'],
       ),
-      newFollowers: _readInt(
-        overview['newFollowers'] ?? data['followerGrowth'],
-      ),
+      newFollowers: _readInt(newFollowers),
       newFollowersChange: _getChangePercentage(
-        overview['newFollowers'] ?? data['followerGrowth'],
+        newFollowers,
         previousOverview['newFollowers'],
       ),
-      totalReach: _readInt(overview['totalReach'] ?? data['totalReach']),
+      totalReach: _readInt(totalReach),
       totalReachChange: _getChangePercentage(
-        overview['totalReach'] ?? data['totalReach'],
+        totalReach,
         previousOverview['totalReach'],
       ),
-      engagementRate: (data['engagementRate'] as num?)?.toDouble() ??
-          (data['averageEngagementRate'] as num?)?.toDouble() ??
+      engagementRate: _readDouble(root['engagementRate']) ??
+          _readDouble(root['averageEngagementRate']) ??
           0,
       previousEngagementRate: previousEngagementRate,
       demographics: Demographics(
@@ -169,13 +185,15 @@ class InsightsBloc extends Bloc<InsightsEvent, InsightsState> {
         other: _readInt(demographicsData['other'] ?? genderData['other']),
       ),
       topLocations: (locationsData)
+          .map(_readMap)
+          .where((item) => item.isNotEmpty)
           .map((item) => TopLocation(
-                location: item['location'] ??
+                location: item['location']?.toString() ??
                     [item['city'], item['country']]
                         .where((value) =>
                             value != null && value.toString().isNotEmpty)
                         .join(', '),
-                percentage: (item['percentage'] as num?)?.toDouble() ?? 0,
+                percentage: _readDouble(item['percentage']) ?? 0,
               ))
           .toList(),
       ageRanges: (ageRangesData.isNotEmpty
@@ -186,8 +204,10 @@ class InsightsBloc extends Bloc<InsightsEvent, InsightsState> {
                         'count': entry.value,
                       })
                   .toList())
+          .map(_readMap)
+          .where((item) => item.isNotEmpty)
           .map((item) => AgeRange(
-                range: item['range'] ?? '',
+                range: item['range']?.toString() ?? '',
                 count: _readInt(item['count']),
               ))
           .toList(),
@@ -197,9 +217,24 @@ class InsightsBloc extends Bloc<InsightsEvent, InsightsState> {
     );
   }
 
+  Map<String, dynamic> _unwrapInsightsPayload(Map<String, dynamic> data) {
+    for (final key in ['data', 'insights', 'analytics']) {
+      final value = data[key];
+      if (value is Map) return _readMap(value);
+    }
+
+    return data;
+  }
+
   double _getChangePercentage(dynamic current, dynamic previous) {
-    if (current == null || previous == null || previous == 0) return 0;
-    return ((current - previous) / previous) * 100;
+    final currentValue = _readDouble(current);
+    final previousValue = _readDouble(previous);
+
+    if (currentValue == null || previousValue == null || previousValue == 0) {
+      return 0;
+    }
+
+    return ((currentValue - previousValue) / previousValue) * 100;
   }
 
   Map<String, List<ChartDataPoint>> _parseChartData(Map<String, dynamic> data) {
@@ -289,11 +324,22 @@ class InsightsBloc extends Bloc<InsightsEvent, InsightsState> {
     return {};
   }
 
+  List<dynamic> _readList(dynamic value) {
+    if (value is List) return value;
+    return const [];
+  }
+
   int _readInt(dynamic value) {
     if (value is int) return value;
     if (value is num) return value.toInt();
     if (value is String) return int.tryParse(value) ?? 0;
 
     return 0;
+  }
+
+  double? _readDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
   }
 }

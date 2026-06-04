@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
+import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/core/router/named_routes.dart';
-import 'package:clique/data/hooks/auth/auth_hook.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -19,22 +20,9 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
 
-  final AuthHook _authHook = AuthHook();
-
   bool _agreeToTerms = false;
+  bool _showPassword = false;
   bool _showConfirmPassword = false;
-  bool _isInitializing = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _initialize();
-  }
-
-  Future<void> _initialize() async {
-    await _authHook.initialize();
-    setState(() => _isInitializing = false);
-  }
 
   @override
   void dispose() {
@@ -42,7 +30,6 @@ class _RegisterPageState extends State<RegisterPage> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _authHook.dispose();
     super.dispose();
   }
 
@@ -55,69 +42,29 @@ class _RegisterPageState extends State<RegisterPage> {
       ),
     );
 
-    if (_isInitializing || _authHook.isLoadingStorage) {
-      return _buildLoadingScreen();
-    }
-
     return Scaffold(
       backgroundColor: AppColors.whiteColor,
-      body: SafeArea(
-        child: ListenableBuilder(
-          listenable: _authHook,
-          builder: (context, _) {
-            return _buildRegisterView();
-          },
-        ),
+      body: BlocConsumer<AuthBloc, AuthState>(
+        listener: (context, state) {
+          if (state.status == AuthStatus.authenticated) {
+            Navigator.pushReplacementNamed(context, NamedRoutes.homeScreen);
+          } else if (state.status == AuthStatus.verificationRequired) {
+            _showSnack(state.error ?? 'Verification email sent.');
+          } else if (state.status == AuthStatus.error && state.error != null) {
+            _showSnack(state.error!);
+            context.read<AuthBloc>().add(const ClearAuthError());
+          }
+        },
+        builder: (context, state) {
+          return SafeArea(
+            child: _buildRegisterView(state),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildLoadingScreen() {
-    return Scaffold(
-      backgroundColor: AppColors.whiteColor,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: Image.asset(
-                  'assets/images/clique.png',
-                  width: 80,
-                  height: 80,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-            const SizedBox(height: 32),
-            const SizedBox(
-              width: 28,
-              height: 28,
-              child: CircularProgressIndicator(
-                color: AppColors.primary,
-                strokeWidth: 2.5,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRegisterView() {
+  Widget _buildRegisterView(AuthState state) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -170,7 +117,9 @@ class _RegisterPageState extends State<RegisterPage> {
             hint: 'Enter your email',
             icon: Icons.email_outlined,
             keyboardType: TextInputType.emailAddress,
-            onChanged: _authHook.updateEmail,
+            onChanged: (value) {
+              context.read<AuthBloc>().add(UpdateEmail(email: value));
+            },
           ),
           const SizedBox(height: 20),
           _buildInputField(
@@ -178,16 +127,22 @@ class _RegisterPageState extends State<RegisterPage> {
             label: 'Password',
             hint: 'Create a password',
             icon: Icons.lock_outlined,
-            obscureText: !_authHook.showPassword,
-            onChanged: _authHook.updatePassword,
+            obscureText: !_showPassword,
+            onChanged: (value) {
+              context.read<AuthBloc>().add(UpdatePassword(password: value));
+            },
             suffixIcon: IconButton(
               icon: Icon(
-                _authHook.showPassword
+                _showPassword
                     ? Icons.visibility_outlined
                     : Icons.visibility_off_outlined,
                 color: AppColors.greyColor,
               ),
-              onPressed: _authHook.toggleShowPassword,
+              onPressed: () {
+                setState(() {
+                  _showPassword = !_showPassword;
+                });
+              },
             ),
           ),
           const SizedBox(height: 20),
@@ -212,13 +167,9 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
           ),
           const SizedBox(height: 16),
-          ListenableBuilder(
-            listenable: _authHook,
-            builder: (_, __) {
-              if (_authHook.loginError.isEmpty) return const SizedBox.shrink();
-              return _buildErrorBox(_authHook.loginError);
-            },
-          ),
+          if (state.status == AuthStatus.verificationRequired &&
+              state.error != null)
+            _buildErrorBox(state.error!),
           Row(
             children: [
               GestureDetector(
@@ -273,11 +224,11 @@ class _RegisterPageState extends State<RegisterPage> {
             ],
           ),
           const SizedBox(height: 32),
-          ListenableBuilder(
-            listenable: _authHook,
-            builder: (_, __) {
+          Builder(
+            builder: (_) {
+              final isLoading = state.status == AuthStatus.loading;
               return GestureDetector(
-                onTap: _authHook.loading ? null : _handleRegister,
+                onTap: isLoading ? null : _handleRegister,
                 child: Container(
                   width: double.infinity,
                   height: 56,
@@ -298,7 +249,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     ],
                   ),
                   child: Center(
-                    child: _authHook.loading
+                    child: isLoading
                         ? const SizedBox(
                             width: 24,
                             height: 24,
@@ -457,14 +408,14 @@ class _RegisterPageState extends State<RegisterPage> {
     final firstName = parts.isNotEmpty ? parts.first : '';
     final lastName = parts.length > 1 ? parts.sublist(1).join(' ') : '';
 
-    final success = await _authHook.handleSignup(
-      firstName: firstName,
-      lastName: lastName,
-    );
-
-    if (success && mounted) {
-      Navigator.pushReplacementNamed(context, NamedRoutes.homeScreen);
-    }
+    context.read<AuthBloc>().add(
+          SignUpRequested(
+            email: _emailController.text.trim(),
+            password: password,
+            firstName: firstName,
+            lastName: lastName,
+          ),
+        );
   }
 
   void _showSnack(String message) {

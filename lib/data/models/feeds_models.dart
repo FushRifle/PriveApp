@@ -7,7 +7,13 @@ class FeedPost {
   final String time;
   final int likes;
   final int comments;
+  final int shares;
+  final int saves;
+  final int reposts;
   final bool isLiked;
+  final bool isSaved;
+  final bool isReposted;
+  final List<String> hashtags;
   final DateTime createdAt;
 
   FeedPost({
@@ -18,7 +24,13 @@ class FeedPost {
     required this.time,
     required this.likes,
     required this.comments,
+    this.shares = 0,
+    this.saves = 0,
+    this.reposts = 0,
     required this.isLiked,
+    this.isSaved = false,
+    this.isReposted = false,
+    this.hashtags = const [],
     required this.createdAt,
   });
 
@@ -29,9 +41,21 @@ class FeedPost {
       content: json['content']?.toString() ?? '',
       attachments: _parseAttachments(json['attachments']),
       time: json['time']?.toString() ?? '',
-      likes: _toInt(json['likes']),
-      comments: _toInt(json['comments']),
+      likes: _toInt(json['likes'] ??
+          json['likesCount'] ??
+          json['likeCount'] ??
+          json['_count']?['likes']),
+      comments: _toInt(json['comments'] ??
+          json['commentsCount'] ??
+          json['commentCount'] ??
+          json['_count']?['comments']),
+      shares: _toInt(json['shares'] ?? json['shareCount']),
+      saves: _toInt(json['saves'] ?? json['saveCount']),
+      reposts: _toInt(json['reposts'] ?? json['repostCount']),
       isLiked: json['isLiked'] == true || json['is_liked'] == true,
+      isSaved: json['isSaved'] == true || json['is_saved'] == true,
+      isReposted: json['isReposted'] == true || json['is_reposted'] == true,
+      hashtags: _parseStringList(json['hashtags']),
       createdAt: _parseDateTime(json['createdAt'] ?? json['created_at']),
     );
   }
@@ -44,7 +68,13 @@ class FeedPost {
         'time': time,
         'likes': likes,
         'comments': comments,
+        'shares': shares,
+        'saves': saves,
+        'reposts': reposts,
         'isLiked': isLiked,
+        'isSaved': isSaved,
+        'isReposted': isReposted,
+        'hashtags': hashtags,
         'createdAt': createdAt.toIso8601String(),
       };
 
@@ -56,7 +86,13 @@ class FeedPost {
     String? time,
     int? likes,
     int? comments,
+    int? shares,
+    int? saves,
+    int? reposts,
     bool? isLiked,
+    bool? isSaved,
+    bool? isReposted,
+    List<String>? hashtags,
     DateTime? createdAt,
   }) {
     return FeedPost(
@@ -67,7 +103,13 @@ class FeedPost {
       time: time ?? this.time,
       likes: likes ?? this.likes,
       comments: comments ?? this.comments,
+      shares: shares ?? this.shares,
+      saves: saves ?? this.saves,
+      reposts: reposts ?? this.reposts,
       isLiked: isLiked ?? this.isLiked,
+      isSaved: isSaved ?? this.isSaved,
+      isReposted: isReposted ?? this.isReposted,
+      hashtags: hashtags ?? this.hashtags,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -297,8 +339,14 @@ class UserMedia {
       url: json['url']?.toString() ?? '',
       thumbnail: json['thumbnail']?.toString(),
       caption: json['caption']?.toString(),
-      likes: _toInt(json['likes']),
-      comments: _toInt(json['comments']),
+      likes: _toInt(json['likes'] ??
+          json['likesCount'] ??
+          json['likeCount'] ??
+          json['_count']?['likes']),
+      comments: _toInt(json['comments'] ??
+          json['commentsCount'] ??
+          json['commentCount'] ??
+          json['_count']?['comments']),
       createdAt: _parseDateTime(json['createdAt'] ?? json['created_at']),
     );
   }
@@ -541,4 +589,23 @@ List<Attachment> _parseAttachments(dynamic value) {
         .toList();
   }
   return [];
+}
+
+List<String> _parseStringList(dynamic value) {
+  if (value is List) {
+    return value
+        .map((item) => item.toString().replaceFirst('#', '').trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+  }
+
+  if (value is String && value.trim().isNotEmpty) {
+    return value
+        .split(',')
+        .map((item) => item.replaceFirst('#', '').trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+  }
+
+  return const [];
 }

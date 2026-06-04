@@ -77,6 +77,7 @@ dependencies:
   audio_waveforms: ^2.0.2
   just_audio: ^0.10.5
   cloudinary: ^1.2.0
+  purchases_flutter: ^10.1.1
 
 dev_dependencies:
   flutter_test:

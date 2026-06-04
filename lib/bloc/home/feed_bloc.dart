@@ -25,6 +25,10 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     on<CreateFeedPost>(_onCreateFeedPost);
     on<LikeFeedPost>(_onLikeFeedPost);
     on<UnlikeFeedPost>(_onUnlikeFeedPost);
+    on<SaveFeedPost>(_onSaveFeedPost);
+    on<UnsaveFeedPost>(_onUnsaveFeedPost);
+    on<ShareFeedPost>(_onShareFeedPost);
+    on<RepostFeedPost>(_onRepostFeedPost);
     on<GetPostComments>(_onGetPostComments);
     on<LoadMoreComments>(_onLoadMoreComments);
     on<CreatePostComment>(_onCreatePostComment);
@@ -294,7 +298,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
       if (post.id == event.postId && post.isLiked) {
         return post.copyWith(
           isLiked: false,
-          likes: post.likes - 1,
+          likes: post.likes > 0 ? post.likes - 1 : 0,
         );
       }
 
@@ -318,6 +322,108 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
           generalError: e.toString(),
         ),
       );
+    }
+  }
+
+  Future<void> _onSaveFeedPost(
+    SaveFeedPost event,
+    Emitter<FeedState> emit,
+  ) async {
+    final originalPosts = state.posts;
+
+    final updatedPosts = state.posts.map((post) {
+      if (post.id == event.postId && !post.isSaved) {
+        return post.copyWith(
+          isSaved: true,
+          saves: post.saves + 1,
+        );
+      }
+
+      return post;
+    }).toList();
+
+    emit(state.copyWith(posts: updatedPosts));
+
+    try {
+      await _feedService.savePost(event.postId);
+    } catch (e) {
+      emit(state.copyWith(posts: originalPosts, generalError: e.toString()));
+    }
+  }
+
+  Future<void> _onUnsaveFeedPost(
+    UnsaveFeedPost event,
+    Emitter<FeedState> emit,
+  ) async {
+    final originalPosts = state.posts;
+
+    final updatedPosts = state.posts.map((post) {
+      if (post.id == event.postId && post.isSaved) {
+        return post.copyWith(
+          isSaved: false,
+          saves: post.saves > 0 ? post.saves - 1 : 0,
+        );
+      }
+
+      return post;
+    }).toList();
+
+    emit(state.copyWith(posts: updatedPosts));
+
+    try {
+      await _feedService.unsavePost(event.postId);
+    } catch (e) {
+      emit(state.copyWith(posts: originalPosts, generalError: e.toString()));
+    }
+  }
+
+  Future<void> _onShareFeedPost(
+    ShareFeedPost event,
+    Emitter<FeedState> emit,
+  ) async {
+    final originalPosts = state.posts;
+    final updatedPosts = state.posts.map((post) {
+      if (post.id == event.postId) {
+        return post.copyWith(shares: post.shares + 1);
+      }
+
+      return post;
+    }).toList();
+
+    emit(state.copyWith(posts: updatedPosts));
+
+    try {
+      await _feedService.sharePost(event.postId);
+    } catch (e) {
+      emit(state.copyWith(posts: originalPosts, generalError: e.toString()));
+    }
+  }
+
+  Future<void> _onRepostFeedPost(
+    RepostFeedPost event,
+    Emitter<FeedState> emit,
+  ) async {
+    final originalPosts = state.posts;
+    final updatedPosts = state.posts.map((post) {
+      if (post.id == event.postId && !post.isReposted) {
+        return post.copyWith(
+          isReposted: true,
+          reposts: post.reposts + 1,
+        );
+      }
+
+      return post;
+    }).toList();
+
+    emit(state.copyWith(posts: updatedPosts));
+
+    try {
+      await _feedService.repost(
+        postId: event.postId,
+        content: event.content,
+      );
+    } catch (e) {
+      emit(state.copyWith(posts: originalPosts, generalError: e.toString()));
     }
   }
 
@@ -464,9 +570,18 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
         ...existingComments,
       ];
 
+      final updatedPosts = state.posts.map((post) {
+        if (post.id == event.postId) {
+          return post.copyWith(comments: post.comments + 1);
+        }
+
+        return post;
+      }).toList();
+
       emit(
         state.copyWith(
           comments: updatedComments,
+          posts: updatedPosts,
           isCreatingComment: false,
         ),
       );

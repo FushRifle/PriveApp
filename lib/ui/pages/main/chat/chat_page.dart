@@ -374,6 +374,7 @@ class _ChatPageState extends State<ChatPage>
                     onPickImage: () => _pickImage(ImageSource.gallery),
                     onPickVideo: _pickVideo,
                     onPickDocument: _pickDocument,
+                    onSendVoice: (file) => _sendMedia(file, UploadType.audio),
                   ),
                 ],
               ),

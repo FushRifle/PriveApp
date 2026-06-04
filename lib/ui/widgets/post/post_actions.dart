@@ -6,20 +6,30 @@ class PostActions extends StatelessWidget {
   final bool isLiked;
   final int likeCount;
   final int commentCount;
+  final int shareCount;
+  final int repostCount;
+  final bool isSaved;
+  final bool isReposted;
   final VoidCallback onLike;
   final VoidCallback onComment;
   final VoidCallback onSave;
   final VoidCallback onShare;
+  final VoidCallback onRepost;
 
   const PostActions({
     super.key,
     required this.isLiked,
     required this.likeCount,
     required this.commentCount,
+    this.shareCount = 0,
+    this.repostCount = 0,
+    this.isSaved = false,
+    this.isReposted = false,
     required this.onLike,
     required this.onComment,
     required this.onSave,
     required this.onShare,
+    required this.onRepost,
   });
 
   @override
@@ -48,13 +58,23 @@ class PostActions extends StatelessWidget {
           const SizedBox(width: 10),
           _IconAction(
             icon: Icons.send_outlined,
+            label: shareCount > 0 ? _formatCount(shareCount) : null,
             color: actionColor,
             onTap: onShare,
           ),
+          const SizedBox(width: 10),
+          _IconAction(
+            icon: Icons.repeat_rounded,
+            label: repostCount > 0 ? _formatCount(repostCount) : null,
+            color: isReposted ? AppColors.primary : actionColor,
+            onTap: onRepost,
+          ),
           const Spacer(),
           _IconAction(
-            icon: Icons.bookmark_border_rounded,
-            color: actionColor,
+            icon: isSaved
+                ? Icons.bookmark_rounded
+                : Icons.bookmark_border_rounded,
+            color: isSaved ? AppColors.primary : actionColor,
             onTap: onSave,
           ),
         ],
@@ -137,11 +157,13 @@ class _ActionPill extends StatelessWidget {
 
 class _IconAction extends StatelessWidget {
   final IconData icon;
+  final String? label;
   final Color color;
   final VoidCallback onTap;
 
   const _IconAction({
     required this.icon,
+    this.label,
     required this.color,
     required this.onTap,
   });
@@ -166,12 +188,32 @@ class _IconAction extends StatelessWidget {
             ),
           ),
           child: SizedBox(
-            width: 40,
             height: 40,
-            child: Icon(
-              icon,
-              color: color,
-              size: 20,
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: label == null ? 10 : 11,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    icon,
+                    color: color,
+                    size: 20,
+                  ),
+                  if (label != null) ...[
+                    const SizedBox(width: 5),
+                    Text(
+                      label!,
+                      style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
         ),

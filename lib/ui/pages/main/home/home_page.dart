@@ -148,7 +148,7 @@ class _HomePageState extends State<HomePage>
               ),
               SliverToBoxAdapter(
                 child: _QuickComposer(
-                  onTap: () => _openCreatePost(context),
+                  onOpenCreate: () => _openCreatePost(context),
                 ),
               ),
               BlocBuilder<FeedBloc, FeedState>(
@@ -551,12 +551,44 @@ class _StoriesSection extends StatelessWidget {
   }
 }
 
-class _QuickComposer extends StatelessWidget {
-  final VoidCallback onTap;
+class _QuickComposer extends StatefulWidget {
+  final VoidCallback onOpenCreate;
 
   const _QuickComposer({
-    required this.onTap,
+    required this.onOpenCreate,
   });
+
+  @override
+  State<_QuickComposer> createState() => _QuickComposerState();
+}
+
+class _QuickComposerState extends State<_QuickComposer> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  bool get _canPost => _controller.text.trim().isNotEmpty;
+
+  void _submit() {
+    final content = _controller.text.trim();
+    if (content.isEmpty) return;
+
+    HapticFeedback.lightImpact();
+
+    context.read<FeedBloc>().add(
+          CreateFeedPost(
+            content: content,
+          ),
+        );
+
+    _controller.clear();
+    FocusScope.of(context).unfocus();
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -575,46 +607,62 @@ class _QuickComposer extends StatelessWidget {
           child: Material(
             color: AppColors.cardColor,
             borderRadius: BorderRadius.circular(22),
-            child: InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(22),
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: AppColors.cardBorderColor),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.shadowElevated,
-                      blurRadius: 18,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    _Avatar(avatar: avatar, fallback: fallback),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        "What's on your mind?",
-                        style: AppTheme.greyTextStyle.copyWith(
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: AppColors.cardBorderColor),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.shadowElevated,
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  _Avatar(avatar: avatar, fallback: fallback),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      minLines: 1,
+                      maxLines: 4,
+                      textInputAction: TextInputAction.newline,
+                      onChanged: (_) => setState(() {}),
+                      style: AppTheme.blackTextStyle.copyWith(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: "What's on your mind?",
+                        hintStyle: AppTheme.greyTextStyle.copyWith(
                           fontSize: 14,
-                          fontWeight: FontWeight.w600,
                         ),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
                       ),
                     ),
-                    _ComposerAction(
-                      icon: Icons.image_rounded,
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: widget.onOpenCreate,
+                    child: _ComposerAction(
+                      icon: Icons.image_outlined,
                       color: AppColors.secondary,
                     ),
-                    const SizedBox(width: 8),
-                    _ComposerAction(
-                      icon: Icons.edit_rounded,
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: _canPost ? _submit : widget.onOpenCreate,
+                    child: _ComposerAction(
+                      icon: _canPost ? Icons.send_rounded : Icons.add_rounded,
                       color: AppColors.primary,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),

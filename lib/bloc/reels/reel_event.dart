@@ -59,6 +59,19 @@ class ShareReel extends ReelEvent {
   List<Object?> get props => [reelId, index];
 }
 
+class IncrementReelCommentCount extends ReelEvent {
+  final String reelId;
+  final int index;
+
+  const IncrementReelCommentCount({
+    required this.reelId,
+    required this.index,
+  });
+
+  @override
+  List<Object?> get props => [reelId, index];
+}
+
 class ClearReelError extends ReelEvent {}
 
 class ResetReelState extends ReelEvent {}

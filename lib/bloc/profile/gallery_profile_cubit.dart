@@ -16,12 +16,15 @@ class GalleryProfileCubit extends Cubit<GalleryProfileState> {
     int page = 1,
     bool loadMore = false,
   }) async {
+    List<GalleryModel> previousItems = const [];
+
     if (loadMore && state is GalleryProfileLoaded) {
       final currentState = state as GalleryProfileLoaded;
       if (!currentState.hasMore) {
         return; // No more media to load
       }
-      emit(GalleryProfileLoadingMore(currentState.galleryProfiles));
+      previousItems = currentState.galleryProfiles;
+      emit(GalleryProfileLoadingMore(previousItems));
     } else {
       emit(GalleryProfileLoading());
     }
@@ -49,9 +52,13 @@ class GalleryProfileCubit extends Cubit<GalleryProfileState> {
               ))
           .toList();
 
-      if (loadMore && state is GalleryProfileLoaded) {
-        final currentState = state as GalleryProfileLoaded;
-        final allItems = [...currentState.galleryProfiles, ...galleryItems];
+      if (loadMore) {
+        final existingIds = previousItems.map((item) => item.id).toSet();
+        final newItems = galleryItems
+            .where((item) => !existingIds.contains(item.id))
+            .toList();
+        final allItems = [...previousItems, ...newItems];
+
         emit(GalleryProfileLoaded(
           galleryProfiles: allItems,
           hasMore: response.hasMore,

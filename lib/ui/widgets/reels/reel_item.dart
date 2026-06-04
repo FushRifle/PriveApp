@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:video_player/video_player.dart';
 
@@ -44,6 +45,7 @@ class _ReelItemState extends State<ReelItem>
   bool _hasVideoError = false;
   bool _isFollowing = false;
   bool _isLiked = false;
+  bool _isMuted = false;
 
   int _localLikeDelta = 0;
   int _localCommentDelta = 0;
@@ -76,6 +78,7 @@ class _ReelItemState extends State<ReelItem>
     super.initState();
 
     _syncLocalState();
+    _loadMutePreference();
     _initializeVideo();
   }
 
@@ -115,6 +118,17 @@ class _ReelItemState extends State<ReelItem>
     _localLikeDelta = 0;
     _localCommentDelta = 0;
     _localShareDelta = 0;
+  }
+
+  Future<void> _loadMutePreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+
+    setState(() {
+      _isMuted = prefs.getBool('reels_muted') ?? false;
+    });
+
+    await _videoController?.setVolume(_isMuted ? 0 : 1);
   }
 
   Future<void> _disposeController() async {
@@ -158,7 +172,7 @@ class _ReelItemState extends State<ReelItem>
       }
 
       await controller.setLooping(true);
-      await controller.setVolume(1);
+      await controller.setVolume(_isMuted ? 0 : 1);
 
       if (widget.isActive) {
         await controller.play();
@@ -222,6 +236,19 @@ class _ReelItemState extends State<ReelItem>
     }
   }
 
+  Future<void> _toggleMute() async {
+    final nextMuted = !_isMuted;
+
+    setState(() {
+      _isMuted = nextMuted;
+    });
+
+    await _videoController?.setVolume(nextMuted ? 0 : 1);
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('reels_muted', nextMuted);
+  }
+
   void _handleLike() {
     final reelId = widget.reel['id']?.toString();
 
@@ -273,6 +300,13 @@ class _ReelItemState extends State<ReelItem>
             setState(() {
               _localCommentDelta += 1;
             });
+
+            context.read<ReelBloc>().add(
+                  IncrementReelCommentCount(
+                    reelId: reelId,
+                    index: widget.index,
+                  ),
+                );
           },
         );
       },
@@ -363,6 +397,7 @@ class _ReelItemState extends State<ReelItem>
           _buildGradients(),
           if (!_isPlaying && _isInitialized) _buildPlayPauseOverlay(),
           _buildRightActions(),
+          _buildMuteButton(),
           _buildBottomInfo(),
           if (_isInitialized && _videoController != null)
             _VideoProgress(controller: _videoController!),
@@ -505,6 +540,32 @@ class _ReelItemState extends State<ReelItem>
               imageUrl: _avatarUrl,
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMuteButton() {
+    return Positioned(
+      top: MediaQuery.paddingOf(context).top + 74,
+      right: 16,
+      child: SafeArea(
+        child: Material(
+          color: AppColors.black.withOpacity(0.34),
+          shape: const CircleBorder(),
+          child: InkWell(
+            onTap: _toggleMute,
+            customBorder: const CircleBorder(),
+            child: SizedBox(
+              width: 42,
+              height: 42,
+              child: Icon(
+                _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+                color: AppColors.white,
+                size: 22,
+              ),
+            ),
+          ),
         ),
       ),
     );

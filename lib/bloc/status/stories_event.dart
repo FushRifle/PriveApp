@@ -47,4 +47,44 @@ class MarkStorySeen extends StoriesEvent {
   List<Object?> get props => [storyId];
 }
 
+class LikeStoryEvent extends StoriesEvent {
+  final String storyId;
+
+  const LikeStoryEvent({required this.storyId});
+
+  @override
+  List<Object?> get props => [storyId];
+}
+
+class UnlikeStoryEvent extends StoriesEvent {
+  final String storyId;
+
+  const UnlikeStoryEvent({required this.storyId});
+
+  @override
+  List<Object?> get props => [storyId];
+}
+
+class ReplyToStoryEvent extends StoriesEvent {
+  final String storyId;
+  final String content;
+
+  const ReplyToStoryEvent({
+    required this.storyId,
+    required this.content,
+  });
+
+  @override
+  List<Object?> get props => [storyId, content];
+}
+
+class ReshareStoryEvent extends StoriesEvent {
+  final String storyId;
+
+  const ReshareStoryEvent({required this.storyId});
+
+  @override
+  List<Object?> get props => [storyId];
+}
+
 class ClearStoriesError extends StoriesEvent {}

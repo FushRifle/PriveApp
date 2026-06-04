@@ -106,6 +106,95 @@ class FeedService {
     }
   }
 
+  Future<Map<String, dynamic>> savePost(int postId) async {
+    try {
+      final response = await _api.post('/api/feed/posts/$postId/save');
+      return _readMap(response.data);
+    } on DioException catch (e) {
+      debugPrint('Save post error: ${e.response?.data}');
+      throw e.response?.data['message'] ??
+          e.response?.data['error'] ??
+          'Failed to save post';
+    }
+  }
+
+  Future<Map<String, dynamic>> unsavePost(int postId) async {
+    try {
+      final response = await _api.delete('/api/feed/posts/$postId/save');
+      return _readMap(response.data);
+    } on DioException catch (e) {
+      debugPrint('Unsave post error: ${e.response?.data}');
+      throw e.response?.data['message'] ??
+          e.response?.data['error'] ??
+          'Failed to unsave post';
+    }
+  }
+
+  Future<Map<String, dynamic>> sharePost(int postId) async {
+    try {
+      final response = await _api.post('/api/feed/posts/$postId/share');
+      return _readMap(response.data);
+    } on DioException catch (e) {
+      debugPrint('Share post error: ${e.response?.data}');
+      throw e.response?.data['message'] ??
+          e.response?.data['error'] ??
+          'Failed to share post';
+    }
+  }
+
+  Future<Map<String, dynamic>> repost({
+    required int postId,
+    String content = '',
+  }) async {
+    try {
+      final response = await _api.post(
+        '/api/feed/posts/$postId/repost',
+        data: {'content': content},
+      );
+      return _readMap(response.data);
+    } on DioException catch (e) {
+      debugPrint('Repost error: ${e.response?.data}');
+      throw e.response?.data['message'] ??
+          e.response?.data['error'] ??
+          'Failed to repost';
+    }
+  }
+
+  Future<PostsResponse> getPostsByHashtag({
+    required String tag,
+    int page = 1,
+  }) async {
+    try {
+      final cleanTag = tag.replaceFirst('#', '').trim().toLowerCase();
+      final response = await _api.get(
+        '/api/feed/hashtags/$cleanTag/posts',
+        queryParameters: {'page': page},
+      );
+
+      if (response.data is List) {
+        final posts = (response.data as List)
+            .map((json) => FeedPost.fromJson(json))
+            .toList();
+        return PostsResponse(
+          posts: posts,
+          hasMore: posts.length == 10,
+          page: page,
+        );
+      }
+
+      if (response.data is Map) {
+        return PostsResponse.fromJson(response.data);
+      }
+
+      return PostsResponse(posts: [], hasMore: false, page: page);
+    } on DioException catch (e) {
+      debugPrint('Hashtag posts error: ${e.response?.data}');
+      throw e.response?.data['message'] ??
+          e.response?.data['error'] ??
+          'Failed to get hashtag posts';
+    }
+  }
+
   // Get post comments - returns typed List<Comment>
   Future<CommentsResponse> getComments(int postId, {int page = 1}) async {
     try {
@@ -279,5 +368,11 @@ class FeedService {
       debugPrint('Get user media count error: ${e.response?.data}');
       return 0;
     }
+  }
+
+  Map<String, dynamic> _readMap(dynamic data) {
+    if (data is Map<String, dynamic>) return data;
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {};
   }
 }

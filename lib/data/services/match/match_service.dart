@@ -8,9 +8,9 @@ class MatchService {
   Future<List<dynamic>> getMatches() async {
     try {
       final response = await _api.get('/api/matches');
-      return response.data['matches'] ?? response.data ?? [];
+      return _readList(response.data, keys: const ['matches', 'data', 'items']);
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to get matches';
+      throw _readError(e, 'Failed to get matches');
     }
   }
 
@@ -20,9 +20,9 @@ class MatchService {
       final response = await _api.post('/api/matches/like', data: {
         'userId': userId,
       });
-      return response.data;
+      return _readMap(response.data);
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to like user';
+      throw _readError(e, 'Failed to like user');
     }
   }
 
@@ -30,9 +30,9 @@ class MatchService {
   Future<Map<String, dynamic>> acceptMatch(int matchId) async {
     try {
       final response = await _api.post('/api/matches/$matchId/accept');
-      return response.data;
+      return _readMap(response.data);
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to accept match';
+      throw _readError(e, 'Failed to accept match');
     }
   }
 
@@ -40,9 +40,9 @@ class MatchService {
   Future<Map<String, dynamic>> rejectMatch(int matchId) async {
     try {
       final response = await _api.post('/api/matches/$matchId/reject');
-      return response.data;
+      return _readMap(response.data);
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to reject match';
+      throw _readError(e, 'Failed to reject match');
     }
   }
 
@@ -50,9 +50,51 @@ class MatchService {
   Future<List<dynamic>> getRecommendations() async {
     try {
       final response = await _api.get('/api/recommendations');
-      return response.data['recommendations'] ?? response.data ?? [];
+      return _readList(
+        response.data,
+        keys: const ['recommendations', 'profiles', 'users', 'data', 'items'],
+      );
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to get recommendations';
+      throw _readError(e, 'Failed to get recommendations');
     }
+  }
+
+  List<dynamic> _readList(
+    dynamic data, {
+    required List<String> keys,
+  }) {
+    if (data is List) return data;
+
+    if (data is Map) {
+      for (final key in keys) {
+        final value = data[key];
+        if (value is List) return value;
+        if (value is Map) {
+          final nested = _readList(value, keys: keys);
+          if (nested.isNotEmpty) return nested;
+        }
+      }
+    }
+
+    return [];
+  }
+
+  Map<String, dynamic> _readMap(dynamic data) {
+    if (data is Map<String, dynamic>) return data;
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {};
+  }
+
+  String _readError(DioException error, String fallback) {
+    final data = error.response?.data;
+
+    if (data is Map) {
+      final message = data['message'] ?? data['error'];
+      if (message != null) return message.toString();
+    }
+
+    if (data is String && data.isNotEmpty) return data;
+
+    return fallback;
   }
 }

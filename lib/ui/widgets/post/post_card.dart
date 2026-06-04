@@ -27,8 +27,12 @@ class CardPost extends StatefulWidget {
 
 class _CardPostState extends State<CardPost> {
   late bool _isLiked;
+  late bool _isSaved;
+  late bool _isReposted;
   late int _likeCount;
   late int _commentCount;
+  late int _shareCount;
+  late int _repostCount;
 
   bool get _hasMedia => widget.post.attachments.isNotEmpty;
 
@@ -46,15 +50,23 @@ class _CardPostState extends State<CardPost> {
     if (oldWidget.post.id != widget.post.id ||
         oldWidget.post.likes != widget.post.likes ||
         oldWidget.post.comments != widget.post.comments ||
-        oldWidget.post.isLiked != widget.post.isLiked) {
+        oldWidget.post.shares != widget.post.shares ||
+        oldWidget.post.reposts != widget.post.reposts ||
+        oldWidget.post.isLiked != widget.post.isLiked ||
+        oldWidget.post.isSaved != widget.post.isSaved ||
+        oldWidget.post.isReposted != widget.post.isReposted) {
       _syncPostState();
     }
   }
 
   void _syncPostState() {
     _isLiked = widget.post.isLiked;
+    _isSaved = widget.post.isSaved;
+    _isReposted = widget.post.isReposted;
     _likeCount = widget.post.likes;
     _commentCount = widget.post.comments;
+    _shareCount = widget.post.shares;
+    _repostCount = widget.post.reposts;
   }
 
   void _openDetail() {
@@ -130,11 +142,11 @@ class _CardPostState extends State<CardPost> {
           },
           onRepost: () {
             Navigator.pop(context);
-            _showComingSoon('Repost coming soon');
+            _repost();
           },
           onShare: () {
             Navigator.pop(context);
-            _showComingSoon('Share coming soon');
+            _share();
           },
           onReport: () {
             Navigator.pop(context);
@@ -143,6 +155,52 @@ class _CardPostState extends State<CardPost> {
         );
       },
     );
+  }
+
+  void _toggleSave() {
+    HapticFeedback.lightImpact();
+
+    final wasSaved = _isSaved;
+
+    setState(() {
+      _isSaved = !wasSaved;
+    });
+
+    if (wasSaved) {
+      context.read<FeedBloc>().add(UnsaveFeedPost(postId: widget.post.id));
+      _showComingSoon('Removed from saved posts');
+    } else {
+      context.read<FeedBloc>().add(SaveFeedPost(postId: widget.post.id));
+      _showComingSoon('Post saved');
+    }
+  }
+
+  void _share() {
+    HapticFeedback.lightImpact();
+
+    setState(() {
+      _shareCount += 1;
+    });
+
+    context.read<FeedBloc>().add(ShareFeedPost(postId: widget.post.id));
+    _showComingSoon('Share recorded');
+  }
+
+  void _repost() {
+    if (_isReposted) {
+      _showComingSoon('Already reposted');
+      return;
+    }
+
+    HapticFeedback.lightImpact();
+
+    setState(() {
+      _isReposted = true;
+      _repostCount += 1;
+    });
+
+    context.read<FeedBloc>().add(RepostFeedPost(postId: widget.post.id));
+    _showComingSoon('Reposted');
   }
 
   void _confirmDelete() {
@@ -309,25 +367,30 @@ class _CardPostState extends State<CardPost> {
                 post: widget.post,
                 onMoreTap: _showPostOptions,
               ),
-              if (_hasMedia)
-                PostMedia(
-                  post: widget.post,
-                  isDetailView: widget.isDetailView,
-                ),
               if (widget.post.content.trim().isNotEmpty)
                 PostFooter(
                   post: widget.post,
                   isTextOnly: !_hasMedia,
                   maxLines: widget.isDetailView ? null : (_hasMedia ? 3 : 5),
                 ),
+              if (_hasMedia)
+                PostMedia(
+                  post: widget.post,
+                  isDetailView: widget.isDetailView,
+                ),
               PostActions(
                 isLiked: _isLiked,
                 likeCount: _likeCount,
                 commentCount: _commentCount,
+                shareCount: _shareCount,
+                repostCount: _repostCount,
+                isSaved: _isSaved,
+                isReposted: _isReposted,
                 onLike: _toggleLike,
                 onComment: _openComments,
-                onSave: () => _showComingSoon('Save feature coming soon'),
-                onShare: () => _showComingSoon('Share feature coming soon'),
+                onSave: _toggleSave,
+                onShare: _share,
+                onRepost: _repost,
               ),
             ],
           ),

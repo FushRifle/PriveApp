@@ -83,7 +83,7 @@ class _CreateReelPageState extends State<CreateReelPage> {
                     previous.error != current.error);
           },
           listener: (context, state) {
-            if (state.status == ReelStatus.success) {
+            if (state.status == ReelStatus.created) {
               _showSnackBar('Reel uploaded successfully');
 
               if (!mounted) return;
@@ -92,7 +92,9 @@ class _CreateReelPageState extends State<CreateReelPage> {
               return;
             }
 
-            if (state.error != null && state.error!.isNotEmpty) {
+            if (state.status == ReelStatus.error &&
+                state.error != null &&
+                state.error!.isNotEmpty) {
               _showSnackBar(
                 state.error!,
                 isError: true,

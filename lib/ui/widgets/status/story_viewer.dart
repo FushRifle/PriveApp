@@ -33,10 +33,11 @@ class _StoryViewerState extends State<StoryViewer>
   late final TextEditingController _replyController;
 
   int _currentIndex = 0;
+  late List<Story> _stories;
   bool _isPaused = false;
   bool _isReplying = false;
 
-  Story get _currentStory => widget.stories[_currentIndex];
+  Story get _currentStory => _stories[_currentIndex];
 
   @override
   void initState() {
@@ -45,6 +46,7 @@ class _StoryViewerState extends State<StoryViewer>
     _currentIndex = widget.stories.isEmpty
         ? 0
         : widget.initialIndex.clamp(0, widget.stories.length - 1);
+    _stories = List<Story>.from(widget.stories);
 
     _replyController = TextEditingController();
     _pageController = PageController(initialPage: _currentIndex);
@@ -55,10 +57,22 @@ class _StoryViewerState extends State<StoryViewer>
     )..addStatusListener(_onProgressStatus);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || widget.stories.isEmpty) return;
+      if (!mounted || _stories.isEmpty) return;
       _markSeen(_currentStory);
       _startProgress();
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant StoryViewer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.stories != widget.stories) {
+      _stories = List<Story>.from(widget.stories);
+      if (_stories.isNotEmpty && _currentIndex >= _stories.length) {
+        _currentIndex = _stories.length - 1;
+      }
+    }
   }
 
   @override
@@ -110,7 +124,7 @@ class _StoryViewerState extends State<StoryViewer>
   }
 
   void _goNext() {
-    if (_currentIndex < widget.stories.length - 1) {
+    if (_currentIndex < _stories.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 260),
         curve: Curves.easeOutCubic,
@@ -156,7 +170,7 @@ class _StoryViewerState extends State<StoryViewer>
       _isPaused = false;
     });
 
-    _markSeen(widget.stories[index]);
+    _markSeen(_stories[index]);
     _startProgress();
   }
 
@@ -176,6 +190,15 @@ class _StoryViewerState extends State<StoryViewer>
     HapticFeedback.lightImpact();
 
     _replyController.clear();
+    context.read<StoriesBloc>().add(
+          ReplyToStoryEvent(
+            storyId: _currentStory.id,
+            content: value,
+          ),
+        );
+    _replaceCurrentStory(
+      _currentStory.copyWith(replyCount: _currentStory.replyCount + 1),
+    );
 
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
@@ -201,16 +224,69 @@ class _StoryViewerState extends State<StoryViewer>
 
   void _likeStory() {
     HapticFeedback.mediumImpact();
+    final story = _currentStory;
+    final nextLiked = !story.isLiked;
+
+    context.read<StoriesBloc>().add(
+          nextLiked
+              ? LikeStoryEvent(storyId: story.id)
+              : UnlikeStoryEvent(storyId: story.id),
+        );
+
+    _replaceCurrentStory(
+      story.copyWith(
+        isLiked: nextLiked,
+        likeCount: nextLiked
+            ? story.likeCount + 1
+            : (story.likeCount - 1).clamp(0, 2147483647).toInt(),
+      ),
+    );
 
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Liked ${_currentStory.user.name}\'s story'),
+        content: Text(
+          nextLiked
+              ? 'Liked ${story.user.name}\'s story'
+              : 'Removed like from ${story.user.name}\'s story',
+        ),
         backgroundColor: AppColors.primary,
         duration: const Duration(seconds: 1),
       ),
     );
+  }
+
+  void _reshareStory() {
+    final story = _currentStory;
+    if (story.isReshared) return;
+
+    HapticFeedback.mediumImpact();
+
+    context.read<StoriesBloc>().add(ReshareStoryEvent(storyId: story.id));
+    _replaceCurrentStory(
+      story.copyWith(
+        isReshared: true,
+        reshareCount: story.reshareCount + 1,
+      ),
+    );
+
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Reshared ${story.user.name}\'s story'),
+        backgroundColor: AppColors.primary,
+        duration: const Duration(seconds: 1),
+      ),
+    );
+  }
+
+  void _replaceCurrentStory(Story story) {
+    if (!mounted || _stories.isEmpty) return;
+
+    setState(() {
+      _stories = List<Story>.from(_stories)..[_currentIndex] = story;
+    });
   }
 
   void _close() {
@@ -223,7 +299,7 @@ class _StoryViewerState extends State<StoryViewer>
 
   @override
   Widget build(BuildContext context) {
-    if (widget.stories.isEmpty) {
+    if (_stories.isEmpty) {
       return const Scaffold(
         backgroundColor: AppColors.black,
         body: Center(
@@ -255,11 +331,11 @@ class _StoryViewerState extends State<StoryViewer>
               PageView.builder(
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: widget.stories.length,
+                itemCount: _stories.length,
                 onPageChanged: _onPageChanged,
                 itemBuilder: (context, index) {
                   return _StoryContent(
-                    story: widget.stories[index],
+                    story: _stories[index],
                     isActive: index == _currentIndex,
                   );
                 },
@@ -269,7 +345,7 @@ class _StoryViewerState extends State<StoryViewer>
                 left: 8,
                 right: 8,
                 child: StoryProgress(
-                  count: widget.stories.length,
+                  count: _stories.length,
                   currentIndex: _currentIndex,
                   animation: _progressController,
                 ),
@@ -305,6 +381,9 @@ class _StoryViewerState extends State<StoryViewer>
                   },
                   onSend: _sendReply,
                   onLike: _likeStory,
+                  onReshare: _reshareStory,
+                  isLiked: _currentStory.isLiked,
+                  isReshared: _currentStory.isReshared,
                 ),
               ),
               if (_isPaused && !_isReplying)

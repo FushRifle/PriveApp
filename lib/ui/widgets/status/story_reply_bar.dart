@@ -8,6 +8,9 @@ class StoryReplyBar extends StatefulWidget {
   final ValueChanged<bool> onFocusChanged;
   final ValueChanged<String> onSend;
   final VoidCallback onLike;
+  final VoidCallback onReshare;
+  final bool isLiked;
+  final bool isReshared;
 
   const StoryReplyBar({
     super.key,
@@ -16,6 +19,9 @@ class StoryReplyBar extends StatefulWidget {
     required this.onFocusChanged,
     required this.onSend,
     required this.onLike,
+    required this.onReshare,
+    this.isLiked = false,
+    this.isReshared = false,
   });
 
   @override
@@ -109,12 +115,30 @@ class _StoryReplyBarState extends State<StoryReplyBar> {
         ),
         const SizedBox(width: 10),
         _RoundButton(
-          icon: Icons.favorite_border_rounded,
-          backgroundColor: AppColors.white.withOpacity(0.12),
-          borderColor: AppColors.white.withOpacity(0.28),
+          icon: widget.isLiked ? Icons.favorite_rounded : Icons.favorite_border,
+          backgroundColor: widget.isLiked
+              ? AppColors.red.withOpacity(0.78)
+              : AppColors.white.withOpacity(0.12),
+          borderColor: widget.isLiked
+              ? AppColors.red
+              : AppColors.white.withOpacity(0.28),
           onTap: () {
             HapticFeedback.mediumImpact();
             widget.onLike();
+          },
+        ),
+        const SizedBox(width: 10),
+        _RoundButton(
+          icon: Icons.repeat_rounded,
+          backgroundColor: widget.isReshared
+              ? AppColors.primary
+              : AppColors.white.withOpacity(0.12),
+          borderColor: widget.isReshared
+              ? AppColors.primary
+              : AppColors.white.withOpacity(0.28),
+          onTap: () {
+            HapticFeedback.lightImpact();
+            widget.onReshare();
           },
         ),
         const SizedBox(width: 10),

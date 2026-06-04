@@ -5,6 +5,8 @@ enum ReelStatus {
   loading,
   refreshing,
   loadingMore,
+  creating,
+  created,
   success,
   error,
 }
@@ -18,6 +20,7 @@ class ReelState extends Equatable {
   final bool isLoading;
   final bool isRefreshing;
   final bool isLoadingMore;
+  final bool isCreating;
 
   const ReelState({
     this.status = ReelStatus.initial,
@@ -28,6 +31,7 @@ class ReelState extends Equatable {
     this.isLoading = false,
     this.isRefreshing = false,
     this.isLoadingMore = false,
+    this.isCreating = false,
   });
 
   ReelState copyWith({
@@ -39,6 +43,7 @@ class ReelState extends Equatable {
     bool? isLoading,
     bool? isRefreshing,
     bool? isLoadingMore,
+    bool? isCreating,
     bool clearError = false,
   }) {
     return ReelState(
@@ -50,6 +55,7 @@ class ReelState extends Equatable {
       isLoading: isLoading ?? this.isLoading,
       isRefreshing: isRefreshing ?? this.isRefreshing,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      isCreating: isCreating ?? this.isCreating,
     );
   }
 
@@ -63,5 +69,6 @@ class ReelState extends Equatable {
         isLoading,
         isRefreshing,
         isLoadingMore,
+        isCreating,
       ];
 }

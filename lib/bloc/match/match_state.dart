@@ -26,18 +26,37 @@ class MatchUser {
   });
 
   factory MatchUser.fromJson(Map<String, dynamic> json) {
+    final user = _readMap(json['user'] ?? json['profile']);
+
     return MatchUser(
-      id: json['id'] ?? 0,
-      name: json['name'] ?? json['username'] ?? 'User',
-      username: json['username'] ?? '',
-      avatar: json['avatar'],
-      age: json['age'] ?? 0,
-      location: json['location'],
-      bio: json['bio'],
-      isVerified: json['verified'] == true,
+      id: _readInt(
+          json['userId'] ?? json['user_id'] ?? user['id'] ?? json['id']),
+      name:
+          (user['name'] ?? json['name'] ?? user['username'] ?? json['username'])
+                  ?.toString() ??
+              'User',
+      username: (user['username'] ?? json['username'])?.toString() ?? '',
+      avatar: (user['avatar'] ?? json['avatar'])?.toString(),
+      age: _readInt(user['age'] ?? json['age']),
+      location: (user['location'] ?? json['location'])?.toString(),
+      bio: (user['bio'] ?? json['bio'])?.toString(),
+      isVerified: user['verified'] == true || json['verified'] == true,
       isMutual: json['isMutual'] == true,
     );
   }
+}
+
+Map<String, dynamic> _readMap(dynamic value) {
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) return Map<String, dynamic>.from(value);
+  return {};
+}
+
+int _readInt(dynamic value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? 0;
+  return 0;
 }
 
 class MatchState extends Equatable {
