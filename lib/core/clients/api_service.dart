@@ -23,16 +23,14 @@ class ApiService {
 
   final Map<String, DateTime> _cacheTimestamps = {};
 
-  final Map<String, DateTime> _cooldowns = {};
-
   int _requestId = 0;
 
   Future<Session?>? _refreshSessionFuture;
+  Future<void> _requestQueue = Future<void>.value();
 
   static const Duration _cacheDuration = Duration(seconds: 60);
   static const int _maxCacheEntries = 120;
   static const int _maxRetries = 3;
-  static const Duration _defaultRateLimitCooldown = Duration(seconds: 30);
 
   ApiService._internal() {
     dio = Dio(
@@ -197,45 +195,6 @@ class ApiService {
     return DateTime.now().difference(timestamp) < _cacheDuration;
   }
 
-  bool _isCoolingDown(String key) {
-    final cooldownUntil = _cooldowns[key];
-    if (cooldownUntil == null) {
-      return false;
-    }
-
-    if (DateTime.now().isBefore(cooldownUntil)) {
-      return true;
-    }
-
-    _cooldowns.remove(key);
-    return false;
-  }
-
-  void _startCooldown(String key, DioException error) {
-    final retryAfter = error.response?.headers.value('retry-after');
-    final retryAfterSeconds = int.tryParse(retryAfter ?? '');
-    final duration = retryAfterSeconds != null && retryAfterSeconds > 0
-        ? Duration(seconds: retryAfterSeconds)
-        : _defaultRateLimitCooldown;
-
-    _cooldowns[key] = DateTime.now().add(duration);
-  }
-
-  DioException _cooldownException(String key, String path) {
-    return DioException(
-      requestOptions: RequestOptions(path: path),
-      response: Response(
-        requestOptions: RequestOptions(path: path),
-        statusCode: 429,
-        data: {
-          'message': 'Request is cooling down after a rate limit response',
-          'key': key,
-        },
-      ),
-      type: DioExceptionType.badResponse,
-    );
-  }
-
   Future<Response> _sendWithRetry(
     Future<Response> Function() request,
     String key,
@@ -254,10 +213,7 @@ class ApiService {
 
         final status = e.response?.statusCode ?? 0;
 
-        if (status == 429) {
-          _startCooldown(key, e);
-          rethrow;
-        }
+        if (status == 429) rethrow;
 
         final shouldRetry = status >= 500 || status == 0;
 
@@ -270,6 +226,19 @@ class ApiService {
         await Future.delayed(_retryDelay(e, retries));
       }
     }
+  }
+
+  Future<T> _runQueued<T>(Future<T> Function() request) {
+    final previous = _requestQueue;
+
+    final next = previous.catchError((_) {}).then((_) => request());
+
+    _requestQueue = next.then<void>(
+      (_) {},
+      onError: (_) {},
+    );
+
+    return next;
   }
 
   Duration _retryDelay(DioException error, int retryCount) {
@@ -310,17 +279,6 @@ class ApiService {
       );
     }
 
-    if (_isCoolingDown(key)) {
-      if (useCache && _memoryCache.containsKey(key)) {
-        return Response(
-          requestOptions: RequestOptions(path: path),
-          data: _memoryCache[key],
-        );
-      }
-
-      throw _cooldownException(key, path);
-    }
-
     final shouldSharePending = !forceRefresh;
 
     if (shouldSharePending && _pendingGetRequests.containsKey(key)) {
@@ -330,10 +288,12 @@ class ApiService {
     final trackedToken = _trackCancelToken(key, cancelToken);
 
     final future = _sendWithRetry(
-      () => dio.get(
-        path,
-        queryParameters: queryParameters,
-        cancelToken: trackedToken.token,
+      () => _runQueued(
+        () => dio.get(
+          path,
+          queryParameters: queryParameters,
+          cancelToken: trackedToken.token,
+        ),
       ),
       key,
       'GET',
@@ -384,10 +344,12 @@ class ApiService {
     final trackedToken = _trackCancelToken(key, cancelToken);
 
     return _sendWithRetry(
-      () => dio.post(
-        path,
-        data: data,
-        cancelToken: trackedToken.token,
+      () => _runQueued(
+        () => dio.post(
+          path,
+          data: data,
+          cancelToken: trackedToken.token,
+        ),
       ),
       key,
       'POST',
@@ -417,10 +379,12 @@ class ApiService {
     final trackedToken = _trackCancelToken(key, cancelToken);
 
     return _sendWithRetry(
-      () => dio.put(
-        path,
-        data: data,
-        cancelToken: trackedToken.token,
+      () => _runQueued(
+        () => dio.put(
+          path,
+          data: data,
+          cancelToken: trackedToken.token,
+        ),
       ),
       key,
       'PUT',
@@ -450,10 +414,12 @@ class ApiService {
     final trackedToken = _trackCancelToken(key, cancelToken);
 
     return _sendWithRetry(
-      () => dio.patch(
-        path,
-        data: data,
-        cancelToken: trackedToken.token,
+      () => _runQueued(
+        () => dio.patch(
+          path,
+          data: data,
+          cancelToken: trackedToken.token,
+        ),
       ),
       key,
       'PATCH',
@@ -483,10 +449,12 @@ class ApiService {
     final trackedToken = _trackCancelToken(key, cancelToken);
 
     return _sendWithRetry(
-      () => dio.delete(
-        path,
-        data: data,
-        cancelToken: trackedToken.token,
+      () => _runQueued(
+        () => dio.delete(
+          path,
+          data: data,
+          cancelToken: trackedToken.token,
+        ),
       ),
       key,
       'DELETE',
@@ -516,8 +484,6 @@ class ApiService {
     _memoryCache.clear();
 
     _cacheTimestamps.clear();
-
-    _cooldowns.clear();
   }
 
   void _trimCache() {

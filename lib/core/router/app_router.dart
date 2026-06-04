@@ -86,21 +86,19 @@ class AppRouter {
 
       case NamedRoutes.profileScreen:
         return _page(
-          const ProfilePage(
-            isOwnProfile: true,
-          ),
+          const ProfilePage(),
         );
 
       case NamedRoutes.otherProfileScreen:
         final userId = _readUserId(settings.arguments);
-        if (userId == null || userId.isEmpty) {
+        final parsedUserId = int.tryParse(userId ?? '');
+        if (parsedUserId == null || parsedUserId <= 0) {
           return _errorRoute('Invalid user ID');
         }
 
         return _page(
-          ProfilePage(
-            isOwnProfile: false,
-            userId: userId,
+          OtherProfilePage(
+            userId: parsedUserId,
           ),
         );
 

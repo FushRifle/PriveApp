@@ -61,12 +61,16 @@ class FeedService {
           return cached;
         }
       }
-      throw e.response?.data['message'] ?? 'Failed to get posts';
+      throw _readError(e.response?.data, 'Failed to get posts');
     }
   }
 
   PostsResponse? getCachedPosts() {
     return _feedCacheService.readLatestFeed();
+  }
+
+  UserMediaResponse? getCachedUserMedia(int userId, String? type) {
+    return _feedCacheService.readUserMedia(userId, type);
   }
 
   // Create post
@@ -396,6 +400,19 @@ class FeedService {
     if (data is Map<String, dynamic>) return data;
     if (data is Map) return Map<String, dynamic>.from(data);
     return {};
+  }
+
+  String _readError(dynamic data, String fallback) {
+    if (data is Map) {
+      final message = data['message'] ?? data['error'];
+      if (message != null) return message.toString();
+    }
+
+    if (data is String && data.isNotEmpty) {
+      return data;
+    }
+
+    return fallback;
   }
 
   void _invalidatePostCaches(int postId) {

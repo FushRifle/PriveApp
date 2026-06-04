@@ -33,6 +33,20 @@ class GalleryProfileLoaded extends GalleryProfileState {
     this.isLoadingMore = false,
   });
 
+  GalleryProfileLoaded copyWith({
+    List<GalleryModel>? galleryProfiles,
+    bool? hasMore,
+    int? currentPage,
+    bool? isLoadingMore,
+  }) {
+    return GalleryProfileLoaded(
+      galleryProfiles: galleryProfiles ?? this.galleryProfiles,
+      hasMore: hasMore ?? this.hasMore,
+      currentPage: currentPage ?? this.currentPage,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+    );
+  }
+
   @override
   List<Object?> get props =>
       [galleryProfiles, hasMore, currentPage, isLoadingMore];

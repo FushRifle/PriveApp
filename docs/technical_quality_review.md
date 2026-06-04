@@ -27,6 +27,22 @@ Reviewed high-risk shared paths for performance, stability, and state consistenc
 - Added 429-aware retry delay handling that honors `Retry-After` when the backend sends it.
 - Deferred duplicate current-user loading when the authenticated user was already bootstrapped.
 - Corrected the backend auth/onboarding migrations to align `users` and `profiles` with the Supabase-backed repositories used during signup.
+- Made `AuthGuard` wait for in-flight profile/user bootstrap loads instead of routing while those BLoCs are still loading.
+- Added real FIFO serialization for app API calls in `ApiService`.
+- Coalesced concurrent current-user loads in `UserBloc`.
+- Blocked feed refresh and load-more from running over each other.
+- Made the demographics Skip action local-only so it navigates into the app without saving demographics or calling onboarding APIs.
+- Disabled the backend API rate limiter by default and in local `.env` with `RATE_LIMIT_PER_MINUTE=0`; production can re-enable it with an explicit positive value.
+- Removed the frontend's artificial post-429 cooldown exception so users see real backend responses instead of repeated local `Request is cooling down` failures.
+- Removed duplicate `/api/users/me` fetches from profile load/refresh; `UserBloc` owns current-user loading.
+- Split other-user profile routing to a dedicated `OtherProfilePage` file/class backed by `viewedProfile` state.
+- Redesigned the home page into clear header, stories, composer, and feed sections using a local `Theme.of(context)` palette for immediate light/dark adaptation, then softened the home modules with more fluid rounded surfaces and removed the feed-count chip.
+- Switched settings account header from `ProfileBloc` to `UserBloc` so it reads from the `users` table and avoids profile/user field confusion.
+- Merged `UserBloc` and `ProfileBloc` data on profile pages so account fields come from `users`, profile-only fields come from `profiles`, and gallery media uses the stable app user id.
+- Made gallery media loads faster with page cache warm starts, duplicate request suppression, and non-destructive load-more/error states.
+- Synced edit-profile avatar, cover, bio, location, work, education, age, and interests/languages changes into both user and profile state where the schemas overlap.
+- Added a reusable animated heart loader and switched `AuthGuard` away from the logo plus circular spinner splash.
+- Hardened the backend user-media feed query to normalize attachments as JSONB before filtering/expanding them.
 
 ## Current Architecture Risks
 

@@ -7,6 +7,7 @@ import 'package:clique/core/clients/supabase_client.dart';
 
 class AuthService {
   final ApiService _api = ApiService();
+  Future<Session?>? _refreshSessionFuture;
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage(
     aOptions: AndroidOptions(
@@ -280,8 +281,24 @@ class AuthService {
       return session;
     }
 
-    final response = await SupabaseConfig.client.auth.refreshSession();
-    return response.session;
+    final existingRefresh = _refreshSessionFuture;
+    if (existingRefresh != null) {
+      return existingRefresh;
+    }
+
+    final refresh = SupabaseConfig.client.auth.refreshSession().then(
+          (response) => response.session,
+        );
+
+    _refreshSessionFuture = refresh;
+
+    try {
+      return await refresh;
+    } finally {
+      if (_refreshSessionFuture == refresh) {
+        _refreshSessionFuture = null;
+      }
+    }
   }
 
   // GET SAVED CREDENTIALS

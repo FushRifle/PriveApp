@@ -8,8 +8,8 @@ part 'user_state.dart';
 class UserBloc extends Bloc<UserEvent, UserState> {
   final UserService _userService = UserService();
 
-  bool _isLoadingCurrentUser = false;
   bool _isRefreshingCurrentUser = false;
+  Future<Map<String, dynamic>>? _currentUserFuture;
 
   UserBloc() : super(const UserState()) {
     on<LoadCurrentUser>(_onLoadCurrentUser);
@@ -38,9 +38,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     LoadCurrentUser event,
     Emitter<UserState> emit,
   ) async {
-    if (_isLoadingCurrentUser || _isRefreshingCurrentUser) return;
-
-    _isLoadingCurrentUser = true;
+    if (_isRefreshingCurrentUser) return;
 
     if (state.currentUser == null) {
       emit(state.copyWith(
@@ -51,7 +49,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     }
 
     try {
-      final userData = await _userService.getCurrentUser();
+      final userData = await _getCurrentUserOnce();
 
       emit(state.copyWith(
         currentUser: userData,
@@ -66,8 +64,6 @@ class UserBloc extends Bloc<UserEvent, UserState> {
         isLoading: false,
         error: e.toString(),
       ));
-    } finally {
-      _isLoadingCurrentUser = false;
     }
   }
 
@@ -75,7 +71,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     RefreshCurrentUser event,
     Emitter<UserState> emit,
   ) async {
-    if (_isLoadingCurrentUser || _isRefreshingCurrentUser) return;
+    if (_isRefreshingCurrentUser) return;
 
     _isRefreshingCurrentUser = true;
 
@@ -86,7 +82,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     ));
 
     try {
-      final userData = await _userService.getCurrentUser();
+      final userData = await _getCurrentUserOnce();
 
       emit(state.copyWith(
         currentUser: userData,
@@ -104,6 +100,22 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     } finally {
       _isRefreshingCurrentUser = false;
     }
+  }
+
+  Future<Map<String, dynamic>> _getCurrentUserOnce() {
+    final existing = _currentUserFuture;
+    if (existing != null) {
+      return existing;
+    }
+
+    final future = _userService.getCurrentUser();
+    _currentUserFuture = future;
+
+    return future.whenComplete(() {
+      if (_currentUserFuture == future) {
+        _currentUserFuture = null;
+      }
+    });
   }
 
   Future<void> _onLoadUserById(

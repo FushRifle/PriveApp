@@ -8,6 +8,7 @@ import 'package:clique/app/configs/theme.dart';
 
 import 'package:clique/bloc/profile/gallery_profile_cubit.dart';
 import 'package:clique/bloc/profile/profile_bloc.dart';
+import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/bloc/friends/friends_bloc.dart';
 import 'package:clique/bloc/insights/insights_bloc.dart';
 import 'package:clique/bloc/match/match_bloc.dart';
@@ -20,14 +21,11 @@ import 'package:clique/ui/pages/settings/settings_page.dart';
 import 'package:clique/ui/pages/social/friends_list_page.dart';
 import 'package:clique/ui/pages/social/insights_page.dart';
 
-class ProfilePage extends StatefulWidget {
-  final bool isOwnProfile;
-  final String? userId;
+part 'other_profile_page.dart';
 
+class ProfilePage extends StatefulWidget {
   const ProfilePage({
     super.key,
-    this.isOwnProfile = true,
-    this.userId,
   });
 
   @override
@@ -72,13 +70,6 @@ class _ProfilePageState extends State<ProfilePage>
   @override
   void didUpdateWidget(covariant ProfilePage oldWidget) {
     super.didUpdateWidget(oldWidget);
-
-    if (oldWidget.userId != widget.userId ||
-        oldWidget.isOwnProfile != widget.isOwnProfile) {
-      _profileRequested = false;
-      _loadedMediaKey = null;
-      _loadProfile();
-    }
   }
 
   @override
@@ -95,18 +86,8 @@ class _ProfilePageState extends State<ProfilePage>
 
     _profileRequested = true;
 
-    if (widget.isOwnProfile) {
-      context.read<ProfileBloc>().add(LoadMyProfile());
-      return;
-    }
-
-    final id = int.tryParse(widget.userId ?? '');
-
-    if (id != null) {
-      context.read<ProfileBloc>().add(
-            LoadProfileByUserId(userId: id),
-          );
-    }
+    context.read<UserBloc>().add(LoadCurrentUser());
+    context.read<ProfileBloc>().add(LoadMyProfile());
   }
 
   void _reloadProfile() {
@@ -118,7 +99,10 @@ class _ProfilePageState extends State<ProfilePage>
   void _handleTabChanged() {
     if (_tabController.indexIsChanging) return;
 
-    final profile = _currentProfile(context.read<ProfileBloc>().state);
+    final profile = _currentProfile(
+      context.read<UserBloc>().state,
+      context.read<ProfileBloc>().state,
+    );
     if (profile == null) return;
 
     final userId = _profileUserId(profile);
@@ -161,11 +145,17 @@ class _ProfilePageState extends State<ProfilePage>
     return type == _GalleryTabType.videos ? 'video' : 'image';
   }
 
-  Profile? _currentProfile(ProfileState state) {
-    return widget.isOwnProfile ? state.myProfile : state.viewedProfile;
+  _ProfileView? _currentProfile(
+    UserState userState,
+    ProfileState profileState,
+  ) {
+    return _ProfileView.fromSources(
+      user: userState.currentUser,
+      profile: profileState.myProfile,
+    );
   }
 
-  int? _profileUserId(Profile profile) {
+  int? _profileUserId(_ProfileView profile) {
     return profile.userId != 0 ? profile.userId : profile.id;
   }
 
@@ -177,56 +167,68 @@ class _ProfilePageState extends State<ProfilePage>
       value: _galleryCubit,
       child: Scaffold(
         backgroundColor: AppColors.backgroundColor,
-        body: BlocConsumer<ProfileBloc, ProfileState>(
-          listenWhen: (previous, current) {
-            final previousProfile = _currentProfile(previous);
-            final currentProfile = _currentProfile(current);
-
-            return previous.status != current.status ||
-                previous.viewedStatus != current.viewedStatus ||
-                previousProfile?.userId != currentProfile?.userId ||
-                previousProfile?.id != currentProfile?.id;
-          },
-          listener: (context, state) {
-            final status =
-                widget.isOwnProfile ? state.status : state.viewedStatus;
-            if (status != ProfileStatus.success) return;
-
-            final profile = _currentProfile(state);
-            if (profile == null) return;
-
-            final userId = _profileUserId(profile);
-            if (userId != null) {
-              _loadUserMedia(
-                userId,
-                _tabTypeForIndex(_tabController.index) ??
-                    _GalleryTabType.photos,
-              );
-            }
-          },
+        body: BlocBuilder<UserBloc, UserState>(
           buildWhen: (previous, current) {
             return previous.status != current.status ||
-                previous.viewedStatus != current.viewedStatus ||
                 previous.error != current.error ||
-                _currentProfile(previous) != _currentProfile(current);
+                previous.currentUser != current.currentUser;
           },
-          builder: (context, state) {
-            return _ProfileBody(
-              state: state,
-              profile: _currentProfile(state),
-              isOwnProfile: widget.isOwnProfile,
-              isFollowing: _isFollowing,
-              tabController: _tabController,
-              scrollController: _scrollController,
-              onRetry: _reloadProfile,
-              onToggleFollow: () {
-                HapticFeedback.mediumImpact();
+          builder: (context, userState) {
+            return BlocConsumer<ProfileBloc, ProfileState>(
+              listenWhen: (previous, current) {
+                final previousProfile = _currentProfile(userState, previous);
+                final currentProfile = _currentProfile(userState, current);
 
-                setState(() {
-                  _isFollowing = !_isFollowing;
-                });
+                return previous.status != current.status ||
+                    previousProfile?.userId != currentProfile?.userId ||
+                    previousProfile?.id != currentProfile?.id;
               },
-              onLoadMoreMedia: _loadMoreMedia,
+              listener: (context, profileState) {
+                if (userState.status != UserStatus.success &&
+                    profileState.status != ProfileStatus.success) {
+                  return;
+                }
+
+                final profile = _currentProfile(userState, profileState);
+                if (profile == null) return;
+
+                final userId = _profileUserId(profile);
+                if (userId != null) {
+                  _loadUserMedia(
+                    userId,
+                    _tabTypeForIndex(_tabController.index) ??
+                        _GalleryTabType.photos,
+                  );
+                }
+              },
+              buildWhen: (previous, current) {
+                return previous.status != current.status ||
+                    previous.error != current.error ||
+                    previous.myProfile != current.myProfile;
+              },
+              builder: (context, profileState) {
+                final profile = _currentProfile(userState, profileState);
+
+                return _ProfileBody(
+                  isLoading: userState.isLoading ||
+                      profileState.status == ProfileStatus.loading,
+                  error: userState.error ?? profileState.error,
+                  profile: profile,
+                  isOwnProfile: true,
+                  isFollowing: _isFollowing,
+                  tabController: _tabController,
+                  scrollController: _scrollController,
+                  onRetry: _reloadProfile,
+                  onToggleFollow: () {
+                    HapticFeedback.mediumImpact();
+
+                    setState(() {
+                      _isFollowing = !_isFollowing;
+                    });
+                  },
+                  onLoadMoreMedia: _loadMoreMedia,
+                );
+              },
             );
           },
         ),
@@ -235,9 +237,155 @@ class _ProfilePageState extends State<ProfilePage>
   }
 }
 
+class _ProfileView {
+  final int id;
+  final int userId;
+  final String? displayName;
+  final String? bio;
+  final String? avatar;
+  final String? coverImage;
+  final List<String> photos;
+  final List<String> interests;
+  final int age;
+  final String? gender;
+  final String? lookingFor;
+  final String? location;
+  final String? work;
+  final String? education;
+
+  const _ProfileView({
+    required this.id,
+    required this.userId,
+    this.displayName,
+    this.bio,
+    this.avatar,
+    this.coverImage,
+    this.photos = const [],
+    this.interests = const [],
+    this.age = 0,
+    this.gender,
+    this.lookingFor,
+    this.location,
+    this.work,
+    this.education,
+  });
+
+  static _ProfileView? fromSources({
+    Map<String, dynamic>? user,
+    Profile? profile,
+  }) {
+    if (user == null && profile == null) return null;
+
+    final id = _readInt(user?['id'] ?? user?['userId'] ?? user?['user_id']);
+    final userId = _readInt(user?['userId'] ?? user?['user_id'] ?? user?['id']);
+    final profileUserId = profile?.userId ?? 0;
+    final name = _readName(user) ?? _readString(profile?.displayName);
+
+    return _ProfileView(
+      id: id != 0 ? id : profile?.id ?? 0,
+      userId: profileUserId != 0 ? profileUserId : userId,
+      displayName: name,
+      bio: _readString(profile?.bio) ?? _readString(user?['bio']),
+      avatar: _readString(user?['avatar']) ?? _readString(profile?.avatar),
+      coverImage: _readString(
+              user?['coverImage'] ?? user?['cover_image'] ?? user?['cover']) ??
+          _readString(profile?.coverImage),
+      photos: profile?.photos.isNotEmpty == true
+          ? profile!.photos
+          : _readStringList(user?['photos']),
+      interests: profile?.interests.isNotEmpty == true
+          ? profile!.interests
+          : _readStringList(user?['interests'] ?? user?['languages']),
+      age: profile?.age != 0 ? profile?.age ?? 0 : _readInt(user?['age']),
+      gender: _readString(profile?.gender) ?? _readString(user?['gender']),
+      lookingFor: _readString(profile?.lookingFor) ??
+          _readString(user?['lookingFor'] ?? user?['looking_for']),
+      location:
+          _readString(profile?.location) ?? _readString(user?['location']),
+      work: _readString(profile?.work) ?? _readString(user?['work']),
+      education:
+          _readString(profile?.education) ?? _readString(user?['education']),
+    );
+  }
+
+  Map<String, dynamic> toProfileUpdateData() {
+    return {
+      'displayName': displayName,
+      'bio': bio,
+      'avatar': avatar,
+      'coverImage': coverImage,
+      'age': age > 0 ? age : null,
+      'gender': gender,
+      'lookingFor': lookingFor,
+      'location': location,
+      'work': work,
+      'education': education,
+      'interests': interests,
+    };
+  }
+
+  Map<String, dynamic> toUserUpdateData() {
+    return {
+      'name': displayName,
+      'bio': bio,
+      'avatar': avatar,
+      'coverImage': coverImage,
+      'age': age > 0 ? age : null,
+      'location': location,
+      'work': work,
+      'education': education,
+      'languages': interests,
+    };
+  }
+
+  String get displayNameOrDefault => displayName ?? 'User';
+
+  String get ageText => age > 0 ? '$age years old' : 'Age not specified';
+
+  static String? _readString(dynamic value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty || text == 'null') return null;
+    return text;
+  }
+
+  static int _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  static List<String> _readStringList(dynamic value) {
+    if (value is Iterable) {
+      return value
+          .map((item) => item?.toString().trim() ?? '')
+          .where((item) => item.isNotEmpty && item != 'null')
+          .toList();
+    }
+    return const [];
+  }
+
+  static String? _readName(Map<String, dynamic>? user) {
+    if (user == null) return null;
+
+    final name = _readString(user['name'] ?? user['displayName']);
+    if (name != null) return name;
+
+    final firstName = _readString(user['firstName'] ?? user['first_name']);
+    final lastName = _readString(user['lastName'] ?? user['last_name']);
+    final fullName = [
+      firstName,
+      lastName,
+    ].whereType<String>().join(' ').trim();
+    if (fullName.isNotEmpty) return fullName;
+
+    return _readString(user['username'] ?? user['email']);
+  }
+}
+
 class _ProfileBody extends StatelessWidget {
-  final ProfileState state;
-  final Profile? profile;
+  final bool isLoading;
+  final String? error;
+  final _ProfileView? profile;
   final bool isOwnProfile;
   final bool isFollowing;
   final TabController tabController;
@@ -247,7 +395,8 @@ class _ProfileBody extends StatelessWidget {
   final void Function(int userId, _GalleryTabType type) onLoadMoreMedia;
 
   const _ProfileBody({
-    required this.state,
+    required this.isLoading,
+    required this.error,
     required this.profile,
     required this.isOwnProfile,
     required this.isFollowing,
@@ -264,9 +413,9 @@ class _ProfileBody extends StatelessWidget {
       return const _LoadingState();
     }
 
-    if (_effectiveStatus == ProfileStatus.error && state.error != null) {
+    if (error != null && profile == null) {
       return _ErrorState(
-        message: state.error!,
+        message: error!,
         onRetry: onRetry,
       );
     }
@@ -323,19 +472,12 @@ class _ProfileBody extends StatelessWidget {
   }
 
   bool get _isInitialLoading {
-    final effectiveStatus = isOwnProfile ? state.status : state.viewedStatus;
-
-    return effectiveStatus == ProfileStatus.loading ||
-        (effectiveStatus == ProfileStatus.initial && profile == null);
-  }
-
-  ProfileStatus get _effectiveStatus {
-    return isOwnProfile ? state.status : state.viewedStatus;
+    return isLoading && profile == null;
   }
 }
 
 class _ProfileSliverAppBar extends StatelessWidget {
-  final Profile profile;
+  final _ProfileView profile;
   final bool isOwnProfile;
 
   const _ProfileSliverAppBar({
@@ -355,10 +497,10 @@ class _ProfileSliverAppBar extends StatelessWidget {
       elevation: 0,
       leading: IconButton(
         onPressed: () => Navigator.maybePop(context),
-        icon: const Icon(
+        icon: Icon(
           Icons.arrow_back_ios_new,
-          color: AppColors.black,
-          size: 20,
+          color: AppColors.primary,
+          size: 25,
         ),
       ),
       actions: [
@@ -376,7 +518,8 @@ class _ProfileSliverAppBar extends StatelessWidget {
             },
             icon: const Icon(
               Icons.settings_outlined,
-              color: AppColors.black,
+              color: AppColors.primary,
+              size: 25,
             ),
           ),
       ],
@@ -480,7 +623,7 @@ class _CoverPlaceholder extends StatelessWidget {
 }
 
 class _ProfileHeader extends StatelessWidget {
-  final Profile profile;
+  final _ProfileView profile;
   final bool isOwnProfile;
   final bool isFollowing;
   final VoidCallback onToggleFollow;
@@ -533,7 +676,7 @@ class _ProfileHeader extends StatelessWidget {
 }
 
 class _AvatarSection extends StatelessWidget {
-  final Profile profile;
+  final _ProfileView profile;
 
   const _AvatarSection({
     required this.profile,
@@ -581,7 +724,7 @@ class _AvatarSection extends StatelessWidget {
 }
 
 class _NameSection extends StatelessWidget {
-  final Profile profile;
+  final _ProfileView profile;
 
   const _NameSection({
     required this.profile,
@@ -613,7 +756,7 @@ class _NameSection extends StatelessWidget {
 }
 
 class _BioSection extends StatelessWidget {
-  final Profile profile;
+  final _ProfileView profile;
 
   const _BioSection({
     required this.profile,

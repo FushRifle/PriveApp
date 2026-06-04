@@ -53,6 +53,7 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
   final List<String> _selectedInterests = [];
 
   int _currentPage = 0;
+  bool _isSkipping = false;
 
   final List<String> _genders = [
     'Male',
@@ -950,7 +951,18 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
     );
   }
 
-  void _skipOnboarding() => _saveDemographicInfo();
+  void _skipOnboarding() {
+    if (_isSkipping) return;
+
+    _isSkipping = true;
+    HapticFeedback.lightImpact();
+
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      NamedRoutes.homeScreen,
+      (_) => false,
+    );
+  }
 
   Future<void> _saveDemographicInfo() async {
     context.read<ProfileBloc>().add(UpdateProfile(

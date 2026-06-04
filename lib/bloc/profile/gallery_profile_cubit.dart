@@ -1,11 +1,14 @@
 import 'package:clique/core/services/home/feed_service.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:clique/core/models/feeds_models.dart' as feed_models;
 import 'package:clique/core/models/gallery_model.dart';
 part 'gallery_profile_state.dart';
 
 class GalleryProfileCubit extends Cubit<GalleryProfileState> {
   final FeedService _feedService = FeedService();
+  final Map<String, GalleryProfileLoaded> _cache = {};
+  final Set<String> _inFlight = {};
 
   GalleryProfileCubit() : super(GalleryProfileInitial());
 
@@ -16,6 +19,9 @@ class GalleryProfileCubit extends Cubit<GalleryProfileState> {
     int page = 1,
     bool loadMore = false,
   }) async {
+    final key = _requestKey(userId, type, page);
+    if (_inFlight.contains(key)) return;
+
     List<GalleryModel> previousItems = const [];
 
     if (loadMore && state is GalleryProfileLoaded) {
@@ -24,10 +30,17 @@ class GalleryProfileCubit extends Cubit<GalleryProfileState> {
         return; // No more media to load
       }
       previousItems = currentState.galleryProfiles;
-      emit(GalleryProfileLoadingMore(previousItems));
+      emit(currentState.copyWith(isLoadingMore: true));
     } else {
-      emit(GalleryProfileLoading());
+      final cached = _cache[key] ?? _cachedPage(userId, type, page);
+      if (cached != null) {
+        emit(cached);
+      } else {
+        emit(GalleryProfileLoading());
+      }
     }
+
+    _inFlight.add(key);
 
     try {
       final response = await _feedService.getUserMedia(
@@ -36,25 +49,7 @@ class GalleryProfileCubit extends Cubit<GalleryProfileState> {
         type: type,
       );
 
-      final mediaList = response.media;
-
-      // Convert UserMedia to GalleryModel
-      final galleryItems = mediaList
-          .map((media) => GalleryModel(
-                id: media.id.toString(),
-                postId: media.postId,
-                image: media.thumbnail ?? media.url,
-                thumbnail: media.thumbnail ?? media.url,
-                videoUrl: media.type == 'video' ? media.url : null,
-                type: media.type,
-                like: _formatLikes(media.likes),
-                likesCount: media.likes,
-                commentsCount: media.comments,
-                caption: media.caption,
-                createdAt: media.createdAt,
-                createdAtDate: media.createdAt,
-              ))
-          .toList();
+      final galleryItems = _toGalleryItems(response.media);
 
       if (loadMore) {
         final existingIds = previousItems.map((item) => item.id).toSet();
@@ -63,20 +58,28 @@ class GalleryProfileCubit extends Cubit<GalleryProfileState> {
             .toList();
         final allItems = [...previousItems, ...newItems];
 
-        emit(GalleryProfileLoaded(
+        final loaded = GalleryProfileLoaded(
           galleryProfiles: allItems,
           hasMore: response.hasMore,
           currentPage: response.page,
-        ));
+        );
+        _cache[key] = loaded;
+        emit(loaded);
       } else {
-        emit(GalleryProfileLoaded(
+        final loaded = GalleryProfileLoaded(
           galleryProfiles: galleryItems,
           hasMore: response.hasMore,
           currentPage: response.page,
-        ));
+        );
+        _cache[key] = loaded;
+        emit(loaded);
       }
     } catch (e) {
-      emit(GalleryProfileError(message: e.toString()));
+      if (state is! GalleryProfileLoaded) {
+        emit(GalleryProfileError(message: e.toString()));
+      }
+    } finally {
+      _inFlight.remove(key);
     }
   }
 
@@ -254,6 +257,48 @@ class GalleryProfileCubit extends Cubit<GalleryProfileState> {
 
   // Clear gallery
   void clearGallery() {
+    _cache.clear();
+    _inFlight.clear();
     emit(GalleryProfileInitial());
+  }
+
+  GalleryProfileLoaded? _cachedPage(int userId, String? type, int page) {
+    if (page != 1) return null;
+
+    final cached = _feedService.getCachedUserMedia(userId, type);
+    if (cached == null) return null;
+
+    return GalleryProfileLoaded(
+      galleryProfiles: _toGalleryItems(cached.media),
+      hasMore: cached.hasMore,
+      currentPage: cached.page,
+    );
+  }
+
+  List<GalleryModel> _toGalleryItems(List<feed_models.UserMedia> mediaList) {
+    return mediaList
+        .map((media) => GalleryModel(
+              id: media.id.toString(),
+              postId: media.postId,
+              image: media.thumbnail ?? media.url,
+              thumbnail: media.thumbnail ?? media.url,
+              videoUrl: media.type == 'video' ? media.url : null,
+              type: media.type,
+              like: _formatLikes(media.likes),
+              likesCount: media.likes,
+              commentsCount: media.comments,
+              caption: media.caption,
+              createdAt: media.createdAt,
+              createdAtDate: media.createdAt,
+            ))
+        .toList();
+  }
+
+  String _requestKey(int userId, String? type, int page) {
+    return [
+      userId,
+      type?.trim().isNotEmpty == true ? type!.trim() : 'all',
+      page,
+    ].join(':');
   }
 }

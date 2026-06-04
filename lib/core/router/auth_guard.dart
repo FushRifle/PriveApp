@@ -11,6 +11,7 @@ import 'package:clique/bloc/user/user_bloc.dart';
 
 import 'package:clique/ui/pages/auth/login_page.dart';
 import 'package:clique/ui/pages/auth/onboarding_page.dart';
+import 'package:clique/ui/widgets/ui/app_heart_loader.dart';
 
 import 'main_wrapper.dart';
 import 'named_routes.dart';
@@ -86,6 +87,8 @@ class _BootstrapperState extends State<_Bootstrapper> {
 
   String? _error;
 
+  Future<void>? _bootstrapFuture;
+
   @override
   void initState() {
     super.initState();
@@ -96,6 +99,24 @@ class _BootstrapperState extends State<_Bootstrapper> {
   }
 
   Future<void> _bootstrap() async {
+    final existingBootstrap = _bootstrapFuture;
+    if (existingBootstrap != null) {
+      return existingBootstrap;
+    }
+
+    final future = _runBootstrap();
+    _bootstrapFuture = future;
+
+    try {
+      await future;
+    } finally {
+      if (_bootstrapFuture == future) {
+        _bootstrapFuture = null;
+      }
+    }
+  }
+
+  Future<void> _runBootstrap() async {
     try {
       final profileBloc = context.read<ProfileBloc>();
 
@@ -109,11 +130,7 @@ class _BootstrapperState extends State<_Bootstrapper> {
 
       final futures = <Future>[];
 
-      if (!_hasProfile && profileBloc.state.status != ProfileStatus.loading) {
-        profileBloc.add(
-          LoadMyProfile(),
-        );
-
+      if (!_hasProfile) {
         futures.add(
           profileBloc.stream.firstWhere(
             (state) {
@@ -122,13 +139,15 @@ class _BootstrapperState extends State<_Bootstrapper> {
             },
           ),
         );
+
+        if (profileBloc.state.status != ProfileStatus.loading) {
+          profileBloc.add(
+            LoadMyProfile(),
+          );
+        }
       }
 
-      if (!_hasUser && userBloc.state.status != UserStatus.loading) {
-        userBloc.add(
-          LoadCurrentUser(),
-        );
-
+      if (!_hasUser) {
         futures.add(
           userBloc.stream.firstWhere(
             (state) {
@@ -137,6 +156,12 @@ class _BootstrapperState extends State<_Bootstrapper> {
             },
           ),
         );
+
+        if (userBloc.state.status != UserStatus.loading) {
+          userBloc.add(
+            LoadCurrentUser(),
+          );
+        }
       }
 
       if (futures.isNotEmpty) {
@@ -154,6 +179,7 @@ class _BootstrapperState extends State<_Bootstrapper> {
 
       setState(() {
         _hasProfile = hasValidProfile;
+        _hasUser = userBloc.state.currentUser != null;
         _loading = false;
       });
     } on TimeoutException {
@@ -208,28 +234,13 @@ class _SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset(
-              'images/clique.png',
-              width: 120,
-              height: 120,
-              fit: BoxFit.contain,
-            ),
-            const SizedBox(height: 24),
-            const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: AppColors.primary,
-              ),
-            ),
-          ],
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: const Center(
+        child: AppHeartLoader(
+          size: 82,
         ),
       ),
     );

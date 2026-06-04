@@ -213,10 +213,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 avatarUrl: imageUrl,
               ),
             );
+        context.read<UserBloc>().add(
+              UpdateUserAvatar(
+                avatar: imageUrl,
+              ),
+            );
       } else {
         context.read<ProfileBloc>().add(
               UpdateProfileCoverImage(
                 coverImageUrl: imageUrl,
+              ),
+            );
+        context.read<UserBloc>().add(
+              UpdateUserCoverImage(
+                coverImage: imageUrl,
               ),
             );
       }
@@ -349,6 +359,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
               phone: _nullableText(_phoneController),
               age: age,
               occupation: _nullableText(_occupationController),
+              bio: _nullableText(_bioController),
+              location: _nullableText(_locationController),
+              work: _nullableText(_workController),
+              education: _nullableText(_educationController),
+              languages: languages,
             ),
           );
     } catch (e) {

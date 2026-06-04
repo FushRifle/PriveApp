@@ -54,7 +54,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
   ) async {
     if (_disposed) return;
 
-    if (_isFetchingPosts) return;
+    if (_isFetchingPosts || _isFetchingMorePosts) return;
 
     final now = DateTime.now();
 
@@ -158,7 +158,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
   ) async {
     if (_disposed) return;
 
-    if (_isFetchingMorePosts) return;
+    if (_isFetchingMorePosts || _isFetchingPosts) return;
 
     if (!state.hasMorePosts) return;
 

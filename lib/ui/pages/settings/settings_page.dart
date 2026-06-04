@@ -1,10 +1,8 @@
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/bloc/auth/auth_bloc.dart';
-import 'package:clique/bloc/profile/gallery_profile_cubit.dart';
-import 'package:clique/bloc/profile/profile_bloc.dart';
+import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/core/providers/theme_provider.dart';
-import 'package:clique/ui/pages/main/profile/profile_page.dart';
 import 'package:clique/ui/pages/settings/subscribe_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,7 +17,7 @@ class SettingsPage extends ConsumerStatefulWidget {
 }
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
-  Profile? _profile;
+  Map<String, dynamic>? _user;
 
   bool notificationsEnabled = true;
   bool privateAccount = false;
@@ -31,7 +29,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   @override
   void initState() {
     super.initState();
-    context.read<ProfileBloc>().add(LoadMyProfile());
+    context.read<UserBloc>().add(LoadCurrentUser());
   }
 
   @override
@@ -55,16 +53,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           );
         }
       },
-      child: BlocConsumer<ProfileBloc, ProfileState>(
+      child: BlocConsumer<UserBloc, UserState>(
         listener: (context, state) {
-          if (state.status == ProfileStatus.success) {
+          if (state.status == UserStatus.success) {
             setState(() {
-              _profile = state.myProfile;
+              _user = state.currentUser;
             });
           }
         },
         builder: (context, state) {
-          final profile = state.myProfile ?? _profile;
+          final user = state.currentUser ?? _user;
 
           return Scaffold(
             backgroundColor: isDark
@@ -97,7 +95,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
               child: Column(
                 children: [
-                  _buildProfileCard(profile, isDark),
+                  _buildProfileCard(user, isDark),
                   const SizedBox(height: 28),
                   _section(
                     'Appearance',
@@ -350,31 +348,22 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  Widget _buildProfileCard(Profile? profile, bool isDark) {
-    final name =
-        profile?.displayName ?? profile?.displayNameOrDefault ?? 'User';
-
-    final avatar = profile?.avatar ?? '';
+  Widget _buildProfileCard(Map<String, dynamic>? user, bool isDark) {
+    final name = _readUserName(user);
+    final avatar = user?['avatar']?.toString() ?? '';
+    final username = user?['username']?.toString();
+    final email = user?['email']?.toString();
+    final subtitle = username != null && username.trim().isNotEmpty
+        ? '@${username.trim()}'
+        : email != null && email.trim().isNotEmpty
+            ? email.trim()
+            : 'View profile';
 
     return GestureDetector(
       onTap: () {
-        Navigator.push(
+        Navigator.pushNamed(
           context,
-          MaterialPageRoute(
-            builder: (_) => MultiBlocProvider(
-              providers: [
-                BlocProvider.value(
-                  value: context.read<ProfileBloc>(),
-                ),
-                BlocProvider(
-                  create: (_) => GalleryProfileCubit(),
-                ),
-              ],
-              child: const ProfilePage(
-                isOwnProfile: true,
-              ),
-            ),
-          ),
+          NamedRoutes.profileScreen,
         );
       },
       child: Container(
@@ -412,7 +401,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'View profile',
+                    subtitle,
                     style: TextStyle(
                       color: AppColors.grey.shade500,
                       fontSize: 13,
@@ -429,6 +418,29 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ),
       ),
     );
+  }
+
+  String _readUserName(Map<String, dynamic>? user) {
+    final name = user?['name']?.toString();
+    if (name != null && name.trim().isNotEmpty) return name.trim();
+
+    final firstName =
+        user?['firstName']?.toString() ?? user?['first_name']?.toString();
+    final lastName =
+        user?['lastName']?.toString() ?? user?['last_name']?.toString();
+    final fullName = [
+      firstName,
+      lastName,
+    ].where((part) => part != null && part.trim().isNotEmpty).join(' ');
+    if (fullName.trim().isNotEmpty) return fullName.trim();
+
+    final username = user?['username']?.toString();
+    if (username != null && username.trim().isNotEmpty) return username.trim();
+
+    final email = user?['email']?.toString();
+    if (email != null && email.trim().isNotEmpty) return email.trim();
+
+    return 'User';
   }
 
   Widget _avatar(

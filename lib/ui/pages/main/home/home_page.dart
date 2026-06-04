@@ -1,4 +1,5 @@
 import 'package:clique/ui/pages/settings/settings_page.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -30,8 +31,78 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage>
-    with AutomaticKeepAliveClientMixin {
+class _HomePalette {
+  final bool isDark;
+  final Color background;
+  final Color card;
+  final Color elevatedCard;
+  final Color border;
+  final Color text;
+  final Color mutedText;
+  final Color subtleText;
+  final Color primary;
+  final Color secondary;
+  final Color shadow;
+  final SystemUiOverlayStyle overlayStyle;
+
+  const _HomePalette({
+    required this.isDark,
+    required this.background,
+    required this.card,
+    required this.elevatedCard,
+    required this.border,
+    required this.text,
+    required this.mutedText,
+    required this.subtleText,
+    required this.primary,
+    required this.secondary,
+    required this.shadow,
+    required this.overlayStyle,
+  });
+
+  factory _HomePalette.of(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    return _HomePalette(
+      isDark: isDark,
+      background: theme.scaffoldBackgroundColor,
+      card: scheme.surface,
+      elevatedCard: isDark ? const Color(0xFF1E2633) : AppColors.white,
+      border: isDark ? AppColors.darkCardBorder.withOpacity(0.5) : AppColors.lightCardBorder.withOpacity(0.5),
+      text: scheme.onSurface,
+      mutedText: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+      subtleText: isDark ? AppColors.darkTextHint : AppColors.lightTextHint,
+      primary: scheme.primary,
+      secondary: scheme.secondary,
+      shadow: isDark ? Colors.black.withOpacity(0.25) : Colors.grey.withOpacity(0.08),
+      overlayStyle: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+      ),
+    );
+  }
+}
+
+class _StoryGroup {
+  final int userId;
+  final dynamic user;
+  final List<Story> stories;
+  final bool hasUnseen;
+  final DateTime latestStory;
+
+  _StoryGroup({
+    required this.userId,
+    required this.user,
+    required this.stories,
+    required this.hasUnseen,
+    required this.latestStory,
+  });
+}
+
+class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin {
   final ScrollController _scrollController = ScrollController();
 
   bool _initialized = false;
@@ -46,16 +117,7 @@ class _HomePageState extends State<HomePage>
   @override
   void initState() {
     super.initState();
-
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: AppColors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-      ),
-    );
-
     _initialize();
-
     _scrollController.addListener(_onScroll);
   }
 
@@ -63,13 +125,11 @@ class _HomePageState extends State<HomePage>
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
-
     super.dispose();
   }
 
   void _initialize() {
     if (_initialized) return;
-
     _initialized = true;
 
     context.read<FeedBloc>().add(GetFeedPosts());
@@ -87,7 +147,6 @@ class _HomePageState extends State<HomePage>
 
       if (state.hasMorePosts && state.postsStatus != FeedStatus.loadingMore) {
         _isLoadingMore = true;
-
         feedBloc.add(LoadMoreFeedPosts());
 
         Future<void>.delayed(
@@ -113,114 +172,118 @@ class _HomePageState extends State<HomePage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final palette = _HomePalette.of(context);
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundColor,
-      body: SafeArea(
-        top: false,
-        child: RefreshIndicator(
-          color: AppColors.primary,
-          onRefresh: _refresh,
-          child: CustomScrollView(
-            controller: _scrollController,
-            physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics(),
-            ),
-            slivers: [
-              const SliverToBoxAdapter(
-                child: _HomeAppBar(),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: palette.overlayStyle,
+      child: Scaffold(
+        backgroundColor: palette.background,
+        body: SafeArea(
+          top: false,
+          child: RefreshIndicator(
+            color: palette.primary,
+            backgroundColor: palette.card,
+            edgeOffset: MediaQuery.paddingOf(context).top + 60,
+            onRefresh: _refresh,
+            child: CustomScrollView(
+              controller: _scrollController,
+              physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
               ),
-              SliverToBoxAdapter(
-                child: BlocBuilder<StoriesBloc, StoriesState>(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: _HomeAppBar(palette: palette),
+                ),
+                SliverToBoxAdapter(
+                  child: BlocBuilder<StoriesBloc, StoriesState>(
+                    buildWhen: (previous, current) {
+                      return previous.stories != current.stories ||
+                          previous.status != current.status ||
+                          previous.error != current.error;
+                    },
+                    builder: (context, state) {
+                      return _StoriesSection(
+                        palette: palette,
+                        state: state,
+                        groups: _getGroupedStories(state.stories),
+                      );
+                    },
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: _QuickComposer(
+                    palette: palette,
+                    onOpenCreate: () => _openCreatePost(context),
+                  ),
+                ),
+                BlocBuilder<FeedBloc, FeedState>(
                   buildWhen: (previous, current) {
-                    return previous.stories != current.stories ||
-                        previous.status != current.status ||
-                        previous.error != current.error;
+                    return previous.posts != current.posts ||
+                        previous.postsStatus != current.postsStatus ||
+                        previous.postsError != current.postsError ||
+                        previous.hasMorePosts != current.hasMorePosts;
                   },
                   builder: (context, state) {
-                    return _StoriesSection(
-                      state: state,
-                      groups: _getGroupedStories(state.stories),
+                    final posts = state.posts;
+
+                    if (state.postsStatus == FeedStatus.loading && posts.isEmpty) {
+                      return SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: palette.primary,
+                            strokeWidth: 3,
+                          ),
+                        ),
+                      );
+                    }
+
+                    if (posts.isEmpty) {
+                      return SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: _EmptyFeed(palette: palette),
+                      );
+                    }
+
+                    return SliverMainAxisGroup(
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: _FeedHeader(
+                            palette: palette,
+                            isRefreshing: state.postsStatus == FeedStatus.loading,
+                          ),
+                        ),
+                        SliverPadding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          sliver: SliverList.separated(
+                            itemCount: posts.length + (state.hasMorePosts ? 1 : 0),
+                            separatorBuilder: (_, __) => const SizedBox(height: 16),
+                            itemBuilder: (context, index) {
+                              if (index >= posts.length) {
+                                return _LoadMoreIndicator(
+                                  palette: palette,
+                                  isLoading: state.postsStatus == FeedStatus.loadingMore,
+                                );
+                              }
+
+                              final post = posts[index];
+
+                              return CardPost(
+                                key: ValueKey('post_${post.id}'),
+                                post: post,
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                     );
                   },
                 ),
-              ),
-              SliverToBoxAdapter(
-                child: _QuickComposer(
-                  onOpenCreate: () => _openCreatePost(context),
+                const SliverPadding(
+                  padding: EdgeInsets.only(bottom: 100),
                 ),
-              ),
-              BlocBuilder<FeedBloc, FeedState>(
-                buildWhen: (previous, current) {
-                  return previous.posts != current.posts ||
-                      previous.postsStatus != current.postsStatus ||
-                      previous.postsError != current.postsError ||
-                      previous.hasMorePosts != current.hasMorePosts;
-                },
-                builder: (context, state) {
-                  final posts = state.posts;
-
-                  if (state.postsStatus == FeedStatus.loading &&
-                      posts.isEmpty) {
-                    return const SliverFillRemaining(
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    );
-                  }
-
-                  if (state.postsStatus == FeedStatus.error && posts.isEmpty) {
-                    return SliverFillRemaining(
-                      child: _ErrorWidget(
-                        error: state.postsError,
-                        onRetry: () {
-                          context.read<FeedBloc>().add(RefreshFeed());
-                        },
-                      ),
-                    );
-                  }
-
-                  if (posts.isEmpty) {
-                    return const SliverFillRemaining(
-                      child: _EmptyFeed(),
-                    );
-                  }
-
-                  return SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        if (index >= posts.length) {
-                          return _LoadMoreIndicator(
-                            isLoading:
-                                state.postsStatus == FeedStatus.loadingMore,
-                          );
-                        }
-
-                        final post = posts[index];
-
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                          ),
-                          child: CardPost(
-                            key: ValueKey('post_${post.id}'),
-                            post: post,
-                          ),
-                        );
-                      },
-                      childCount: posts.length + (state.hasMorePosts ? 1 : 0),
-                    ),
-                  );
-                },
-              ),
-              const SliverPadding(
-                padding: EdgeInsets.only(
-                  bottom: 120,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -251,7 +314,6 @@ class _HomePageState extends State<HomePage>
     }
 
     _lastStories = stories;
-
     final grouped = <int, List<Story>>{};
 
     for (final story in stories) {
@@ -280,18 +342,20 @@ class _HomePageState extends State<HomePage>
     groups.sort((a, b) {
       if (a.hasUnseen && !b.hasUnseen) return -1;
       if (!a.hasUnseen && b.hasUnseen) return 1;
-
       return b.latestStory.compareTo(a.latestStory);
     });
 
     _cachedGroups = groups;
-
     return groups;
   }
 }
 
 class _HomeAppBar extends StatelessWidget {
-  const _HomeAppBar();
+  final _HomePalette palette;
+
+  const _HomeAppBar({
+    required this.palette,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -299,27 +363,22 @@ class _HomeAppBar extends StatelessWidget {
       selector: (state) => state.currentUser,
       builder: (context, user) {
         final avatar = user?['avatar']?.toString() ?? '';
-        final name = user?['name']?.toString() ??
-            user?['username']?.toString() ??
-            'User';
+        final name = user?['name']?.toString() ?? user?['username']?.toString() ?? 'User';
+        final fallback = name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'U';
 
-        final fallback =
-            name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'U';
-
-        return Padding(
+        return Container(
           padding: EdgeInsets.fromLTRB(
-            20,
-            MediaQuery.paddingOf(context).top + 10,
-            20,
+            16,
+            MediaQuery.paddingOf(context).top + 16,
+            16,
             12,
           ),
+          color: palette.background,
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               GestureDetector(
                 onTap: () {
                   HapticFeedback.lightImpact();
-
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -328,49 +387,73 @@ class _HomeAppBar extends StatelessWidget {
                   );
                 },
                 child: _Avatar(
+                  palette: palette,
                   avatar: avatar,
                   fallback: fallback,
+                  size: 44,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Clique',
+                      style: AppTheme.blackTextStyle.copyWith(
+                        color: palette.text,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    Text(
+                      'Your digital sanctuary',
+                      style: AppTheme.greyTextStyle.copyWith(
+                        color: palette.mutedText,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               GestureDetector(
                 onTap: () {
                   HapticFeedback.lightImpact();
-
-                  Navigator.pushNamed(
-                    context,
-                    NamedRoutes.notificationScreen,
-                  );
+                  Navigator.pushNamed(context, NamedRoutes.notificationScreen);
                 },
                 child: Container(
-                  width: 48,
-                  height: 48,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
-                    color: AppColors.cardColor,
+                    color: palette.elevatedCard,
                     shape: BoxShape.circle,
+                    border: Border.all(color: palette.border),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.shadow,
-                        blurRadius: 10,
+                        color: palette.shadow,
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
                   child: Stack(
+                    alignment: Alignment.center,
                     children: [
-                      const Center(
-                        child: Icon(
-                          Icons.notifications_none_outlined,
-                          color: AppColors.primary,
-                          size: 25,
-                        ),
+                      Icon(
+                        Icons.notifications_outlined,
+                        color: palette.text,
+                        size: 22,
                       ),
                       Positioned(
                         top: 12,
                         right: 12,
                         child: Container(
-                          width: 8,
-                          height: 8,
+                          width: 7,
+                          height: 7,
                           decoration: const BoxDecoration(
-                            color: AppColors.red,
+                            color: Colors.redAccent,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -388,10 +471,12 @@ class _HomeAppBar extends StatelessWidget {
 }
 
 class _StoriesSection extends StatelessWidget {
+  final _HomePalette palette;
   final StoriesState state;
   final List<_StoryGroup> groups;
 
   const _StoriesSection({
+    required this.palette,
     required this.state,
     required this.groups,
   });
@@ -401,143 +486,147 @@ class _StoriesSection extends StatelessWidget {
     final stories = state.stories;
     final isLoading = state.status == StoriesStatus.loading;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(22, 8, 22, 8),
-          child: Row(
-            children: [
-              Text(
-                'Stories',
-                style: AppTheme.blackTextStyle.copyWith(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 15,
-                ),
-              ),
-              if (isLoading && stories.isNotEmpty) ...[
-                const SizedBox(width: 8),
-                const SizedBox(
-                  width: 12,
-                  height: 12,
-                  child: CircularProgressIndicator(
-                    color: AppColors.primary,
-                    strokeWidth: 2,
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(
+        color: palette.card,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: palette.border),
+        boxShadow: [
+          BoxShadow(
+            color: palette.shadow,
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: Row(
+              children: [
+                Text(
+                  'Stories',
+                  style: AppTheme.blackTextStyle.copyWith(
+                    color: palette.text,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
                   ),
                 ),
-              ],
-              const Spacer(),
-              if (stories.isNotEmpty)
-                TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => BlocProvider.value(
-                          value: context.read<StoriesBloc>(),
-                          child: const StatusPage(
-                            stories: [],
+                if (isLoading && stories.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      color: palette.primary,
+                      strokeWidth: 2,
+                    ),
+                  ),
+                ],
+                const Spacer(),
+                if (stories.isNotEmpty)
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => BlocProvider.value(
+                            value: context.read<StoriesBloc>(),
+                            child: const StatusPage(stories: []),
                           ),
                         ),
+                      );
+                    },
+                    child: Text(
+                      'See All',
+                      style: AppTheme.greyTextStyle.copyWith(
+                        color: palette.primary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
                       ),
-                    );
-                  },
-                  style: TextButton.styleFrom(
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    minimumSize: Size.zero,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
                     ),
                   ),
-                  child: Text(
-                    'More',
-                    style: AppTheme.greyTextStyle.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-            ],
+              ],
+            ),
           ),
-        ),
-        SizedBox(
-          height: 102,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            itemCount: groups.length + 1,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                return BlocSelector<UserBloc, UserState, String>(
-                  selector: (state) {
-                    return state.currentUser?['avatar']?.toString() ?? '';
-                  },
-                  builder: (context, avatar) {
-                    return StatusWidget(
-                      name: 'Your Story',
-                      avatar: avatar,
-                      isAddStatus: true,
-                      statusCount: 0,
-                      hasUnviewed: false,
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => BlocProvider.value(
-                              value: context.read<StoriesBloc>(),
-                              child: const CreateStatusPage(),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 96,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              itemCount: groups.length + 1,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return BlocSelector<UserBloc, UserState, String>(
+                    selector: (state) => state.currentUser?['avatar']?.toString() ?? '',
+                    builder: (context, avatar) {
+                      return StatusWidget(
+                        name: 'Add Story',
+                        avatar: avatar,
+                        isAddStatus: true,
+                        statusCount: 0,
+                        hasUnviewed: false,
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => BlocProvider.value(
+                                value: context.read<StoriesBloc>(),
+                                child: const CreateStatusPage(),
+                              ),
                             ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                );
-              }
-
-              final group = groups[index - 1];
-
-              return RepaintBoundary(
-                child: StatusWidget(
-                  name: group.user.name,
-                  avatar: group.user.avatar,
-                  statusCount: group.stories.length,
-                  hasUnviewed: group.hasUnseen,
-                  onTap: () {
-                    HapticFeedback.lightImpact();
-
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) {
-                          return StatusViewPage(
-                            stories: group.stories,
-                            initialIndex: 0,
                           );
                         },
-                      ),
-                    );
-                  },
-                ),
-              );
-            },
+                      );
+                    },
+                  );
+                }
+
+                final group = groups[index - 1];
+
+                return RepaintBoundary(
+                  child: StatusWidget(
+                    name: group.user.name,
+                    avatar: group.user.avatar,
+                    statusCount: group.stories.length,
+                    hasUnviewed: group.hasUnseen,
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => StatusViewPage(
+                            stories: group.stories,
+                            initialIndex: 0,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
-      ],
+        ],
+      ),
     );
   }
 }
 
 class _QuickComposer extends StatefulWidget {
+  final _HomePalette palette;
   final VoidCallback onOpenCreate;
 
   const _QuickComposer({
+    required this.palette,
     required this.onOpenCreate,
   });
 
@@ -561,12 +650,7 @@ class _QuickComposerState extends State<_QuickComposer> {
     if (content.isEmpty) return;
 
     HapticFeedback.lightImpact();
-
-    context.read<FeedBloc>().add(
-          CreateFeedPost(
-            content: content,
-          ),
-        );
+    context.read<FeedBloc>().add(CreateFeedPost(content: content));
 
     _controller.clear();
     FocusScope.of(context).unfocus();
@@ -579,74 +663,85 @@ class _QuickComposerState extends State<_QuickComposer> {
       selector: (state) => state.currentUser,
       builder: (context, user) {
         final avatar = user?['avatar']?.toString() ?? '';
-        final name = user?['name']?.toString() ??
-            user?['username']?.toString() ??
-            'User';
-        final fallback =
-            name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'U';
+        final name = user?['name']?.toString() ?? user?['username']?.toString() ?? 'User';
+        final fallback = name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'U';
 
         return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 2, 16, 16),
-          child: Material(
-            color: AppColors.cardColor,
-            borderRadius: BorderRadius.circular(22),
-            child: Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: AppColors.cardBorderColor),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.shadowElevated,
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  _Avatar(avatar: avatar, fallback: fallback),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      minLines: 1,
-                      maxLines: 4,
-                      textInputAction: TextInputAction.newline,
-                      onChanged: (_) => setState(() {}),
-                      style: AppTheme.blackTextStyle.copyWith(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: "What's on your mind?",
-                        hintStyle: AppTheme.greyTextStyle.copyWith(
-                          fontSize: 14,
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: widget.palette.card,
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: widget.palette.border),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.palette.shadow,
+                  blurRadius: 20,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _Avatar(
+                      palette: widget.palette,
+                      avatar: avatar,
+                      fallback: fallback,
+                      size: 42,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        minLines: 1,
+                        maxLines: 4,
+                        textInputAction: TextInputAction.newline,
+                        onChanged: (_) => setState(() {}),
+                        style: AppTheme.blackTextStyle.copyWith(
+                          color: widget.palette.text,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
                         ),
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
+                        decoration: InputDecoration(
+                          hintText: "What's sparkling dynamic today?",
+                          hintStyle: AppTheme.greyTextStyle.copyWith(
+                            color: widget.palette.subtleText,
+                            fontSize: 15,
+                          ),
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: widget.onOpenCreate,
-                    child: _ComposerAction(
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _ComposerAction(
+                      palette: widget.palette,
                       icon: Icons.image_outlined,
-                      color: AppColors.secondary,
+                      label: 'Photo/Media',
+                      color: widget.palette.secondary,
+                      onTap: widget.onOpenCreate,
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: _canPost ? _submit : widget.onOpenCreate,
-                    child: _ComposerAction(
+                    const SizedBox(width: 10),
+                    _ComposerAction(
+                      palette: widget.palette,
                       icon: _canPost ? Icons.send_rounded : Icons.add_rounded,
-                      color: AppColors.primary,
+                      label: _canPost ? 'Publish' : 'Expand Space',
+                      color: widget.palette.primary,
+                      onTap: _canPost ? _submit : widget.onOpenCreate,
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ),
           ),
         );
@@ -656,108 +751,219 @@ class _QuickComposerState extends State<_QuickComposer> {
 }
 
 class _ComposerAction extends StatelessWidget {
+  final _HomePalette palette;
   final IconData icon;
+  final String label;
   final Color color;
+  final VoidCallback onTap;
 
   const _ComposerAction({
+    required this.palette,
     required this.icon,
+    required this.label,
     required this.color,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 38,
-      height: 38,
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(13),
-      ),
-      child: Icon(
-        icon,
-        color: color,
-        size: 21,
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          height: 42,
+          decoration: BoxDecoration(
+            color: color.withOpacity(palette.isDark ? 0.12 : 0.06),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: color.withOpacity(0.15)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: color, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: AppTheme.blackTextStyle.copyWith(
+                  color: color,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 
 class _Avatar extends StatelessWidget {
+  final _HomePalette palette;
   final String avatar;
   final String fallback;
+  final double size;
 
   const _Avatar({
+    required this.palette,
     required this.avatar,
     required this.fallback,
+    this.size = 48,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 48,
-      height: 48,
+      width: size,
+      height: size,
       decoration: const BoxDecoration(
         shape: BoxShape.circle,
         gradient: LinearGradient(
-          colors: [
-            AppColors.primary,
-            AppColors.secondary,
-          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.primary, AppColors.secondary],
         ),
       ),
       padding: const EdgeInsets.all(2),
-      child: ClipOval(
-        child: avatar.isNotEmpty && avatar.startsWith('http')
-            ? Image.network(
-                avatar,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _fallback(),
-              )
-            : avatar.isNotEmpty
-                ? Image.asset(
-                    avatar,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _fallback(),
-                  )
-                : _fallback(),
+      child: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: palette.background,
+        ),
+        padding: const EdgeInsets.all(2),
+        child: ClipOval(
+          child: avatar.isNotEmpty && avatar.startsWith('http')
+              ? CachedNetworkImage(
+                  imageUrl: avatar,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => _fallback(),
+                  errorWidget: (_, __, ___) => _fallback(),
+                )
+              : avatar.isNotEmpty
+                  ? Image.asset(
+                      avatar,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _fallback(),
+                    )
+                  : _fallback(),
+        ),
       ),
     );
   }
 
   Widget _fallback() {
     return Container(
-      color: AppColors.white.withOpacity(0.2),
+      color: palette.isDark ? AppColors.white.withOpacity(0.08) : AppColors.black.withOpacity(0.08),
       alignment: Alignment.center,
       child: Text(
         fallback,
-        style: const TextStyle(
-          color: AppColors.white,
+        style: TextStyle(
+          color: palette.text,
           fontWeight: FontWeight.bold,
+          fontSize: size * 0.35,
         ),
       ),
     );
   }
 }
 
+class _FeedHeader extends StatelessWidget {
+  final _HomePalette palette;
+  final bool isRefreshing;
+
+  const _FeedHeader({
+    required this.palette,
+    required this.isRefreshing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 8, 18, 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Feed Space',
+                  style: AppTheme.blackTextStyle.copyWith(
+                    color: palette.text,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Fresh perspectives from your circle',
+                  style: AppTheme.greyTextStyle.copyWith(
+                    color: palette.mutedText,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (isRefreshing) ...[
+            SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(
+                color: palette.primary,
+                strokeWidth: 2,
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: palette.elevatedCard,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: palette.border),
+            ),
+            child: Text(
+              'Recent',
+              style: AppTheme.greyTextStyle.copyWith(
+                color: palette.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _LoadMoreIndicator extends StatelessWidget {
+  final _HomePalette palette;
   final bool isLoading;
 
   const _LoadMoreIndicator({
+    required this.palette,
     required this.isLoading,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (!isLoading) {
-      return const SizedBox(height: 20);
-    }
+    if (!isLoading) return const SizedBox(height: 24);
 
-    return const Padding(
-      padding: EdgeInsets.all(24),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 32),
       child: Center(
-        child: CircularProgressIndicator(
-          color: AppColors.primary,
-          strokeWidth: 2,
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            color: palette.primary,
+            strokeWidth: 2.5,
+          ),
         ),
       ),
     );
@@ -765,35 +971,50 @@ class _LoadMoreIndicator extends StatelessWidget {
 }
 
 class _EmptyFeed extends StatelessWidget {
-  const _EmptyFeed();
+  final _HomePalette palette;
+
+  const _EmptyFeed({
+    required this.palette,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(28),
+        padding: const EdgeInsets.all(40),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.post_add_rounded,
-              size: 68,
-              color: AppColors.greyColor.withOpacity(0.45),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: palette.card,
+                shape: BoxShape.circle,
+                border: Border.all(color: palette.border),
+              ),
+              child: Icon(
+                Icons.bubble_chart_outlined,
+                size: 40,
+                color: palette.subtleText,
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             Text(
-              'No posts yet',
+              'Quiet in the circle',
               style: AppTheme.blackTextStyle.copyWith(
-                fontSize: 17,
+                color: palette.text,
+                fontSize: 18,
                 fontWeight: FontWeight.w800,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Pull down to refresh or create your first post.',
-              textAlign: TextAlign.center,
+              'Be the first to break the ice or refresh the feed to look for updates.',
               style: AppTheme.greyTextStyle.copyWith(
+                color: palette.mutedText,
                 fontSize: 14,
+                fontWeight: FontWeight.w400,
+                height: 1.4,
               ),
             ),
           ],
@@ -804,10 +1025,12 @@ class _EmptyFeed extends StatelessWidget {
 }
 
 class _ErrorWidget extends StatelessWidget {
-  final String? error;
+  final _HomePalette palette;
+  final String error;
   final VoidCallback onRetry;
 
   const _ErrorWidget({
+    required this.palette,
     required this.error,
     required this.onRetry,
   });
@@ -816,54 +1039,36 @@ class _ErrorWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(28),
+        padding: const EdgeInsets.all(32),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline_rounded,
-              size: 68,
-              color: AppColors.greyColor.withOpacity(0.5),
-            ),
+            Icon(Icons.error_outline_rounded, size: 44, color: palette.secondary),
             const SizedBox(height: 16),
             Text(
-              error ?? 'Something went wrong',
-              textAlign: TextAlign.center,
-              style: AppTheme.greyTextStyle.copyWith(
-                fontSize: 14,
-              ),
+              'Something misbehaved',
+              style: TextStyle(color: palette.text, fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 18),
-            ElevatedButton(
+            const SizedBox(height: 6),
+            Text(
+              error,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: palette.mutedText, fontSize: 13),
+            ),
+            const SizedBox(height: 20),
+            TextButton.icon(
               onPressed: onRetry,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                minimumSize: const Size(130, 46),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28),
-                ),
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: const Text('Try Again'),
+              style: TextButton.styleFrom(
+                foregroundColor: palette.primary,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
-              child: const Text('Retry'),
             ),
           ],
         ),
       ),
     );
   }
-}
-
-class _StoryGroup {
-  final int userId;
-  final StoryUser user;
-  final List<Story> stories;
-  final bool hasUnseen;
-  final DateTime latestStory;
-
-  const _StoryGroup({
-    required this.userId,
-    required this.user,
-    required this.stories,
-    required this.hasUnseen,
-    required this.latestStory,
-  });
 }

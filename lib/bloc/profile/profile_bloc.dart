@@ -49,32 +49,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     }
 
     try {
-      // Fetch both profile and user data in parallel
-      final results = await Future.wait([
-        _profileService.getMyProfile(),
-        _userService.getCurrentUser(),
-      ]);
-
-      final profileData = results[0];
-      final userData = results[1];
-
-      // Merge user data into profile
-      final mergedProfile = {
-        ...profileData,
-        'avatar': userData['avatar'] ?? profileData['avatar'],
-        'coverImage': userData['coverImage'] ??
-            userData['cover_image'] ??
-            userData['cover'] ??
-            profileData['coverImage'] ??
-            profileData['cover_image'] ??
-            profileData['cover'],
-        'name': userData['name'] ?? profileData['displayName'],
-        'email': userData['email'],
-        'username': userData['username'],
-        'verified': userData['verified'] ?? false,
-      };
-
-      final profile = Profile.fromJson(mergedProfile);
+      final profileData = await _profileService.getMyProfile();
+      final profile = Profile.fromJson(profileData);
 
       emit(state.copyWith(
         myProfile: profile,
@@ -103,30 +79,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     ));
 
     try {
-      final results = await Future.wait([
-        _profileService.getMyProfile(),
-        _userService.getCurrentUser(),
-      ]);
-
-      final profileData = results[0];
-      final userData = results[1];
-
-      final mergedProfile = {
-        ...profileData,
-        'avatar': userData['avatar'] ?? profileData['avatar'],
-        'coverImage': userData['coverImage'] ??
-            userData['cover_image'] ??
-            userData['cover'] ??
-            profileData['coverImage'] ??
-            profileData['cover_image'] ??
-            profileData['cover'],
-        'name': userData['name'] ?? profileData['displayName'],
-        'email': userData['email'],
-        'username': userData['username'],
-        'verified': userData['verified'] ?? false,
-      };
-
-      final profile = Profile.fromJson(mergedProfile);
+      final profileData = await _profileService.getMyProfile();
+      final profile = Profile.fromJson(profileData);
 
       emit(state.copyWith(
         myProfile: profile,
