@@ -53,7 +53,7 @@ class _ChatPageState extends State<ChatPage>
   bool get wantKeepAlive => true;
 
   bool get _isCliqueBot =>
-      widget.userId == 0 || widget.userName.toLowerCase() == 'clique';
+      widget.userId == 0 || widget.userName.toLowerCase() == 'Clique';
 
   @override
   void initState() {

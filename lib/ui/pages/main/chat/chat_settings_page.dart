@@ -194,7 +194,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
     );
   }
 
-  bool get _isBot => widget.userName.toLowerCase() == 'clique';
+  bool get _isBot => widget.userName.toLowerCase() == 'Clique';
 
   @override
   Widget build(BuildContext context) {

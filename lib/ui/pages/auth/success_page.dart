@@ -117,7 +117,7 @@ class _OnboardingSuccessPageState extends State<OnboardingSuccessPage>
                     child: Column(
                       children: [
                         Text(
-                          'Welcome to clique!',
+                          'Welcome to Clique!',
                           style: AppTheme.whiteTextStyle.copyWith(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,

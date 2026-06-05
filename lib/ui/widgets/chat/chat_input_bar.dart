@@ -150,7 +150,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
       }
 
       final file = File(
-        '${Directory.systemTemp.path}/clique_voice_${DateTime.now().microsecondsSinceEpoch}.m4a',
+        '${Directory.systemTemp.path}/Clique_voice_${DateTime.now().microsecondsSinceEpoch}.m4a',
       );
 
       _recordingPath = file.path;

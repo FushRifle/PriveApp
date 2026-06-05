@@ -39,7 +39,7 @@ class TermsPage extends StatelessWidget {
               context,
               title: '1. Acceptance of Terms',
               content:
-                  'By downloading, accessing, or using clique ("the App"), you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use the App.',
+                  'By downloading, accessing, or using Clique ("the App"), you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use the App.',
               isDarkMode: isDarkMode,
             ),
             const SizedBox(height: 24),
@@ -47,7 +47,7 @@ class TermsPage extends StatelessWidget {
               context,
               title: '2. Eligibility',
               content:
-                  'You must be at least 18 years old to use clique. By using the App, you represent and warrant that you meet this age requirement and have the full authority to enter into these terms.',
+                  'You must be at least 18 years old to use Clique. By using the App, you represent and warrant that you meet this age requirement and have the full authority to enter into these terms.',
               isDarkMode: isDarkMode,
             ),
             const SizedBox(height: 24),
@@ -72,7 +72,7 @@ class TermsPage extends StatelessWidget {
               context,
               title: '5. Content Ownership',
               content:
-                  'You retain ownership of any content you post. By posting content, you grant clique a worldwide, non-exclusive, royalty-free license to use, display, and distribute your content within the App.',
+                  'You retain ownership of any content you post. By posting content, you grant Clique a worldwide, non-exclusive, royalty-free license to use, display, and distribute your content within the App.',
               isDarkMode: isDarkMode,
             ),
             const SizedBox(height: 24),
@@ -104,7 +104,7 @@ class TermsPage extends StatelessWidget {
               context,
               title: '9. Limitation of Liability',
               content:
-                  'To the maximum extent permitted by law, clique shall not be liable for any indirect, incidental, or consequential damages arising from your use of the App.',
+                  'To the maximum extent permitted by law, Clique shall not be liable for any indirect, incidental, or consequential damages arising from your use of the App.',
               isDarkMode: isDarkMode,
             ),
             const SizedBox(height: 24),
@@ -120,7 +120,7 @@ class TermsPage extends StatelessWidget {
               context,
               title: '11. Contact Us',
               content:
-                  'If you have any questions about these Terms, please contact us at: support@clique.com',
+                  'If you have any questions about these Terms, please contact us at: support@Clique.com',
               isDarkMode: isDarkMode,
             ),
             const SizedBox(height: 40),

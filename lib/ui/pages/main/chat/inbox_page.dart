@@ -128,8 +128,8 @@ class _InboxPageState extends State<InboxPage> {
     });
 
     for (final conv in sortedConversations) {
-      final isBot = conv.name.toLowerCase() == 'clique' ||
-          conv.username.toLowerCase() == 'clique';
+      final isBot = conv.name.toLowerCase() == 'Clique' ||
+          conv.username.toLowerCase() == 'Clique';
 
       conversations.add(_ChatMessage(
         id: conv.id.toString(),
@@ -251,7 +251,7 @@ class _InboxPageState extends State<InboxPage> {
   Widget _buildMessageItem(BuildContext context, _ChatMessage message) {
     final firstLetter =
         message.name.isNotEmpty ? message.name[0].toUpperCase() : 'U';
-    final isBot = message.name.toLowerCase() == 'clique';
+    final isBot = message.name.toLowerCase() == 'Clique';
 
     return Dismissible(
       key: Key(message.id),
@@ -477,7 +477,7 @@ class _InboxPageState extends State<InboxPage> {
   }
 
   Widget _buildAvatar(_ChatMessage message, String firstLetter) {
-    if (message.name.toLowerCase() == 'clique') {
+    if (message.name.toLowerCase() == 'Clique') {
       return Container(
         width: 56,
         height: 56,

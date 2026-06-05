@@ -9,6 +9,7 @@ import 'package:clique/bloc/insights/insights_bloc.dart';
 import 'package:clique/bloc/match/match_bloc.dart';
 import 'package:clique/bloc/reels/reel_bloc.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
+import 'package:clique/bloc/community/community_bloc.dart';
 
 import 'package:clique/ui/pages/auth/demographic_page.dart';
 import 'package:clique/ui/pages/auth/login_page.dart';
@@ -22,6 +23,7 @@ import 'package:clique/ui/pages/auth/success_page.dart';
 
 import 'package:clique/ui/pages/main/home/create_post_page.dart';
 import 'package:clique/ui/pages/main/home/post_detail_page.dart';
+import 'package:clique/ui/pages/main/community/create_community_page.dart';
 import 'package:clique/ui/pages/main/reels/create_reel_page.dart';
 
 import 'package:clique/ui/pages/main/match/matches_page.dart';
@@ -37,10 +39,10 @@ import 'package:clique/ui/pages/main/status/status_page.dart';
 import 'package:clique/ui/pages/settings/settings_page.dart';
 import 'package:clique/ui/pages/settings/subscribe_page.dart';
 
-import 'package:clique/ui/pages/settings/clique/about_page.dart';
-import 'package:clique/ui/pages/settings/clique/help_page.dart';
-import 'package:clique/ui/pages/settings/clique/privacy_page.dart';
-import 'package:clique/ui/pages/settings/clique/terms_page.dart';
+import 'package:clique/ui/pages/settings/Clique/about_page.dart';
+import 'package:clique/ui/pages/settings/Clique/help_page.dart';
+import 'package:clique/ui/pages/settings/Clique/privacy_page.dart';
+import 'package:clique/ui/pages/settings/Clique/terms_page.dart';
 
 import 'package:clique/ui/pages/social/friends_list_page.dart';
 import 'package:clique/ui/pages/social/insights_page.dart';
@@ -152,6 +154,14 @@ class AppRouter {
           BlocProvider(
             create: (_) => ReelBloc(),
             child: const CreateReelPage(),
+          ),
+        );
+
+      case NamedRoutes.createCommunityScreen:
+        return _page(
+          BlocProvider(
+            create: (_) => CommunityBloc(),
+            child: const CreateCommunityPage(),
           ),
         );
 

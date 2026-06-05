@@ -321,7 +321,7 @@ class _CreateStoryBanner extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Share a moment with your clique',
+                        'Share a moment with your Clique',
                         style: AppTheme.greyTextStyle.copyWith(
                           fontSize: 13,
                         ),

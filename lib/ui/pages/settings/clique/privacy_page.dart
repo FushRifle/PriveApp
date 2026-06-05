@@ -145,7 +145,7 @@ class PrivacyPage extends StatelessWidget {
               context,
               title: '7. Children\'s Privacy',
               content:
-                  'clique is not intended for users under 18. We do not knowingly collect information from minors. If we learn we have collected information from a minor, we will delete it.',
+                  'Clique is not intended for users under 18. We do not knowingly collect information from minors. If we learn we have collected information from a minor, we will delete it.',
               isDarkMode: isDarkMode,
             ),
             const SizedBox(height: 24),
@@ -169,7 +169,7 @@ class PrivacyPage extends StatelessWidget {
               context,
               title: '10. Contact Us',
               content:
-                  'If you have questions about this Privacy Policy, please contact us:\n• Email: privacy@clique.com\n• In-app: Settings → Help Center',
+                  'If you have questions about this Privacy Policy, please contact us:\n• Email: privacy@Clique.com\n• In-app: Settings → Help Center',
               isDarkMode: isDarkMode,
             ),
             const SizedBox(height: 40),

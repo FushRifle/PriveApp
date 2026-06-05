@@ -74,7 +74,7 @@ class _SubscribePageState extends State<SubscribePage> {
             onPressed: () => Navigator.pop(context),
           ),
           title: Text(
-            'clique Premium',
+            'Clique Premium',
             style: AppTheme.blackTextStyle.copyWith(
               fontWeight: AppTheme.bold,
               fontSize: 20,
@@ -329,7 +329,7 @@ class _SubscribePageState extends State<SubscribePage> {
                 _buildFeatureItem(
                   icon: Icons.palette,
                   title: 'Premium Themes',
-                  description: 'Personalize clique with exclusive themes',
+                  description: 'Personalize Clique with exclusive themes',
                   color: AppColors.storyPurple,
                 ),
                 const SizedBox(height: 20),

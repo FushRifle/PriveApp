@@ -83,7 +83,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
     Navigator.pop(context);
   }
 
-  bool get _isBot => widget.userName.toLowerCase() == 'clique';
+  bool get _isBot => widget.userName.toLowerCase() == 'Clique';
 
   @override
   Widget build(BuildContext context) {

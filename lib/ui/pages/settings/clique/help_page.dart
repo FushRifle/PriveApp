@@ -196,11 +196,11 @@ class HelpPage extends StatelessWidget {
                 context,
                 icon: Icons.email_outlined,
                 title: 'Email Support',
-                subtitle: 'support@clique.com',
+                subtitle: 'support@Clique.com',
                 onTap: () async {
                   final Uri emailUri = Uri(
                     scheme: 'mailto',
-                    path: 'support@clique.com',
+                    path: 'support@Clique.com',
                   );
                   if (await canLaunchUrl(emailUri)) {
                     await launchUrl(emailUri);

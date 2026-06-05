@@ -106,7 +106,7 @@ class AuthService {
       final authResponse = await SupabaseConfig.client.auth.signUp(
         email: normalizedEmail,
         password: password,
-        emailRedirectTo: 'com.clique.app://verify-email',
+        emailRedirectTo: 'com.Clique.app://verify-email',
         data: {
           'first_name': trimmedFirstName,
           'last_name': trimmedLastName,
@@ -205,7 +205,7 @@ class AuthService {
       await SupabaseConfig.client.auth.signUp(
         email: email.trim().toLowerCase(),
         password: tempPassword,
-        emailRedirectTo: 'com.clique.app://verify-email',
+        emailRedirectTo: 'com.Clique.app://verify-email',
       );
 
       return true;

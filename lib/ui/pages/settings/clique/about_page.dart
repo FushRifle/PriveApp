@@ -82,7 +82,7 @@ class AboutPage extends StatelessWidget {
           ),
           child: Center(
             child: Image.asset(
-              'assets/images/clique.png',
+              'assets/images/Clique.png',
               width: 32,
               height: 32,
               errorBuilder: (_, __, ___) => const SizedBox(),
@@ -260,7 +260,7 @@ class AboutPage extends StatelessWidget {
                 onTap: () async {
                   final Uri emailUri = Uri(
                     scheme: 'mailto',
-                    path: 'hello@clique.com',
+                    path: 'hello@Clique.com',
                   );
                   if (await canLaunchUrl(emailUri)) {
                     await launchUrl(emailUri);
@@ -272,7 +272,7 @@ class AboutPage extends StatelessWidget {
                 icon: Icons.web,
                 label: 'Website',
                 onTap: () async {
-                  final Uri url = Uri.parse('https://clique.com');
+                  final Uri url = Uri.parse('https://Clique.com');
                   if (await canLaunchUrl(url)) {
                     await launchUrl(url);
                   }
@@ -283,7 +283,7 @@ class AboutPage extends StatelessWidget {
                 icon: Icons.reddit,
                 label: 'Reddit',
                 onTap: () async {
-                  final Uri url = Uri.parse('https://instagram.com/clique');
+                  final Uri url = Uri.parse('https://instagram.com/Clique');
                   if (await canLaunchUrl(url)) {
                     await launchUrl(url);
                   }
@@ -294,7 +294,7 @@ class AboutPage extends StatelessWidget {
                 icon: Icons.facebook,
                 label: 'Facebook',
                 onTap: () async {
-                  final Uri url = Uri.parse('https://facebook.com/clique');
+                  final Uri url = Uri.parse('https://facebook.com/Clique');
                   if (await canLaunchUrl(url)) {
                     await launchUrl(url);
                   }

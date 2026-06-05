@@ -417,7 +417,7 @@ class _HomeAppBar extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'Your digital sanctuary',
+                      'Your Vibe, Your Clique.',
                       style: AppTheme.greyTextStyle.copyWith(
                         color: palette.mutedText,
                         fontSize: 13,

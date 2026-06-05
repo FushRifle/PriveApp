@@ -285,7 +285,7 @@ abstract final class FeatureAccessPolicy {
     PremiumFeature(
       permission: PremiumPermission.canUsePremiumThemes,
       title: 'Premium Themes',
-      description: 'Personalize clique with exclusive themes.',
+      description: 'Personalize Clique with exclusive themes.',
     ),
     PremiumFeature(
       permission: PremiumPermission.canAccessAnalytics,
