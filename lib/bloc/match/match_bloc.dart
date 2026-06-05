@@ -97,8 +97,9 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
 
     try {
       await _matchService.likeUser(event.userId);
-      // Refresh recommendations after liking
+      // Refresh both lists in case this like completed a reciprocal match.
       add(LoadRecommendations());
+      add(LoadMatches());
       emit(state.copyWith(isLiking: false));
     } catch (e) {
       emit(state.copyWith(

@@ -16,9 +16,9 @@ class NotificationService {
         'pageSize': pageSize,
         'unread': unreadOnly,
       });
-      return response.data;
+      return _normalizeNotificationsResponse(response.data, pageSize);
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to get notifications';
+      throw _handleError(e, 'Failed to get notifications');
     }
   }
 
@@ -27,9 +27,10 @@ class NotificationService {
     try {
       final response =
           await _api.put('/api/notifications/$notificationId/read');
-      return response.data;
+      _api.removeCacheByPath('/api/notifications');
+      return _asMap(response.data);
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to mark as read';
+      throw _handleError(e, 'Failed to mark as read');
     }
   }
 
@@ -37,9 +38,10 @@ class NotificationService {
   Future<Map<String, dynamic>> markAllAsRead() async {
     try {
       final response = await _api.put('/api/notifications/read-all');
-      return response.data;
+      _api.removeCacheByPath('/api/notifications');
+      return _asMap(response.data);
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to mark all as read';
+      throw _handleError(e, 'Failed to mark all as read');
     }
   }
 
@@ -47,9 +49,10 @@ class NotificationService {
   Future<Map<String, dynamic>> deleteNotification(int notificationId) async {
     try {
       final response = await _api.delete('/api/notifications/$notificationId');
-      return response.data;
+      _api.removeCacheByPath('/api/notifications');
+      return _asMap(response.data);
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to delete notification';
+      throw _handleError(e, 'Failed to delete notification');
     }
   }
 
@@ -57,9 +60,10 @@ class NotificationService {
   Future<Map<String, dynamic>> deleteAllNotifications() async {
     try {
       final response = await _api.delete('/api/notifications');
-      return response.data;
+      _api.removeCacheByPath('/api/notifications');
+      return _asMap(response.data);
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to delete all notifications';
+      throw _handleError(e, 'Failed to delete all notifications');
     }
   }
 
@@ -67,9 +71,9 @@ class NotificationService {
   Future<Map<String, dynamic>> getPreferences() async {
     try {
       final response = await _api.get('/api/notifications/preferences');
-      return response.data;
+      return _normalizePreferences(_asMap(response.data));
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to get preferences';
+      throw _handleError(e, 'Failed to get preferences');
     }
   }
 
@@ -77,11 +81,12 @@ class NotificationService {
   Future<Map<String, dynamic>> updatePreferences(
       Map<String, dynamic> data) async {
     try {
-      final response =
-          await _api.put('/api/notifications/preferences', data: data);
-      return response.data;
+      final response = await _api.put('/api/notifications/preferences',
+          data: _toApiPreferences(data));
+      _api.removeCacheByPath('/api/notifications/preferences');
+      return _normalizePreferences(_asMap(response.data));
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to update preferences';
+      throw _handleError(e, 'Failed to update preferences');
     }
   }
 
@@ -100,9 +105,9 @@ class NotificationService {
             'deviceId': deviceId,
         },
       );
-      return response.data;
+      return _asMap(response.data);
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to register device token';
+      throw _handleError(e, 'Failed to register device token');
     }
   }
 
@@ -114,9 +119,158 @@ class NotificationService {
           'token': token,
         },
       );
-      return response.data;
+      return _asMap(response.data);
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to delete device token';
+      throw _handleError(e, 'Failed to delete device token');
     }
+  }
+
+  Map<String, dynamic> _normalizeNotificationsResponse(
+    dynamic data,
+    int pageSize,
+  ) {
+    final map = _asMap(data);
+    final items = _readList(map, const ['notifications', 'data', 'items'])
+        .map(_normalizeNotificationItem)
+        .toList();
+    final total = _readInt(map['total'] ?? map['count'], items.length);
+    final page = _readInt(map['page'], 1);
+    final totalPages = pageSize > 0 ? (total / pageSize).ceil() : 1;
+
+    return {
+      ...map,
+      'notifications': items,
+      'data': items,
+      'total': total,
+      'page': page,
+      'unreadCount': _readInt(
+        map['unreadCount'] ?? map['unread_count'],
+        items.where((item) {
+          final n = _asMap(item);
+          return n['isRead'] != true && n['read'] != true;
+        }).length,
+      ),
+      'pagination': {
+        ..._asMap(map['pagination']),
+        'totalPages': totalPages < 1 ? 1 : totalPages,
+      },
+    };
+  }
+
+  Map<String, dynamic> _normalizeNotificationItem(dynamic item) {
+    final json = _asMap(item);
+    final data = _asMap(json['data']);
+    final isRead = json['isRead'] == true || json['read'] == true;
+    final type = json['type']?.toString() ?? 'general';
+
+    return {
+      ...json,
+      'type': _normalizeNotificationType(type),
+      'isUnread': !isRead,
+      'isRead': isRead,
+      'actorId': json['actorId'] ??
+          data['actorId'] ??
+          data['followerUserId'] ??
+          data['fromUserId'] ??
+          data['friendUserId'] ??
+          data['likerUserId'] ??
+          data['commenterUserId'] ??
+          data['swiperId'] ??
+          data['matchedUserId'],
+      'actorName': json['actorName'] ?? data['actorName'] ?? 'Someone',
+      'actorAvatar': json['actorAvatar'] ?? data['actorAvatar'] ?? '',
+      'targetId': json['targetId'] ??
+          data['targetId'] ??
+          data['postId'] ??
+          data['profileId'] ??
+          data['matchId'],
+      'postImage': json['postImage'] ?? data['postImage'] ?? data['imageUrl'],
+      'content': json['message'] ?? json['content'] ?? '',
+      'data': data,
+    };
+  }
+
+  String _normalizeNotificationType(String type) {
+    switch (type) {
+      case 'new_like':
+        return 'like';
+      case 'new_comment':
+        return 'comment';
+      case 'new_follower':
+        return 'follow';
+      case 'achievement':
+        return 'match';
+      default:
+        return type;
+    }
+  }
+
+  Map<String, dynamic> _normalizePreferences(Map<String, dynamic> json) {
+    return {
+      ...json,
+      'pushEnabled': json['pushEnabled'] ?? json['pushNotifications'] ?? true,
+      'emailEnabled':
+          json['emailEnabled'] ?? json['emailNotifications'] ?? true,
+      'likeNotifications':
+          json['likeNotifications'] ?? json['notifyNewLike'] ?? true,
+      'commentNotifications':
+          json['commentNotifications'] ?? json['notifyNewComment'] ?? true,
+      'followNotifications':
+          json['followNotifications'] ?? json['notifyNewFollower'] ?? true,
+      'messageNotifications':
+          json['messageNotifications'] ?? json['notifyFriendRequest'] ?? true,
+      'matchNotifications':
+          json['matchNotifications'] ?? json['notifySystemUpdates'] ?? true,
+    };
+  }
+
+  Map<String, dynamic> _toApiPreferences(Map<String, dynamic> json) {
+    return {
+      if (json.containsKey('emailEnabled'))
+        'emailNotifications': json['emailEnabled'],
+      if (json.containsKey('pushEnabled'))
+        'pushNotifications': json['pushEnabled'],
+      if (json.containsKey('likeNotifications'))
+        'notifyNewLike': json['likeNotifications'],
+      if (json.containsKey('commentNotifications'))
+        'notifyNewComment': json['commentNotifications'],
+      if (json.containsKey('followNotifications'))
+        'notifyNewFollower': json['followNotifications'],
+      if (json.containsKey('messageNotifications'))
+        'notifyFriendRequest': json['messageNotifications'],
+      if (json.containsKey('matchNotifications'))
+        'notifySystemUpdates': json['matchNotifications'],
+    };
+  }
+
+  List<dynamic> _readList(Map<String, dynamic> json, List<String> keys) {
+    for (final key in keys) {
+      final value = json[key];
+      if (value is List) return value;
+    }
+    return const [];
+  }
+
+  Map<String, dynamic> _asMap(dynamic data) {
+    if (data is Map<String, dynamic>) return data;
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {};
+  }
+
+  int _readInt(dynamic value, int fallback) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? fallback;
+    return fallback;
+  }
+
+  String _handleError(DioException e, String fallback) {
+    final data = e.response?.data;
+    if (data is Map) {
+      final message = data['message'] ?? data['error'];
+      if (message != null) return message.toString();
+    }
+    if (data is String && data.isNotEmpty) return data;
+    return fallback;
   }
 }

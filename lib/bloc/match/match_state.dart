@@ -36,7 +36,7 @@ class MatchUser {
                   ?.toString() ??
               'User',
       username: (user['username'] ?? json['username'])?.toString() ?? '',
-      avatar: (user['avatar'] ?? json['avatar'])?.toString(),
+      avatar: (user['avatar'] ?? json['avatar'] ?? json['image'])?.toString(),
       age: _readInt(user['age'] ?? json['age']),
       location: (user['location'] ?? json['location'])?.toString(),
       bio: (user['bio'] ?? json['bio'])?.toString(),

@@ -14,6 +14,7 @@ import 'package:clique/bloc/insights/insights_bloc.dart';
 import 'package:clique/bloc/match/match_bloc.dart';
 
 import 'package:clique/core/models/gallery_model.dart';
+import 'package:clique/core/services/friends/friends_service.dart';
 
 import 'package:clique/ui/pages/main/match/matches_page.dart';
 import 'package:clique/ui/pages/main/profile/edit_profile_page.dart';

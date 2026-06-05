@@ -253,7 +253,8 @@ class Relationship {
       isFollowing: json['isFollowing'] == true,
       isFollowedBy: json['isFollowedBy'] == true,
       isFriend: json['isFriend'] == true,
-      hasPendingRequest: json['hasPendingRequest'] == true,
+      hasPendingRequest:
+          json['hasPendingRequest'] == true || json['pendingRequest'] == true,
       hasReceivedRequest: json['hasReceivedRequest'] == true,
     );
   }

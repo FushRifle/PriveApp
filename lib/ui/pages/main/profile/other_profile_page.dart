@@ -17,8 +17,10 @@ class _OtherProfilePageState extends State<OtherProfilePage>
   late final TabController _tabController;
   late final ScrollController _scrollController;
   late final GalleryProfileCubit _galleryCubit;
+  final FriendsService _friendsService = FriendsService();
 
   bool _isFollowing = false;
+  bool _isFollowBusy = false;
   bool _profileRequested = false;
   String? _loadedMediaKey;
 
@@ -74,6 +76,7 @@ class _OtherProfilePageState extends State<OtherProfilePage>
     context.read<ProfileBloc>().add(
           LoadProfileByUserId(userId: widget.userId),
         );
+    _loadRelationship();
   }
 
   void _reloadProfile() {
@@ -133,6 +136,63 @@ class _OtherProfilePageState extends State<OtherProfilePage>
 
   int? _profileUserId(_ProfileView profile) {
     return profile.userId != 0 ? profile.userId : profile.id;
+  }
+
+  Future<void> _loadRelationship() async {
+    try {
+      final relationship =
+          await _friendsService.checkRelationship(widget.userId);
+      if (!mounted) return;
+
+      setState(() {
+        _isFollowing = relationship.isFollowing;
+      });
+    } catch (e) {
+      debugPrint('Failed to load relationship: $e');
+    }
+  }
+
+  Future<void> _toggleFollow() async {
+    if (_isFollowBusy) return;
+
+    HapticFeedback.mediumImpact();
+
+    final wasFollowing = _isFollowing;
+
+    setState(() {
+      _isFollowing = !wasFollowing;
+      _isFollowBusy = true;
+    });
+
+    try {
+      if (wasFollowing) {
+        await _friendsService.unfollowUser(widget.userId);
+      } else {
+        await _friendsService.followUser(widget.userId);
+      }
+
+      if (!mounted) return;
+      context.read<FriendsBloc>().add(LoadFollowStats());
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isFollowing = wasFollowing;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: AppColors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isFollowBusy = false;
+        });
+      }
+    }
   }
 
   @override
@@ -200,13 +260,7 @@ class _OtherProfilePageState extends State<OtherProfilePage>
                   tabController: _tabController,
                   scrollController: _scrollController,
                   onRetry: _reloadProfile,
-                  onToggleFollow: () {
-                    HapticFeedback.mediumImpact();
-
-                    setState(() {
-                      _isFollowing = !_isFollowing;
-                    });
-                  },
+                  onToggleFollow: _toggleFollow,
                   onLoadMoreMedia: _loadMoreMedia,
                 );
               },
