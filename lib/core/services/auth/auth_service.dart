@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -364,11 +366,15 @@ class AuthService {
   }
 
   String _handleAuthError(AuthException e) {
-    final message = e.message.toLowerCase();
-    if (e.message.contains('Invalid login credentials')) {
+    final rawMessage = _readAuthErrorMessage(e.message);
+    final message = rawMessage.toLowerCase();
+    if (message.contains('database error saving new user')) {
+      return 'Signup is blocked by backend database setup. Please try again after the server is updated.';
+    }
+    if (rawMessage.contains('Invalid login credentials')) {
       return 'Invalid email or password';
     }
-    if (e.message.contains('Email not confirmed')) {
+    if (rawMessage.contains('Email not confirmed')) {
       return 'Please verify your email first';
     }
     if (message.contains('already registered') ||
@@ -377,9 +383,9 @@ class AuthService {
       return 'An account already exists for this email. Please sign in instead.';
     }
     if (message.contains('password')) {
-      return e.message;
+      return rawMessage;
     }
-    return e.message;
+    return rawMessage;
   }
 
   String _handleDioError(DioException e) {
@@ -397,6 +403,20 @@ class AuthService {
     }
     if (data is String && data.isNotEmpty) return data;
     return fallback;
+  }
+
+  String _readAuthErrorMessage(String message) {
+    try {
+      final decoded = jsonDecode(message);
+      if (decoded is Map) {
+        final errorMessage = decoded['message'] ?? decoded['msg'];
+        if (errorMessage != null) return errorMessage.toString();
+      }
+    } catch (_) {
+      // Supabase usually provides a plain message; JSON only appears for some
+      // gateway/backend failures.
+    }
+    return message;
   }
 
   Future<Object?> verifyEmail(String email, String code) async {

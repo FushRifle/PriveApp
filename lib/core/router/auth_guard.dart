@@ -85,6 +85,8 @@ class _BootstrapperState extends State<_Bootstrapper> {
 
   bool _hasUser = false;
 
+  bool _isOnboarded = false;
+
   String? _error;
 
   Future<void>? _bootstrapFuture;
@@ -126,7 +128,10 @@ class _BootstrapperState extends State<_Bootstrapper> {
 
       _hasProfile = profile != null && profile.userId > 0;
 
-      _hasUser = userBloc.state.currentUser != null;
+      final currentUser = userBloc.state.currentUser;
+
+      _hasUser = currentUser != null;
+      _isOnboarded = _readOnboarded(currentUser);
 
       final futures = <Future>[];
 
@@ -180,6 +185,7 @@ class _BootstrapperState extends State<_Bootstrapper> {
       setState(() {
         _hasProfile = hasValidProfile;
         _hasUser = userBloc.state.currentUser != null;
+        _isOnboarded = _readOnboarded(userBloc.state.currentUser);
         _loading = false;
       });
     } on TimeoutException {
@@ -219,13 +225,27 @@ class _BootstrapperState extends State<_Bootstrapper> {
       );
     }
 
-    if (!_hasProfile) {
+    if (!_isOnboarded || !_hasProfile) {
       return const OnboardingPage(
         completionRoute: NamedRoutes.demographicScreen,
       );
     }
 
     return const MainWrapper();
+  }
+
+  bool _readOnboarded(Map<String, dynamic>? user) {
+    final value = user?['onboarded'] ?? user?['isOnboarded'];
+
+    if (value is bool) {
+      return value;
+    }
+
+    if (value is String) {
+      return value.toLowerCase() == 'true';
+    }
+
+    return false;
   }
 }
 

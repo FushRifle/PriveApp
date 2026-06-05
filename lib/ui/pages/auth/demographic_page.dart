@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -54,6 +56,8 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
 
   int _currentPage = 0;
   bool _isSkipping = false;
+  bool _isCompletingOnboarding = false;
+  bool _isSavingDemographics = false;
 
   final List<String> _genders = [
     'Male',
@@ -131,6 +135,15 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
     });
     _fadeController.forward();
     _loadExistingData();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final userBloc = context.read<UserBloc>();
+      if (userBloc.state.currentUser == null &&
+          userBloc.state.status != UserStatus.loading) {
+        userBloc.add(LoadCurrentUser());
+      }
+    });
   }
 
   void _loadExistingData() {
@@ -179,20 +192,23 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
       backgroundColor: AppColors.white,
       body: BlocConsumer<ProfileBloc, ProfileState>(
         listener: (context, state) {
-          if (state.status == ProfileStatus.success) {
-            context.read<UserBloc>().add(CompleteOnboarding());
-
-            if (mounted) {
-              Navigator.pushReplacementNamed(
-                  context, NamedRoutes.onboardingSuccessScreen);
-            }
+          if (_isSavingDemographics && state.status == ProfileStatus.success) {
+            _isSavingDemographics = false;
+            _completeOnboardingAndGoHome();
           }
-          if (state.status == ProfileStatus.error && state.error != null) {
+          if (_isSavingDemographics &&
+              state.status == ProfileStatus.error &&
+              state.error != null) {
+            _isSavingDemographics = false;
             _showSnack(state.error!);
           }
         },
         builder: (context, state) {
-          final isLoading = state.isSaving;
+          final userState = context.watch<UserBloc>().state;
+          final isLoading = state.isSaving ||
+              userState.isLoading ||
+              userState.isSaving ||
+              _isCompletingOnboarding;
           return _buildContent(isLoading);
         },
       ),
@@ -951,20 +967,66 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
     );
   }
 
-  void _skipOnboarding() {
+  Future<void> _skipOnboarding() async {
     if (_isSkipping) return;
 
     _isSkipping = true;
     HapticFeedback.lightImpact();
 
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      NamedRoutes.homeScreen,
-      (_) => false,
-    );
+    final hasUser = await _ensureCurrentUser();
+    if (!hasUser) {
+      _isSkipping = false;
+      return;
+    }
+    if (!mounted) return;
+
+    await _completeOnboardingAndGoHome();
+  }
+
+  Future<void> _completeOnboardingAndGoHome() async {
+    if (_isCompletingOnboarding) return;
+
+    _isCompletingOnboarding = true;
+    final userBloc = context.read<UserBloc>();
+    userBloc.add(CompleteOnboarding());
+
+    try {
+      final result = await userBloc.stream.firstWhere((state) {
+        return state.status == UserStatus.success ||
+            state.status == UserStatus.error;
+      }).timeout(const Duration(seconds: 12));
+
+      if (!mounted) return;
+
+      if (result.status == UserStatus.error) {
+        _showSnack(result.error ?? 'Failed to complete onboarding');
+        _isCompletingOnboarding = false;
+        _isSkipping = false;
+        return;
+      }
+
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        NamedRoutes.homeScreen,
+        (_) => false,
+      );
+    } on TimeoutException {
+      if (!mounted) return;
+      _showSnack('Connection timeout. Please try again.');
+      _isCompletingOnboarding = false;
+      _isSkipping = false;
+    }
   }
 
   Future<void> _saveDemographicInfo() async {
+    if (_isSavingDemographics) return;
+
+    final hasUser = await _ensureCurrentUser();
+    if (!hasUser) return;
+    if (!mounted) return;
+
+    _isSavingDemographics = true;
+
     context.read<ProfileBloc>().add(UpdateProfile(
           data: {
             'displayName': _displayNameController.text.isEmpty
@@ -990,6 +1052,76 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
             'interests': _selectedInterests.isEmpty ? [] : _selectedInterests,
           },
         ));
+  }
+
+  Future<bool> _ensureCurrentUser() async {
+    final userBloc = context.read<UserBloc>();
+
+    if (userBloc.state.currentUser != null) {
+      return true;
+    }
+
+    if (userBloc.state.status != UserStatus.loading) {
+      userBloc.add(LoadCurrentUser());
+    }
+
+    try {
+      final result = await userBloc.stream.firstWhere((state) {
+        return state.status == UserStatus.success ||
+            state.status == UserStatus.error;
+      }).timeout(const Duration(seconds: 12));
+
+      if (result.currentUser != null) {
+        return true;
+      }
+
+      if (!mounted) return false;
+
+      if (await _ensureProfileExists()) {
+        return true;
+      }
+
+      if (!mounted) return false;
+
+      _showSnack(
+        result.error?.contains('User not found') == true
+            ? 'Account setup is not complete yet. Please sign out and sign in again after the signup fix is applied.'
+            : result.error?.contains('converting NULL to string') == true
+                ? 'Account data needs a backend cleanup before this can finish.'
+                : result.error ?? 'Unable to load your account.',
+      );
+
+      return false;
+    } on TimeoutException {
+      if (!mounted) return false;
+      _showSnack('Connection timeout. Please try again.');
+      return false;
+    }
+  }
+
+  Future<bool> _ensureProfileExists() async {
+    final profileBloc = context.read<ProfileBloc>();
+
+    final currentProfile = profileBloc.state.myProfile;
+    if (currentProfile != null && currentProfile.userId > 0) {
+      return true;
+    }
+
+    if (profileBloc.state.status != ProfileStatus.loading) {
+      profileBloc.add(LoadMyProfile());
+    }
+
+    try {
+      final result = await profileBloc.stream.firstWhere((state) {
+        return state.status == ProfileStatus.success ||
+            state.status == ProfileStatus.error;
+      }).timeout(const Duration(seconds: 12));
+
+      final profile = result.myProfile;
+      return profile != null && profile.userId > 0;
+    } on TimeoutException {
+      return false;
+    }
   }
 
   Future<void> _selectDateOfBirth() async {

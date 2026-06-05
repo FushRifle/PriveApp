@@ -296,12 +296,9 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
                 comment.content,
                 comment.formattedTimeAgo,
                 false,
+                index == 0,
+                index == _comments.length - 1,
               ),
-              if (index < _comments.length - 1)
-                Divider(
-                  color: AppColors.dashedLineColor.withOpacity(0.3),
-                  thickness: 1,
-                ),
               const SizedBox(height: 6),
             ],
           );
@@ -378,120 +375,156 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
   }
 
   Widget _buildCommentCard(
-      String imageUrl, String name, String comment, String time, bool isTemp) {
+    String imageUrl,
+    String name,
+    String comment,
+    String time,
+    bool isTemp,
+    bool isFirst,
+    bool isLast,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: SizedBox(
-              width: 45,
-              height: 45,
-              child: imageUrl.startsWith('http')
-                  ? CachedNetworkImage(
-                      imageUrl: imageUrl,
-                      fit: BoxFit.cover,
-                      errorWidget: (context, error, stackTrace) {
-                        return Container(
-                          color: AppColors.greyColor.withOpacity(0.2),
-                          child: const Icon(Icons.person, size: 25),
-                        );
-                      },
-                    )
-                  : Container(
-                      color: AppColors.greyColor.withOpacity(0.2),
-                      child: const Icon(Icons.person, size: 25),
-                    ),
+          Positioned(
+            left: 22,
+            top: isFirst ? 22 : 0,
+            bottom: isLast ? 22 : 0,
+            child: Container(
+              width: 1.5,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
           ),
-          const SizedBox(width: 12),
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      name,
-                      style: AppTheme.blackTextStyle.copyWith(
-                        fontSize: 14,
-                        fontWeight: AppTheme.bold,
-                      ),
-                    ),
-                    if (isTemp) ...[
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        width: 12,
-                        height: 12,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ],
-                  ],
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 49,
+                height: 49,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.backgroundColor,
+                  border: Border.all(
+                    color: AppColors.primary.withOpacity(0.16),
+                    width: 2,
+                  ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  comment,
-                  style: isTemp
-                      ? AppTheme.greyTextStyle.copyWith(
-                          fontSize: 12,
-                          fontWeight: AppTheme.medium,
-                          fontStyle: FontStyle.italic,
+                padding: const EdgeInsets.all(2),
+                child: ClipOval(
+                  child: imageUrl.startsWith('http')
+                      ? CachedNetworkImage(
+                          imageUrl: imageUrl,
+                          fit: BoxFit.cover,
+                          errorWidget: (context, error, stackTrace) {
+                            return Container(
+                              color: AppColors.greyColor.withOpacity(0.2),
+                              child: const Icon(Icons.person, size: 25),
+                            );
+                          },
                         )
-                      : AppTheme.greyTextStyle.copyWith(
-                          fontSize: 12,
-                          fontWeight: AppTheme.medium,
+                      : Container(
+                          color: AppColors.greyColor.withOpacity(0.2),
+                          child: const Icon(Icons.person, size: 25),
                         ),
                 ),
-                const SizedBox(height: 6),
-                Row(
+              ),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(12, 38),
-                        backgroundColor: AppColors.backgroundColor,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      onPressed: () {
-                        _commentController.text = '@$name ';
-                        _focusNode.requestFocus();
-                      },
-                      child: Row(
-                        children: [
-                          Image.asset("assets/images/ic_share.png", width: 16),
-                          const SizedBox(width: 8),
-                          Text(
-                            "Reply",
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: AppTheme.blackTextStyle.copyWith(
-                              fontSize: 12,
+                              fontSize: 14,
                               fontWeight: AppTheme.bold,
                             ),
                           ),
+                        ),
+                        if (isTemp) ...[
+                          const SizedBox(width: 8),
+                          SizedBox(
+                            width: 12,
+                            height: 12,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.primary,
+                            ),
+                          ),
                         ],
-                      ),
+                      ],
                     ),
-                    const Spacer(),
+                    const SizedBox(height: 4),
                     Text(
-                      time,
-                      style: AppTheme.greyTextStyle.copyWith(
-                        fontSize: 12,
-                        fontWeight: AppTheme.medium,
-                      ),
+                      comment,
+                      style: isTemp
+                          ? AppTheme.greyTextStyle.copyWith(
+                              fontSize: 12,
+                              fontWeight: AppTheme.medium,
+                              fontStyle: FontStyle.italic,
+                            )
+                          : AppTheme.greyTextStyle.copyWith(
+                              fontSize: 12,
+                              fontWeight: AppTheme.medium,
+                            ),
                     ),
-                    const SizedBox(width: 8),
-                    Image.asset("assets/images/ic_calendar.png", width: 14),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(12, 38),
+                            backgroundColor: AppColors.backgroundColor,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: () {
+                            _commentController.text = '@$name ';
+                            _focusNode.requestFocus();
+                          },
+                          child: Row(
+                            children: [
+                              Image.asset("assets/images/ic_share.png",
+                                  width: 16),
+                              const SizedBox(width: 8),
+                              Text(
+                                "Reply",
+                                style: AppTheme.blackTextStyle.copyWith(
+                                  fontSize: 12,
+                                  fontWeight: AppTheme.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          time,
+                          style: AppTheme.greyTextStyle.copyWith(
+                            fontSize: 12,
+                            fontWeight: AppTheme.medium,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Image.asset("assets/images/ic_calendar.png", width: 14),
+                      ],
+                    ),
                   ],
                 ),
-              ],
-            ),
-          )
+              )
+            ],
+          ),
         ],
       ),
     );

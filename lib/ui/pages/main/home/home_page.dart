@@ -70,13 +70,18 @@ class _HomePalette {
       background: theme.scaffoldBackgroundColor,
       card: scheme.surface,
       elevatedCard: isDark ? const Color(0xFF1E2633) : AppColors.white,
-      border: isDark ? AppColors.darkCardBorder.withOpacity(0.5) : AppColors.lightCardBorder.withOpacity(0.5),
+      border: isDark
+          ? AppColors.darkCardBorder.withOpacity(0.5)
+          : AppColors.lightCardBorder.withOpacity(0.5),
       text: scheme.onSurface,
-      mutedText: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+      mutedText:
+          isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
       subtleText: isDark ? AppColors.darkTextHint : AppColors.lightTextHint,
       primary: scheme.primary,
       secondary: scheme.secondary,
-      shadow: isDark ? Colors.black.withOpacity(0.25) : Colors.grey.withOpacity(0.08),
+      shadow: isDark
+          ? Colors.black.withOpacity(0.25)
+          : Colors.grey.withOpacity(0.08),
       overlayStyle: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
@@ -102,7 +107,8 @@ class _StoryGroup {
   });
 }
 
-class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin {
+class _HomePageState extends State<HomePage>
+    with AutomaticKeepAliveClientMixin {
   final ScrollController _scrollController = ScrollController();
 
   bool _initialized = false;
@@ -210,12 +216,6 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
                     },
                   ),
                 ),
-                SliverToBoxAdapter(
-                  child: _QuickComposer(
-                    palette: palette,
-                    onOpenCreate: () => _openCreatePost(context),
-                  ),
-                ),
                 BlocBuilder<FeedBloc, FeedState>(
                   buildWhen: (previous, current) {
                     return previous.posts != current.posts ||
@@ -226,7 +226,8 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
                   builder: (context, state) {
                     final posts = state.posts;
 
-                    if (state.postsStatus == FeedStatus.loading && posts.isEmpty) {
+                    if (state.postsStatus == FeedStatus.loading &&
+                        posts.isEmpty) {
                       return SliverFillRemaining(
                         hasScrollBody: false,
                         child: Center(
@@ -250,19 +251,24 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
                         SliverToBoxAdapter(
                           child: _FeedHeader(
                             palette: palette,
-                            isRefreshing: state.postsStatus == FeedStatus.loading,
+                            isRefreshing:
+                                state.postsStatus == FeedStatus.loading,
+                            onOpenCreate: () => _openCreatePost(context),
                           ),
                         ),
                         SliverPadding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           sliver: SliverList.separated(
-                            itemCount: posts.length + (state.hasMorePosts ? 1 : 0),
-                            separatorBuilder: (_, __) => const SizedBox(height: 16),
+                            itemCount:
+                                posts.length + (state.hasMorePosts ? 1 : 0),
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 16),
                             itemBuilder: (context, index) {
                               if (index >= posts.length) {
                                 return _LoadMoreIndicator(
                                   palette: palette,
-                                  isLoading: state.postsStatus == FeedStatus.loadingMore,
+                                  isLoading: state.postsStatus ==
+                                      FeedStatus.loadingMore,
                                 );
                               }
 
@@ -363,8 +369,11 @@ class _HomeAppBar extends StatelessWidget {
       selector: (state) => state.currentUser,
       builder: (context, user) {
         final avatar = user?['avatar']?.toString() ?? '';
-        final name = user?['name']?.toString() ?? user?['username']?.toString() ?? 'User';
-        final fallback = name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'U';
+        final name = user?['name']?.toString() ??
+            user?['username']?.toString() ??
+            'User';
+        final fallback =
+            name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'U';
 
         return Container(
           padding: EdgeInsets.fromLTRB(
@@ -565,7 +574,8 @@ class _StoriesSection extends StatelessWidget {
               itemBuilder: (context, index) {
                 if (index == 0) {
                   return BlocSelector<UserBloc, UserState, String>(
-                    selector: (state) => state.currentUser?['avatar']?.toString() ?? '',
+                    selector: (state) =>
+                        state.currentUser?['avatar']?.toString() ?? '',
                     builder: (context, avatar) {
                       return StatusWidget(
                         name: 'Add Story',
@@ -616,184 +626,6 @@ class _StoriesSection extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _QuickComposer extends StatefulWidget {
-  final _HomePalette palette;
-  final VoidCallback onOpenCreate;
-
-  const _QuickComposer({
-    required this.palette,
-    required this.onOpenCreate,
-  });
-
-  @override
-  State<_QuickComposer> createState() => _QuickComposerState();
-}
-
-class _QuickComposerState extends State<_QuickComposer> {
-  final TextEditingController _controller = TextEditingController();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  bool get _canPost => _controller.text.trim().isNotEmpty;
-
-  void _submit() {
-    final content = _controller.text.trim();
-    if (content.isEmpty) return;
-
-    HapticFeedback.lightImpact();
-    context.read<FeedBloc>().add(CreateFeedPost(content: content));
-
-    _controller.clear();
-    FocusScope.of(context).unfocus();
-    setState(() {});
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocSelector<UserBloc, UserState, Map<String, dynamic>?>(
-      selector: (state) => state.currentUser,
-      builder: (context, user) {
-        final avatar = user?['avatar']?.toString() ?? '';
-        final name = user?['name']?.toString() ?? user?['username']?.toString() ?? 'User';
-        final fallback = name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'U';
-
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: widget.palette.card,
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: widget.palette.border),
-              boxShadow: [
-                BoxShadow(
-                  color: widget.palette.shadow,
-                  blurRadius: 20,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _Avatar(
-                      palette: widget.palette,
-                      avatar: avatar,
-                      fallback: fallback,
-                      size: 42,
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: TextField(
-                        controller: _controller,
-                        minLines: 1,
-                        maxLines: 4,
-                        textInputAction: TextInputAction.newline,
-                        onChanged: (_) => setState(() {}),
-                        style: AppTheme.blackTextStyle.copyWith(
-                          color: widget.palette.text,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: "What's sparkling dynamic today?",
-                          hintStyle: AppTheme.greyTextStyle.copyWith(
-                            color: widget.palette.subtleText,
-                            fontSize: 15,
-                          ),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    _ComposerAction(
-                      palette: widget.palette,
-                      icon: Icons.image_outlined,
-                      label: 'Photo/Media',
-                      color: widget.palette.secondary,
-                      onTap: widget.onOpenCreate,
-                    ),
-                    const SizedBox(width: 10),
-                    _ComposerAction(
-                      palette: widget.palette,
-                      icon: _canPost ? Icons.send_rounded : Icons.add_rounded,
-                      label: _canPost ? 'Publish' : 'Expand Space',
-                      color: widget.palette.primary,
-                      onTap: _canPost ? _submit : widget.onOpenCreate,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _ComposerAction extends StatelessWidget {
-  final _HomePalette palette;
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _ComposerAction({
-    required this.palette,
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          height: 42,
-          decoration: BoxDecoration(
-            color: color.withOpacity(palette.isDark ? 0.12 : 0.06),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: color.withOpacity(0.15)),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: color, size: 18),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: AppTheme.blackTextStyle.copyWith(
-                  color: color,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -854,7 +686,9 @@ class _Avatar extends StatelessWidget {
 
   Widget _fallback() {
     return Container(
-      color: palette.isDark ? AppColors.white.withOpacity(0.08) : AppColors.black.withOpacity(0.08),
+      color: palette.isDark
+          ? AppColors.white.withOpacity(0.08)
+          : AppColors.black.withOpacity(0.08),
       alignment: Alignment.center,
       child: Text(
         fallback,
@@ -871,16 +705,18 @@ class _Avatar extends StatelessWidget {
 class _FeedHeader extends StatelessWidget {
   final _HomePalette palette;
   final bool isRefreshing;
+  final VoidCallback onOpenCreate;
 
   const _FeedHeader({
     required this.palette,
     required this.isRefreshing,
+    required this.onOpenCreate,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 8, 18, 14),
+      padding: const EdgeInsets.fromLTRB(18, 2, 18, 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -892,7 +728,7 @@ class _FeedHeader extends StatelessWidget {
                   'Feed Space',
                   style: AppTheme.blackTextStyle.copyWith(
                     color: palette.text,
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -919,19 +755,39 @@ class _FeedHeader extends StatelessWidget {
             ),
             const SizedBox(width: 12),
           ],
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: palette.elevatedCard,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: palette.border),
-            ),
-            child: Text(
-              'Recent',
-              style: AppTheme.greyTextStyle.copyWith(
-                color: palette.primary,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
+          InkWell(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              onOpenCreate();
+            },
+            borderRadius: BorderRadius.circular(18),
+            child: Container(
+              height: 38,
+              padding: const EdgeInsets.symmetric(horizontal: 13),
+              decoration: BoxDecoration(
+                color:
+                    palette.primary.withOpacity(palette.isDark ? 0.18 : 0.08),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: palette.primary.withOpacity(0.18)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.add_rounded,
+                    color: palette.primary,
+                    size: 19,
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    'Post',
+                    style: AppTheme.greyTextStyle.copyWith(
+                      color: palette.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -1015,55 +871,6 @@ class _EmptyFeed extends StatelessWidget {
                 fontSize: 14,
                 fontWeight: FontWeight.w400,
                 height: 1.4,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ErrorWidget extends StatelessWidget {
-  final _HomePalette palette;
-  final String error;
-  final VoidCallback onRetry;
-
-  const _ErrorWidget({
-    required this.palette,
-    required this.error,
-    required this.onRetry,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline_rounded, size: 44, color: palette.secondary),
-            const SizedBox(height: 16),
-            Text(
-              'Something misbehaved',
-              style: TextStyle(color: palette.text, fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              error,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: palette.mutedText, fontSize: 13),
-            ),
-            const SizedBox(height: 20),
-            TextButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: const Text('Try Again'),
-              style: TextButton.styleFrom(
-                foregroundColor: palette.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
             ),
           ],

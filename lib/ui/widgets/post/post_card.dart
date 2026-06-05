@@ -365,7 +365,7 @@ class _CardPostState extends State<CardPost> {
             children: [
               PostHeader(
                 post: widget.post,
-                onMoreTap: _showPostOptions,
+                onMoreTap: widget.isDetailView ? null : _showPostOptions,
               ),
               if (widget.post.content.trim().isNotEmpty)
                 PostFooter(

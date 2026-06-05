@@ -57,16 +57,17 @@ class PostHeader extends StatelessWidget {
               ),
             ),
           ),
-          IconButton(
-            onPressed: () {
-              HapticFeedback.lightImpact();
-              onMoreTap?.call();
-            },
-            icon: Icon(
-              Icons.more_horiz_rounded,
-              color: AppColors.text,
+          if (onMoreTap != null)
+            IconButton(
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                onMoreTap?.call();
+              },
+              icon: Icon(
+                Icons.more_horiz_rounded,
+                color: AppColors.text,
+              ),
             ),
-          ),
         ],
       ),
     );

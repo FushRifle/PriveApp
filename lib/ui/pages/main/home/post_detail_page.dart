@@ -245,7 +245,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
     final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundColor,
+      backgroundColor: AppColors.background,
       resizeToAvoidBottomInset: true,
       body: BlocListener<FeedBloc, FeedState>(
         listenWhen: (previous, current) {
@@ -321,21 +321,17 @@ class _PostDetailPageState extends State<PostDetailPage> {
 
     return Stack(
       children: [
+        const _DetailBackdrop(),
         CustomScrollView(
           controller: _scrollController,
           physics: const BouncingScrollPhysics(),
           slivers: [
             _PostAppBar(
-              isOwnPost: _isOwnPost,
               onMore: _showPostOptions,
             ),
             SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: CardPost(
-                  post: post,
-                  isDetailView: true,
-                ),
+              child: _PostDetailSurface(
+                post: post,
               ),
             ),
             SliverToBoxAdapter(
@@ -470,27 +466,29 @@ class _PostDetailPageState extends State<PostDetailPage> {
 }
 
 class _PostAppBar extends StatelessWidget {
-  final bool isOwnPost;
   final VoidCallback onMore;
 
   const _PostAppBar({
-    required this.isOwnPost,
     required this.onMore,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return SliverAppBar(
       floating: true,
       pinned: true,
       elevation: 0,
-      backgroundColor: AppColors.backgroundColor.withOpacity(0.92),
-      foregroundColor: AppColors.black,
+      backgroundColor: AppColors.background.withOpacity(isDark ? 0.82 : 0.9),
+      foregroundColor: AppColors.text,
       centerTitle: true,
+      toolbarHeight: 64,
       title: Text(
-        'Post',
+        'Thread',
         style: AppTheme.blackTextStyle.copyWith(
-          fontSize: 17,
+          color: AppColors.text,
+          fontSize: 16,
           fontWeight: FontWeight.w800,
         ),
       ),
@@ -515,12 +513,64 @@ class _PostAppBar extends StatelessWidget {
       actions: [
         Padding(
           padding: const EdgeInsets.all(8),
-          child: _AppBarCircleButton( 
+          child: _AppBarCircleButton(
             icon: Icons.more_horiz,
             onTap: onMore,
           ),
         ),
       ],
+    );
+  }
+}
+
+class _DetailBackdrop extends StatelessWidget {
+  const _DetailBackdrop();
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.background,
+        ),
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: Container(
+            height: 270,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.primary.withOpacity(0.24),
+                  AppColors.secondary.withOpacity(0.18),
+                  AppColors.background.withOpacity(0.0),
+                ],
+                stops: const [0, 0.48, 1],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PostDetailSurface extends StatelessWidget {
+  final FeedPost post;
+
+  const _PostDetailSurface({
+    required this.post,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 16, 14, 0),
+      child: CardPost(
+        post: post,
+        isDetailView: true,
+      ),
     );
   }
 }
@@ -537,14 +587,15 @@ class _AppBarCircleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.cardColor.withOpacity(0.05),
+      color: AppColors.card.withOpacity(0.86),
       shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onTap,
         child: Icon(
           icon,
-          color: AppColors.white,
+          color: AppColors.text,
           size: 20,
         ),
       ),
@@ -562,57 +613,76 @@ class _CommentsHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 26, 20, 16),
-      child: Row(
-        children: [
-          Text(
-            'Comments',
-            style: AppTheme.blackTextStyle.copyWith(
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.6,
-              fontSize: 14,
-              color: AppColors.blackTextColor,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 9,
-              vertical: 4,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              count.toString(),
-              style: const TextStyle(
-                color: AppColors.primary,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.card.withOpacity(0.78),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: AppColors.cardBorderColor),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.secondary.withOpacity(0.12),
+              ),
+              child: const Icon(
+                Icons.mode_comment_outlined,
+                color: AppColors.secondary,
+                size: 18,
               ),
             ),
-          ),
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 6,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.secondary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              'Recent First',
-              style: TextStyle(
-                color: AppColors.blackTextColor,
-                fontWeight: FontWeight.w600,
-                fontSize: 11,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Replies',
+                    style: AppTheme.blackTextStyle.copyWith(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                      color: AppColors.text,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    count == 1
+                        ? '1 comment in this thread'
+                        : '$count comments in this thread',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTheme.greyTextStyle.copyWith(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.09),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.primary.withOpacity(0.12)),
+              ),
+              child: Text(
+                'Recent',
+                style: AppTheme.greyTextStyle.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 11,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -640,10 +710,11 @@ class _CommentsSection extends StatelessWidget {
     if (isLoading && comments.isEmpty) {
       return const SliverToBoxAdapter(
         child: Padding(
-          padding: EdgeInsets.all(34),
+          padding: EdgeInsets.all(38),
           child: Center(
             child: CircularProgressIndicator(
               color: AppColors.primary,
+              strokeWidth: 2.6,
             ),
           ),
         ),
@@ -666,7 +737,7 @@ class _CommentsSection extends StatelessWidget {
     }
 
     return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 18),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
           (context, index) {
@@ -693,6 +764,8 @@ class _CommentsSection extends StatelessWidget {
             return RepaintBoundary(
               child: _CommentTile(
                 comment: comments[index],
+                isFirst: index == 0,
+                isLast: index == comments.length - 1,
               ),
             );
           },
@@ -705,77 +778,134 @@ class _CommentsSection extends StatelessWidget {
 
 class _CommentTile extends StatelessWidget {
   final Comment comment;
+  final bool isFirst;
+  final bool isLast;
 
   const _CommentTile({
     required this.comment,
+    required this.isFirst,
+    required this.isLast,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(15),
+          decoration: BoxDecoration(
+            color: AppColors.card.withOpacity(0.92),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppColors.cardBorderColor,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.shadow.withOpacity(0.04),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                left: 21,
+                top: isFirst ? 22 : -15,
+                bottom: isLast ? 22 : -15,
+                child: Container(
+                  width: 1.5,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _ThreadAvatar(
+                    avatar: comment.userAvatar,
+                    size: 40,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                comment.userName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTheme.greyTextStyle.copyWith(
+                                  color: AppColors.text,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              comment.formattedTimeAgo,
+                              style: AppTheme.greyTextStyle.copyWith(
+                                fontSize: 11,
+                                color: AppColors.textHint,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 7),
+                        Text(
+                          comment.content,
+                          style: AppTheme.greyTextStyle.copyWith(
+                            fontSize: 14,
+                            height: 1.4,
+                            color: AppColors.text,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ThreadAvatar extends StatelessWidget {
+  final String avatar;
+  final double size;
+
+  const _ThreadAvatar({
+    required this.avatar,
+    required this.size,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
+      width: size + 4,
+      height: size + 4,
       decoration: BoxDecoration(
-        color: AppColors.cardColor,
-        borderRadius: BorderRadius.circular(22),
+        shape: BoxShape.circle,
+        color: AppColors.card,
         border: Border.all(
-          color: AppColors.border.withOpacity(0.03),
+          color: AppColors.primary.withOpacity(0.16),
+          width: 2,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow.withOpacity(0.018),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
-          ),
-        ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _Avatar(
-            avatar: comment.userAvatar,
-            size: 40,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        comment.userName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTheme.greyTextStyle.copyWith(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      comment.formattedTimeAgo,
-                      style: AppTheme.greyTextStyle.copyWith(
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 7),
-                Text(
-                  comment.content,
-                  style: AppTheme.greyTextStyle.copyWith(
-                    fontSize: 14,
-                    height: 1.4,
-                    color: AppColors.text,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+      padding: const EdgeInsets.all(2),
+      child: _Avatar(
+        avatar: avatar,
+        size: size,
       ),
     );
   }
@@ -808,21 +938,26 @@ class _CommentComposer extends StatelessWidget {
         color: AppColors.transparent,
         child: Container(
           padding: EdgeInsets.fromLTRB(
-            16,
-            12,
-            16,
-            bottomPadding + 12,
+            14,
+            10,
+            14,
+            bottomPadding + 10,
           ),
           decoration: BoxDecoration(
-            color: AppColors.cardColor,
+            color: AppColors.card.withOpacity(0.94),
             borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(24),
+              top: Radius.circular(28),
+            ),
+            border: Border(
+              top: BorderSide(
+                color: AppColors.cardBorderColor,
+              ),
             ),
             boxShadow: [
               BoxShadow(
                 color: AppColors.black.withOpacity(0.06),
-                blurRadius: 14,
-                offset: const Offset(0, -3),
+                blurRadius: 22,
+                offset: const Offset(0, -8),
               ),
             ],
           ),
@@ -841,10 +976,10 @@ class _CommentComposer extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
-                    color: AppColors.backgroundColor,
+                    color: AppColors.background,
                     borderRadius: BorderRadius.circular(26),
                     border: Border.all(
-                      color: AppColors.black.withOpacity(0.03),
+                      color: AppColors.cardBorderColor,
                     ),
                   ),
                   child: TextField(
@@ -859,9 +994,10 @@ class _CommentComposer extends StatelessWidget {
                       height: 1.3,
                     ),
                     decoration: InputDecoration(
-                      hintText: 'Write a comment...',
+                      hintText: 'Reply to this thread...',
                       hintStyle: AppTheme.greyTextStyle.copyWith(
                         fontSize: 14,
+                        color: AppColors.textHint,
                       ),
                       border: InputBorder.none,
                       isDense: true,
@@ -882,8 +1018,17 @@ class _CommentComposer extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: canSend
                         ? AppColors.primary
-                        : AppColors.greyColor.withOpacity(0.25),
+                        : AppColors.textHint.withOpacity(0.18),
                     shape: BoxShape.circle,
+                    boxShadow: canSend
+                        ? [
+                            BoxShadow(
+                              color: AppColors.primary.withOpacity(0.28),
+                              blurRadius: 14,
+                              offset: const Offset(0, 6),
+                            ),
+                          ]
+                        : null,
                   ),
                   child: Center(
                     child: isSending
@@ -1092,20 +1237,31 @@ class _CommentsError extends StatelessWidget {
       ),
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: AppColors.card,
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.cardBorderColor),
       ),
       child: Column(
         children: [
-          const Icon(
-            Icons.error_outline,
-            size: 48,
-            color: AppColors.grey,
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.redAccent.withOpacity(0.1),
+            ),
+            child: const Icon(
+              Icons.error_outline,
+              size: 28,
+              color: AppColors.redAccent,
+            ),
           ),
           const SizedBox(height: 12),
           Text(
             message,
-            style: AppTheme.greyTextStyle,
+            style: AppTheme.greyTextStyle.copyWith(
+              color: AppColors.textSecondary,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
@@ -1137,18 +1293,28 @@ class _EmptyComments extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.cardBorderColor),
       ),
       child: Column(
         children: [
-          Icon(
-            Icons.chat_bubble_outline,
-            size: 62,
-            color: AppColors.greyColor.withOpacity(0.5),
+          Container(
+            width: 66,
+            height: 66,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.primary.withOpacity(0.1),
+            ),
+            child: Icon(
+              Icons.chat_bubble_outline,
+              size: 32,
+              color: AppColors.primary.withOpacity(0.7),
+            ),
           ),
           const SizedBox(height: 16),
           Text(
             'No comments yet',
             style: AppTheme.blackTextStyle.copyWith(
+              color: AppColors.text,
               fontSize: 16,
               fontWeight: FontWeight.w700,
             ),
@@ -1158,6 +1324,7 @@ class _EmptyComments extends StatelessWidget {
             'Be the first to comment',
             style: AppTheme.greyTextStyle.copyWith(
               fontSize: 14,
+              color: AppColors.textSecondary,
             ),
           ),
         ],
@@ -1211,9 +1378,18 @@ class _LoadingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: CircularProgressIndicator(
-        color: AppColors.primary,
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: const Stack(
+        children: [
+          _DetailBackdrop(),
+          Center(
+            child: CircularProgressIndicator(
+              color: AppColors.primary,
+              strokeWidth: 2.6,
+            ),
+          ),
+        ],
       ),
     );
   }
