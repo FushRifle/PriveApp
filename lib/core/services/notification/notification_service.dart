@@ -170,20 +170,29 @@ class NotificationService {
       'isRead': isRead,
       'actorId': json['actorId'] ??
           data['actorId'] ??
+          data['actorUserId'] ??
           data['followerUserId'] ??
           data['fromUserId'] ??
           data['friendUserId'] ??
           data['likerUserId'] ??
           data['commenterUserId'] ??
           data['swiperId'] ??
-          data['matchedUserId'],
-      'actorName': json['actorName'] ?? data['actorName'] ?? 'Someone',
+          data['matchedUserId'] ??
+          data['userId'],
+      'actorName': json['actorName'] ??
+          data['actorName'] ??
+          data['actorUsername'] ??
+          data['username'] ??
+          '',
       'actorAvatar': json['actorAvatar'] ?? data['actorAvatar'] ?? '',
       'targetId': json['targetId'] ??
           data['targetId'] ??
           data['postId'] ??
           data['profileId'] ??
-          data['matchId'],
+          data['matchId'] ??
+          data['conversationId'] ??
+          data['groupId'] ??
+          data['communityId'],
       'postImage': json['postImage'] ?? data['postImage'] ?? data['imageUrl'],
       'content': json['message'] ?? json['content'] ?? '',
       'data': data,

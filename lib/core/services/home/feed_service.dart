@@ -281,8 +281,9 @@ class FeedService {
     try {
       await _api.delete('/api/feed/posts/$postId');
       _invalidateFeedCaches();
-    } on DioException {
-      // Delete failures are intentionally non-blocking for the feed UI.
+    } on DioException catch (e) {
+      debugPrint('Delete post error: ${e.response?.data}');
+      throw _readError(e.response?.data, 'Failed to delete post');
     }
   }
 

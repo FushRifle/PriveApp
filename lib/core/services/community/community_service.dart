@@ -84,6 +84,21 @@ class CommunityService {
     }
   }
 
+  Future<List<CommunityMemberModel>> getCommunityMembers(
+      int communityId) async {
+    try {
+      final response = await _api.get(
+        '/api/communities/$communityId/members',
+        forceRefresh: true,
+      );
+      return _readList(response.data)
+          .map((item) => CommunityMemberModel.fromJson(item))
+          .toList();
+    } on DioException catch (e) {
+      throw _handleError(e, 'Failed to load members');
+    }
+  }
+
   Future<List<CommunityGroupModel>> getGroups(int communityId) async {
     try {
       final response = await _api.get(

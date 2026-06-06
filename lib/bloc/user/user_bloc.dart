@@ -8,6 +8,7 @@ part 'user_state.dart';
 class UserBloc extends Bloc<UserEvent, UserState> {
   final UserService _userService = UserService();
 
+  bool _hasAuthToken = false;
   bool _isRefreshingCurrentUser = false;
   Future<Map<String, dynamic>>? _currentUserFuture;
 
@@ -27,12 +28,16 @@ class UserBloc extends Bloc<UserEvent, UserState> {
   }
 
   void setAuthToken(String token) {
+    _hasAuthToken = token.isNotEmpty;
     _userService.setAuthToken(token);
   }
 
   void clearAuthToken() {
+    _hasAuthToken = false;
     _userService.clearAuthToken();
   }
+
+  bool get hasAuthToken => _hasAuthToken;
 
   Future<void> _onLoadCurrentUser(
     LoadCurrentUser event,

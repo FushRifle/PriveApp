@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -464,10 +465,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ),
       clipBehavior: Clip.antiAlias,
       child: avatar.startsWith('http')
-          ? Image.network(
-              avatar,
+          ? CachedNetworkImage(
+              imageUrl: avatar,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _fallbackAvatar(fallback),
+              errorWidget: (_, __, ___) => _fallbackAvatar(fallback),
             )
           : _fallbackAvatar(fallback),
     );

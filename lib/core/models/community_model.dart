@@ -184,6 +184,30 @@ class GroupInvitationModel {
   }
 }
 
+class CommunityMemberModel {
+  final CommunityUser user;
+  final String role;
+  final DateTime? joinedAt;
+
+  const CommunityMemberModel({
+    required this.user,
+    required this.role,
+    this.joinedAt,
+  });
+
+  factory CommunityMemberModel.fromJson(Map<String, dynamic> json) {
+    final userJson = json['user'] is Map
+        ? Map<String, dynamic>.from(json['user'])
+        : Map<String, dynamic>.from(json);
+
+    return CommunityMemberModel(
+      user: CommunityUser.fromJson(userJson),
+      role: _readString(json['role'], fallback: 'member'),
+      joinedAt: DateTime.tryParse(_readString(json['joinedAt'])),
+    );
+  }
+}
+
 class CommunityUser {
   final int id;
   final String name;

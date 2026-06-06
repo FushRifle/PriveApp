@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
+import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/services/notification/notification_service.dart';
 
 class NotificationPage extends StatefulWidget {
@@ -196,19 +198,78 @@ class _NotificationPageState extends State<NotificationPage> {
   }
 
   void _navigateByType(Map<String, dynamic> notification) {
-    final type = notification['type'];
-    final targetId = notification['targetId'];
+    final type = notification['type']?.toString();
+    final data = _asMap(notification['data']);
+    final targetId = _readInt(
+      notification['targetId'] ??
+          data['targetId'] ??
+          data['postId'] ??
+          data['profileId'] ??
+          data['matchId'] ??
+          data['conversationId'],
+    );
+    final actorId = _readInt(
+      notification['actorId'] ??
+          data['actorId'] ??
+          data['actorUserId'] ??
+          data['followerUserId'] ??
+          data['fromUserId'] ??
+          data['friendUserId'] ??
+          data['likerUserId'] ??
+          data['matchedUserId'] ??
+          data['userId'],
+    );
+    final postId = _readInt(data['postId'] ?? notification['postId']);
+    final conversationId = _readInt(data['conversationId']);
 
     switch (type) {
       case 'like':
       case 'comment':
-        debugPrint('Navigate to post: $targetId');
+      case 'mention':
+        final id = postId > 0 ? postId : targetId;
+        if (id > 0) {
+          Navigator.pushNamed(context, NamedRoutes.postDetailScreen,
+              arguments: id);
+        } else if (actorId > 0) {
+          Navigator.pushNamed(context, NamedRoutes.otherProfileScreen,
+              arguments: actorId);
+        }
         break;
       case 'follow':
-        debugPrint('Navigate to profile: ${notification['actorId']}');
+      case 'friend_request':
+      case 'friend_accepted':
+        if (actorId > 0) {
+          Navigator.pushNamed(context, NamedRoutes.otherProfileScreen,
+              arguments: actorId);
+        } else {
+          Navigator.pushNamed(context, NamedRoutes.friendListScreen);
+        }
         break;
-      case 'mention':
-        debugPrint('Navigate to mention: $targetId');
+      case 'match':
+        if (actorId > 0) {
+          Navigator.pushNamed(context, NamedRoutes.otherProfileScreen,
+              arguments: actorId);
+        } else {
+          Navigator.pushNamed(context, NamedRoutes.matchScreen);
+        }
+        break;
+      case 'message':
+      case 'chat':
+        final id = conversationId > 0 ? conversationId : targetId;
+        if (id > 0) {
+          Navigator.pushNamed(
+            context,
+            NamedRoutes.chatScreen,
+            arguments: {
+              'conversationId': id,
+              'userName': actorId > 0 ? _actorName(notification) : '',
+              'userAvatar': notification['actorAvatar'] ?? data['actorAvatar'],
+              'userId': actorId,
+            },
+          );
+        } else {
+          Navigator.pushNamed(context, NamedRoutes.inboxScreen);
+        }
         break;
       default:
         break;
@@ -217,19 +278,32 @@ class _NotificationPageState extends State<NotificationPage> {
 
   String _getNotificationContent(Map<String, dynamic> notification) {
     final type = notification['type'];
+    final message = (notification['content'] ?? notification['message'] ?? '')
+        .toString()
+        .trim();
 
     switch (type) {
       case 'like':
-        return 'liked your post.';
+        return message.toLowerCase().contains('profile')
+            ? 'liked your profile.'
+            : 'liked your post.';
       case 'comment':
         final snippet = notification['snippet'] ?? '';
-        return 'commented: "$snippet"';
+        return snippet.toString().isNotEmpty
+            ? 'commented: "$snippet"'
+            : 'commented on your post.';
       case 'follow':
         return 'started following you.';
       case 'mention':
         return 'mentioned you in a comment.';
+      case 'match':
+        return 'matched with you.';
+      case 'friend_request':
+        return 'sent you a friend request.';
+      case 'friend_accepted':
+        return 'accepted your friend request.';
       default:
-        return notification['content'] ?? '';
+        return message;
     }
   }
 
@@ -245,7 +319,7 @@ class _NotificationPageState extends State<NotificationPage> {
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.white,
+        backgroundColor: AppColors.background,
         elevation: 1,
         title: Text(
           'Notifications',
@@ -419,7 +493,7 @@ class _NotificationPageState extends State<NotificationPage> {
   Widget _buildNotificationItem(Map<String, dynamic> item, int index) {
     final bool isUnread = item['isUnread'] ?? false;
     final String avatar = item['actorAvatar'] ?? '';
-    final String actorName = item['actorName'] ?? 'Someone';
+    final String actorName = _actorName(item);
     final String content = _getNotificationContent(item);
     final String time = _formatTime(item['createdAt']);
     final String? postImage = item['postImage'];
@@ -472,10 +546,10 @@ class _NotificationPageState extends State<NotificationPage> {
                   ),
                   child: ClipOval(
                     child: avatar.isNotEmpty && avatar.startsWith('http')
-                        ? Image.network(
-                            avatar,
+                        ? CachedNetworkImage(
+                            imageUrl: avatar,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
+                            errorWidget: (_, __, ___) =>
                                 _avatarFallback(actorName),
                           )
                         : _avatarFallback(actorName),
@@ -543,12 +617,12 @@ class _NotificationPageState extends State<NotificationPage> {
             if (postImage != null && postImage.isNotEmpty)
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: Image.network(
-                  postImage,
+                child: CachedNetworkImage(
+                  imageUrl: postImage,
                   width: 44,
                   height: 44,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
+                  errorWidget: (context, error, stackTrace) {
                     return Container(
                       width: 44,
                       height: 44,
@@ -586,6 +660,28 @@ class _NotificationPageState extends State<NotificationPage> {
         ),
       ),
     );
+  }
+
+  String _actorName(Map<String, dynamic> item) {
+    final data = _asMap(item['data']);
+    final value = item['actorName'] ??
+        data['actorName'] ??
+        data['actorUsername'] ??
+        data['username'];
+    final name = value?.toString().trim() ?? '';
+    return name.isEmpty ? 'User' : name;
+  }
+
+  Map<String, dynamic> _asMap(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return Map<String, dynamic>.from(value);
+    return {};
+  }
+
+  int _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   void _showDeleteDialog(int notificationId, int index) {

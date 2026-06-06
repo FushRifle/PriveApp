@@ -14,6 +14,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final Map<int, List<MessageModel>> _messageCache = {};
   final Set<int> _loadingConversations = {};
   final Set<String> _inFlightMessageKeys = {};
+  int _messageRequestId = 0;
 
   ChatBloc() : super(const ChatState()) {
     on<LoadConversations>(_onLoadConversations);
@@ -187,6 +188,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   ) async {
     await _loadCurrentUserId();
 
+    final requestId = ++_messageRequestId;
     final cacheKey = event.conversationId;
 
     if (_loadingConversations.contains(cacheKey)) {
@@ -244,6 +246,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       final finalMessages = _mergeMessages(updatedMessages);
 
       _messageCache[cacheKey] = finalMessages;
+
+      if (requestId != _messageRequestId ||
+          state.activeConversationId != event.conversationId) {
+        return;
+      }
 
       emit(state.copyWith(
         messages: finalMessages,

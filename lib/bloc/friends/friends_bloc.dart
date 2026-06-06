@@ -8,6 +8,13 @@ part 'friends_state.dart';
 class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
   final FriendsService _friendsService = FriendsService();
 
+  int _followersRequestId = 0;
+  int _followingRequestId = 0;
+  int _friendsRequestId = 0;
+  bool _loadingFollowers = false;
+  bool _loadingFollowing = false;
+  bool _loadingFriends = false;
+
   FriendsBloc() : super(const FriendsState()) {
     on<LoadFollowers>(_onLoadFollowers);
     on<LoadFollowing>(_onLoadFollowing);
@@ -33,6 +40,11 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
     LoadFollowers event,
     Emitter<FriendsState> emit,
   ) async {
+    if (_loadingFollowers) return;
+
+    _loadingFollowers = true;
+    final requestId = ++_followersRequestId;
+
     emit(state.copyWith(
       followersStatus: event.page == 1
           ? FollowersStatus.loading
@@ -47,6 +59,8 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
         pageSize: event.pageSize,
       );
 
+      if (requestId != _followersRequestId) return;
+
       final newFollowers = _dedupeUsers(event.page == 1
           ? response.data
           : [...state.followers, ...response.data]);
@@ -60,10 +74,15 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
         clearError: true,
       ));
     } catch (e) {
+      if (requestId != _followersRequestId) return;
       emit(state.copyWith(
         followersStatus: FollowersStatus.error,
         error: e.toString(),
       ));
+    } finally {
+      if (requestId == _followersRequestId) {
+        _loadingFollowers = false;
+      }
     }
   }
 
@@ -71,6 +90,11 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
     LoadFollowing event,
     Emitter<FriendsState> emit,
   ) async {
+    if (_loadingFollowing) return;
+
+    _loadingFollowing = true;
+    final requestId = ++_followingRequestId;
+
     emit(state.copyWith(
       followingStatus: event.page == 1
           ? FollowingStatus.loading
@@ -85,6 +109,8 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
         pageSize: event.pageSize,
       );
 
+      if (requestId != _followingRequestId) return;
+
       final newFollowing = _dedupeUsers(event.page == 1
           ? response.data
           : [...state.following, ...response.data]);
@@ -98,10 +124,15 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
         clearError: true,
       ));
     } catch (e) {
+      if (requestId != _followingRequestId) return;
       emit(state.copyWith(
         followingStatus: FollowingStatus.error,
         error: e.toString(),
       ));
+    } finally {
+      if (requestId == _followingRequestId) {
+        _loadingFollowing = false;
+      }
     }
   }
 
@@ -109,6 +140,11 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
     LoadFriends event,
     Emitter<FriendsState> emit,
   ) async {
+    if (_loadingFriends) return;
+
+    _loadingFriends = true;
+    final requestId = ++_friendsRequestId;
+
     emit(state.copyWith(
       friendsStatus: FriendsStatus.loading,
       friends: event.page == 1 ? [] : state.friends,
@@ -120,6 +156,8 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
         page: event.page,
         pageSize: event.pageSize,
       );
+
+      if (requestId != _friendsRequestId) return;
 
       final newFriends = _dedupeUsers(event.page == 1
           ? response.data
@@ -134,10 +172,15 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
         clearError: true,
       ));
     } catch (e) {
+      if (requestId != _friendsRequestId) return;
       emit(state.copyWith(
         friendsStatus: FriendsStatus.error,
         error: e.toString(),
       ));
+    } finally {
+      if (requestId == _friendsRequestId) {
+        _loadingFriends = false;
+      }
     }
   }
 

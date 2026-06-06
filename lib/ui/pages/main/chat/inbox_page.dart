@@ -5,6 +5,7 @@ import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
 import 'package:clique/ui/pages/main/chat/chat_page.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../widgets/home/custom_app_bar.dart';
 
 class InboxPage extends StatefulWidget {
@@ -500,10 +501,10 @@ class _InboxPageState extends State<InboxPage> {
     }
 
     if (message.avatar.isNotEmpty) {
-      return Image.network(
-        message.avatar,
+      return CachedNetworkImage(
+        imageUrl: message.avatar,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _avatarFallback(firstLetter),
+        errorWidget: (_, __, ___) => _avatarFallback(firstLetter),
       );
     }
 

@@ -1,9 +1,10 @@
-import 'package:clique/core/router/main_wrapper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:clique/core/router/auth_guard.dart';
 import 'package:clique/core/router/named_routes.dart';
 
 import 'package:clique/bloc/friends/friends_bloc.dart';
+import 'package:clique/bloc/chat/chat_bloc.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/bloc/insights/insights_bloc.dart';
 import 'package:clique/bloc/match/match_bloc.dart';
@@ -12,7 +13,6 @@ import 'package:clique/bloc/status/stories_bloc.dart';
 import 'package:clique/bloc/community/community_bloc.dart';
 
 import 'package:clique/ui/pages/auth/demographic_page.dart';
-import 'package:clique/ui/pages/auth/login_page.dart';
 import 'package:clique/ui/pages/auth/onboarding_page.dart';
 import 'package:clique/ui/pages/auth/register_page.dart';
 import 'package:clique/ui/pages/auth/security/active_sessions_page.dart';
@@ -23,6 +23,7 @@ import 'package:clique/ui/pages/auth/success_page.dart';
 
 import 'package:clique/ui/pages/main/home/create_post_page.dart';
 import 'package:clique/ui/pages/main/home/post_detail_page.dart';
+import 'package:clique/ui/pages/main/chat/chat_page.dart';
 import 'package:clique/ui/pages/main/community/create_community_page.dart';
 import 'package:clique/ui/pages/main/reels/create_reel_page.dart';
 
@@ -58,12 +59,12 @@ class AppRouter {
       case NamedRoutes.inboxScreen:
       case NamedRoutes.reelsScreen:
         return _page(
-          const MainWrapper(),
+          const AuthGuard(),
         );
 
       case NamedRoutes.loginScreen:
         return _page(
-          const LoginPage(),
+          const AuthGuard(),
         );
 
       case NamedRoutes.registerScreen:
@@ -130,6 +131,25 @@ class AppRouter {
           BlocProvider(
             create: (_) => MatchBloc(),
             child: const MatchesPage(),
+          ),
+        );
+
+      case NamedRoutes.chatScreen:
+        final args = _readChatArgs(settings.arguments);
+        final conversationId = args['conversationId'] as int;
+        if (conversationId <= 0) {
+          return _errorRoute('Invalid conversation ID');
+        }
+
+        return _page(
+          BlocProvider(
+            create: (_) => ChatBloc(),
+            child: ChatPage(
+              conversationId: conversationId,
+              userName: args['userName'] as String,
+              userAvatar: args['userAvatar'] as String,
+              userId: args['userId'] as int,
+            ),
           ),
         );
 
@@ -292,5 +312,32 @@ class AppRouter {
     }
 
     return null;
+  }
+
+  static Map<String, Object> _readChatArgs(Object? arguments) {
+    if (arguments is! Map) {
+      return {
+        'conversationId': 0,
+        'userName': '',
+        'userAvatar': '',
+        'userId': 0,
+      };
+    }
+
+    return {
+      'conversationId': _readInt(
+        arguments['conversationId'] ?? arguments['conversation_id'],
+      ),
+      'userName': (arguments['userName'] ?? arguments['name'] ?? '').toString(),
+      'userAvatar':
+          (arguments['userAvatar'] ?? arguments['avatar'] ?? '').toString(),
+      'userId': _readInt(arguments['userId'] ?? arguments['user_id']),
+    };
+  }
+
+  static int _readInt(Object? value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 }

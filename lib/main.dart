@@ -182,6 +182,12 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
               if (state.status == AuthStatus.unauthenticated) {
                 PushNotificationService.instance.deleteDeviceToken();
                 LocalCacheService.clearAll();
+                context.read<UserBloc>()
+                  ..clearAuthToken()
+                  ..add(ResetUserState());
+                context.read<ProfileBloc>()
+                  ..clearAuthToken()
+                  ..add(ResetProfileState());
               }
             },
             child: MaterialApp(

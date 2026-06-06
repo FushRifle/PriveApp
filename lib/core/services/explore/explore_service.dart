@@ -32,17 +32,17 @@ class ExploreService {
 
       final response =
           await _api.get('/api/explore', queryParameters: queryParams);
+      final data = _readMap(response.data);
       return {
-        'profiles': (response.data['profiles'] as List?)
-                ?.map((json) => ProfileModel.fromJson(json))
-                .toList() ??
-            [],
-        'hasMore': response.data['hasMore'] ?? false,
-        'page': response.data['page'] ?? 1,
-        'total': response.data['total'] ?? 0,
+        'profiles': _readList(data['profiles'] ?? data['data'])
+            .map((json) => ProfileModel.fromJson(json))
+            .toList(),
+        'hasMore': data['hasMore'] ?? data['has_more'] ?? false,
+        'page': data['page'] ?? 1,
+        'total': data['total'] ?? 0,
       };
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to get profiles';
+      throw _readError(e, 'Failed to get profiles');
     }
   }
 
@@ -52,7 +52,7 @@ class ExploreService {
       final response = await _api.get('/api/explore/filters');
       return response.data ?? [];
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to get filters';
+      throw _readError(e, 'Failed to get filters');
     }
   }
 
@@ -63,9 +63,9 @@ class ExploreService {
         'profileId': profileId,
         'action': action,
       });
-      return response.data;
+      return _readMap(response.data);
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to swipe';
+      throw _readError(e, 'Failed to swipe');
     }
   }
 
@@ -75,9 +75,9 @@ class ExploreService {
       final response = await _api.get('/api/explore/matches', queryParameters: {
         'page': page,
       });
-      return response.data;
+      return _readMap(response.data);
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to get matches';
+      throw _readError(e, 'Failed to get matches');
     }
   }
 
@@ -87,9 +87,9 @@ class ExploreService {
       final response = await _api.get('/api/explore/likes', queryParameters: {
         'page': page,
       });
-      return response.data;
+      return _readMap(response.data);
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to get liked profiles';
+      throw _readError(e, 'Failed to get liked profiles');
     }
   }
 
@@ -100,9 +100,9 @@ class ExploreService {
           await _api.get('/api/explore/liked-by', queryParameters: {
         'page': page,
       });
-      return response.data;
+      return _readMap(response.data);
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to get liked by profiles';
+      throw _readError(e, 'Failed to get liked by profiles');
     }
   }
 
@@ -110,9 +110,35 @@ class ExploreService {
   Future<Map<String, dynamic>> getStats() async {
     try {
       final response = await _api.get('/api/explore/stats');
-      return response.data;
+      return _readMap(response.data);
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to get stats';
+      throw _readError(e, 'Failed to get stats');
     }
+  }
+
+  Map<String, dynamic> _readMap(dynamic data) {
+    if (data is Map<String, dynamic>) return data;
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {};
+  }
+
+  List<Map<String, dynamic>> _readList(dynamic data) {
+    if (data is List) {
+      return data
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList();
+    }
+    return const [];
+  }
+
+  String _readError(DioException e, String fallback) {
+    final data = e.response?.data;
+    if (data is Map) {
+      final message = data['message'] ?? data['error'];
+      if (message != null) return message.toString();
+    }
+    if (data is String && data.isNotEmpty) return data;
+    return fallback;
   }
 }

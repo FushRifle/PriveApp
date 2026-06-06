@@ -139,7 +139,8 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final userBloc = context.read<UserBloc>();
-      if (userBloc.state.currentUser == null &&
+      if (userBloc.hasAuthToken &&
+          userBloc.state.currentUser == null &&
           userBloc.state.status != UserStatus.loading) {
         userBloc.add(LoadCurrentUser());
       }

@@ -20,6 +20,7 @@ class CommunityState extends Equatable {
   final CommunityActionStatus actionStatus;
   final List<CommunityModel> communities;
   final List<CommunityGroupModel> groups;
+  final List<CommunityMemberModel> members;
   final List<DiscussionPostModel> posts;
   final List<GroupInvitationModel> invitations;
   final CommunityModel? selectedCommunity;
@@ -33,6 +34,7 @@ class CommunityState extends Equatable {
     this.actionStatus = CommunityActionStatus.initial,
     this.communities = const [],
     this.groups = const [],
+    this.members = const [],
     this.posts = const [],
     this.invitations = const [],
     this.selectedCommunity,
@@ -47,6 +49,7 @@ class CommunityState extends Equatable {
     CommunityActionStatus? actionStatus,
     List<CommunityModel>? communities,
     List<CommunityGroupModel>? groups,
+    List<CommunityMemberModel>? members,
     List<DiscussionPostModel>? posts,
     List<GroupInvitationModel>? invitations,
     CommunityModel? selectedCommunity,
@@ -61,6 +64,7 @@ class CommunityState extends Equatable {
       actionStatus: actionStatus ?? this.actionStatus,
       communities: communities ?? this.communities,
       groups: groups ?? this.groups,
+      members: members ?? this.members,
       posts: posts ?? this.posts,
       invitations: invitations ?? this.invitations,
       selectedCommunity: selectedCommunity ?? this.selectedCommunity,
@@ -77,6 +81,7 @@ class CommunityState extends Equatable {
         actionStatus,
         communities,
         groups,
+        members,
         posts,
         invitations,
         selectedCommunity,

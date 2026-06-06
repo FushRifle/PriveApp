@@ -108,6 +108,9 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
     emit(state.copyWith(detailStatus: CommunityStatus.loading));
     try {
       final community = await _service.getCommunity(event.communityId);
+      final members = community.isMember
+          ? await _service.getCommunityMembers(event.communityId)
+          : <CommunityMemberModel>[];
       final groups = community.isMember
           ? await _service.getGroups(event.communityId)
           : <CommunityGroupModel>[];
@@ -120,6 +123,7 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
       emit(state.copyWith(
         detailStatus: CommunityStatus.success,
         selectedCommunity: community,
+        members: members,
         groups: groups,
         posts: posts,
         clearError: true,
@@ -169,6 +173,7 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
               (state.selectedCommunity!.memberCount - 1).clamp(0, 1 << 31),
         ),
         groups: const [],
+        members: const [],
         posts: const [],
       ));
       add(const LoadCommunities());

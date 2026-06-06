@@ -14,6 +14,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
   bool _isFetchingPosts = false;
   bool _isFetchingMorePosts = false;
   final Set<int> _fetchingComments = {};
+  final Set<int> _creatingComments = {};
   final Set<String> _fetchingMedia = {};
 
   bool _disposed = false;
@@ -546,7 +547,9 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     CreatePostComment event,
     Emitter<FeedState> emit,
   ) async {
-    if (state.isCreatingComment) return;
+    if (_creatingComments.contains(event.postId)) return;
+
+    _creatingComments.add(event.postId);
 
     emit(
       state.copyWith(
@@ -584,16 +587,21 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
         state.copyWith(
           comments: updatedComments,
           posts: updatedPosts,
-          isCreatingComment: false,
+          isCreatingComment: _creatingComments.length > 1,
         ),
       );
     } catch (e) {
       emit(
         state.copyWith(
-          isCreatingComment: false,
+          isCreatingComment: _creatingComments.length > 1,
           generalError: e.toString(),
         ),
       );
+    } finally {
+      _creatingComments.remove(event.postId);
+      if (_creatingComments.isEmpty && !isClosed) {
+        emit(state.copyWith(isCreatingComment: false));
+      }
     }
   }
 

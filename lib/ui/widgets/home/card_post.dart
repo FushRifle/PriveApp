@@ -11,7 +11,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/models/feeds_models.dart';
-import 'package:video_player/video_player.dart';
 import 'package:clique/ui/widgets/home/custom_bottom_sheet.dart';
 
 class CardPost extends StatefulWidget {
@@ -32,8 +31,6 @@ class _CardPostState extends State<CardPost> {
   late bool isLiked;
   late int likeCount;
   late int commentCount;
-  VideoPlayerController? _videoController;
-  bool _isVideoInitialized = false;
 
   @override
   void initState() {
@@ -41,37 +38,6 @@ class _CardPostState extends State<CardPost> {
     isLiked = widget.post.isLiked;
     likeCount = widget.post.likes;
     commentCount = widget.post.comments;
-    _checkForVideo();
-  }
-
-  void _checkForVideo() {
-    final videoAttachment = widget.post.attachments.firstWhere(
-      (a) => a.type == 'video',
-      orElse: () => Attachment(type: '', url: ''),
-    );
-
-    if (videoAttachment.url.isNotEmpty) {
-      _initializeVideoController(videoAttachment.url);
-    }
-  }
-
-  void _initializeVideoController(String videoUrl) {
-    _videoController = VideoPlayerController.network(videoUrl)
-      ..initialize().then((_) {
-        if (mounted) {
-          setState(() {
-            _isVideoInitialized = true;
-          });
-        }
-      }).catchError((error) {
-        debugPrint('Error initializing video: $error');
-      });
-  }
-
-  @override
-  void dispose() {
-    _videoController?.dispose();
-    super.dispose();
   }
 
   void _toggleLike() {
@@ -476,9 +442,7 @@ class _CardPostState extends State<CardPost> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (_isVideoInitialized && _videoController != null)
-              VideoPlayer(_videoController!)
-            else if (videoAttachment.thumbnail != null &&
+            if (videoAttachment.thumbnail != null &&
                 videoAttachment.thumbnail!.isNotEmpty)
               CachedNetworkImage(
                 imageUrl: videoAttachment.thumbnail!,

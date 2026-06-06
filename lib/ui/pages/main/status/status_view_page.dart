@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class StatusViewPage extends StatefulWidget {
   final List<Story> stories;
@@ -359,10 +360,10 @@ class _StatusViewPageState extends State<StatusViewPage>
     }
 
     if (avatarUrl.startsWith('http')) {
-      return Image.network(
-        avatarUrl,
+      return CachedNetworkImage(
+        imageUrl: avatarUrl,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Container(
+        errorWidget: (_, __, ___) => Container(
           color: AppColors.grey,
           child: const Icon(Icons.person, color: AppColors.white, size: 20),
         ),

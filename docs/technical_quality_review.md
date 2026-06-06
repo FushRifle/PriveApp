@@ -12,6 +12,17 @@ Reviewed high-risk shared paths for performance, stability, and state consistenc
 
 ## Changes Applied
 
+- Routed login and all protected main routes through `AuthGuard` so user/profile bootstrap happens before app shell rendering.
+- Added backend match/swipe schema and fixed match recommendation SQL to use existing user/profile columns.
+- Added real community member loading from `GET /api/communities/{id}/members` and rendered those members on community detail pages.
+- Hardened Explore service response parsing against inconsistent backend envelopes and string/map error bodies.
+- Made feed delete failures propagate so optimistic removal can rollback on API failure.
+- Scoped feed comment creation by post instead of globally blocking every comment composer.
+- Guarded chat message loads from stale responses overwriting the currently open conversation.
+- Added request sequencing and in-flight guards to friends/followers/following loads.
+- Cleared global user/profile BLoC state and auth headers on sign-out to prevent previous-account state leaks.
+- Removed eager feed-card video controller initialization; feed videos now use cached thumbnails and open playback on demand.
+- Switched more high-traffic avatars from raw network image loading to cached image widgets/providers.
 - Stabilized `ApiService` request keys with deterministic encoding.
 - Prevented forced-refresh GETs from attaching to stale pending requests.
 - Added API memory-cache bounds and cleaned completed cancel tokens.
