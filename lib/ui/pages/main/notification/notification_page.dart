@@ -5,6 +5,7 @@ import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/services/notification/notification_service.dart';
+import 'package:clique/ui/widgets/common/app_page_header.dart';
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
@@ -202,11 +203,17 @@ class _NotificationPageState extends State<NotificationPage> {
     final data = _asMap(notification['data']);
     final targetId = _readInt(
       notification['targetId'] ??
+          notification['target_id'] ??
           data['targetId'] ??
+          data['target_id'] ??
           data['postId'] ??
+          data['post_id'] ??
           data['profileId'] ??
+          data['profile_id'] ??
           data['matchId'] ??
-          data['conversationId'],
+          data['match_id'] ??
+          data['conversationId'] ??
+          data['conversation_id'],
     );
     final actorId = _readInt(
       notification['actorId'] ??
@@ -219,8 +226,20 @@ class _NotificationPageState extends State<NotificationPage> {
           data['matchedUserId'] ??
           data['userId'],
     );
-    final postId = _readInt(data['postId'] ?? notification['postId']);
-    final conversationId = _readInt(data['conversationId']);
+    final postId = _readInt(
+      notification['postId'] ??
+          notification['post_id'] ??
+          data['postId'] ??
+          data['post_id'] ??
+          data['targetPostId'] ??
+          data['target_post_id'],
+    );
+    final conversationId = _readInt(
+      data['conversationId'] ??
+          data['conversation_id'] ??
+          notification['conversationId'] ??
+          notification['conversation_id'],
+    );
 
     switch (type) {
       case 'like':
@@ -322,95 +341,96 @@ class _NotificationPageState extends State<NotificationPage> {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 1,
-        title: Text(
-          'Notifications',
-          style: AppTheme.blackTextStyle.copyWith(
-            fontWeight: AppTheme.bold,
-            fontSize: 20,
+      body: Column(
+        children: [
+          AppPageHeader(
+            title: 'Notifications',
+            subtitle: _notifications.isEmpty
+                ? 'Recent activity'
+                : '${_notifications.where((n) => n['isUnread'] == true).length} unread',
+            leadingIcon: Icons.arrow_back_ios_new,
+            onLeadingTap: () => Navigator.pop(context),
+            actionIcon: _notifications.any((n) => n['isUnread'] == true)
+                ? Icons.done_all_rounded
+                : Icons.notifications_outlined,
+            onActionTap: _notifications.any((n) => n['isUnread'] == true)
+                ? _markAllAsRead
+                : null,
           ),
-        ),
-        centerTitle: false,
-        actions: [
-          if (_notifications.any((n) => n['isUnread'] == true))
-            IconButton(
-              icon:
-                  const Icon(Icons.done_all_rounded, color: AppColors.black87),
-              onPressed: _markAllAsRead,
-            ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _refreshNotifications,
-        color: AppColors.primary,
-        child: _isLoading && _notifications.isEmpty
-            ? const Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
-              )
-            : _error != null && _notifications.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          size: 64,
-                          color: AppColors.grey,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          _error!,
-                          style: AppTheme.greyTextStyle,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: _refreshNotifications,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                          ),
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  )
-                : _notifications.isEmpty
-                    ? _buildEmptyState()
-                    : Stack(
-                        children: [
-                          ListView.builder(
-                            controller: _scrollController,
-                            padding: const EdgeInsets.only(top: 8, bottom: 100),
-                            itemCount: _notifications.length + 1,
-                            itemBuilder: (context, index) {
-                              if (index == 0) {
-                                return _buildNewestHeader();
-                              }
-                              final notificationIndex = index - 1;
-                              return _buildNotificationItem(
-                                _notifications[notificationIndex],
-                                notificationIndex,
-                              );
-                            },
-                          ),
-                          if (_isLoadingMore)
-                            const Positioned(
-                              bottom: 20,
-                              left: 0,
-                              right: 0,
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: AppColors.primary,
-                                ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _refreshNotifications,
+              color: AppColors.primary,
+              child: _isLoading && _notifications.isEmpty
+                  ? const Center(
+                      child:
+                          CircularProgressIndicator(color: AppColors.primary),
+                    )
+                  : _error != null && _notifications.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.error_outline,
+                                size: 64,
+                                color: AppColors.grey,
                               ),
+                              const SizedBox(height: 16),
+                              Text(
+                                _error!,
+                                style: AppTheme.greyTextStyle,
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: _refreshNotifications,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                ),
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        )
+                      : _notifications.isEmpty
+                          ? _buildEmptyState()
+                          : Stack(
+                              children: [
+                                ListView.builder(
+                                  controller: _scrollController,
+                                  padding: const EdgeInsets.only(
+                                      top: 8, bottom: 100),
+                                  itemCount: _notifications.length + 1,
+                                  itemBuilder: (context, index) {
+                                    if (index == 0) {
+                                      return _buildNewestHeader();
+                                    }
+                                    final notificationIndex = index - 1;
+                                    return _buildNotificationItem(
+                                      _notifications[notificationIndex],
+                                      notificationIndex,
+                                    );
+                                  },
+                                ),
+                                if (_isLoadingMore)
+                                  const Positioned(
+                                    bottom: 20,
+                                    left: 0,
+                                    right: 0,
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                  ),
+                                _buildBlurBottomGradient(),
+                              ],
                             ),
-                          _buildBlurBottomGradient(),
-                        ],
-                      ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -512,7 +532,7 @@ class _NotificationPageState extends State<NotificationPage> {
       duration: const Duration(milliseconds: 300),
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: AppColors.card,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isUnread ? accent.withOpacity(0.35) : AppColors.border,
@@ -626,9 +646,8 @@ class _NotificationPageState extends State<NotificationPage> {
                               color: isUnread
                                   ? AppColors.blackColor
                                   : AppColors.greyColor,
-                              fontWeight: isUnread
-                                  ? FontWeight.w600
-                                  : FontWeight.w400,
+                              fontWeight:
+                                  isUnread ? FontWeight.w600 : FontWeight.w400,
                             ),
                           ),
                         ],

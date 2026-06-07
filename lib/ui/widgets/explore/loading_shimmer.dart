@@ -13,8 +13,8 @@ class LoadingShimmer extends StatelessWidget {
         .toDouble();
 
     return Shimmer.fromColors(
-      baseColor: AppColors.grey[300]!,
-      highlightColor: AppColors.grey[100]!,
+      baseColor: AppColors.card,
+      highlightColor: AppColors.secondary,
       child: Column(
         children: [
           _buildShimmerCard(cardHeight),
@@ -29,7 +29,7 @@ class LoadingShimmer extends StatelessWidget {
     return Container(
       height: height,
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: AppColors.card,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(

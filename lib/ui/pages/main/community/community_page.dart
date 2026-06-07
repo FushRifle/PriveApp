@@ -10,6 +10,7 @@ import 'package:clique/ui/pages/main/community/create_community_page.dart';
 import 'package:clique/ui/widgets/community/community_card.dart';
 import 'package:clique/ui/widgets/community/community_empty_state.dart';
 import 'package:clique/ui/widgets/community/community_list_header.dart';
+import 'package:clique/ui/widgets/common/app_page_header.dart';
 
 class CommunityPage extends StatefulWidget {
   const CommunityPage({super.key});
@@ -53,59 +54,79 @@ class _CommunityPageState extends State<CommunityPage>
           previous.actionStatus != current.actionStatus,
       listener: _handleStateChange,
       builder: (context, state) {
+        final communities = _filteredCommunities(state.communities);
+
         return Scaffold(
           backgroundColor: AppColors.background,
-          body: SafeArea(
-            child: RefreshIndicator(
-              color: AppColors.primary,
-              onRefresh: () async {
-                context.read<CommunityBloc>().add(const LoadCommunities());
-                await Future<void>.delayed(const Duration(milliseconds: 350));
-              },
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: CommunityListHeader(
-                      searchController: _searchController,
-                      category: _category,
-                      invitationCount: state.invitations.length,
-                      onCategoryChanged: _changeCategory,
-                      onSearch: _search,
-                      onCreate: _openCreateCommunity,
-                    ),
-                  ),
-                  if (state.status == CommunityStatus.loading &&
-                      state.communities.isEmpty)
-                    const SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary,
+          body: Column(
+            children: [
+              AppPageHeader(
+                title: 'Spaces',
+                subtitle: state.invitations.isEmpty
+                    ? 'Find focused groups'
+                    : '${state.invitations.length} invitation${state.invitations.length == 1 ? '' : 's'} waiting',
+                leadingIcon: Icons.diversity_3_outlined,
+                actionIcon: Icons.add_rounded,
+                onActionTap: _openCreateCommunity,
+              ),
+              Expanded(
+                child: RefreshIndicator(
+                  color: AppColors.primary,
+                  onRefresh: () async {
+                    context.read<CommunityBloc>().add(const LoadCommunities());
+                    await Future<void>.delayed(
+                      const Duration(milliseconds: 350),
+                    );
+                  },
+                  child: CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: CommunityListHeader(
+                          searchController: _searchController,
+                          category: _category,
+                          communityCount: communities.length,
+                          memberCount: communities.fold<int>(
+                            0,
+                            (total, community) => total + community.memberCount,
+                          ),
+                          onCategoryChanged: _changeCategory,
+                          onSearch: _search,
                         ),
                       ),
-                    )
-                  else if (state.communities.isEmpty)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: CommunityEmptyState(
-                        icon: Icons.diversity_3_outlined,
-                        title: 'No spaces found',
-                        message:
-                            'Create a space for shared interests, focused groups, and useful discussions.',
-                        actionLabel: 'Create space',
-                        onAction: _openCreateCommunity,
-                      ),
-                    )
-                  else
-                    _CommunityList(
-                      communities: state.communities,
-                      onOpen: _openCommunity,
-                      onJoin: _joinCommunity,
-                    ),
-                ],
+                      if (state.status == CommunityStatus.loading &&
+                          state.communities.isEmpty)
+                        const SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        )
+                      else if (communities.isEmpty)
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: CommunityEmptyState(
+                            icon: Icons.diversity_3_outlined,
+                            title: 'No spaces found',
+                            message:
+                                'Create a space for shared interests, focused groups, and useful discussions.',
+                            actionLabel: 'Create space',
+                            onAction: _openCreateCommunity,
+                          ),
+                        )
+                      else
+                        _CommunityList(
+                          communities: communities,
+                          onOpen: _openCommunity,
+                          onJoin: _joinCommunity,
+                        ),
+                    ],
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         );
       },
@@ -152,6 +173,22 @@ class _CommunityPageState extends State<CommunityPage>
             category: _category,
           ),
         );
+  }
+
+  List<CommunityModel> _filteredCommunities(List<CommunityModel> communities) {
+    final query = _searchController.text.trim().toLowerCase();
+    final category = _category.trim().toLowerCase();
+
+    return communities.where((community) {
+      final matchesCategory =
+          category.isEmpty || community.category.toLowerCase() == category;
+      final matchesQuery = query.isEmpty ||
+          community.name.toLowerCase().contains(query) ||
+          community.description.toLowerCase().contains(query) ||
+          community.category.toLowerCase().contains(query);
+
+      return matchesCategory && matchesQuery;
+    }).toList();
   }
 
   void _openCreateCommunity() {

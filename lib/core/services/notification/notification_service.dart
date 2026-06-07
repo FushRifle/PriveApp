@@ -186,13 +186,26 @@ class NotificationService {
           '',
       'actorAvatar': json['actorAvatar'] ?? data['actorAvatar'] ?? '',
       'targetId': json['targetId'] ??
+          json['target_id'] ??
           data['targetId'] ??
+          data['target_id'] ??
           data['postId'] ??
+          data['post_id'] ??
           data['profileId'] ??
+          data['profile_id'] ??
           data['matchId'] ??
+          data['match_id'] ??
           data['conversationId'] ??
+          data['conversation_id'] ??
           data['groupId'] ??
+          data['group_id'] ??
           data['communityId'],
+      'postId': json['postId'] ??
+          json['post_id'] ??
+          data['postId'] ??
+          data['post_id'] ??
+          data['targetPostId'] ??
+          data['target_post_id'],
       'postImage': json['postImage'] ?? data['postImage'] ?? data['imageUrl'],
       'content': json['message'] ?? json['content'] ?? '',
       'data': data,

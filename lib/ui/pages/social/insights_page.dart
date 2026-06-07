@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/insights/insights_bloc.dart';
+import 'package:clique/ui/widgets/common/app_page_header.dart';
 
 class InsightsPage extends StatefulWidget {
   const InsightsPage({super.key});
@@ -44,124 +45,122 @@ class _InsightsPageState extends State<InsightsPage>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
-      appBar: _buildAppBar(),
-      body: BlocConsumer<InsightsBloc, InsightsState>(
-        listener: (context, state) {
-          if (state.error != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.error!),
-                backgroundColor: AppColors.red,
-              ),
-            );
-            context.read<InsightsBloc>().add(ClearInsightsError());
-          }
-        },
-        builder: (context, state) {
-          if (state.status == InsightsStatus.loading &&
-              state.insights == null) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            );
-          }
-
-          if (state.status == InsightsStatus.error && state.insights == null) {
-            return _buildErrorWidget();
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async {
-              context.read<InsightsBloc>().add(
-                    RefreshInsights(days: state.currentPeriodDays),
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: BlocConsumer<InsightsBloc, InsightsState>(
+              listener: (context, state) {
+                if (state.error != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.error!),
+                      backgroundColor: AppColors.red,
+                    ),
                   );
-              context.read<InsightsBloc>().add(RefreshRealtimeStats());
-            },
-            color: AppColors.primary,
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (state.realtimeStats != null)
-                    _buildRealtimeIndicator(state),
-                  _buildOverviewCards(state),
-                  const SizedBox(height: 24),
-                  _buildChartSection(state),
-                  const SizedBox(height: 24),
-                  if (state.insights != null) ...[
-                    _buildEngagementRateCard(state),
-                    const SizedBox(height: 24),
-                    _buildDemographicsSection(state),
-                    const SizedBox(height: 24),
-                    _buildLocationsSection(state),
-                    const SizedBox(height: 24),
-                    _buildAgeRangeSection(state),
-                  ],
-                  const SizedBox(height: 32),
-                ],
-              ),
+                  context.read<InsightsBloc>().add(ClearInsightsError());
+                }
+              },
+              builder: (context, state) {
+                if (state.status == InsightsStatus.loading &&
+                    state.insights == null) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  );
+                }
+
+                if (state.status == InsightsStatus.error &&
+                    state.insights == null) {
+                  return _buildErrorWidget();
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    context.read<InsightsBloc>().add(
+                          RefreshInsights(days: state.currentPeriodDays),
+                        );
+                    context.read<InsightsBloc>().add(RefreshRealtimeStats());
+                  },
+                  color: AppColors.primary,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (state.realtimeStats != null)
+                          _buildRealtimeIndicator(state),
+                        _buildOverviewCards(state),
+                        const SizedBox(height: 24),
+                        _buildChartSection(state),
+                        const SizedBox(height: 24),
+                        if (state.insights != null) ...[
+                          _buildEngagementRateCard(state),
+                          const SizedBox(height: 24),
+                          _buildDemographicsSection(state),
+                          const SizedBox(height: 24),
+                          _buildLocationsSection(state),
+                          const SizedBox(height: 24),
+                          _buildAgeRangeSection(state),
+                        ],
+                        const SizedBox(height: 32),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: AppColors.cardColor,
-      elevation: 0,
-      leading: IconButton(
-        icon: Icon(Icons.arrow_back_ios_new, color: AppColors.text),
-        onPressed: () => Navigator.pop(context),
-      ),
-      title: Text(
-        'Insights',
-        style: AppTheme.blackTextStyle.copyWith(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      centerTitle: true,
-      actions: [
-        BlocBuilder<InsightsBloc, InsightsState>(
-          builder: (context, state) {
-            return PopupMenuButton<int>(
-              icon: const Icon(Icons.calendar_today_outlined),
-              color: AppColors.primary,
-              onSelected: (days) {
-                context
-                    .read<InsightsBloc>()
-                    .add(ChangeInsightsPeriod(days: days));
-              },
-              itemBuilder: (context) => [
-                for (int days in _daysOptions)
-                  PopupMenuItem<int>(
-                    value: days,
-                    child: Row(
-                      children: [
-                        Radio<int>(
-                          value: days,
-                          groupValue: state.currentPeriodDays,
-                          onChanged: (_) {
-                            context
-                                .read<InsightsBloc>()
-                                .add(ChangeInsightsPeriod(days: days));
-                            Navigator.pop(context);
-                          },
-                          activeColor: AppColors.primary,
-                        ),
-                        const SizedBox(width: 8),
-                        Text('Last $days days'),
-                      ],
-                    ),
+  Widget _buildHeader() {
+    return BlocBuilder<InsightsBloc, InsightsState>(
+      builder: (context, state) {
+        return AppPageHeader(
+          title: 'Insights',
+          subtitle: 'Last ${state.currentPeriodDays} days',
+          leadingIcon: Icons.arrow_back_ios_new,
+          onLeadingTap: () => Navigator.pop(context),
+          action: PopupMenuButton<int>(
+            icon: Icon(
+              Icons.calendar_today_outlined,
+              color: AppColors.text,
+            ),
+            color: AppColors.cardColor,
+            onSelected: (days) {
+              context
+                  .read<InsightsBloc>()
+                  .add(ChangeInsightsPeriod(days: days));
+            },
+            itemBuilder: (context) => [
+              for (int days in _daysOptions)
+                PopupMenuItem<int>(
+                  value: days,
+                  child: Row(
+                    children: [
+                      Radio<int>(
+                        value: days,
+                        groupValue: state.currentPeriodDays,
+                        onChanged: (_) {
+                          context
+                              .read<InsightsBloc>()
+                              .add(ChangeInsightsPeriod(days: days));
+                          Navigator.pop(context);
+                        },
+                        activeColor: AppColors.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text('Last $days days'),
+                    ],
                   ),
-              ],
-            );
-          },
-        ),
-      ],
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -450,14 +449,20 @@ class _InsightsPageState extends State<InsightsPage>
     final dataPoints = _getSelectedChartData(chartData);
     if (dataPoints.isEmpty) return _getEmptyChartData();
 
-    final maxValue =
+    final rawMaxValue =
         dataPoints.map((e) => e.value).reduce((a, b) => a > b ? a : b);
+    final maxValue = rawMaxValue <= 0 ? 1.0 : rawMaxValue;
+    final horizontalInterval = (maxValue / 4).clamp(1.0, double.infinity);
 
     return LineChartData(
+      minX: 0,
+      maxX: (dataPoints.length - 1).clamp(1, dataPoints.length).toDouble(),
+      minY: 0,
+      maxY: maxValue == 1.0 ? 1.0 : maxValue * 1.15,
       gridData: FlGridData(
         show: true,
         drawVerticalLine: false,
-        horizontalInterval: maxValue / 4,
+        horizontalInterval: horizontalInterval,
         getDrawingHorizontalLine: (value) => FlLine(
           color: AppColors.greyColor.withOpacity(0.2),
           strokeWidth: 1,
@@ -504,7 +509,10 @@ class _InsightsPageState extends State<InsightsPage>
           spots: dataPoints
               .asMap()
               .entries
-              .map((e) => FlSpot(e.key.toDouble(), e.value.value))
+              .map((e) => FlSpot(
+                    e.key.toDouble(),
+                    e.value.value < 0 ? 0 : e.value.value,
+                  ))
               .toList(),
           isCurved: true,
           color: AppColors.primary,

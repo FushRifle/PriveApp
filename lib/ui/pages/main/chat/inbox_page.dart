@@ -6,7 +6,7 @@ import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
 import 'package:clique/ui/pages/main/chat/chat_page.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../../widgets/home/custom_app_bar.dart';
+import 'package:clique/ui/widgets/common/app_page_header.dart';
 
 class InboxPage extends StatefulWidget {
   const InboxPage({super.key});
@@ -44,40 +44,46 @@ class _InboxPageState extends State<InboxPage> {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildCustomAppBar(context),
-            const SizedBox(height: 8),
-            Expanded(
-              child: RefreshIndicator(
-                key: _refreshIndicatorKey,
-                color: AppColors.primary,
-                onRefresh: _refreshConversations,
-                child: BlocBuilder<ChatBloc, ChatState>(
-                  builder: (context, state) {
-                    if (state.conversationsStatus == ChatStatus.loading &&
-                        state.conversations.isEmpty) {
-                      return const Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary,
-                        ),
-                      );
-                    }
+      body: Column(
+        children: [
+          AppPageHeader(
+            title: 'Chats',
+            subtitle: 'Messages and conversations',
+            leadingIcon: Icons.message_outlined,
+            actionIcon: Icons.search,
+            onActionTap: () {
+              HapticFeedback.lightImpact();
+              debugPrint('Search tapped');
+            },
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              key: _refreshIndicatorKey,
+              color: AppColors.primary,
+              onRefresh: _refreshConversations,
+              child: BlocBuilder<ChatBloc, ChatState>(
+                builder: (context, state) {
+                  if (state.conversationsStatus == ChatStatus.loading &&
+                      state.conversations.isEmpty) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                      ),
+                    );
+                  }
 
-                    if (state.conversationsStatus == ChatStatus.error &&
-                        state.conversations.isEmpty) {
-                      return _buildErrorWidget(state.error);
-                    }
+                  if (state.conversationsStatus == ChatStatus.error &&
+                      state.conversations.isEmpty) {
+                    return _buildErrorWidget(state.error);
+                  }
 
-                    final conversations = _getDisplayConversations(state);
-                    return _buildMessageList(context, conversations);
-                  },
-                ),
+                  final conversations = _getDisplayConversations(state);
+                  return _buildMessageList(context, conversations);
+                },
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -174,38 +180,6 @@ class _InboxPageState extends State<InboxPage> {
     } catch (e) {
       return timestamp;
     }
-  }
-
-  Widget _buildCustomAppBar(BuildContext context) {
-    return CustomAppBar(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            Text(
-              "Chats",
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppColors.text,
-              ),
-            ),
-            const Spacer(),
-            IconButton(
-              onPressed: () {
-                HapticFeedback.lightImpact();
-                debugPrint('Search tapped');
-              },
-              icon: const Icon(
-                Icons.search,
-                color: AppColors.primary,
-                size: 28,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildMessageList(

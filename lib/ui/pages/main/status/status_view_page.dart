@@ -26,13 +26,18 @@ class _StatusViewPageState extends State<StatusViewPage>
   late AnimationController _progressController;
   late int currentIndex;
   late PageController _pageController;
+  late final TextEditingController _replyController;
+  late final FocusNode _replyFocusNode;
   bool _isPaused = false;
+  bool _pausedForReply = false;
 
   @override
   void initState() {
     super.initState();
     currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: currentIndex);
+    _replyController = TextEditingController();
+    _replyFocusNode = FocusNode()..addListener(_handleReplyFocusChanged);
 
     _progressController = AnimationController(
       vsync: this,
@@ -84,6 +89,31 @@ class _StatusViewPageState extends State<StatusViewPage>
     });
   }
 
+  void _pausePlayback({bool forReply = false}) {
+    if (!_isPaused) {
+      _progressController.stop();
+      setState(() => _isPaused = true);
+    }
+    if (forReply) _pausedForReply = true;
+  }
+
+  void _resumePlayback({bool fromReply = false}) {
+    if (fromReply && !_pausedForReply) return;
+    _pausedForReply = false;
+    if (_isPaused) {
+      _progressController.forward();
+      setState(() => _isPaused = false);
+    }
+  }
+
+  void _handleReplyFocusChanged() {
+    if (_replyFocusNode.hasFocus) {
+      _pausePlayback(forReply: true);
+    } else {
+      _resumePlayback(fromReply: true);
+    }
+  }
+
   void _markStoryAsSeen(String storyId) {
     context.read<StoriesBloc>().add(MarkStorySeen(storyId: storyId));
   }
@@ -92,6 +122,8 @@ class _StatusViewPageState extends State<StatusViewPage>
   void dispose() {
     _progressController.dispose();
     _pageController.dispose();
+    _replyFocusNode.dispose();
+    _replyController.dispose();
     super.dispose();
   }
 
@@ -108,7 +140,10 @@ class _StatusViewPageState extends State<StatusViewPage>
       backgroundColor: AppColors.black,
       body: GestureDetector(
         onTapDown: (details) {
-          final screenWidth = MediaQuery.of(context).size.width;
+          final size = MediaQuery.of(context).size;
+          if (details.globalPosition.dy > size.height - 120) return;
+
+          final screenWidth = size.width;
           if (details.globalPosition.dx < screenWidth / 2) {
             _previousStatus();
           } else {
@@ -150,7 +185,7 @@ class _StatusViewPageState extends State<StatusViewPage>
             _buildBottomActions(),
 
             // Pause Indicator
-            if (_isPaused)
+            if (_isPaused && !_replyFocusNode.hasFocus)
               Container(
                 color: AppColors.black.withOpacity(0.6),
                 child: const Center(
@@ -427,7 +462,6 @@ class _StatusViewPageState extends State<StatusViewPage>
 
   Widget _buildBottomActions() {
     final story = widget.stories[currentIndex];
-    final TextEditingController replyController = TextEditingController();
 
     return Positioned(
       bottom: 30,
@@ -447,7 +481,8 @@ class _StatusViewPageState extends State<StatusViewPage>
                 ),
               ),
               child: TextField(
-                controller: replyController,
+                controller: _replyController,
+                focusNode: _replyFocusNode,
                 style: const TextStyle(color: AppColors.white),
                 decoration: InputDecoration(
                   hintText: 'Send message',
@@ -463,7 +498,8 @@ class _StatusViewPageState extends State<StatusViewPage>
                 onSubmitted: (value) {
                   if (value.isNotEmpty) {
                     _sendReply(value, story);
-                    replyController.clear();
+                    _replyController.clear();
+                    _replyFocusNode.unfocus();
                   }
                 },
               ),
@@ -491,9 +527,10 @@ class _StatusViewPageState extends State<StatusViewPage>
           const SizedBox(width: 8),
           GestureDetector(
             onTap: () {
-              if (replyController.text.isNotEmpty) {
-                _sendReply(replyController.text, story);
-                replyController.clear();
+              if (_replyController.text.isNotEmpty) {
+                _sendReply(_replyController.text, story);
+                _replyController.clear();
+                _replyFocusNode.unfocus();
               }
             },
             child: Container(

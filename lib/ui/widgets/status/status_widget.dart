@@ -51,6 +51,8 @@ class StatusWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasActiveStories = isAddStatus || statusCount > 0;
+
     return Material(
       color: AppColors.transparent,
       child: SizedBox(
@@ -72,9 +74,9 @@ class StatusWidget extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: _getAvatarGradient(),
-                        border: isAddStatus
+                        border: isAddStatus || !hasActiveStories
                             ? Border.all(
-                                color: AppColors.cardBorderColor,
+                                color: AppColors.border,
                                 width: 1.2,
                               )
                             : null,
@@ -161,6 +163,7 @@ class StatusWidget extends StatelessWidget {
 
   Gradient? _getAvatarGradient() {
     if (isAddStatus) return null;
+    if (statusCount <= 0) return null;
 
     if (hasUnviewed) {
       return const LinearGradient(

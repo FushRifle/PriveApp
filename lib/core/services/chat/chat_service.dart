@@ -72,6 +72,32 @@ class ChatService {
     }
   }
 
+  Future<Map<String, dynamic>> startConversation({
+    required int receiverId,
+  }) async {
+    try {
+      final response = await _api.post(
+        '/api/chat/conversations',
+        data: {
+          'receiverId': receiverId,
+        },
+      );
+
+      _api.removeCacheByPath('/api/chat');
+
+      if (response.data is Map<String, dynamic>) {
+        return Map<String, dynamic>.from(response.data);
+      }
+      if (response.data is Map) {
+        return Map<String, dynamic>.from(response.data);
+      }
+
+      return {};
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   // =========================
   // Messages
   // =========================

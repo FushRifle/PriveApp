@@ -13,7 +13,9 @@ import 'package:clique/bloc/friends/friends_bloc.dart';
 import 'package:clique/bloc/insights/insights_bloc.dart';
 import 'package:clique/bloc/match/match_bloc.dart';
 
+import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/models/gallery_model.dart';
+import 'package:clique/core/services/chat/chat_service.dart';
 import 'package:clique/core/services/friends/friends_service.dart';
 
 import 'package:clique/ui/pages/main/match/matches_page.dart';
@@ -393,6 +395,7 @@ class _ProfileBody extends StatelessWidget {
   final ScrollController scrollController;
   final VoidCallback onRetry;
   final VoidCallback onToggleFollow;
+  final ValueChanged<_ProfileView>? onMessage;
   final void Function(int userId, _GalleryTabType type) onLoadMoreMedia;
 
   const _ProfileBody({
@@ -405,6 +408,7 @@ class _ProfileBody extends StatelessWidget {
     required this.scrollController,
     required this.onRetry,
     required this.onToggleFollow,
+    this.onMessage,
     required this.onLoadMoreMedia,
   });
 
@@ -445,6 +449,7 @@ class _ProfileBody extends StatelessWidget {
               isOwnProfile: isOwnProfile,
               isFollowing: isFollowing,
               onToggleFollow: onToggleFollow,
+              onMessage: onMessage,
             ),
           ),
           _StickyTabBar(
@@ -628,12 +633,14 @@ class _ProfileHeader extends StatelessWidget {
   final bool isOwnProfile;
   final bool isFollowing;
   final VoidCallback onToggleFollow;
+  final ValueChanged<_ProfileView>? onMessage;
 
   const _ProfileHeader({
     required this.profile,
     required this.isOwnProfile,
     required this.isFollowing,
     required this.onToggleFollow,
+    this.onMessage,
   });
 
   @override
@@ -658,16 +665,22 @@ class _ProfileHeader extends StatelessWidget {
                     )
                   : 0;
 
-              return _StatsRow(totalLikes: totalLikes);
+              return _StatsRow(
+                profile: profile,
+                isOwnProfile: isOwnProfile,
+                totalLikes: totalLikes,
+              );
             },
           ),
           const SizedBox(height: 24),
           if (isOwnProfile) const _InsightsButton(),
           if (isOwnProfile) const SizedBox(height: 12),
           _ActionButtons(
+            profile: profile,
             isOwnProfile: isOwnProfile,
             isFollowing: isFollowing,
             onToggleFollow: onToggleFollow,
+            onMessage: onMessage,
           ),
           const SizedBox(height: 20),
         ],
@@ -850,67 +863,84 @@ class _InfoChip extends StatelessWidget {
 }
 
 class _StatsRow extends StatelessWidget {
+  static final FriendsService _friendsService = FriendsService();
+
+  final _ProfileView profile;
+  final bool isOwnProfile;
   final int totalLikes;
 
   const _StatsRow({
+    required this.profile,
+    required this.isOwnProfile,
     required this.totalLikes,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        _StatItem(
-          value: '0',
-          label: 'Following',
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => BlocProvider(
-                  create: (_) => FriendsBloc(),
-                  child: const FriendsListPage(
-                    isFollowers: false,
+    final userId = profile.userId != 0 ? profile.userId : profile.id;
+
+    return FutureBuilder<FollowStats>(
+      future: isOwnProfile
+          ? _friendsService.getFollowStats()
+          : _friendsService.getFollowStatsForUser(userId),
+      builder: (context, snapshot) {
+        final stats = snapshot.data;
+
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _StatItem(
+              value: _formatCount(stats?.followingCount ?? 0),
+              label: 'Following',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => BlocProvider(
+                      create: (_) => FriendsBloc(),
+                      child: const FriendsListPage(
+                        isFollowers: false,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            );
-          },
-        ),
-        _StatItem(
-          value: '0',
-          label: 'Followers',
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => BlocProvider(
-                  create: (_) => FriendsBloc(),
-                  child: const FriendsListPage(
-                    isFollowers: true,
+                );
+              },
+            ),
+            _StatItem(
+              value: _formatCount(stats?.followersCount ?? 0),
+              label: 'Followers',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => BlocProvider(
+                      create: (_) => FriendsBloc(),
+                      child: const FriendsListPage(
+                        isFollowers: true,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            );
-          },
-        ),
-        _StatItem(
-          value: _formatCount(totalLikes),
-          label: 'Likes',
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => BlocProvider(
-                  create: (_) => InsightsBloc(),
-                  child: const InsightsPage(),
-                ),
-              ),
-            );
-          },
-        ),
-      ],
+                );
+              },
+            ),
+            _StatItem(
+              value: _formatCount(totalLikes),
+              label: 'Likes',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => BlocProvider(
+                      create: (_) => InsightsBloc(),
+                      child: const InsightsPage(),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -1025,14 +1055,18 @@ class _InsightsButton extends StatelessWidget {
 }
 
 class _ActionButtons extends StatelessWidget {
+  final _ProfileView profile;
   final bool isOwnProfile;
   final bool isFollowing;
   final VoidCallback onToggleFollow;
+  final ValueChanged<_ProfileView>? onMessage;
 
   const _ActionButtons({
+    required this.profile,
     required this.isOwnProfile,
     required this.isFollowing,
     required this.onToggleFollow,
+    this.onMessage,
   });
 
   @override
@@ -1096,7 +1130,7 @@ class _ActionButtons extends StatelessWidget {
           _IconActionButton(
             icon: Icons.mail_outline,
             color: AppColors.greyColor,
-            onTap: () {},
+            onTap: () => onMessage?.call(profile),
           ),
         ],
       ),

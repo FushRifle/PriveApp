@@ -7,14 +7,12 @@ import 'package:clique/app/configs/colors.dart';
 
 import 'package:clique/bloc/chat/chat_bloc.dart';
 import 'package:clique/bloc/community/community_bloc.dart';
-import 'package:clique/bloc/explore/explore_bloc.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
 import 'package:clique/ui/pages/main/home/create_post_page.dart';
 
 import 'package:clique/ui/pages/main/chat/inbox_page.dart';
 import 'package:clique/ui/pages/main/community/community_page.dart';
-import 'package:clique/ui/pages/main/explore/explore_page.dart';
 import 'package:clique/ui/pages/main/home/home_page.dart';
 import 'package:clique/ui/pages/main/reels/reels_page.dart';
 
@@ -67,7 +65,7 @@ class _MainWrapperState extends State<MainWrapper>
     _pageController.jumpToPage(index);
   }
 
-  bool get _showBottomBar => _currentIndex != 2;
+  bool get _showBottomBar => _currentIndex != 1;
 
   @override
   Widget build(BuildContext context) {
@@ -121,27 +119,20 @@ class _MainWrapperState extends State<MainWrapper>
                     ),
                     _DeferredTab(
                       enabled: _visitedTabs.contains(1),
-                      child: const _ExploreTabScope(
-                        key: PageStorageKey('discover_page'),
-                        child: DiscoverPage(),
-                      ),
-                    ),
-                    _DeferredTab(
-                      enabled: _visitedTabs.contains(2),
                       child: ReelsPage(
                         key: PageStorageKey('reels_page'),
                         onBack: () => _onTabChanged(0),
                       ),
                     ),
                     _DeferredTab(
-                      enabled: _visitedTabs.contains(3),
+                      enabled: _visitedTabs.contains(2),
                       child: const _CommunityTabScope(
                         key: PageStorageKey('community_page'),
                         child: CommunityPage(),
                       ),
                     ),
                     _DeferredTab(
-                      enabled: _visitedTabs.contains(4),
+                      enabled: _visitedTabs.contains(3),
                       child: const _ChatTabScope(
                         key: PageStorageKey('inbox_page'),
                         child: InboxPage(),
@@ -200,23 +191,6 @@ class _DeferredTab extends StatelessWidget {
     }
 
     return child;
-  }
-}
-
-class _ExploreTabScope extends StatelessWidget {
-  final Widget child;
-
-  const _ExploreTabScope({
-    super.key,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => ExploreBloc(),
-      child: child,
-    );
   }
 }
 
@@ -312,21 +286,13 @@ class _BottomNavBar extends StatelessWidget {
                 _NavItem(
                   index: 1,
                   currentIndex: currentIndex,
-                  icon: Icons.explore,
-                  label: 'Discover',
-                  unselectedColor: unselectedColor,
-                  onTap: onChanged,
-                ),
-                _NavItem(
-                  index: 2,
-                  currentIndex: currentIndex,
                   icon: Icons.play_circle_fill,
                   label: 'Reels',
                   unselectedColor: unselectedColor,
                   onTap: onChanged,
                 ),
                 _NavItem(
-                  index: 3,
+                  index: 2,
                   currentIndex: currentIndex,
                   icon: Icons.diversity_3,
                   label: 'Spaces',
@@ -334,7 +300,7 @@ class _BottomNavBar extends StatelessWidget {
                   onTap: onChanged,
                 ),
                 _NavItem(
-                  index: 4,
+                  index: 3,
                   currentIndex: currentIndex,
                   icon: Icons.message,
                   label: 'Inbox',

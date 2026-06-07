@@ -13,6 +13,7 @@ import 'package:clique/bloc/status/stories_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 
 import 'package:clique/core/models/status_model.dart';
+import 'package:clique/core/services/notification/notification_service.dart';
 
 import 'package:clique/ui/pages/main/status/create_status_page.dart';
 import 'package:clique/ui/pages/main/home/create_post_page.dart';
@@ -382,6 +383,8 @@ class _HomePageState extends State<HomePage>
 }
 
 class _HomeAppBar extends StatelessWidget {
+  static final NotificationService _notificationService = NotificationService();
+
   final _HomePalette palette;
 
   const _HomeAppBar({
@@ -436,7 +439,7 @@ class _HomeAppBar extends StatelessWidget {
                       'Clique',
                       style: AppTheme.blackTextStyle.copyWith(
                         color: palette.text,
-                        fontSize: 26,
+                        fontSize: 24,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -0.5,
                       ),
@@ -461,7 +464,7 @@ class _HomeAppBar extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: palette.elevatedCard,
+                    color: AppColors.primary,
                     shape: BoxShape.circle,
                     border: Border.all(color: palette.border),
                     boxShadow: [
@@ -477,20 +480,52 @@ class _HomeAppBar extends StatelessWidget {
                     children: [
                       Icon(
                         Icons.notifications_outlined,
-                        color: palette.text,
+                        color: AppColors.white,
                         size: 22,
                       ),
-                      Positioned(
-                        top: 12,
-                        right: 12,
-                        child: Container(
-                          width: 7,
-                          height: 7,
-                          decoration: const BoxDecoration(
-                            color: Colors.redAccent,
-                            shape: BoxShape.circle,
-                          ),
+                      FutureBuilder<Map<String, dynamic>>(
+                        future: _notificationService.getNotifications(
+                          page: 1,
+                          pageSize: 1,
                         ),
+                        builder: (context, snapshot) {
+                          final count = _readInt(
+                            snapshot.data?['unreadCount'],
+                          );
+                          if (count <= 0) return const SizedBox.shrink();
+
+                          return Positioned(
+                            top: 7,
+                            right: 6,
+                            child: Container(
+                              constraints: const BoxConstraints(
+                                minWidth: 17,
+                                minHeight: 17,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.red,
+                                borderRadius: BorderRadius.circular(9),
+                                border: Border.all(
+                                  color: palette.elevatedCard,
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  count > 99 ? '99+' : '$count',
+                                  style: const TextStyle(
+                                    color: AppColors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -501,6 +536,12 @@ class _HomeAppBar extends StatelessWidget {
         );
       },
     );
+  }
+
+  static int _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 }
 

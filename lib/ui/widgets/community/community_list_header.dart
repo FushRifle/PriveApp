@@ -6,19 +6,19 @@ import 'package:clique/app/configs/theme.dart';
 class CommunityListHeader extends StatelessWidget {
   final TextEditingController searchController;
   final String category;
-  final int invitationCount;
+  final int communityCount;
+  final int memberCount;
   final ValueChanged<String> onCategoryChanged;
   final VoidCallback onSearch;
-  final VoidCallback onCreate;
 
   const CommunityListHeader({
     super.key,
     required this.searchController,
     required this.category,
-    required this.invitationCount,
+    required this.communityCount,
+    required this.memberCount,
     required this.onCategoryChanged,
     required this.onSearch,
-    required this.onCreate,
   });
 
   static const categories = [
@@ -33,68 +33,61 @@ class CommunityListHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Spaces',
-                      style: AppTheme.blackTextStyle.copyWith(
-                        fontSize: 30,
-                        fontWeight: AppTheme.extraBold,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      invitationCount == 0
-                          ? 'Find focused groups and useful conversations'
-                          : '$invitationCount invitation${invitationCount == 1 ? '' : 's'} waiting',
-                      style: AppTheme.greyTextStyle.copyWith(fontSize: 13),
-                    ),
-                  ],
+                child: _SummaryTile(
+                  icon: Icons.diversity_3_outlined,
+                  value: '$communityCount',
+                  label: 'Spaces',
                 ),
               ),
-              const SizedBox(width: 12),
-              IconButton.filled(
-                onPressed: onCreate,
-                style: IconButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.white,
-                  fixedSize: const Size(44, 44),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _SummaryTile(
+                  icon: Icons.people_alt_outlined,
+                  value: _formatCount(memberCount),
+                  label: 'Members',
                 ),
-                icon: const Icon(Icons.add),
-                tooltip: 'Create community',
               ),
             ],
           ),
-          const SizedBox(height: 18),
-          TextField(
-            controller: searchController,
-            textInputAction: TextInputAction.search,
-            onSubmitted: (_) => onSearch(),
-            decoration: InputDecoration(
-              hintText: 'Search spaces',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: IconButton(
-                icon: const Icon(Icons.tune),
-                onPressed: onSearch,
-                tooltip: 'Search',
+          const SizedBox(height: 14),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: TextField(
+              controller: searchController,
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) => onSearch(),
+              decoration: InputDecoration(
+                hintText: 'Search spaces',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.tune),
+                  onPressed: onSearch,
+                  tooltip: 'Search',
+                ),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 14,
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           SizedBox(
-            height: 38,
+            height: 40,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemBuilder: (context, index) {
@@ -104,8 +97,9 @@ class CommunityListHeader extends StatelessWidget {
                   selected: selected,
                   label: Text(item.isEmpty ? 'All' : item),
                   onSelected: (_) => onCategoryChanged(item),
-                  selectedColor: AppColors.primary.withOpacity(0.16),
+                  selectedColor: AppColors.primary.withOpacity(0.14),
                   backgroundColor: AppColors.card,
+                  showCheckmark: false,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                     side: BorderSide(
@@ -121,6 +115,71 @@ class CommunityListHeader extends StatelessWidget {
               separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemCount: categories.length,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _formatCount(int value) {
+    if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
+    if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}K';
+    return value.toString();
+  }
+}
+
+class _SummaryTile extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final String label;
+
+  const _SummaryTile({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              color: AppColors.primary,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: AppTheme.blackTextStyle.copyWith(
+                  fontSize: 18,
+                  fontWeight: AppTheme.bold,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
+              ),
+            ],
           ),
         ],
       ),

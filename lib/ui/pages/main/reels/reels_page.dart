@@ -168,7 +168,7 @@ class _ReelsPageState extends State<ReelsPage> {
                             ),
                       // Header
                       Positioned(
-                        top: MediaQuery.of(context).padding.top + 10,
+                        top: MediaQuery.of(context).padding.top + 15,
                         left: 16,
                         right: 16,
                         child: Row(
@@ -183,7 +183,7 @@ class _ReelsPageState extends State<ReelsPage> {
                                 width: 40,
                                 height: 40,
                                 decoration: BoxDecoration(
-                                  color: AppColors.blueGrey.withOpacity(0.3),
+                                  color: AppColors.primary.withOpacity(0.7),
                                   borderRadius: BorderRadius.circular(15),
                                 ),
                                 child: const Icon(
@@ -216,7 +216,7 @@ class _ReelsPageState extends State<ReelsPage> {
                                 width: 40,
                                 height: 40,
                                 decoration: BoxDecoration(
-                                  color: AppColors.blueGrey.withOpacity(0.3),
+                                  color: AppColors.primary.withOpacity(0.7),
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                                 child: const Icon(

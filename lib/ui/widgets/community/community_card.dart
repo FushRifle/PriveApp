@@ -27,10 +27,17 @@ class CommunityCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: AppColors.border),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.black.withOpacity(0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -109,22 +116,24 @@ class CommunityCard extends StatelessWidget {
                   ),
                 ),
               ],
-              const SizedBox(height: 14),
-              Row(
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 10,
+                runSpacing: 8,
                 children: [
-                  Expanded(
-                    child: CommunityMetric(
-                      icon: Icons.people_alt_outlined,
-                      label: '${community.memberCount} members',
-                    ),
+                  CommunityMetric(
+                    icon: Icons.people_alt_outlined,
+                    label: '${community.memberCount} members',
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: CommunityMetric(
-                      icon: Icons.forum_outlined,
-                      label: '${community.groupCount} groups',
-                    ),
+                  CommunityMetric(
+                    icon: Icons.forum_outlined,
+                    label: '${community.groupCount} groups',
                   ),
+                  if (community.owner?.name.isNotEmpty == true)
+                    CommunityMetric(
+                      icon: Icons.admin_panel_settings_outlined,
+                      label: community.owner!.name,
+                    ),
                 ],
               ),
             ],

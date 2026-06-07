@@ -85,6 +85,15 @@ class FriendsService {
     }
   }
 
+  Future<FollowStats> getFollowStatsForUser(int userId) async {
+    try {
+      final response = await _api.get('/api/friends/users/$userId/stats');
+      return FollowStats.fromJson(response.data);
+    } on DioException catch (e) {
+      throw _handleError(e, 'Failed to get follow stats');
+    }
+  }
+
   // Check relationship with a user
   Future<Relationship> checkRelationship(int userId) async {
     try {

@@ -21,12 +21,8 @@ class DiscoverHeader extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.primary, AppColors.primary],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(12),
+              color: AppColors.primary.withOpacity(0.7),
+              borderRadius: BorderRadius.circular(15),
             ),
             child: const Icon(
               Icons.explore,
@@ -35,49 +31,27 @@ class DiscoverHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          const Text(
+          Text(
             'Discover',
             style: TextStyle(
-              fontSize: 22,
+              fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: AppColors.exploreHeaderText,
+              color: AppColors.text,
             ),
           ),
           const Spacer(),
-          // Remaining count
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              '${remainingCount < 0 ? 0 : remainingCount} left',
-              style: TextStyle(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
-          ),
+
           const SizedBox(width: 12),
           // Filter button
           Container(
             decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              color: AppColors.primary.withOpacity(0.7),
+              borderRadius: BorderRadius.circular(15),
             ),
             child: IconButton(
               onPressed: onFilterTap,
               icon: const Icon(Icons.filter_list),
-              color: AppColors.primary,
+              color: AppColors.white,
               iconSize: 20,
               padding: const EdgeInsets.all(8),
               constraints: const BoxConstraints(),

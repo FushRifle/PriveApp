@@ -9,6 +9,7 @@ import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
 
 import 'package:clique/core/models/status_model.dart';
+import 'package:clique/ui/widgets/common/app_page_header.dart';
 
 import './create_status_page.dart';
 import './status_view_page.dart';
@@ -59,54 +60,32 @@ class _StatusPageState extends State<StatusPage> {
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
         backgroundColor: AppColors.backgroundColor,
-        appBar: AppBar(
-          backgroundColor: AppColors.backgroundColor,
-          elevation: 0,
-          centerTitle: true,
-          leading: IconButton(
-            icon: const Icon(
-              Icons.arrow_back_ios_new,
-              color: AppColors.primary,
-              size: 20,
+        body: Column(
+          children: [
+            AppPageHeader(
+              title: 'Stories',
+              subtitle: 'Updates from your circle',
+              leadingIcon: Icons.arrow_back_ios_new,
+              onLeadingTap: () => Navigator.pop(context),
+              actionIcon: Icons.add_rounded,
+              onActionTap: () => _openCreateStatus(context),
             ),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: Text(
-            'Stories',
-            style: AppTheme.blackTextStyle.copyWith(
-              fontWeight: FontWeight.w800,
-              fontSize: 19,
-            ),
-          ),
-          actions: [
-            Padding(
-              padding: const EdgeInsets.only(right: 10),
-              child: IconButton.filled(
-                onPressed: () => _openCreateStatus(context),
-                style: IconButton.styleFrom(
-                  backgroundColor: AppColors.primary.withOpacity(0.12),
-                  foregroundColor: AppColors.primary,
-                ),
-                icon: const Icon(
-                  Icons.add_rounded,
-                  size: 24,
-                ),
+            Expanded(
+              child: BlocBuilder<StoriesBloc, StoriesState>(
+                buildWhen: (previous, current) {
+                  return previous.status != current.status ||
+                      previous.stories != current.stories ||
+                      previous.error != current.error;
+                },
+                builder: (context, state) {
+                  return _StatusBody(
+                    state: state,
+                    onRefresh: _refresh,
+                  );
+                },
               ),
             ),
           ],
-        ),
-        body: BlocBuilder<StoriesBloc, StoriesState>(
-          buildWhen: (previous, current) {
-            return previous.status != current.status ||
-                previous.stories != current.stories ||
-                previous.error != current.error;
-          },
-          builder: (context, state) {
-            return _StatusBody(
-              state: state,
-              onRefresh: _refresh,
-            );
-          },
         ),
       ),
     );

@@ -18,6 +18,7 @@ class _OtherProfilePageState extends State<OtherProfilePage>
   late final ScrollController _scrollController;
   late final GalleryProfileCubit _galleryCubit;
   final FriendsService _friendsService = FriendsService();
+  final ChatService _chatService = ChatService();
 
   bool _isFollowing = false;
   bool _isFollowBusy = false;
@@ -195,6 +196,43 @@ class _OtherProfilePageState extends State<OtherProfilePage>
     }
   }
 
+  Future<void> _openConversation(_ProfileView profile) async {
+    final userId = _profileUserId(profile);
+    if (userId == null || userId <= 0) return;
+
+    HapticFeedback.lightImpact();
+
+    try {
+      final conversation = await _chatService.startConversation(
+        receiverId: userId,
+      );
+      final conversationId = _ProfileView._readInt(
+        conversation['conversationId'] ?? conversation['id'],
+      );
+      if (!mounted || conversationId <= 0) return;
+
+      Navigator.pushNamed(
+        context,
+        NamedRoutes.chatScreen,
+        arguments: {
+          'conversationId': conversationId,
+          'userId': userId,
+          'userName': profile.displayName ?? 'User',
+          'userAvatar': profile.avatar ?? '',
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: AppColors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider.value(
@@ -261,6 +299,7 @@ class _OtherProfilePageState extends State<OtherProfilePage>
                   scrollController: _scrollController,
                   onRetry: _reloadProfile,
                   onToggleFollow: _toggleFollow,
+                  onMessage: _openConversation,
                   onLoadMoreMedia: _loadMoreMedia,
                 );
               },
