@@ -16,6 +16,7 @@ class FriendsService {
   Future<void> followUser(int userId) async {
     try {
       await _api.post('/api/friends/follow/$userId');
+      _clearFollowCaches();
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to follow user');
     }
@@ -25,6 +26,7 @@ class FriendsService {
   Future<void> unfollowUser(int userId) async {
     try {
       await _api.delete('/api/friends/follow/$userId');
+      _clearFollowCaches();
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to unfollow user');
     }
@@ -97,10 +99,11 @@ class FriendsService {
   Future<void> sendFriendRequest(int userId, {String? message}) async {
     try {
       final data = {
-        'user_id': userId,
+        'userId': userId,
         if (message != null && message.isNotEmpty) 'message': message,
       };
       await _api.post('/api/friends/requests', data: data);
+      _clearFollowCaches();
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to send friend request');
     }
@@ -127,6 +130,7 @@ class FriendsService {
       await _api.put('/api/friends/requests/$requestId/respond', data: {
         'action': 'accept',
       });
+      _clearFollowCaches();
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to accept friend request');
     }
@@ -138,9 +142,16 @@ class FriendsService {
       await _api.put('/api/friends/requests/$requestId/respond', data: {
         'action': 'decline',
       });
+      _clearFollowCaches();
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to decline friend request');
     }
+  }
+
+  void _clearFollowCaches() {
+    _api.removeCacheByPath('/api/friends');
+    _api.removeCacheByPath('/api/notifications');
+    _api.removeCacheByPath('/api/insights');
   }
 
   String _handleError(DioException e, String fallback) {

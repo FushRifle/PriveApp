@@ -224,7 +224,9 @@ class _NotificationPageState extends State<NotificationPage> {
 
     switch (type) {
       case 'like':
+      case 'post_like':
       case 'comment':
+      case 'post_comment':
       case 'mention':
         final id = postId > 0 ? postId : targetId;
         if (id > 0) {
@@ -284,10 +286,12 @@ class _NotificationPageState extends State<NotificationPage> {
 
     switch (type) {
       case 'like':
+      case 'post_like':
         return message.toLowerCase().contains('profile')
             ? 'liked your profile.'
             : 'liked your post.';
       case 'comment':
+      case 'post_comment':
         final snippet = notification['snippet'] ?? '';
         return snippet.toString().isNotEmpty
             ? 'commented: "$snippet"'
@@ -492,31 +496,37 @@ class _NotificationPageState extends State<NotificationPage> {
 
   Widget _buildNotificationItem(Map<String, dynamic> item, int index) {
     final bool isUnread = item['isUnread'] ?? false;
-    final String avatar = item['actorAvatar'] ?? '';
+    final data = _asMap(item['data']);
+    final type = item['type']?.toString() ?? 'general';
+    final String avatar =
+        (item['actorAvatar'] ?? data['actorAvatar'] ?? '').toString();
     final String actorName = _actorName(item);
     final String content = _getNotificationContent(item);
     final String time = _formatTime(item['createdAt']);
-    final String? postImage = item['postImage'];
+    final String postImage =
+        (item['postImage'] ?? data['postImage'] ?? data['imageUrl'] ?? '')
+            .toString();
+    final accent = _notificationColor(type);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
-        color: isUnread ? AppColors.white : AppColors.transparent,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: isUnread
-            ? [
-                BoxShadow(
-                  color: AppColors.black.withOpacity(0.04),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                )
-              ]
-            : [],
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isUnread ? accent.withOpacity(0.35) : AppColors.border,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withOpacity(isUnread ? 0.07 : 0.03),
+            blurRadius: isUnread ? 18 : 10,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         onTap: () async {
           HapticFeedback.lightImpact();
           if (isUnread) {
@@ -527,122 +537,248 @@ class _NotificationPageState extends State<NotificationPage> {
         onLongPress: () {
           _showDeleteDialog(item['id'], index);
         },
-        child: Row(
-          children: [
-            // Avatar
-            Stack(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isUnread
-                          ? AppColors.primary.withOpacity(0.3)
-                          : AppColors.transparent,
-                      width: 2,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isUnread
+                            ? accent.withOpacity(0.45)
+                            : AppColors.border,
+                        width: 2,
+                      ),
+                    ),
+                    child: ClipOval(
+                      child: avatar.isNotEmpty && avatar.startsWith('http')
+                          ? CachedNetworkImage(
+                              imageUrl: avatar,
+                              fit: BoxFit.cover,
+                              errorWidget: (_, __, ___) =>
+                                  _avatarFallback(actorName),
+                            )
+                          : _avatarFallback(actorName),
                     ),
                   ),
-                  child: ClipOval(
-                    child: avatar.isNotEmpty && avatar.startsWith('http')
-                        ? CachedNetworkImage(
-                            imageUrl: avatar,
-                            fit: BoxFit.cover,
-                            errorWidget: (_, __, ___) =>
-                                _avatarFallback(actorName),
-                          )
-                        : _avatarFallback(actorName),
-                  ),
-                ),
-                if (isUnread)
                   Positioned(
-                    right: 0,
-                    top: 0,
+                    right: -2,
+                    bottom: -2,
                     child: Container(
-                      width: 12,
-                      height: 12,
+                      width: 22,
+                      height: 22,
                       decoration: BoxDecoration(
-                        color: AppColors.primary,
                         shape: BoxShape.circle,
+                        color: accent,
                         border: Border.all(color: AppColors.white, width: 2),
                       ),
+                      child: Icon(
+                        _notificationIcon(type),
+                        size: 12,
+                        color: AppColors.white,
+                      ),
                     ),
                   ),
-              ],
-            ),
-            const SizedBox(width: 12),
-
-            // Content
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  RichText(
-                    text: TextSpan(
-                      style: AppTheme.blackTextStyle.copyWith(
-                        fontSize: 14,
-                        height: 1.3,
-                      ),
-                      children: [
-                        TextSpan(
-                          text: '$actorName ',
-                          style: const TextStyle(fontWeight: FontWeight.w800),
+                  if (isUnread)
+                    Positioned(
+                      left: -2,
+                      top: -2,
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.white, width: 2),
                         ),
-                        TextSpan(
-                          text: content,
-                          style: TextStyle(
-                            color: isUnread
-                                ? AppColors.blackColor
-                                : AppColors.greyColor,
-                            fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    RichText(
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      text: TextSpan(
+                        style: AppTheme.blackTextStyle.copyWith(
+                          fontSize: 14,
+                          height: 1.3,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: '$actorName ',
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          TextSpan(
+                            text: content,
+                            style: TextStyle(
+                              color: isUnread
+                                  ? AppColors.blackColor
+                                  : AppColors.greyColor,
+                              fontWeight: isUnread
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Text(
+                          time,
+                          style: AppTheme.greyTextStyle.copyWith(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 4,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: AppColors.greyColor.withOpacity(0.5),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            _notificationActionLabel(type),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTheme.greyTextStyle.copyWith(
+                              color: accent,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    time,
-                    style: AppTheme.greyTextStyle.copyWith(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Action Preview
-            if (postImage != null && postImage.isNotEmpty)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: CachedNetworkImage(
-                  imageUrl: postImage,
-                  width: 44,
-                  height: 44,
-                  fit: BoxFit.cover,
-                  errorWidget: (context, error, stackTrace) {
-                    return Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        Icons.image,
-                        color: AppColors.primary.withOpacity(0.5),
-                        size: 20,
-                      ),
-                    );
-                  },
+                  ],
                 ),
               ),
-          ],
+              const SizedBox(width: 10),
+              if (postImage.isNotEmpty)
+                _postPreview(postImage, accent)
+              else
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.greyColor.withOpacity(0.7),
+                  size: 24,
+                ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  Widget _postPreview(String imageUrl, Color accent) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: CachedNetworkImage(
+        imageUrl: imageUrl,
+        width: 48,
+        height: 48,
+        fit: BoxFit.cover,
+        errorWidget: (context, error, stackTrace) {
+          return Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: accent.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.article_outlined,
+              color: accent,
+              size: 20,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  IconData _notificationIcon(String type) {
+    switch (type) {
+      case 'like':
+      case 'post_like':
+        return Icons.favorite_rounded;
+      case 'comment':
+      case 'post_comment':
+      case 'mention':
+        return Icons.chat_bubble_rounded;
+      case 'follow':
+      case 'friend_request':
+      case 'friend_accepted':
+        return Icons.person_add_alt_1_rounded;
+      case 'match':
+        return Icons.local_fire_department_rounded;
+      case 'message':
+      case 'chat':
+        return Icons.mail_rounded;
+      default:
+        return Icons.notifications_rounded;
+    }
+  }
+
+  Color _notificationColor(String type) {
+    switch (type) {
+      case 'like':
+      case 'post_like':
+        return AppColors.primary;
+      case 'comment':
+      case 'post_comment':
+      case 'mention':
+        return AppColors.info;
+      case 'follow':
+      case 'friend_request':
+      case 'friend_accepted':
+        return AppColors.success;
+      case 'match':
+        return AppColors.purple;
+      case 'message':
+      case 'chat':
+        return AppColors.secondary;
+      default:
+        return AppColors.greyColor;
+    }
+  }
+
+  String _notificationActionLabel(String type) {
+    switch (type) {
+      case 'like':
+      case 'post_like':
+      case 'comment':
+      case 'post_comment':
+      case 'mention':
+        return 'View post';
+      case 'follow':
+      case 'friend_request':
+      case 'friend_accepted':
+      case 'match':
+        return 'View profile';
+      case 'message':
+      case 'chat':
+        return 'Open chat';
+      default:
+        return 'Open';
+    }
   }
 
   Widget _avatarFallback(String name) {

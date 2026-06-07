@@ -33,8 +33,10 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<CommunityBloc, CommunityState>(
-      listenWhen: (previous, current) => previous.error != current.error,
-      listener: _showError,
+      listenWhen: (previous, current) =>
+          previous.error != current.error ||
+          previous.actionStatus != current.actionStatus,
+      listener: _handleStateChange,
       builder: (context, state) {
         final community = state.selectedCommunity;
 
@@ -103,14 +105,27 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
     );
   }
 
-  void _showError(BuildContext context, CommunityState state) {
+  void _handleStateChange(BuildContext context, CommunityState state) {
     final error = state.error;
-    if (error == null || error.isEmpty) return;
+    if (error != null && error.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      context.read<CommunityBloc>().add(const ClearCommunityError());
+      return;
+    }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(error)),
-    );
-    context.read<CommunityBloc>().add(const ClearCommunityError());
+    if (state.actionStatus == CommunityActionStatus.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Done'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Future<void> _openCreateGroup(int communityId) async {

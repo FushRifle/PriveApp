@@ -141,9 +141,11 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
     JoinCommunity event,
     Emitter<CommunityState> emit,
   ) async {
+    emit(state.copyWith(actionStatus: CommunityActionStatus.loading));
     try {
       await _service.joinCommunity(event.communityId);
       emit(state.copyWith(
+        actionStatus: CommunityActionStatus.success,
         communities: state.communities.map((community) {
           if (community.id != event.communityId) return community;
           return community.copyWith(
@@ -155,7 +157,10 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
       ));
       add(SelectCommunity(event.communityId));
     } catch (e) {
-      emit(state.copyWith(error: e.toString()));
+      emit(state.copyWith(
+        actionStatus: CommunityActionStatus.error,
+        error: e.toString(),
+      ));
     }
   }
 
@@ -163,9 +168,11 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
     LeaveCommunity event,
     Emitter<CommunityState> emit,
   ) async {
+    emit(state.copyWith(actionStatus: CommunityActionStatus.loading));
     try {
       await _service.leaveCommunity(event.communityId);
       emit(state.copyWith(
+        actionStatus: CommunityActionStatus.success,
         selectedCommunity: state.selectedCommunity?.copyWith(
           isMember: false,
           role: '',
@@ -178,7 +185,10 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
       ));
       add(const LoadCommunities());
     } catch (e) {
-      emit(state.copyWith(error: e.toString()));
+      emit(state.copyWith(
+        actionStatus: CommunityActionStatus.error,
+        error: e.toString(),
+      ));
     }
   }
 
@@ -186,14 +196,22 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
     CreateCommunityDiscussion event,
     Emitter<CommunityState> emit,
   ) async {
+    emit(state.copyWith(actionStatus: CommunityActionStatus.loading));
     try {
       final post = await _service.createCommunityPost(
         communityId: event.communityId,
         content: event.content,
       );
-      emit(state.copyWith(posts: [post, ...state.posts], clearError: true));
+      emit(state.copyWith(
+        actionStatus: CommunityActionStatus.success,
+        posts: [post, ...state.posts],
+        clearError: true,
+      ));
     } catch (e) {
-      emit(state.copyWith(error: e.toString()));
+      emit(state.copyWith(
+        actionStatus: CommunityActionStatus.error,
+        error: e.toString(),
+      ));
     }
   }
 
@@ -201,6 +219,7 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
     CreateCommunityGroup event,
     Emitter<CommunityState> emit,
   ) async {
+    emit(state.copyWith(actionStatus: CommunityActionStatus.loading));
     try {
       final group = await _service.createGroup(
         communityId: event.communityId,
@@ -208,9 +227,16 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
         description: event.description,
         isPrivate: event.isPrivate,
       );
-      emit(state.copyWith(groups: [group, ...state.groups], clearError: true));
+      emit(state.copyWith(
+        actionStatus: CommunityActionStatus.success,
+        groups: [group, ...state.groups],
+        clearError: true,
+      ));
     } catch (e) {
-      emit(state.copyWith(error: e.toString()));
+      emit(state.copyWith(
+        actionStatus: CommunityActionStatus.error,
+        error: e.toString(),
+      ));
     }
   }
 
@@ -218,13 +244,18 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
     JoinCommunityGroup event,
     Emitter<CommunityState> emit,
   ) async {
+    emit(state.copyWith(actionStatus: CommunityActionStatus.loading));
     try {
       await _service.joinGroup(event.groupId);
+      emit(state.copyWith(actionStatus: CommunityActionStatus.success));
       if (state.selectedCommunity != null) {
         add(SelectCommunity(state.selectedCommunity!.id));
       }
     } catch (e) {
-      emit(state.copyWith(error: e.toString()));
+      emit(state.copyWith(
+        actionStatus: CommunityActionStatus.error,
+        error: e.toString(),
+      ));
     }
   }
 

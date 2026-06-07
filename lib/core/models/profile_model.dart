@@ -5,6 +5,7 @@ class ProfileModel {
   final String occupation;
   final int distance;
   final String image;
+  final List<String> photos;
   final List<String>? interests;
   final bool verified;
   final String bio;
@@ -18,6 +19,7 @@ class ProfileModel {
     required this.occupation,
     required this.distance,
     required this.image,
+    this.photos = const [],
     this.interests,
     required this.verified,
     required this.bio,
@@ -26,6 +28,18 @@ class ProfileModel {
   });
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
+    final primaryImage = _readString(
+      json['image'] ??
+          json['avatar'] ??
+          json['profileImage'] ??
+          json['profile_image'] ??
+          json['photo'],
+    );
+    final photos = _readStringList(
+          json['photos'] ?? json['images'] ?? json['gallery'],
+        ) ??
+        const <String>[];
+
     return ProfileModel(
       id: _readInt(json['id']),
       name: _readString(
@@ -37,13 +51,11 @@ class ProfileModel {
       age: _readInt(json['age']),
       occupation: _readString(json['occupation']),
       distance: _readInt(json['distance']),
-      image: _readString(
-        json['image'] ??
-            json['avatar'] ??
-            json['profileImage'] ??
-            json['profile_image'] ??
-            json['photo'],
-      ),
+      image: primaryImage,
+      photos: _dedupeStrings([
+        if (primaryImage.isNotEmpty) primaryImage,
+        ...photos,
+      ]),
       interests: _readStringList(json['interests']),
       verified: _readBool(
         json['verified'] ?? json['isVerified'] ?? json['is_verified'],
@@ -66,6 +78,7 @@ class ProfileModel {
       'occupation': occupation,
       'distance': distance,
       'image': image,
+      'photos': photos,
       'interests': interests,
       'verified': verified,
       'bio': bio,
@@ -81,6 +94,7 @@ class ProfileModel {
     String? occupation,
     int? distance,
     String? image,
+    List<String>? photos,
     List<String>? interests,
     bool clearInterests = false,
     bool? verified,
@@ -95,6 +109,7 @@ class ProfileModel {
       occupation: occupation ?? this.occupation,
       distance: distance ?? this.distance,
       image: image ?? this.image,
+      photos: photos ?? this.photos,
       interests: clearInterests ? null : interests ?? this.interests,
       verified: verified ?? this.verified,
       bio: bio ?? this.bio,
@@ -126,6 +141,13 @@ class ProfileModel {
   int get postCount => 0;
 
   String get imageHash => '';
+
+  List<String> get allImages {
+    return _dedupeStrings([
+      if (image.trim().isNotEmpty) image.trim(),
+      ...photos,
+    ]);
+  }
 
   @override
   String toString() {
@@ -181,5 +203,19 @@ class ProfileModel {
     }
 
     return null;
+  }
+
+  static List<String> _dedupeStrings(Iterable<String> values) {
+    final seen = <String>{};
+    final result = <String>[];
+
+    for (final value in values) {
+      final trimmed = value.trim();
+      if (trimmed.isNotEmpty && seen.add(trimmed)) {
+        result.add(trimmed);
+      }
+    }
+
+    return result;
   }
 }

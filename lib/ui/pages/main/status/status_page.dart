@@ -82,19 +82,7 @@ class _StatusPageState extends State<StatusPage> {
             Padding(
               padding: const EdgeInsets.only(right: 10),
               child: IconButton.filled(
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => BlocProvider.value(
-                        value: context.read<StoriesBloc>(),
-                        child: const CreateStatusPage(),
-                      ),
-                    ),
-                  );
-                },
+                onPressed: () => _openCreateStatus(context),
                 style: IconButton.styleFrom(
                   backgroundColor: AppColors.primary.withOpacity(0.12),
                   foregroundColor: AppColors.primary,
@@ -173,19 +161,7 @@ class _StatusBody extends StatelessWidget {
         slivers: [
           SliverToBoxAdapter(
             child: _CreateStoryBanner(
-              onTap: () {
-                HapticFeedback.lightImpact();
-
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => BlocProvider.value(
-                      value: context.read<StoriesBloc>(),
-                      child: const CreateStatusPage(),
-                    ),
-                  ),
-                );
-              },
+              onTap: () => _openCreateStatus(context),
             ),
           ),
           SliverPadding(
@@ -644,17 +620,7 @@ class _EmptyStories extends StatelessWidget {
             ),
             const SizedBox(height: 22),
             ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => BlocProvider.value(
-                      value: context.read<StoriesBloc>(),
-                      child: const CreateStatusPage(),
-                    ),
-                  ),
-                );
-              },
+              onPressed: () => _openCreateStatus(context),
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(160, 48),
                 backgroundColor: AppColors.primary,
@@ -669,6 +635,30 @@ class _EmptyStories extends StatelessWidget {
       ),
     );
   }
+}
+
+Future<void> _openCreateStatus(BuildContext context) async {
+  HapticFeedback.lightImpact();
+
+  final created = await Navigator.push<bool>(
+    context,
+    MaterialPageRoute(
+      builder: (_) => BlocProvider.value(
+        value: context.read<StoriesBloc>(),
+        child: const CreateStatusPage(),
+      ),
+    ),
+  );
+
+  if (created != true || !context.mounted) return;
+
+  context.read<StoriesBloc>().add(GetStories());
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text('Story shared successfully'),
+      behavior: SnackBarBehavior.floating,
+    ),
+  );
 }
 
 class _StoryGroup {

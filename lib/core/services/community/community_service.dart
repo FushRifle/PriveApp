@@ -62,6 +62,7 @@ class CommunityService {
         'imageUrl': imageUrl,
         'isPrivate': isPrivate,
       });
+      _clearCommunityCaches();
       return CommunityModel.fromJson(_asMap(response.data));
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to create community');
@@ -71,6 +72,7 @@ class CommunityService {
   Future<void> joinCommunity(int id) async {
     try {
       await _api.post('/api/communities/$id/join');
+      _clearCommunityCaches();
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to join community');
     }
@@ -79,6 +81,7 @@ class CommunityService {
   Future<void> leaveCommunity(int id) async {
     try {
       await _api.delete('/api/communities/$id/join');
+      _clearCommunityCaches();
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to leave community');
     }
@@ -128,6 +131,7 @@ class CommunityService {
         'imageUrl': imageUrl,
         'isPrivate': isPrivate,
       });
+      _clearCommunityCaches();
       return CommunityGroupModel.fromJson(_asMap(response.data));
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to create group');
@@ -137,6 +141,7 @@ class CommunityService {
   Future<void> joinGroup(int groupId) async {
     try {
       await _api.post('/api/groups/$groupId/join');
+      _clearCommunityCaches();
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to join group');
     }
@@ -163,6 +168,7 @@ class CommunityService {
     try {
       final response = await _api.post('/api/communities/$communityId/posts',
           data: {'content': content, 'attachments': <String>[]});
+      _clearCommunityCaches();
       return DiscussionPostModel.fromJson(_asMap(response.data));
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to post discussion');
@@ -198,6 +204,12 @@ class CommunityService {
           .toList();
     }
     return const [];
+  }
+
+  void _clearCommunityCaches() {
+    _api.removeCacheByPath('/api/communities');
+    _api.removeCacheByPath('/api/groups');
+    _api.removeCacheByPath('/api/notifications');
   }
 
   String _handleError(DioException e, String fallback) {

@@ -18,6 +18,7 @@ class CreateStatusPage extends StatefulWidget {
 
 class _CreateStatusPageState extends State<CreateStatusPage> {
   final TextEditingController _textController = TextEditingController();
+  final TextEditingController _hashtagController = TextEditingController();
   final CloudinaryService _cloudinaryService = CloudinaryService();
   final ImagePicker _imagePicker = ImagePicker();
   StreamSubscription<StoriesState>? _createStorySubscription;
@@ -30,6 +31,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   bool _isSubmitting = false;
   double _uploadProgress = 0.0;
   bool _showFontControls = false;
+  final List<String> _hashtags = [];
 
   static const List<Color> _backgroundColors = [
     AppColors.storyTextBackground,
@@ -48,10 +50,11 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   void dispose() {
     _createStorySubscription?.cancel();
     _textController.dispose();
+    _hashtagController.dispose();
     super.dispose();
   }
 
-  bool get _hasText => _textController.text.trim().isNotEmpty;
+  bool get _hasText => _storyContentWithHashtags().isNotEmpty;
   bool get _hasImage => _selectedImageFile != null;
   bool get _hasContent => _hasText || _hasImage;
 
@@ -110,9 +113,9 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                 child: Center(
                   child: SingleChildScrollView(
                     child: _hasText || !_hasImage
-                        ? Text(
-                            _hasText
-                                ? _textController.text
+                        ? _StoryHashtagText(
+                            text: _hasText
+                                ? _storyContentWithHashtags()
                                 : "What's happening?",
                             textAlign: _textAlign,
                             style: TextStyle(
@@ -354,6 +357,8 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
           const SizedBox(height: 20),
           _buildToolButton(Icons.photo_library, 'Media', _showMediaPicker),
           const SizedBox(height: 20),
+          _buildToolButton(Icons.tag_rounded, 'Hashtags', _showHashtagSheet),
+          const SizedBox(height: 20),
           _buildToolButton(
             _textAlign == TextAlign.center
                 ? Icons.format_align_center
@@ -537,6 +542,161 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
     }
   }
 
+  void _showHashtagSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.viewInsetsOf(context).bottom,
+              ),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+                decoration: const BoxDecoration(
+                  color: AppColors.black87,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Story hashtags',
+                        style: TextStyle(
+                          color: AppColors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      TextField(
+                        controller: _hashtagController,
+                        autofocus: true,
+                        style: const TextStyle(color: AppColors.white),
+                        textInputAction: TextInputAction.done,
+                        decoration: InputDecoration(
+                          hintText: 'Add hashtags',
+                          hintStyle:
+                              TextStyle(color: AppColors.white.withOpacity(0.5)),
+                          prefixIcon: const Icon(
+                            Icons.tag_rounded,
+                            color: AppColors.primary,
+                          ),
+                          filled: true,
+                          fillColor: AppColors.white.withOpacity(0.1),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        onSubmitted: (value) {
+                          _addHashtags(value);
+                          setSheetState(() {});
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      if (_hashtags.isNotEmpty)
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _hashtags.map((tag) {
+                            return _StoryHashtagChip(
+                              tag: tag,
+                              onRemove: () {
+                                _removeHashtag(tag);
+                                setSheetState(() {});
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            _addHashtags(_hashtagController.text);
+                            Navigator.pop(context);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: AppColors.white,
+                            minimumSize: const Size.fromHeight(48),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: const Text('Done'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _addHashtags(String rawValue) {
+    final tags = _extractHashtags(rawValue)
+        .where((tag) => !_hashtags.contains(tag))
+        .toList();
+    if (tags.isEmpty) {
+      _hashtagController.clear();
+      return;
+    }
+    HapticFeedback.selectionClick();
+    setState(() {
+      _hashtags.addAll(tags);
+      _hashtagController.clear();
+    });
+  }
+
+  void _removeHashtag(String tag) {
+    HapticFeedback.selectionClick();
+    setState(() => _hashtags.remove(tag));
+  }
+
+  String _storyContentWithHashtags() {
+    var content = _textController.text.trim();
+    final tags = _dedupeTags([
+      ..._hashtags,
+      ..._extractHashtags(_hashtagController.text),
+    ]);
+
+    if (tags.isNotEmpty) {
+      if (content.isNotEmpty) content += '\n\n';
+      content += tags.map((tag) => '#$tag').join(' ');
+    }
+
+    return content;
+  }
+
+  List<String> _extractHashtags(String rawValue) {
+    return rawValue
+        .split(RegExp(r'[\s,]+'))
+        .map((tag) => tag.replaceAll('#', '').trim().toLowerCase())
+        .where((tag) => RegExp(r'^[a-z0-9_]+$').hasMatch(tag))
+        .toList();
+  }
+
+  List<String> _dedupeTags(Iterable<String> tags) {
+    final seen = <String>{};
+    final result = <String>[];
+    for (final tag in tags) {
+      if (seen.add(tag)) result.add(tag);
+    }
+    return result;
+  }
+
   Future<void> _shareStatus() async {
     if (!_hasContent) {
       _showSnackBar('Please add text or an image to your story', isError: true);
@@ -574,7 +734,6 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
         if (state.status == StoriesStatus.loaded && !state.isCreating) {
           if (!mounted) return;
 
-          _showSnackBar('Story shared successfully!');
           Navigator.pop(context, true);
         } else if (state.status == StoriesStatus.error && mounted) {
           _showSnackBar(state.error ?? 'Failed to share story', isError: true);
@@ -593,7 +752,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
 
       // Create story using StoriesBloc
       storiesBloc.add(CreateStoryEvent(
-        content: _textController.text.trim(),
+        content: _storyContentWithHashtags(),
         attachments: attachments.isNotEmpty ? attachments : null,
         backgroundColor: _hasImage
             ? null
@@ -632,6 +791,106 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
         backgroundColor: isError ? AppColors.red : AppColors.green,
         behavior: SnackBarBehavior.floating,
         duration: Duration(seconds: isError ? 3 : 2),
+      ),
+    );
+  }
+}
+
+class _StoryHashtagText extends StatelessWidget {
+  final String text;
+  final TextAlign textAlign;
+  final TextStyle style;
+
+  const _StoryHashtagText({
+    required this.text,
+    required this.textAlign,
+    required this.style,
+  });
+
+  static final RegExp _hashtagPattern = RegExp(r'#[A-Za-z0-9_]+');
+
+  @override
+  Widget build(BuildContext context) {
+    final spans = <InlineSpan>[];
+    var cursor = 0;
+
+    for (final match in _hashtagPattern.allMatches(text)) {
+      if (match.start > cursor) {
+        spans.add(TextSpan(text: text.substring(cursor, match.start)));
+      }
+
+      spans.add(
+        TextSpan(
+          text: match.group(0),
+          style: style.copyWith(
+            color: AppColors.storyYellow,
+            fontWeight: FontWeight.w900,
+            shadows: const [
+              Shadow(
+                blurRadius: 12,
+                color: AppColors.black87,
+                offset: Offset(1, 1),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      cursor = match.end;
+    }
+
+    if (cursor < text.length) {
+      spans.add(TextSpan(text: text.substring(cursor)));
+    }
+
+    return RichText(
+      textAlign: textAlign,
+      text: TextSpan(
+        style: style,
+        children: spans,
+      ),
+    );
+  }
+}
+
+class _StoryHashtagChip extends StatelessWidget {
+  final String tag;
+  final VoidCallback onRemove;
+
+  const _StoryHashtagChip({
+    required this.tag,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 7, 8, 7),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.18),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.primary.withOpacity(0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '#$tag',
+            style: const TextStyle(
+              color: AppColors.white,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(width: 6),
+          GestureDetector(
+            onTap: onRemove,
+            child: const Icon(
+              Icons.close_rounded,
+              color: AppColors.white,
+              size: 15,
+            ),
+          ),
+        ],
       ),
     );
   }

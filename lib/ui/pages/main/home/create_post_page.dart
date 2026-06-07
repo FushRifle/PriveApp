@@ -63,7 +63,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
     if (_isSubmitting || _isPicking) return false;
 
     final hasText = _textController.text.trim().isNotEmpty;
-    final hasTags = _hashtags.isNotEmpty;
+    final hasTags = _hashtags.isNotEmpty ||
+        _extractHashtags(_hashtagController.text).isNotEmpty;
 
     if (_currentStep == PostCreationStep.textInput) {
       return hasText || hasTags;
@@ -219,11 +220,11 @@ class _CreatePostPageState extends State<CreatePostPage> {
   }
 
   void _addHashtag(String rawTag) {
-    final tag = rawTag.replaceAll('#', '').trim().toLowerCase();
+    final tags = _extractHashtags(rawTag)
+        .where((tag) => !_hashtags.contains(tag))
+        .toList();
 
-    if (tag.isEmpty) return;
-
-    if (_hashtags.contains(tag)) {
+    if (tags.isEmpty) {
       _hashtagController.clear();
       return;
     }
@@ -231,7 +232,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
     HapticFeedback.selectionClick();
 
     setState(() {
-      _hashtags.add(tag);
+      _hashtags.addAll(tags);
       _hashtagController.clear();
     });
   }
@@ -246,16 +247,38 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
   String _contentWithHashtags() {
     String content = _textController.text.trim();
+    final tags = <String>[
+      ..._hashtags,
+      ..._extractHashtags(_hashtagController.text),
+    ];
+    final uniqueTags = _dedupeTags(tags);
 
-    if (_hashtags.isNotEmpty) {
+    if (uniqueTags.isNotEmpty) {
       if (content.isNotEmpty) {
         content += '\n\n';
       }
 
-      content += _hashtags.map((tag) => '#$tag').join(' ');
+      content += uniqueTags.map((tag) => '#$tag').join(' ');
     }
 
     return content;
+  }
+
+  List<String> _extractHashtags(String rawValue) {
+    return rawValue
+        .split(RegExp(r'[\s,]+'))
+        .map((tag) => tag.replaceAll('#', '').trim().toLowerCase())
+        .where((tag) => RegExp(r'^[a-z0-9_]+$').hasMatch(tag))
+        .toList();
+  }
+
+  List<String> _dedupeTags(Iterable<String> tags) {
+    final seen = <String>{};
+    final result = <String>[];
+    for (final tag in tags) {
+      if (seen.add(tag)) result.add(tag);
+    }
+    return result;
   }
 
   Future<void> _pickMedia(

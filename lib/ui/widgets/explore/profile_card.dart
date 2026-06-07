@@ -90,7 +90,12 @@ class _ProfileImage extends StatelessWidget {
       return CachedNetworkImage(
         imageUrl: image,
         fit: BoxFit.cover,
-        memCacheWidth: 900,
+        memCacheWidth: 1200,
+        memCacheHeight: 1600,
+        maxWidthDiskCache: 1600,
+        maxHeightDiskCache: 2200,
+        filterQuality: FilterQuality.high,
+        fadeInDuration: const Duration(milliseconds: 120),
         placeholder: (_, __) => _PlaceholderImage(profile: profile),
         errorWidget: (_, __, ___) => _PlaceholderImage(profile: profile),
       );
@@ -99,6 +104,7 @@ class _ProfileImage extends StatelessWidget {
     return Image.asset(
       image,
       fit: BoxFit.cover,
+      filterQuality: FilterQuality.high,
       errorBuilder: (_, __, ___) {
         return _PlaceholderImage(profile: profile);
       },

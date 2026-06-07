@@ -202,8 +202,10 @@ class NotificationService {
   String _normalizeNotificationType(String type) {
     switch (type) {
       case 'new_like':
+      case 'post_like':
         return 'like';
       case 'new_comment':
+      case 'post_comment':
         return 'comment';
       case 'new_follower':
         return 'follow';

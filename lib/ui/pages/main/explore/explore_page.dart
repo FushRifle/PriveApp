@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:clique/app/configs/colors.dart';
@@ -9,6 +10,8 @@ import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/explore/explore_bloc.dart';
 
 import 'package:clique/core/models/profile_model.dart';
+import 'package:clique/core/router/named_routes.dart';
+import 'package:clique/core/services/chat/chat_service.dart';
 
 import 'package:clique/ui/widgets/explore/action_buttons.dart';
 import 'package:clique/ui/widgets/explore/discover_header.dart';
@@ -35,6 +38,7 @@ class _DiscoverPageState extends State<DiscoverPage>
   late final AnimationController _buttonAnimationController;
 
   late final Animation<double> _feedbackAnimation;
+  final ChatService _chatService = ChatService();
 
   Offset _dragOffset = Offset.zero;
 
@@ -461,7 +465,7 @@ class _DiscoverPageState extends State<DiscoverPage>
           matchId: matchId,
           onStartChat: () {
             Navigator.pop(context);
-            _navigateToChat(profile);
+            _openMessageComposer(profile);
           },
           onKeepSwiping: () {
             Navigator.pop(context);
@@ -471,8 +475,149 @@ class _DiscoverPageState extends State<DiscoverPage>
     );
   }
 
-  void _navigateToChat(ProfileModel profile) {
-    debugPrint('Navigate to chat with: ${profile.name}');
+  Future<void> _openMessageComposer(ProfileModel profile) async {
+    final controller = TextEditingController();
+
+    final message = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.transparent,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(context).bottom,
+          ),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            decoration: const BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Message ${profile.name}',
+                    style: AppTheme.blackTextStyle.copyWith(
+                      fontSize: 18,
+                      fontWeight: AppTheme.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    minLines: 2,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      hintText: 'Write a first message',
+                      filled: true,
+                      fillColor: AppColors.inputLightBackground,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final value = controller.text.trim();
+                        if (value.isEmpty) return;
+                        Navigator.pop(context, value);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: AppColors.white,
+                        minimumSize: const Size.fromHeight(48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text('Send message'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    controller.dispose();
+
+    if (!mounted || message == null || message.trim().isEmpty) return;
+
+    try {
+      final response = await _chatService.sendMessage(
+        receiverId: profile.id,
+        message: message.trim(),
+      );
+      final conversationId = _readInt(
+        response?['conversationId'] ?? response?['conversation_id'],
+      );
+
+      if (!mounted) return;
+
+      if (conversationId <= 0) {
+        throw Exception('Conversation was not created');
+      }
+
+      Navigator.pushNamed(
+        context,
+        NamedRoutes.chatScreen,
+        arguments: {
+          'conversationId': conversationId,
+          'userName': profile.name,
+          'userAvatar': profile.image,
+          'userId': profile.id,
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not send message: $e'),
+          backgroundColor: AppColors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  int _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  void _showProfileDetails(ProfileModel profile) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.transparent,
+      builder: (_) => _ProfileDetailSheet(
+        profile: profile,
+        onMessage: () {
+          Navigator.pop(context);
+          _openMessageComposer(profile);
+        },
+        onViewProfile: () {
+          Navigator.pop(context);
+          Navigator.pushNamed(
+            context,
+            NamedRoutes.otherProfileScreen,
+            arguments: profile.id,
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -567,6 +712,12 @@ class _DiscoverPageState extends State<DiscoverPage>
                           onPanEnd: (details) {
                             _onPanEnd(details, state);
                           },
+                          onOpenProfile: () {
+                            final profile = state.currentProfile;
+                            if (profile != null) {
+                              _showProfileDetails(profile);
+                            }
+                          },
                         ),
                       ),
                       if (state.status == ExploreStatus.success &&
@@ -596,7 +747,7 @@ class _DiscoverPageState extends State<DiscoverPage>
                                   );
                                 },
                                 onMessage: () {
-                                  _navigateToChat(currentProfile);
+                                  _openMessageComposer(currentProfile);
                                 },
                               ),
                             ),
@@ -632,6 +783,7 @@ class _SwipeContent extends StatelessWidget {
   final GestureDragStartCallback onPanStart;
   final GestureDragUpdateCallback onPanUpdate;
   final GestureDragEndCallback onPanEnd;
+  final VoidCallback onOpenProfile;
 
   const _SwipeContent({
     required this.state,
@@ -641,6 +793,7 @@ class _SwipeContent extends StatelessWidget {
     required this.onPanStart,
     required this.onPanUpdate,
     required this.onPanEnd,
+    required this.onOpenProfile,
   });
 
   @override
@@ -669,6 +822,7 @@ class _SwipeContent extends StatelessWidget {
           onPanStart: onPanStart,
           onPanUpdate: onPanUpdate,
           onPanEnd: onPanEnd,
+          onOpenProfile: onOpenProfile,
         );
 
       case ExploreStatus.empty:
@@ -705,6 +859,7 @@ class _SwipeContent extends StatelessWidget {
           onPanStart: onPanStart,
           onPanUpdate: onPanUpdate,
           onPanEnd: onPanEnd,
+          onOpenProfile: onOpenProfile,
         );
     }
   }
@@ -718,6 +873,7 @@ class _SwipeCards extends StatelessWidget {
   final GestureDragStartCallback onPanStart;
   final GestureDragUpdateCallback onPanUpdate;
   final GestureDragEndCallback onPanEnd;
+  final VoidCallback onOpenProfile;
 
   const _SwipeCards({
     required this.state,
@@ -727,6 +883,7 @@ class _SwipeCards extends StatelessWidget {
     required this.onPanStart,
     required this.onPanUpdate,
     required this.onPanEnd,
+    required this.onOpenProfile,
   });
 
   @override
@@ -735,6 +892,7 @@ class _SwipeCards extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 28),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
+        onTap: onOpenProfile,
         onPanStart: onPanStart,
         onPanUpdate: onPanUpdate,
         onPanEnd: onPanEnd,
@@ -744,6 +902,268 @@ class _SwipeCards extends StatelessWidget {
           swipeProgress: swipeProgress,
           verticalSwipeProgress: verticalSwipeProgress,
           swipeDirection: swipeDirection,
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileDetailSheet extends StatelessWidget {
+  final ProfileModel profile;
+  final VoidCallback onMessage;
+  final VoidCallback onViewProfile;
+
+  const _ProfileDetailSheet({
+    required this.profile,
+    required this.onMessage,
+    required this.onViewProfile,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final images = profile.allImages;
+    final interests = profile.interests
+            ?.where((interest) => interest.trim().isNotEmpty)
+            .toList() ??
+        const <String>[];
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.82,
+      minChildSize: 0.5,
+      maxChildSize: 0.94,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+          ),
+          child: ListView(
+            controller: scrollController,
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 280,
+                child: images.isEmpty
+                    ? _DetailImageFallback(profile: profile)
+                    : ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: images.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 12),
+                        itemBuilder: (context, index) {
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(18),
+                            child: CachedNetworkImage(
+                              imageUrl: images[index],
+                              width: images.length == 1
+                                  ? MediaQuery.sizeOf(context).width - 40
+                                  : 220,
+                              height: 280,
+                              fit: BoxFit.cover,
+                              memCacheWidth: 1200,
+                              memCacheHeight: 1600,
+                              filterQuality: FilterQuality.high,
+                              errorWidget: (_, __, ___) {
+                                return _DetailImageFallback(profile: profile);
+                              },
+                            ),
+                          );
+                        },
+                      ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${profile.name}${profile.age > 0 ? ', ${profile.age}' : ''}',
+                      style: AppTheme.blackTextStyle.copyWith(
+                        fontSize: 24,
+                        fontWeight: AppTheme.bold,
+                      ),
+                    ),
+                  ),
+                  if (profile.verified)
+                    const Icon(
+                      Icons.verified_rounded,
+                      color: AppColors.info,
+                      size: 24,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 10,
+                runSpacing: 8,
+                children: [
+                  _DetailPill(
+                    icon: Icons.location_on_rounded,
+                    text: profile.distanceText,
+                  ),
+                  if (profile.occupation.trim().isNotEmpty)
+                    _DetailPill(
+                      icon: Icons.work_rounded,
+                      text: profile.occupation,
+                    ),
+                  if (profile.matchScore > 0)
+                    _DetailPill(
+                      icon: Icons.favorite_rounded,
+                      text: '${profile.matchScore}% match',
+                    ),
+                ],
+              ),
+              if (profile.bio.trim().isNotEmpty) ...[
+                const SizedBox(height: 18),
+                Text(
+                  profile.bio,
+                  style: AppTheme.blackTextStyle.copyWith(
+                    fontSize: 15,
+                    height: 1.45,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+              if (interests.isNotEmpty) ...[
+                const SizedBox(height: 18),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: interests
+                      .map(
+                        (interest) => Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            interest,
+                            style: AppTheme.blackTextStyle.copyWith(
+                              color: AppColors.primary,
+                              fontSize: 13,
+                              fontWeight: AppTheme.medium,
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ],
+              const SizedBox(height: 22),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: onViewProfile,
+                      icon: const Icon(Icons.person_rounded),
+                      label: const Text('Profile'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.text,
+                        side: const BorderSide(color: AppColors.lightBorderColor),
+                        minimumSize: const Size.fromHeight(48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: onMessage,
+                      icon: const Icon(Icons.send_rounded),
+                      label: const Text('Message'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: AppColors.white,
+                        minimumSize: const Size.fromHeight(48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _DetailPill extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _DetailPill({
+    required this.icon,
+    required this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.inputLightBackground,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppColors.textSecondary),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: AppTheme.blackTextStyle.copyWith(
+              fontSize: 12,
+              fontWeight: AppTheme.medium,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailImageFallback extends StatelessWidget {
+  final ProfileModel profile;
+
+  const _DetailImageFallback({
+    required this.profile,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: 280,
+      decoration: BoxDecoration(
+        color: AppColors.inputLightBackground,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Center(
+        child: Icon(
+          Icons.person_rounded,
+          color: AppColors.greyColor.withOpacity(0.55),
+          size: 72,
         ),
       ),
     );

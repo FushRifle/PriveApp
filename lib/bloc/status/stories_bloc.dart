@@ -69,7 +69,11 @@ class StoriesBloc extends Bloc<StoriesEvent, StoriesState> {
     CreateStoryEvent event,
     Emitter<StoriesState> emit,
   ) async {
-    emit(state.copyWith(isCreating: true, clearError: true));
+    emit(state.copyWith(
+      status: StoriesStatus.loading,
+      isCreating: true,
+      clearError: true,
+    ));
 
     try {
       await _statusService.createStory(
@@ -80,10 +84,15 @@ class StoriesBloc extends Bloc<StoriesEvent, StoriesState> {
         fontSize: event.fontSize,
       );
 
-      emit(state.copyWith(isCreating: false));
+      emit(state.copyWith(
+        status: StoriesStatus.loaded,
+        isCreating: false,
+        clearError: true,
+      ));
       add(GetStories());
     } catch (e) {
       emit(state.copyWith(
+        status: StoriesStatus.error,
         isCreating: false,
         error: e.toString(),
       ));

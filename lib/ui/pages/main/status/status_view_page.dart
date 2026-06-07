@@ -208,8 +208,8 @@ class _StatusViewPageState extends State<StatusViewPage>
             padding: const EdgeInsets.all(32),
             child: hasText
                 ? SingleChildScrollView(
-                    child: Text(
-                      story.content!,
+                    child: _StoryHashtagText(
+                      text: story.content!,
                       textAlign: _getTextAlign(story.textAlign),
                       style: _getTextStyle(story, hasMedia: mediaUrl != null),
                     ),
@@ -531,6 +531,63 @@ class _StatusViewPageState extends State<StatusViewPage>
         content: Text('Liked ${story.user.name}\'s story'),
         duration: const Duration(seconds: 1),
         backgroundColor: AppColors.primary,
+      ),
+    );
+  }
+}
+
+class _StoryHashtagText extends StatelessWidget {
+  final String text;
+  final TextAlign textAlign;
+  final TextStyle style;
+
+  const _StoryHashtagText({
+    required this.text,
+    required this.textAlign,
+    required this.style,
+  });
+
+  static final RegExp _hashtagPattern = RegExp(r'#[A-Za-z0-9_]+');
+
+  @override
+  Widget build(BuildContext context) {
+    final spans = <InlineSpan>[];
+    var cursor = 0;
+
+    for (final match in _hashtagPattern.allMatches(text)) {
+      if (match.start > cursor) {
+        spans.add(TextSpan(text: text.substring(cursor, match.start)));
+      }
+
+      spans.add(
+        TextSpan(
+          text: match.group(0),
+          style: style.copyWith(
+            color: AppColors.storyYellow,
+            fontWeight: FontWeight.w900,
+            shadows: const [
+              Shadow(
+                blurRadius: 12,
+                color: AppColors.black87,
+                offset: Offset(1, 1),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      cursor = match.end;
+    }
+
+    if (cursor < text.length) {
+      spans.add(TextSpan(text: text.substring(cursor)));
+    }
+
+    return RichText(
+      textAlign: textAlign,
+      text: TextSpan(
+        style: style,
+        children: spans,
       ),
     );
   }

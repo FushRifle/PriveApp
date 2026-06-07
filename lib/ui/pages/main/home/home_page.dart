@@ -212,6 +212,7 @@ class _HomePageState extends State<HomePage>
                         palette: palette,
                         state: state,
                         groups: _getGroupedStories(state.stories),
+                        onCreateStory: () => _openCreateStatus(context),
                       );
                     },
                   ),
@@ -312,6 +313,30 @@ class _HomePageState extends State<HomePage>
     if (created == true && context.mounted) {
       context.read<FeedBloc>().add(RefreshFeed());
     }
+  }
+
+  Future<void> _openCreateStatus(BuildContext context) async {
+    HapticFeedback.lightImpact();
+
+    final created = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: context.read<StoriesBloc>(),
+          child: const CreateStatusPage(),
+        ),
+      ),
+    );
+
+    if (created != true || !context.mounted) return;
+
+    context.read<StoriesBloc>().add(GetStories());
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Story shared successfully'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   List<_StoryGroup> _getGroupedStories(List<Story> stories) {
@@ -483,11 +508,13 @@ class _StoriesSection extends StatelessWidget {
   final _HomePalette palette;
   final StoriesState state;
   final List<_StoryGroup> groups;
+  final VoidCallback onCreateStory;
 
   const _StoriesSection({
     required this.palette,
     required this.state,
     required this.groups,
+    required this.onCreateStory,
   });
 
   @override
@@ -583,18 +610,7 @@ class _StoriesSection extends StatelessWidget {
                         isAddStatus: true,
                         statusCount: 0,
                         hasUnviewed: false,
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => BlocProvider.value(
-                                value: context.read<StoriesBloc>(),
-                                child: const CreateStatusPage(),
-                              ),
-                            ),
-                          );
-                        },
+                        onTap: onCreateStory,
                       );
                     },
                   );
@@ -725,7 +741,7 @@ class _FeedHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Feed Space',
+                  'Feeds',
                   style: AppTheme.blackTextStyle.copyWith(
                     color: palette.text,
                     fontSize: 18,
