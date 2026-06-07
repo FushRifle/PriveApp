@@ -193,14 +193,127 @@ class _CardPostState extends State<CardPost> {
     }
 
     HapticFeedback.lightImpact();
+    _showRepostSheet();
+  }
 
+  void _showRepostSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.repeat_rounded),
+                  title: Text(
+                    'Repost',
+                    style: TextStyle(color: AppColors.text),
+                  ),
+                  subtitle: Text(
+                    'Share this post instantly',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _performRepost();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.edit_note_rounded),
+                  title: Text(
+                    'Repost with caption',
+                    style: TextStyle(color: AppColors.text),
+                  ),
+                  subtitle: Text(
+                    'Add your own text before reposting',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showRepostCaptionDialog();
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showRepostCaptionDialog() {
+    final controller = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          backgroundColor: AppColors.cardColor,
+          title: Text(
+            'Repost with caption',
+            style: TextStyle(color: AppColors.text),
+          ),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            maxLines: 4,
+            textInputAction: TextInputAction.newline,
+            style: TextStyle(color: AppColors.text),
+            decoration: InputDecoration(
+              hintText: 'Add a caption',
+              hintStyle: TextStyle(color: AppColors.textSecondary),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                final caption = controller.text.trim();
+                Navigator.pop(context);
+                _performRepost(content: caption);
+              },
+              child: Text(
+                'Repost',
+                style: TextStyle(color: AppColors.primary),
+              ),
+            ),
+          ],
+        );
+      },
+    ).whenComplete(controller.dispose);
+  }
+
+  void _performRepost({String content = ''}) {
     setState(() {
       _isReposted = true;
       _repostCount += 1;
     });
 
-    context.read<FeedBloc>().add(RepostFeedPost(postId: widget.post.id));
-    _showComingSoon('Reposted');
+    context.read<FeedBloc>().add(
+          RepostFeedPost(
+            postId: widget.post.id,
+            content: content,
+          ),
+        );
+    _showComingSoon(
+      content.isEmpty ? 'Reposted' : 'Reposted with caption',
+    );
   }
 
   void _confirmDelete() {

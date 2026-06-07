@@ -222,6 +222,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         event.conversationId,
         page: event.page,
         forceRefresh: event.forceRefresh,
+        silent: event.silent,
       );
 
       final fetchedMessages =
@@ -500,6 +501,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         final latest = await _chatService.getMessages(
           event.conversationId,
           forceRefresh: true,
+          silent: true,
         );
         final latestMessages =
             latest.map((json) => MessageModel.fromJson(json)).toList();

@@ -77,6 +77,31 @@ class UserService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> searchUsers(
+    String query, {
+    int limit = 10,
+  }) async {
+    try {
+      final response = await _api.get(
+        '/api/users/search',
+        queryParameters: {
+          'q': query,
+          'limit': limit,
+        },
+      );
+      final data = response.data is Map ? response.data['data'] : response.data;
+      if (data is List) {
+        return data
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
+      }
+      return const [];
+    } on DioException catch (e) {
+      throw _handleError(e, 'Failed to search users');
+    }
+  }
+
 // Update demographic info
   Future<void> updateDemographicInfo({
     required int age,

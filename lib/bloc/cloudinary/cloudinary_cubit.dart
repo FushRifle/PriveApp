@@ -1,5 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:clique/core/clients/cloudinary_service.dart';
+import 'package:clique/core/services/media_service.dart';
 import 'package:equatable/equatable.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
@@ -14,6 +15,7 @@ enum UploadStatus { idle, picking, uploading, success, error }
 class CloudinaryCubit extends Cubit<CloudinaryState> {
   final CloudinaryService _cloudinaryService;
   final ImagePicker _imagePicker = ImagePicker();
+  final MediaService _mediaService = MediaService();
 
   CloudinaryCubit({CloudinaryService? cloudinaryService})
       : _cloudinaryService = cloudinaryService ?? CloudinaryService(),
@@ -127,7 +129,9 @@ class CloudinaryCubit extends Cubit<CloudinaryState> {
     switch (type) {
       case UploadType.image:
         final image = await _imagePicker.pickImage(source: ImageSource.gallery);
-        return image == null ? null : File(image.path);
+        if (image == null) return null;
+        final cropped = await _mediaService.cropImage(image);
+        return cropped == null ? null : File(cropped.path);
       case UploadType.video:
         final video = await _imagePicker.pickVideo(source: ImageSource.gallery);
         return video == null ? null : File(video.path);

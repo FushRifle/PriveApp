@@ -10,6 +10,7 @@ import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
 import 'package:clique/bloc/chat/gallery/chat_gallery_cubit.dart';
 import 'package:clique/bloc/cloudinary/cloudinary_cubit.dart';
+import 'package:clique/core/services/media_service.dart';
 import 'package:clique/ui/pages/main/chat/chat_info_page.dart';
 import 'package:clique/ui/widgets/chat/message_bubble.dart';
 import 'package:clique/ui/widgets/chat/chat_input_bar.dart';
@@ -34,9 +35,10 @@ class ChatPage extends StatefulWidget {
 }
 
 class _ChatPageState extends State<ChatPage>
-    with AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _imagePicker = ImagePicker();
+  final MediaService _mediaService = MediaService();
 
   String _wallpaper = 'default';
   Color _chatColor = AppColors.primary;
@@ -58,6 +60,7 @@ class _ChatPageState extends State<ChatPage>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _setupAuth();
     _loadInitialData();
     _setupScrollListener();
@@ -76,7 +79,20 @@ class _ChatPageState extends State<ChatPage>
     _scrollController.dispose();
     _typingTimer?.cancel();
     _messageSyncTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !mounted || _isCliqueBot) return;
+
+    context.read<ChatBloc>().add(LoadMessages(
+          conversationId: widget.conversationId,
+          page: 1,
+          forceRefresh: true,
+          silent: true,
+        ));
   }
 
   void _setupScrollListener() {
@@ -138,7 +154,6 @@ class _ChatPageState extends State<ChatPage>
     chatBloc.add(LoadMessages(
       conversationId: widget.conversationId,
       page: 1,
-      forceRefresh: true,
     ));
     chatBloc.add(LoadConversationInfo(conversationId: widget.conversationId));
     chatBloc.add(LoadChatSettings(conversationId: widget.conversationId));
@@ -148,8 +163,9 @@ class _ChatPageState extends State<ChatPage>
   void _startMessageSync() {
     if (_isCliqueBot) return;
     _messageSyncTimer?.cancel();
-    _messageSyncTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+    _messageSyncTimer = Timer.periodic(const Duration(seconds: 12), (_) {
       if (!mounted) return;
+      if (_isSending) return;
       context.read<ChatBloc>().add(LoadMessages(
             conversationId: widget.conversationId,
             page: 1,
@@ -238,7 +254,7 @@ class _ChatPageState extends State<ChatPage>
     super.build(context);
 
     return Scaffold(
-      resizeToAvoidBottomInset: false,
+      resizeToAvoidBottomInset: true,
       backgroundColor: AppColors.backgroundColor,
       appBar: _buildAppBar(),
       body: MultiBlocListener(
@@ -327,8 +343,8 @@ class _ChatPageState extends State<ChatPage>
                             : ListView.builder(
                                 controller: _scrollController,
                                 reverse: true,
-                                cacheExtent: 900,
-                                addAutomaticKeepAlives: false,
+                                cacheExtent: 1400,
+                                addAutomaticKeepAlives: true,
                                 addRepaintBoundaries: true,
                                 keyboardDismissBehavior:
                                     ScrollViewKeyboardDismissBehavior.onDrag,
@@ -656,7 +672,10 @@ class _ChatPageState extends State<ChatPage>
 
   Future<void> _pickImage(ImageSource source) async {
     final image = await _imagePicker.pickImage(source: source);
-    if (image != null) _sendMedia(File(image.path), UploadType.image);
+    if (image == null) return;
+
+    final cropped = await _mediaService.cropImage(image);
+    if (cropped != null) _sendMedia(File(cropped.path), UploadType.image);
   }
 
   Future<void> _pickVideo() async {
@@ -705,9 +724,10 @@ class _ChatPageState extends State<ChatPage>
       image: DecorationImage(
         image: AssetImage(wallpaperAsset),
         fit: BoxFit.cover,
+        filterQuality: FilterQuality.high,
         colorFilter: ColorFilter.mode(
-          (isDark ? AppColors.black : AppColors.white).withOpacity(0.22),
-          BlendMode.srcATop,
+          (isDark ? AppColors.black : AppColors.white).withOpacity(0.10),
+          BlendMode.srcOver,
         ),
       ),
     );

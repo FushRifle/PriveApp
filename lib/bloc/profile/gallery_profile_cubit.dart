@@ -18,6 +18,7 @@ class GalleryProfileCubit extends Cubit<GalleryProfileState> {
     String? type, // 'image', 'video', or null for all
     int page = 1,
     bool loadMore = false,
+    bool forceRefresh = false,
   }) async {
     final key = _requestKey(userId, type, page);
     if (_inFlight.contains(key)) return;
@@ -47,6 +48,8 @@ class GalleryProfileCubit extends Cubit<GalleryProfileState> {
         userId: userId,
         page: page,
         type: type,
+        forceRefresh:
+            forceRefresh || (!loadMore && state is GalleryProfileLoaded),
       );
 
       final galleryItems = _toGalleryItems(response.media);

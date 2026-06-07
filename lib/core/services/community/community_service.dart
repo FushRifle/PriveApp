@@ -164,14 +164,34 @@ class CommunityService {
   Future<DiscussionPostModel> createCommunityPost({
     required int communityId,
     required String content,
+    int? groupId,
   }) async {
     try {
-      final response = await _api.post('/api/communities/$communityId/posts',
-          data: {'content': content, 'attachments': <String>[]});
+      final path = groupId != null && groupId > 0
+          ? '/api/groups/$groupId/posts'
+          : '/api/communities/$communityId/posts';
+      final response = await _api.post(
+        path,
+        data: {'content': content, 'attachments': <String>[]},
+      );
       _clearCommunityCaches();
       return DiscussionPostModel.fromJson(_asMap(response.data));
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to post discussion');
+    }
+  }
+
+  Future<List<DiscussionPostModel>> getGroupPosts(int groupId) async {
+    try {
+      final response = await _api.get(
+        '/api/groups/$groupId/posts',
+        forceRefresh: true,
+      );
+      return _readList(response.data)
+          .map((item) => DiscussionPostModel.fromJson(item))
+          .toList();
+    } on DioException catch (e) {
+      throw _handleError(e, 'Failed to load group chat');
     }
   }
 

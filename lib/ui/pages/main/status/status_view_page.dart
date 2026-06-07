@@ -525,6 +525,27 @@ class _StatusViewPageState extends State<StatusViewPage>
             ),
           ),
           const SizedBox(width: 8),
+          IconButton(
+            onPressed: () => _showRepostSheet(story),
+            icon: Icon(
+              story.isReshared ? Icons.repeat_on_rounded : Icons.repeat_rounded,
+              color: AppColors.white,
+              size: 22,
+            ),
+            style: IconButton.styleFrom(
+              backgroundColor: story.isReshared
+                  ? AppColors.primary.withOpacity(0.82)
+                  : AppColors.transparent,
+              foregroundColor: AppColors.white,
+              shape: const CircleBorder(),
+              side: BorderSide(
+                color: AppColors.white.withOpacity(0.3),
+                width: 1,
+              ),
+              padding: const EdgeInsets.all(10),
+            ),
+          ),
+          const SizedBox(width: 8),
           GestureDetector(
             onTap: () {
               if (_replyController.text.isNotEmpty) {
@@ -566,6 +587,109 @@ class _StatusViewPageState extends State<StatusViewPage>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Liked ${story.user.name}\'s story'),
+        duration: const Duration(seconds: 1),
+        backgroundColor: AppColors.primary,
+      ),
+    );
+  }
+
+  void _showRepostSheet(Story story) {
+    if (story.isReshared) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Already reposted'),
+          duration: Duration(seconds: 1),
+          backgroundColor: AppColors.primary,
+        ),
+      );
+      return;
+    }
+
+    _pausePlayback(forReply: true);
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.repeat_rounded),
+                  title: const Text('Repost'),
+                  subtitle: const Text('Share this status instantly'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _repostStory(story);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.edit_note_rounded),
+                  title: const Text('Repost with caption'),
+                  subtitle: const Text(
+                      'Caption support will attach when backend accepts it'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showRepostCaptionDialog(story);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    ).whenComplete(() => _resumePlayback(fromReply: true));
+  }
+
+  void _showRepostCaptionDialog(Story story) {
+    final controller = TextEditingController();
+
+    showDialog<void>(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          backgroundColor: AppColors.card,
+          title: const Text('Repost with caption'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              hintText: 'Add a caption',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _repostStory(story, caption: controller.text.trim());
+              },
+              child: const Text('Repost'),
+            ),
+          ],
+        );
+      },
+    ).whenComplete(controller.dispose);
+  }
+
+  void _repostStory(Story story, {String caption = ''}) {
+    context.read<StoriesBloc>().add(ReshareStoryEvent(storyId: story.id));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          caption.isEmpty ? 'Status reposted' : 'Status reposted with caption',
+        ),
         duration: const Duration(seconds: 1),
         backgroundColor: AppColors.primary,
       ),

@@ -45,11 +45,13 @@ class _ReelItemState extends State<ReelItem>
   bool _hasVideoError = false;
   bool _isFollowing = false;
   bool _isLiked = false;
+  bool _isReposted = false;
   bool _isMuted = false;
 
   int _localLikeDelta = 0;
   int _localCommentDelta = 0;
   int _localShareDelta = 0;
+  int _localRepostDelta = 0;
 
   String get _videoUrl {
     final url = widget.reel['videoUrl'] ?? widget.reel['url'];
@@ -111,6 +113,9 @@ class _ReelItemState extends State<ReelItem>
 
   void _syncLocalState() {
     _isLiked = _readBool(widget.reel['isLiked']);
+    _isReposted = _readBool(
+      widget.reel['isReposted'] ?? widget.reel['is_reposted'],
+    );
     _isFollowing = _readBool(
       widget.reel['isFollowing'] ?? _user['isFollowing'],
     );
@@ -118,6 +123,7 @@ class _ReelItemState extends State<ReelItem>
     _localLikeDelta = 0;
     _localCommentDelta = 0;
     _localShareDelta = 0;
+    _localRepostDelta = 0;
   }
 
   Future<void> _loadMutePreference() async {
@@ -355,6 +361,125 @@ class _ReelItemState extends State<ReelItem>
     });
   }
 
+  void _handleRepost() {
+    final reelId = widget.reel['id']?.toString();
+
+    if (reelId == null || reelId.isEmpty) return;
+
+    if (_isReposted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Already reposted')),
+      );
+      return;
+    }
+
+    _pauseVideo();
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.repeat_rounded),
+                  title: const Text('Repost'),
+                  subtitle: const Text('Share this reel instantly'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _performRepost(reelId);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.edit_note_rounded),
+                  title: const Text('Repost with caption'),
+                  subtitle: const Text('Add your own text before reposting'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showRepostCaptionDialog(reelId);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    ).whenComplete(() {
+      if (widget.isActive) {
+        _playVideo();
+      }
+    });
+  }
+
+  void _showRepostCaptionDialog(String reelId) {
+    final controller = TextEditingController();
+
+    showDialog<void>(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          backgroundColor: AppColors.cardColor,
+          title: const Text('Repost with caption'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              hintText: 'Add a caption',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                final caption = controller.text.trim();
+                Navigator.pop(context);
+                _performRepost(reelId, content: caption);
+              },
+              child: const Text('Repost'),
+            ),
+          ],
+        );
+      },
+    ).whenComplete(controller.dispose);
+  }
+
+  void _performRepost(String reelId, {String content = ''}) {
+    if (!mounted || _isReposted) return;
+
+    setState(() {
+      _isReposted = true;
+      _localRepostDelta += 1;
+    });
+
+    context.read<ReelBloc>().add(
+          RepostReel(
+            reelId: reelId,
+            index: widget.index,
+            content: content,
+          ),
+        );
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          content.isEmpty ? 'Reel reposted' : 'Reel reposted with caption',
+        ),
+      ),
+    );
+  }
+
   void _toggleFollow() {
     if (!mounted) return;
 
@@ -502,6 +627,10 @@ class _ReelItemState extends State<ReelItem>
           widget.reel['shareCount'] ?? widget.reel['shares'],
         ) +
         _localShareDelta;
+    final repostCount = _readInt(
+          widget.reel['repostCount'] ?? widget.reel['reposts'],
+        ) +
+        _localRepostDelta;
 
     return Positioned(
       right: 14,
@@ -528,6 +657,14 @@ class _ReelItemState extends State<ReelItem>
               icon: Icons.send_rounded,
               label: _formatCount(shareCount < 0 ? 0 : shareCount),
               onTap: _handleShare,
+            ),
+            const SizedBox(height: 20),
+            _ActionButton(
+              icon:
+                  _isReposted ? Icons.repeat_on_rounded : Icons.repeat_rounded,
+              label: _formatCount(repostCount < 0 ? 0 : repostCount),
+              color: _isReposted ? AppColors.primary : AppColors.white,
+              onTap: _handleRepost,
             ),
             const SizedBox(height: 20),
             _ActionButton(

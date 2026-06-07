@@ -25,6 +25,7 @@ dependencies:
   # Image & Media
   flutter_blurhash: ^0.9.1
   image_picker: ^1.0.7
+  image_cropper: ^9.1.0
   mime: ^2.0.0
   fl_chart: ^1.2.0
 

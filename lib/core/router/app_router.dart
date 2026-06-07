@@ -25,6 +25,9 @@ import 'package:clique/ui/pages/main/home/create_post_page.dart';
 import 'package:clique/ui/pages/main/home/post_detail_page.dart';
 import 'package:clique/ui/pages/main/chat/chat_page.dart';
 import 'package:clique/ui/pages/main/community/create_community_page.dart';
+import 'package:clique/ui/pages/main/community/community_group_chat_page.dart';
+import 'package:clique/ui/pages/main/community/community_group_info_page.dart';
+import 'package:clique/core/models/community_model.dart';
 import 'package:clique/ui/pages/main/reels/create_reel_page.dart';
 
 import 'package:clique/ui/pages/main/match/matches_page.dart';
@@ -185,6 +188,34 @@ class AppRouter {
           ),
         );
 
+      case NamedRoutes.communityGroupChatScreen:
+        final args = _readCommunityGroupArgs(settings.arguments);
+        final group = args['group'];
+        if (group is! CommunityGroupModel) {
+          return _errorRoute('Invalid group');
+        }
+        return _page(
+          BlocProvider(
+            create: (_) => CommunityBloc(),
+            child: CommunityGroupChatPage(group: group),
+          ),
+        );
+
+      case NamedRoutes.communityGroupInfoScreen:
+        final args = _readCommunityGroupArgs(settings.arguments);
+        final group = args['group'];
+        if (group is! CommunityGroupModel) {
+          return _errorRoute('Invalid group');
+        }
+        return _page(
+          CommunityGroupInfoPage(
+            group: group,
+            members: args['members'] is List<CommunityMemberModel>
+                ? args['members'] as List<CommunityMemberModel>
+                : const <CommunityMemberModel>[],
+          ),
+        );
+
       case NamedRoutes.statusScreen:
       case NamedRoutes.statusViewScreen:
         return _page(
@@ -332,6 +363,17 @@ class AppRouter {
       'userAvatar':
           (arguments['userAvatar'] ?? arguments['avatar'] ?? '').toString(),
       'userId': _readInt(arguments['userId'] ?? arguments['user_id']),
+    };
+  }
+
+  static Map<String, Object?> _readCommunityGroupArgs(Object? arguments) {
+    if (arguments is! Map) {
+      return const {};
+    }
+
+    return {
+      'group': arguments['group'],
+      'members': arguments['members'],
     };
   }
 

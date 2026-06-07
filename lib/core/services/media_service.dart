@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 
 class MediaService {
@@ -21,6 +22,37 @@ class MediaService {
     } catch (e) {
       debugPrint('Error picking image: $e');
       return null;
+    }
+  }
+
+  Future<XFile?> cropImage(
+    XFile file, {
+    CropAspectRatio? aspectRatio,
+  }) async {
+    try {
+      final cropped = await ImageCropper().cropImage(
+        sourcePath: file.path,
+        compressQuality: 92,
+        aspectRatio: aspectRatio,
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Crop image',
+            toolbarColor: Colors.black,
+            toolbarWidgetColor: Colors.white,
+            lockAspectRatio: aspectRatio != null,
+          ),
+          IOSUiSettings(
+            title: 'Crop image',
+            aspectRatioLockEnabled: aspectRatio != null,
+          ),
+        ],
+      );
+
+      if (cropped == null) return file;
+      return XFile(cropped.path, name: file.name, mimeType: file.mimeType);
+    } catch (e) {
+      debugPrint('Error cropping image: $e');
+      return file;
     }
   }
 

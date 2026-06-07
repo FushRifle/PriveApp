@@ -5,6 +5,7 @@ import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/core/clients/cloudinary_service.dart';
 import 'package:clique/core/models/feeds_models.dart';
+import 'package:clique/core/services/media_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -26,6 +27,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
   final ImagePicker _imagePicker = ImagePicker();
   final CloudinaryService _cloudinaryService = CloudinaryService();
+  final MediaService _mediaService = MediaService();
 
   final List<MediaItem> _mediaItems = [];
   final List<String> _hashtags = [];
@@ -305,16 +307,21 @@ class _CreatePostPageState extends State<CreatePostPage> {
           final items = <MediaItem>[];
 
           for (final pickedFile in selectedFiles) {
-            final bytes = kIsWeb ? await pickedFile.readAsBytes() : null;
+            final croppedFile = await _mediaService.cropImage(pickedFile);
+            if (croppedFile == null) continue;
+
+            final bytes = kIsWeb ? await croppedFile.readAsBytes() : null;
             items.add(
               MediaItem(
-                file: kIsWeb ? null : File(pickedFile.path),
+                file: kIsWeb ? null : File(croppedFile.path),
                 fileBytes: bytes,
-                fileName: pickedFile.name,
+                fileName: croppedFile.name,
                 type: type,
               ),
             );
           }
+
+          if (items.isEmpty) return;
 
           if (!mounted) return;
 
@@ -333,7 +340,10 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
         if (pickedFile == null) return;
 
-        final bytes = kIsWeb ? await pickedFile.readAsBytes() : null;
+        final croppedFile = await _mediaService.cropImage(pickedFile);
+        if (croppedFile == null) return;
+
+        final bytes = kIsWeb ? await croppedFile.readAsBytes() : null;
 
         if (!mounted) return;
 
@@ -342,9 +352,9 @@ class _CreatePostPageState extends State<CreatePostPage> {
             ..clear()
             ..add(
               MediaItem(
-                file: kIsWeb ? null : File(pickedFile.path),
+                file: kIsWeb ? null : File(croppedFile.path),
                 fileBytes: bytes,
-                fileName: pickedFile.name,
+                fileName: croppedFile.name,
                 type: type,
               ),
             );

@@ -11,15 +11,22 @@ abstract class FeedEvent extends Equatable {
 class GetFeedPosts extends FeedEvent {
   final int page;
   final bool refresh;
+  final bool silent;
 
-  const GetFeedPosts({this.page = 1, this.refresh = false});
+  const GetFeedPosts({
+    this.page = 1,
+    this.refresh = false,
+    this.silent = false,
+  });
 
   @override
-  List<Object?> get props => [page, refresh];
+  List<Object?> get props => [page, refresh, silent];
 }
 
 // Refresh feed
 class RefreshFeed extends FeedEvent {}
+
+class SilentRefreshFeed extends FeedEvent {}
 
 // Load more posts (pagination)
 class LoadMoreFeedPosts extends FeedEvent {}

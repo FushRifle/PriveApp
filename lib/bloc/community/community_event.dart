@@ -71,14 +71,25 @@ class LeaveCommunity extends CommunityEvent {
 class CreateCommunityDiscussion extends CommunityEvent {
   final int communityId;
   final String content;
+  final int? groupId;
 
   const CreateCommunityDiscussion({
     required this.communityId,
     required this.content,
+    this.groupId,
   });
 
   @override
-  List<Object?> get props => [communityId, content];
+  List<Object?> get props => [communityId, content, groupId];
+}
+
+class LoadCommunityGroupPosts extends CommunityEvent {
+  final int groupId;
+
+  const LoadCommunityGroupPosts(this.groupId);
+
+  @override
+  List<Object?> get props => [groupId];
 }
 
 class CreateCommunityGroup extends CommunityEvent {

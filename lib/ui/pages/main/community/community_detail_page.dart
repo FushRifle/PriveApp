@@ -13,6 +13,7 @@ import 'package:clique/ui/widgets/community/community_empty_state.dart';
 import 'package:clique/ui/widgets/community/community_group_row.dart';
 import 'package:clique/ui/widgets/community/community_section_title.dart';
 import 'package:clique/ui/widgets/community/create_group_sheet.dart';
+import 'package:clique/ui/pages/main/community/community_group_chat_page.dart';
 
 class CommunityDetailPage extends StatefulWidget {
   const CommunityDetailPage({super.key});
@@ -194,6 +195,17 @@ class _MemberContent extends StatelessWidget {
               onJoin: () => context
                   .read<CommunityBloc>()
                   .add(JoinCommunityGroup(group.id)),
+              onOpen: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => BlocProvider.value(
+                      value: context.read<CommunityBloc>(),
+                      child: CommunityGroupChatPage(group: group),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         const SizedBox(height: 18),

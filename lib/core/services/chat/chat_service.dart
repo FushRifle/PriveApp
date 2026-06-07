@@ -106,6 +106,7 @@ class ChatService {
     int conversationId, {
     int page = 1,
     bool forceRefresh = false,
+    bool silent = false,
   }) async {
     try {
       if (!forceRefresh &&
@@ -121,9 +122,11 @@ class ChatService {
         },
         forceRefresh: forceRefresh,
         useCache: false,
-        cancelToken: _createCancelToken(
-          'messages_$conversationId',
-        ),
+        cancelToken: silent
+            ? null
+            : _createCancelToken(
+                'messages_$conversationId',
+              ),
       );
 
       final messages = response.data is List

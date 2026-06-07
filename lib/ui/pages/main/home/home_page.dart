@@ -109,7 +109,7 @@ class _StoryGroup {
 }
 
 class _HomePageState extends State<HomePage>
-    with AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   final ScrollController _scrollController = ScrollController();
 
   bool _initialized = false;
@@ -124,6 +124,7 @@ class _HomePageState extends State<HomePage>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initialize();
     _scrollController.addListener(_onScroll);
   }
@@ -132,7 +133,16 @@ class _HomePageState extends State<HomePage>
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !mounted) return;
+
+    context.read<FeedBloc>().add(SilentRefreshFeed());
+    context.read<StoriesBloc>().add(GetStories());
   }
 
   void _initialize() {

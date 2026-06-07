@@ -21,6 +21,7 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     on<LikeReel>(_onLikeReel);
     on<UnlikeReel>(_onUnlikeReel);
     on<ShareReel>(_onShareReel);
+    on<RepostReel>(_onRepostReel);
     on<IncrementReelCommentCount>(_onIncrementReelCommentCount);
     on<ClearReelError>(_onClearReelError);
     on<ResetReelState>(_onResetReelState);
@@ -45,7 +46,7 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     try {
       final reels = await _reelService.getReels(
         page: event.page,
-        forceRefresh: event.page == 1,
+        forceRefresh: false,
       );
 
       emit(state.copyWith(
@@ -274,6 +275,41 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     }
   }
 
+  Future<void> _onRepostReel(
+    RepostReel event,
+    Emitter<ReelState> emit,
+  ) async {
+    if (event.index < 0 || event.index >= state.reels.length) return;
+
+    final oldReel = state.reels[event.index];
+    if (oldReel is! Map) return;
+
+    if (_readBool(oldReel['isReposted'] ?? oldReel['is_reposted'])) return;
+
+    final updatedReels = List<dynamic>.from(state.reels);
+    updatedReels[event.index] = {
+      ...Map<String, dynamic>.from(oldReel),
+      'isReposted': true,
+      'reposts': _readInt(oldReel['reposts'] ?? oldReel['repostCount']) + 1,
+    };
+
+    emit(state.copyWith(reels: updatedReels, clearError: true));
+
+    try {
+      await _reelService.repostReel(
+        reelId: event.reelId,
+        content: event.content,
+      );
+    } catch (e) {
+      final rolledBackReels = List<dynamic>.from(state.reels);
+      rolledBackReels[event.index] = oldReel;
+      emit(state.copyWith(
+        reels: rolledBackReels,
+        error: e.toString(),
+      ));
+    }
+  }
+
   void _onIncrementReelCommentCount(
     IncrementReelCommentCount event,
     Emitter<ReelState> emit,
@@ -330,5 +366,14 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     if (value is num) return value.toInt();
     if (value is String) return int.tryParse(value) ?? 0;
     return 0;
+  }
+
+  bool _readBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is int) return value == 1;
+    if (value is String) {
+      return value.toLowerCase() == 'true' || value == '1';
+    }
+    return false;
   }
 }

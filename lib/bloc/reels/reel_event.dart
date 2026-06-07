@@ -59,6 +59,21 @@ class ShareReel extends ReelEvent {
   List<Object?> get props => [reelId, index];
 }
 
+class RepostReel extends ReelEvent {
+  final String reelId;
+  final int index;
+  final String content;
+
+  const RepostReel({
+    required this.reelId,
+    required this.index,
+    this.content = '',
+  });
+
+  @override
+  List<Object?> get props => [reelId, index, content];
+}
+
 class IncrementReelCommentCount extends ReelEvent {
   final String reelId;
   final int index;

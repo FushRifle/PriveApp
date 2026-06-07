@@ -3,6 +3,7 @@ import '../../clients/api_service.dart';
 
 class ReelService {
   final ApiService _api = ApiService();
+  final Map<int, List<dynamic>> _reelsCache = {};
 
   // Get reels with pagination
   Future<List<dynamic>> getReels({
@@ -10,12 +11,18 @@ class ReelService {
     bool forceRefresh = false,
   }) async {
     try {
+      if (!forceRefresh && _reelsCache.containsKey(page)) {
+        return _reelsCache[page]!;
+      }
+
       final response = await _api.get('/api/reels',
           queryParameters: {
             'page': page,
           },
           forceRefresh: forceRefresh);
-      return _readList(response.data);
+      final reels = _readList(response.data);
+      _reelsCache[page] = reels;
+      return reels;
     } on DioException catch (e) {
       throw _readErrorMessage(e, 'Failed to get reels');
     }
@@ -62,6 +69,22 @@ class ReelService {
       return _readMap(response.data);
     } on DioException catch (e) {
       throw _readErrorMessage(e, 'Failed to share reel');
+    }
+  }
+
+  Future<Map<String, dynamic>> repostReel({
+    required String reelId,
+    String content = '',
+  }) async {
+    try {
+      final response = await _api.post(
+        '/api/reels/$reelId/repost',
+        data: {'content': content},
+      );
+      _invalidateReelCaches(reelId);
+      return _readMap(response.data);
+    } on DioException catch (e) {
+      throw _readErrorMessage(e, 'Failed to repost reel');
     }
   }
 
@@ -145,6 +168,7 @@ class ReelService {
   }
 
   void _invalidateReelCaches([String? reelId]) {
+    _reelsCache.clear();
     _api.removeCacheByPath('/api/reels');
     if (reelId != null && reelId.isNotEmpty) {
       _api.removeCacheByPath('/api/reels/$reelId');

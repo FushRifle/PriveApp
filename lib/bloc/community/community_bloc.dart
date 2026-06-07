@@ -21,6 +21,7 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
     on<JoinCommunity>(_onJoinCommunity);
     on<LeaveCommunity>(_onLeaveCommunity);
     on<CreateCommunityDiscussion>(_onCreateDiscussion);
+    on<LoadCommunityGroupPosts>(_onLoadGroupPosts);
     on<CreateCommunityGroup>(_onCreateGroup);
     on<JoinCommunityGroup>(_onJoinGroup);
     on<LoadCommunityInvitations>(_onLoadInvitations);
@@ -201,6 +202,7 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
       final post = await _service.createCommunityPost(
         communityId: event.communityId,
         content: event.content,
+        groupId: event.groupId,
       );
       emit(state.copyWith(
         actionStatus: CommunityActionStatus.success,
@@ -212,6 +214,23 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
         actionStatus: CommunityActionStatus.error,
         error: e.toString(),
       ));
+    }
+  }
+
+  Future<void> _onLoadGroupPosts(
+    LoadCommunityGroupPosts event,
+    Emitter<CommunityState> emit,
+  ) async {
+    try {
+      final groupPosts = await _service.getGroupPosts(event.groupId);
+      final otherPosts =
+          state.posts.where((post) => post.groupId != event.groupId).toList();
+      emit(state.copyWith(
+        posts: [...groupPosts, ...otherPosts],
+        clearError: true,
+      ));
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
     }
   }
 

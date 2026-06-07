@@ -52,11 +52,16 @@ class StatusWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasActiveStories = isAddStatus || statusCount > 0;
+    final ringColor = !hasActiveStories ? AppColors.border : null;
+    final avatarSize = (MediaQuery.sizeOf(context).width * 0.15).clamp(
+      56.0,
+      64.0,
+    );
 
     return Material(
       color: AppColors.transparent,
       child: SizedBox(
-        width: 72,
+        width: avatarSize + 10,
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(18),
@@ -69,14 +74,14 @@ class StatusWidget extends StatelessWidget {
                   alignment: Alignment.center,
                   children: [
                     Container(
-                      width: 62,
-                      height: 62,
+                      width: avatarSize,
+                      height: avatarSize,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: _getAvatarGradient(),
                         border: isAddStatus || !hasActiveStories
                             ? Border.all(
-                                color: AppColors.border,
+                                color: ringColor ?? AppColors.border,
                                 width: 1.2,
                               )
                             : null,

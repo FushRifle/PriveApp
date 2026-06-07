@@ -22,6 +22,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
   FeedBloc() : super(const FeedState()) {
     on<GetFeedPosts>(_onGetFeedPosts);
     on<RefreshFeed>(_onRefreshFeed);
+    on<SilentRefreshFeed>(_onSilentRefreshFeed);
     on<LoadMoreFeedPosts>(_onLoadMoreFeedPosts);
     on<CreateFeedPost>(_onCreateFeedPost);
     on<LikeFeedPost>(_onLikeFeedPost);
@@ -70,7 +71,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     _lastFeedRequest = now;
 
     try {
-      if (event.refresh || state.posts.isEmpty) {
+      if (!event.silent && (event.refresh || state.posts.isEmpty)) {
         final cachedResponse = event.page == 1 && state.posts.isEmpty
             ? _feedService.getCachedPosts()
             : null;
@@ -129,6 +130,10 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
         ),
       );
     } catch (e) {
+      if (event.silent && state.posts.isNotEmpty) {
+        return;
+      }
+
       emit(
         state.copyWith(
           postsStatus: FeedStatus.error,
@@ -148,6 +153,20 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
       const GetFeedPosts(
         page: 1,
         refresh: true,
+      ),
+      emit,
+    );
+  }
+
+  Future<void> _onSilentRefreshFeed(
+    SilentRefreshFeed event,
+    Emitter<FeedState> emit,
+  ) async {
+    await _onGetFeedPosts(
+      const GetFeedPosts(
+        page: 1,
+        refresh: true,
+        silent: true,
       ),
       emit,
     );

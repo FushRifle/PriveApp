@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'package:clique/app/configs/colors.dart';
@@ -14,6 +15,7 @@ import 'package:clique/bloc/profile/profile_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 
 import 'package:clique/core/clients/cloudinary_service.dart';
+import 'package:clique/core/services/media_service.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({
@@ -27,6 +29,7 @@ class EditProfilePage extends StatefulWidget {
 class _EditProfilePageState extends State<EditProfilePage> {
   final CloudinaryService _cloudinaryService = CloudinaryService();
   final ImagePicker _imagePicker = ImagePicker();
+  final MediaService _mediaService = MediaService();
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
@@ -47,6 +50,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
   bool _isPickingImage = false;
   bool _isUploadingAvatar = false;
   bool _isUploadingCover = false;
+  bool _waitingForProfileSave = false;
+  bool _waitingForUserSave = false;
+  String? _profileSaveError;
+  String? _userSaveError;
 
   @override
   void initState() {
@@ -153,7 +160,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
       if (pickedFile == null) return;
 
-      final file = File(pickedFile.path);
+      final croppedFile = await _mediaService.cropImage(
+        pickedFile,
+        aspectRatio: isAvatar
+            ? const CropAspectRatio(ratioX: 1, ratioY: 1)
+            : const CropAspectRatio(ratioX: 16, ratioY: 9),
+      );
+      if (croppedFile == null) return;
+
+      final file = File(croppedFile.path);
 
       if (!mounted) return;
 
@@ -327,6 +342,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     setState(() {
       _isSaving = true;
+      _waitingForProfileSave = true;
+      _waitingForUserSave = true;
+      _profileSaveError = null;
+      _userSaveError = null;
     });
 
     final languages = _languagesController.text.trim().isNotEmpty
@@ -411,6 +430,30 @@ class _EditProfilePageState extends State<EditProfilePage> {
     Navigator.pop(context, true);
   }
 
+  void _finishSaveLeg({
+    required bool isProfile,
+    required bool success,
+    String? error,
+  }) {
+    if (!_isSaving || !mounted) return;
+
+    if (isProfile) {
+      _waitingForProfileSave = false;
+      if (!success) _profileSaveError = error ?? 'Unable to update profile';
+    } else {
+      _waitingForUserSave = false;
+      if (!success) _userSaveError = error ?? 'Unable to update account';
+    }
+
+    if (_waitingForProfileSave || _waitingForUserSave) return;
+
+    final saveError = _profileSaveError ?? _userSaveError;
+    _onSaveFinished(
+      success: saveError == null,
+      error: saveError,
+    );
+  }
+
   void _showSnackBar(
     String message, {
     bool isError = false,
@@ -439,14 +482,37 @@ class _EditProfilePageState extends State<EditProfilePage> {
           },
           listener: (context, state) {
             if (state.status == ProfileStatus.error) {
-              _onSaveFinished(
+              _finishSaveLeg(
+                isProfile: true,
                 success: false,
                 error: state.error,
               );
             }
 
             if (state.status == ProfileStatus.success && _isSaving) {
-              _onSaveFinished(
+              _finishSaveLeg(
+                isProfile: true,
+                success: true,
+              );
+            }
+          },
+        ),
+        BlocListener<UserBloc, UserState>(
+          listenWhen: (previous, current) {
+            return previous.status != current.status;
+          },
+          listener: (context, state) {
+            if (state.status == UserStatus.error) {
+              _finishSaveLeg(
+                isProfile: false,
+                success: false,
+                error: state.error,
+              );
+            }
+
+            if (state.status == UserStatus.success && _isSaving) {
+              _finishSaveLeg(
+                isProfile: false,
                 success: true,
               );
             }

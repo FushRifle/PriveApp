@@ -217,22 +217,43 @@ class _NotificationPageState extends State<NotificationPage> {
     );
     final actorId = _readInt(
       notification['actorId'] ??
+          notification['actor_id'] ??
+          notification['fromUserId'] ??
+          notification['from_user_id'] ??
+          notification['userId'] ??
+          notification['user_id'] ??
           data['actorId'] ??
+          data['actor_id'] ??
           data['actorUserId'] ??
+          data['actor_user_id'] ??
           data['followerUserId'] ??
+          data['follower_user_id'] ??
           data['fromUserId'] ??
+          data['from_user_id'] ??
           data['friendUserId'] ??
+          data['friend_user_id'] ??
           data['likerUserId'] ??
+          data['liker_user_id'] ??
           data['matchedUserId'] ??
-          data['userId'],
+          data['matched_user_id'] ??
+          data['userId'] ??
+          data['user_id'],
     );
     final postId = _readInt(
       notification['postId'] ??
           notification['post_id'] ??
+          notification['feedPostId'] ??
+          notification['feed_post_id'] ??
+          notification['entityId'] ??
+          notification['entity_id'] ??
           data['postId'] ??
           data['post_id'] ??
+          data['feedPostId'] ??
+          data['feed_post_id'] ??
           data['targetPostId'] ??
-          data['target_post_id'],
+          data['target_post_id'] ??
+          data['entityId'] ??
+          data['entity_id'],
     );
     final conversationId = _readInt(
       data['conversationId'] ??

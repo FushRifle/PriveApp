@@ -297,26 +297,13 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
       return user;
     }).toList();
 
-    final updatedFollowing = state.following.map((user) {
-      if (user.id == event.userId) {
-        return FriendUser(
-          id: user.id,
-          name: user.name,
-          username: user.username,
-          avatar: user.avatar,
-          isVerified: user.isVerified,
-          bio: user.bio,
-          location: user.location,
-          isFollowing: false,
-          isFollowedBy: user.isFollowedBy,
-        );
-      }
-      return user;
-    }).toList();
+    final updatedFollowing =
+        state.following.where((user) => user.id != event.userId).toList();
 
     emit(state.copyWith(
       followers: updatedFollowers,
       following: updatedFollowing,
+      followingTotal: state.followingTotal > 0 ? state.followingTotal - 1 : 0,
       clearError: true,
     ));
 

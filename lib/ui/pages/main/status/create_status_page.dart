@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:clique/core/clients/cloudinary_service.dart';
+import 'package:clique/core/services/media_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
@@ -21,6 +23,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   final TextEditingController _hashtagController = TextEditingController();
   final CloudinaryService _cloudinaryService = CloudinaryService();
   final ImagePicker _imagePicker = ImagePicker();
+  final MediaService _mediaService = MediaService();
   StreamSubscription<StoriesState>? _createStorySubscription;
 
   File? _selectedImageFile;
@@ -514,8 +517,14 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
         imageQuality: 85,
       );
       if (pickedFile != null) {
+        final croppedFile = await _mediaService.cropImage(
+          pickedFile,
+          aspectRatio: const CropAspectRatio(ratioX: 9, ratioY: 16),
+        );
+        if (croppedFile == null) return;
+
         setState(() {
-          _selectedImageFile = File(pickedFile.path);
+          _selectedImageFile = File(croppedFile.path);
           _selectedColor = AppColors.transparent;
         });
       }
@@ -582,8 +591,8 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                         textInputAction: TextInputAction.done,
                         decoration: InputDecoration(
                           hintText: 'Add hashtags',
-                          hintStyle:
-                              TextStyle(color: AppColors.white.withOpacity(0.5)),
+                          hintStyle: TextStyle(
+                              color: AppColors.white.withOpacity(0.5)),
                           prefixIcon: const Icon(
                             Icons.tag_rounded,
                             color: AppColors.primary,
