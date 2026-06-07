@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:lottie/lottie.dart';
 
 import 'package:clique/app/configs/colors.dart';
 
@@ -11,8 +12,6 @@ import 'package:clique/bloc/user/user_bloc.dart';
 
 import 'package:clique/ui/pages/auth/login_page.dart';
 import 'package:clique/ui/pages/auth/onboarding_page.dart';
-import 'package:clique/ui/widgets/ui/app_heart_loader.dart';
-
 import 'main_wrapper.dart';
 import 'named_routes.dart';
 
@@ -258,9 +257,28 @@ class _SplashScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: const Center(
-        child: AppHeartLoader(
-          size: 82,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 116,
+              height: 116,
+              child: Lottie.asset(
+                'assets/json/auth_guard_loader.json',
+                repeat: true,
+              ),
+            ),
+            const SizedBox(height: 18),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: Image.asset(
+                'assets/icons/clique.png',
+                width: 54,
+                height: 54,
+              ),
+            ),
+          ],
         ),
       ),
     );
