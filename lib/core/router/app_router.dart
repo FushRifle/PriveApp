@@ -35,6 +35,7 @@ import 'package:clique/ui/pages/main/match/matches_page.dart';
 import 'package:clique/ui/pages/main/notification/notification_page.dart';
 
 import 'package:clique/ui/pages/main/profile/edit_profile_page.dart';
+import 'package:clique/ui/pages/main/profile/other_profile_page.dart';
 import 'package:clique/ui/pages/main/profile/profile_page.dart';
 
 import 'package:clique/ui/pages/main/status/create_status_page.dart';

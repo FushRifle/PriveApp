@@ -291,14 +291,21 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     try {
       await _userService.completeOnboarding();
 
-      // Refresh user to get updated onboarding status
-      add(RefreshCurrentUser());
+      final updatedUser = Map<String, dynamic>.from(
+        state.currentUser ?? const <String, dynamic>{},
+      )
+        ..['onboarded'] = true
+        ..['isOnboarded'] = true;
 
       emit(state.copyWith(
+        currentUser: updatedUser,
         status: UserStatus.success,
         isSaving: false,
         clearError: true,
+        lastUpdated: DateTime.now(),
       ));
+
+      add(RefreshCurrentUser());
     } catch (e) {
       emit(state.copyWith(
         status: UserStatus.error,

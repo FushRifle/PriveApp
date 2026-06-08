@@ -101,7 +101,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: isDarkMode
                       ? AppColors.darkBorderColor
@@ -147,7 +147,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                         backgroundColor: AppColors.primary,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
                       child: _isLoading
@@ -198,7 +198,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
             hintText: hint,
             hintStyle: AppTheme.greyTextStyle,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide.none,
             ),
             filled: true,

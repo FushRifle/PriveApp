@@ -195,7 +195,7 @@ class PrivacyPage extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
             color: isDarkMode
                 ? AppColors.darkBorderColor

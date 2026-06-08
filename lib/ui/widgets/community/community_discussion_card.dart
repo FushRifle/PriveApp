@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/models/community_model.dart';
+import 'package:clique/ui/widgets/common/effect_text.dart';
 
 class CommunityDiscussionCard extends StatelessWidget {
   final DiscussionPostModel post;
@@ -57,8 +58,8 @@ class CommunityDiscussionCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  post.content,
+                EffectText(
+                  text: post.content,
                   style: AppTheme.blackTextStyle.copyWith(height: 1.38),
                 ),
               ],

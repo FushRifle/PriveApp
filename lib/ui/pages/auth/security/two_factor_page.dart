@@ -45,7 +45,7 @@ class _TwoFactorPageState extends State<TwoFactorPage> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: isDarkMode
                       ? AppColors.darkBorderColor
@@ -100,7 +100,7 @@ class _TwoFactorPageState extends State<TwoFactorPage> {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: isDarkMode
                         ? AppColors.darkBorderColor
@@ -129,7 +129,7 @@ class _TwoFactorPageState extends State<TwoFactorPage> {
                         color: isDarkMode
                             ? AppColors.darkBackground
                             : AppColors.lightBackground,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: isDarkMode
                               ? AppColors.darkBorderColor
@@ -171,7 +171,7 @@ class _TwoFactorPageState extends State<TwoFactorPage> {
                             style: OutlinedButton.styleFrom(
                               side: BorderSide(color: AppColors.primary),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                             ),
                             child: const Text('Copy Codes'),
@@ -184,7 +184,7 @@ class _TwoFactorPageState extends State<TwoFactorPage> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                             ),
                             child: const Text('Download'),
@@ -207,7 +207,7 @@ class _TwoFactorPageState extends State<TwoFactorPage> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         title: Text(
           'Setup 2FA',
           style: AppTheme.blackTextStyle.copyWith(fontWeight: FontWeight.bold),

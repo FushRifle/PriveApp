@@ -15,6 +15,7 @@ import 'package:clique/core/services/chat/chat_service.dart';
 import 'package:clique/core/services/friends/friends_service.dart';
 import 'package:clique/core/services/reel/reel_service.dart';
 import 'package:clique/ui/pages/main/chat/chat_page.dart';
+import 'package:clique/ui/widgets/common/effect_text.dart';
 
 class ReelItem extends StatefulWidget {
   final Map<String, dynamic> reel;
@@ -769,13 +770,15 @@ class _ReelItemState extends State<ReelItem>
             ),
             if (caption.trim().isNotEmpty) ...[
               const SizedBox(height: 12),
-              Text(
-                caption,
-                style: TextStyle(
-                  color: AppColors.text,
+              EffectText(
+                text: caption,
+                style: const TextStyle(
+                  color: AppColors.white,
                   fontSize: 14,
                   height: 1.25,
                 ),
+                hashtagColor: AppColors.storyYellow,
+                mentionColor: AppColors.secondary,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),

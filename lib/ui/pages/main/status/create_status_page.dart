@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
 import 'package:clique/core/models/status_model.dart';
+import 'package:clique/ui/widgets/common/effect_text.dart';
 
 class CreateStatusPage extends StatefulWidget {
   const CreateStatusPage({super.key});
@@ -816,48 +817,21 @@ class _StoryHashtagText extends StatelessWidget {
     required this.style,
   });
 
-  static final RegExp _hashtagPattern = RegExp(r'#[A-Za-z0-9_]+');
-
   @override
   Widget build(BuildContext context) {
-    final spans = <InlineSpan>[];
-    var cursor = 0;
-
-    for (final match in _hashtagPattern.allMatches(text)) {
-      if (match.start > cursor) {
-        spans.add(TextSpan(text: text.substring(cursor, match.start)));
-      }
-
-      spans.add(
-        TextSpan(
-          text: match.group(0),
-          style: style.copyWith(
-            color: AppColors.storyYellow,
-            fontWeight: FontWeight.w900,
-            shadows: const [
-              Shadow(
-                blurRadius: 12,
-                color: AppColors.black87,
-                offset: Offset(1, 1),
-              ),
-            ],
-          ),
-        ),
-      );
-
-      cursor = match.end;
-    }
-
-    if (cursor < text.length) {
-      spans.add(TextSpan(text: text.substring(cursor)));
-    }
-
-    return RichText(
+    return EffectText(
+      text: text,
       textAlign: textAlign,
-      text: TextSpan(
-        style: style,
-        children: spans,
-      ),
+      style: style,
+      hashtagColor: AppColors.storyYellow,
+      mentionColor: AppColors.storyGreen,
+      effectShadows: const [
+        Shadow(
+          blurRadius: 12,
+          color: AppColors.black87,
+          offset: Offset(1, 1),
+        ),
+      ],
     );
   }
 }

@@ -24,7 +24,7 @@ class CommunityDetailHero extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(15),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -110,7 +110,7 @@ class CommunityDetailHero extends StatelessWidget {
                     : AppColors.primary,
                 foregroundColor: AppColors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(15),
                 ),
               ),
             ),

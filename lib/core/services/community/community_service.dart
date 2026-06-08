@@ -172,7 +172,12 @@ class CommunityService {
           : '/api/communities/$communityId/posts';
       final response = await _api.post(
         path,
-        data: {'content': content, 'attachments': <String>[]},
+        data: {
+          'content': content,
+          'attachments': <String>[],
+          if (_extractMentions(content).isNotEmpty)
+            'mentions': _extractMentions(content),
+        },
       );
       _clearCommunityCaches();
       return DiscussionPostModel.fromJson(_asMap(response.data));
@@ -240,5 +245,14 @@ class CommunityService {
     }
     if (data is String && data.isNotEmpty) return data;
     return fallback;
+  }
+
+  List<String> _extractMentions(String text) {
+    final seen = <String>{};
+    return RegExp(r'(?<![A-Za-z0-9_])@([A-Za-z0-9_]+)')
+        .allMatches(text)
+        .map((match) => match.group(1)!.toLowerCase())
+        .where(seen.add)
+        .toList();
   }
 }

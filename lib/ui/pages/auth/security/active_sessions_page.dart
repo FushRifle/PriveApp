@@ -43,7 +43,7 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         title: const Text('Logout Session'),
         content: Text(
             'Are you sure you want to logout from ${_sessions[index]['device']}?'),
@@ -76,7 +76,7 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         title: const Text('Logout All Devices'),
         content: const Text(
             'This will log you out from all devices including this one. You will need to sign in again.'),
@@ -159,7 +159,7 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
                   decoration: BoxDecoration(
                     color:
                         isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: isDarkMode
                           ? AppColors.darkBorderColor
@@ -173,7 +173,7 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
                         height: 50,
                         decoration: BoxDecoration(
                           color: AppColors.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
                           session['icon'],
@@ -204,7 +204,7 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
                                     ),
                                     decoration: BoxDecoration(
                                       color: AppColors.primary.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
                                       'Current',

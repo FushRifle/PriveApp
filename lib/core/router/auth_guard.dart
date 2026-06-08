@@ -269,15 +269,7 @@ class _SplashScreen extends StatelessWidget {
                 repeat: true,
               ),
             ),
-            const SizedBox(height: 18),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: Image.asset(
-                'assets/icons/clique.png',
-                width: 54,
-                height: 54,
-              ),
-            ),
+            const SizedBox(height: 18),           
           ],
         ),
       ),

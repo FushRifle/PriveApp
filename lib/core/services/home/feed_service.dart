@@ -80,6 +80,10 @@ class FeedService {
   }) async {
     try {
       final data = <String, dynamic>{'content': content};
+      final mentions = _extractMentions(content);
+      if (mentions.isNotEmpty) {
+        data['mentions'] = mentions;
+      }
       if (attachments != null && attachments.isNotEmpty) {
         data['attachments'] = attachments;
       }
@@ -426,5 +430,14 @@ class FeedService {
   void _invalidateFeedCaches() {
     _api.removeCacheByPath('/api/feed/posts');
     _api.removeCacheByPath('/api/feed/users');
+  }
+
+  List<String> _extractMentions(String text) {
+    final seen = <String>{};
+    return RegExp(r'(?<![A-Za-z0-9_])@([A-Za-z0-9_]+)')
+        .allMatches(text)
+        .map((match) => match.group(1)!.toLowerCase())
+        .where(seen.add)
+        .toList();
   }
 }

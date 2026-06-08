@@ -15,11 +15,24 @@ class StatusService {
 
   Future<List<Story>> getStories() async {
     try {
-      final response = await _api.get('/api/stories');
+      final response = await _api.get(
+        '/api/stories',
+        queryParameters: const {
+          'scope': 'following',
+          'followingOnly': true,
+        },
+        forceRefresh: true,
+      );
       final data = response.data;
 
       if (data is List) {
         return data.map((json) => Story.fromJson(json)).toList();
+      }
+      if (data is Map) {
+        final stories = data['data'] ?? data['stories'] ?? data['items'];
+        if (stories is List) {
+          return stories.map((json) => Story.fromJson(json)).toList();
+        }
       }
       return [];
     } on DioException catch (e) {
@@ -38,6 +51,10 @@ class StatusService {
       final data = <String, dynamic>{
         'content': content,
       };
+      final mentions = _extractMentions(content);
+      if (mentions.isNotEmpty) {
+        data['mentions'] = mentions;
+      }
 
       if (attachments != null && attachments.isNotEmpty) {
         data['attachments'] = attachments.map((a) => a.toJson()).toList();
@@ -113,5 +130,14 @@ class StatusService {
       if (message != null) return message.toString();
     }
     return fallback;
+  }
+
+  List<String> _extractMentions(String text) {
+    final seen = <String>{};
+    return RegExp(r'(?<![A-Za-z0-9_])@([A-Za-z0-9_]+)')
+        .allMatches(text)
+        .map((match) => match.group(1)!.toLowerCase())
+        .where(seen.add)
+        .toList();
   }
 }

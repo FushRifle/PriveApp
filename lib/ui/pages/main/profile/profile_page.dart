@@ -13,9 +13,7 @@ import 'package:clique/bloc/friends/friends_bloc.dart';
 import 'package:clique/bloc/insights/insights_bloc.dart';
 import 'package:clique/bloc/match/match_bloc.dart';
 
-import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/models/gallery_model.dart';
-import 'package:clique/core/services/chat/chat_service.dart';
 import 'package:clique/core/services/friends/friends_service.dart';
 
 import 'package:clique/ui/pages/main/match/matches_page.dart';
@@ -23,8 +21,6 @@ import 'package:clique/ui/pages/main/profile/edit_profile_page.dart';
 import 'package:clique/ui/pages/settings/settings_page.dart';
 import 'package:clique/ui/pages/social/friends_list_page.dart';
 import 'package:clique/ui/pages/social/insights_page.dart';
-
-part 'other_profile_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({
@@ -53,7 +49,7 @@ class _ProfilePageState extends State<ProfilePage>
   void initState() {
     super.initState();
 
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_handleTabChanged);
     _scrollController = ScrollController();
     _galleryCubit = GalleryProfileCubit();
@@ -117,7 +113,7 @@ class _ProfilePageState extends State<ProfilePage>
     _loadUserMedia(userId, type);
   }
 
-  void _loadUserMedia(int userId, _GalleryTabType type) {
+  void _loadUserMedia(int userId, ProfileGalleryTabType type) {
     final mediaType = _mediaType(type);
     final key = '$userId:${mediaType ?? 'all'}';
     if (_loadedMediaKey == key) return;
@@ -131,34 +127,34 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  void _loadMoreMedia(int userId, _GalleryTabType type) {
+  void _loadMoreMedia(int userId, ProfileGalleryTabType type) {
     _galleryCubit.loadMoreMedia(
       userId: userId,
       type: _mediaType(type),
     );
   }
 
-  _GalleryTabType? _tabTypeForIndex(int index) {
-    if (index == 0) return _GalleryTabType.photos;
-    if (index == 1) return _GalleryTabType.videos;
+  ProfileGalleryTabType? _tabTypeForIndex(int index) {
+    if (index == 0) return ProfileGalleryTabType.posts;
+    if (index == 1) return ProfileGalleryTabType.media;
     return null;
   }
 
-  String? _mediaType(_GalleryTabType type) {
-    return type == _GalleryTabType.videos ? 'video' : 'image';
+  String? _mediaType(ProfileGalleryTabType type) {
+    return null;
   }
 
-  _ProfileView? _currentProfile(
+  ProfileView? _currentProfile(
     UserState userState,
     ProfileState profileState,
   ) {
-    return _ProfileView.fromSources(
+    return ProfileView.fromSources(
       user: userState.currentUser,
       profile: profileState.myProfile,
     );
   }
 
-  int? _profileUserId(_ProfileView profile) {
+  int? _profileUserId(ProfileView profile) {
     return profile.userId != 0 ? profile.userId : profile.id;
   }
 
@@ -200,7 +196,7 @@ class _ProfilePageState extends State<ProfilePage>
                   _loadUserMedia(
                     userId,
                     _tabTypeForIndex(_tabController.index) ??
-                        _GalleryTabType.photos,
+                        ProfileGalleryTabType.posts,
                   );
                 }
               },
@@ -212,7 +208,7 @@ class _ProfilePageState extends State<ProfilePage>
               builder: (context, profileState) {
                 final profile = _currentProfile(userState, profileState);
 
-                return _ProfileBody(
+                return ProfileBody(
                   isLoading: userState.isLoading ||
                       profileState.status == ProfileStatus.loading,
                   error: userState.error ?? profileState.error,
@@ -240,7 +236,7 @@ class _ProfilePageState extends State<ProfilePage>
   }
 }
 
-class _ProfileView {
+class ProfileView {
   final int id;
   final int userId;
   final String? displayName;
@@ -256,7 +252,7 @@ class _ProfileView {
   final String? work;
   final String? education;
 
-  const _ProfileView({
+  const ProfileView({
     required this.id,
     required this.userId,
     this.displayName,
@@ -273,7 +269,7 @@ class _ProfileView {
     this.education,
   });
 
-  static _ProfileView? fromSources({
+  static ProfileView? fromSources({
     Map<String, dynamic>? user,
     Profile? profile,
   }) {
@@ -284,7 +280,7 @@ class _ProfileView {
     final profileUserId = profile?.userId ?? 0;
     final name = _readName(user) ?? _readString(profile?.displayName);
 
-    return _ProfileView(
+    return ProfileView(
       id: id != 0 ? id : profile?.id ?? 0,
       userId: profileUserId != 0 ? profileUserId : userId,
       displayName: name,
@@ -385,20 +381,21 @@ class _ProfileView {
   }
 }
 
-class _ProfileBody extends StatelessWidget {
+class ProfileBody extends StatelessWidget {
   final bool isLoading;
   final String? error;
-  final _ProfileView? profile;
+  final ProfileView? profile;
   final bool isOwnProfile;
   final bool isFollowing;
   final TabController tabController;
   final ScrollController scrollController;
   final VoidCallback onRetry;
   final VoidCallback onToggleFollow;
-  final ValueChanged<_ProfileView>? onMessage;
-  final void Function(int userId, _GalleryTabType type) onLoadMoreMedia;
+  final ValueChanged<ProfileView>? onMessage;
+  final void Function(int userId, ProfileGalleryTabType type) onLoadMoreMedia;
 
-  const _ProfileBody({
+  const ProfileBody({
+    super.key,
     required this.isLoading,
     required this.error,
     required this.profile,
@@ -463,15 +460,16 @@ class _ProfileBody extends StatelessWidget {
         children: [
           _GalleryTab(
             userId: userId,
-            type: _GalleryTabType.photos,
-            onLoadMore: () => onLoadMoreMedia(userId, _GalleryTabType.photos),
+            type: ProfileGalleryTabType.posts,
+            onLoadMore: () =>
+                onLoadMoreMedia(userId, ProfileGalleryTabType.posts),
           ),
           _GalleryTab(
             userId: userId,
-            type: _GalleryTabType.videos,
-            onLoadMore: () => onLoadMoreMedia(userId, _GalleryTabType.videos),
+            type: ProfileGalleryTabType.media,
+            onLoadMore: () =>
+                onLoadMoreMedia(userId, ProfileGalleryTabType.media),
           ),
-          const _TaggedTab(),
         ],
       ),
     );
@@ -483,7 +481,7 @@ class _ProfileBody extends StatelessWidget {
 }
 
 class _ProfileSliverAppBar extends StatelessWidget {
-  final _ProfileView profile;
+  final ProfileView profile;
   final bool isOwnProfile;
 
   const _ProfileSliverAppBar({
@@ -499,7 +497,7 @@ class _ProfileSliverAppBar extends StatelessWidget {
     return SliverAppBar(
       expandedHeight: hasCover ? 220 : 120,
       pinned: true,
-      backgroundColor: AppColors.card,
+      backgroundColor: AppColors.backgroundColor,
       elevation: 0,
       leading: IconButton(
         onPressed: () => Navigator.maybePop(context),
@@ -629,11 +627,11 @@ class _CoverPlaceholder extends StatelessWidget {
 }
 
 class _ProfileHeader extends StatelessWidget {
-  final _ProfileView profile;
+  final ProfileView profile;
   final bool isOwnProfile;
   final bool isFollowing;
   final VoidCallback onToggleFollow;
-  final ValueChanged<_ProfileView>? onMessage;
+  final ValueChanged<ProfileView>? onMessage;
 
   const _ProfileHeader({
     required this.profile,
@@ -690,7 +688,7 @@ class _ProfileHeader extends StatelessWidget {
 }
 
 class _AvatarSection extends StatelessWidget {
-  final _ProfileView profile;
+  final ProfileView profile;
 
   const _AvatarSection({
     required this.profile,
@@ -738,7 +736,7 @@ class _AvatarSection extends StatelessWidget {
 }
 
 class _NameSection extends StatelessWidget {
-  final _ProfileView profile;
+  final ProfileView profile;
 
   const _NameSection({
     required this.profile,
@@ -770,7 +768,7 @@ class _NameSection extends StatelessWidget {
 }
 
 class _BioSection extends StatelessWidget {
-  final _ProfileView profile;
+  final ProfileView profile;
 
   const _BioSection({
     required this.profile,
@@ -865,7 +863,7 @@ class _InfoChip extends StatelessWidget {
 class _StatsRow extends StatelessWidget {
   static final FriendsService _friendsService = FriendsService();
 
-  final _ProfileView profile;
+  final ProfileView profile;
   final bool isOwnProfile;
   final int totalLikes;
 
@@ -1055,11 +1053,11 @@ class _InsightsButton extends StatelessWidget {
 }
 
 class _ActionButtons extends StatelessWidget {
-  final _ProfileView profile;
+  final ProfileView profile;
   final bool isOwnProfile;
   final bool isFollowing;
   final VoidCallback onToggleFollow;
-  final ValueChanged<_ProfileView>? onMessage;
+  final ValueChanged<ProfileView>? onMessage;
 
   const _ActionButtons({
     required this.profile,
@@ -1249,9 +1247,8 @@ class _StickyTabBar extends StatelessWidget {
             letterSpacing: 1,
           ),
           tabs: const [
-            Tab(text: 'PHOTOS'),
-            Tab(text: 'VIDEOS'),
-            Tab(text: 'TAGGED'),
+            Tab(text: 'POSTS'),
+            Tab(text: 'MEDIA'),
           ],
         ),
       ),
@@ -1259,14 +1256,14 @@ class _StickyTabBar extends StatelessWidget {
   }
 }
 
-enum _GalleryTabType {
-  photos,
-  videos,
+enum ProfileGalleryTabType {
+  posts,
+  media,
 }
 
 class _GalleryTab extends StatelessWidget {
   final int userId;
-  final _GalleryTabType type;
+  final ProfileGalleryTabType type;
   final VoidCallback onLoadMore;
 
   const _GalleryTab({
@@ -1284,34 +1281,44 @@ class _GalleryTab extends StatelessWidget {
         }
 
         if (state is GalleryProfileLoaded) {
+          final items = _filterItems(state.galleryProfiles);
+          if (type == ProfileGalleryTabType.posts) {
+            return _PostsTab(
+              items: items,
+              hasMore: state.hasMore,
+              isLoadingMore: state.isLoadingMore,
+              onLoadMore: onLoadMore,
+            );
+          }
           return _GalleryGrid(
             userId: userId,
-            items: _filterItems(state.galleryProfiles),
+            items: items,
             hasMore: state.hasMore,
             isLoadingMore: state.isLoadingMore,
             onLoadMore: onLoadMore,
-            emptyIcon: type == _GalleryTabType.photos
-                ? Icons.photo_library
-                : Icons.videocam,
-            emptyText: type == _GalleryTabType.photos
-                ? 'No photos yet'
-                : 'No videos yet',
+            emptyIcon: Icons.perm_media_outlined,
+            emptyText: 'No media yet',
           );
         }
 
         if (state is GalleryProfileLoadingMore) {
+          final items = _filterItems(state.currentProfiles);
+          if (type == ProfileGalleryTabType.posts) {
+            return _PostsTab(
+              items: items,
+              hasMore: true,
+              isLoadingMore: true,
+              onLoadMore: onLoadMore,
+            );
+          }
           return _GalleryGrid(
             userId: userId,
-            items: _filterItems(state.currentProfiles),
+            items: items,
             hasMore: true,
             isLoadingMore: true,
             onLoadMore: onLoadMore,
-            emptyIcon: type == _GalleryTabType.photos
-                ? Icons.photo_library
-                : Icons.videocam,
-            emptyText: type == _GalleryTabType.photos
-                ? 'No photos yet'
-                : 'No videos yet',
+            emptyIcon: Icons.perm_media_outlined,
+            emptyText: 'No media yet',
           );
         }
 
@@ -1321,7 +1328,7 @@ class _GalleryTab extends StatelessWidget {
             onRetry: () {
               context.read<GalleryProfileCubit>().getUserMedia(
                     userId: userId,
-                    type: type == _GalleryTabType.videos ? 'video' : 'image',
+                    type: null,
                     page: 1,
                   );
             },
@@ -1334,11 +1341,138 @@ class _GalleryTab extends StatelessWidget {
   }
 
   List<GalleryModel> _filterItems(List<GalleryModel> items) {
-    if (type == _GalleryTabType.videos) {
-      return items.where((item) => item.type == 'video').toList();
+    return items;
+  }
+}
+
+class _PostsTab extends StatelessWidget {
+  final List<GalleryModel> items;
+  final bool hasMore;
+  final bool isLoadingMore;
+  final VoidCallback onLoadMore;
+
+  const _PostsTab({
+    required this.items,
+    required this.hasMore,
+    required this.isLoadingMore,
+    required this.onLoadMore,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty && !isLoadingMore) {
+      return const _EmptyState(
+        icon: Icons.article_outlined,
+        message: 'No posts yet',
+      );
     }
 
-    return items.where((item) => item.type != 'video').toList();
+    return NotificationListener<ScrollNotification>(
+      onNotification: (scrollInfo) {
+        if (!hasMore || isLoadingMore) return false;
+        if (scrollInfo.metrics.pixels >=
+            scrollInfo.metrics.maxScrollExtent - 350) {
+          onLoadMore();
+        }
+        return false;
+      },
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+        physics: const BouncingScrollPhysics(),
+        itemCount: items.length + (isLoadingMore ? 1 : 0),
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          if (index >= items.length) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(18),
+                child: CircularProgressIndicator(
+                  color: AppColors.primary,
+                  strokeWidth: 2,
+                ),
+              ),
+            );
+          }
+          final item = items[index];
+          return _ProfilePostPreview(item: item);
+        },
+      ),
+    );
+  }
+}
+
+class _ProfilePostPreview extends StatelessWidget {
+  final GalleryModel item;
+
+  const _ProfilePostPreview({
+    required this.item,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: 76,
+              height: 76,
+              child: CachedNetworkImage(
+                imageUrl: item.thumbnail ?? item.image,
+                fit: BoxFit.cover,
+                errorWidget: (_, __, ___) => Container(
+                  color: AppColors.primary.withOpacity(0.08),
+                  child: const Icon(Icons.article_outlined),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.caption?.trim().isNotEmpty == true
+                      ? item.caption!.trim()
+                      : item.type == 'video'
+                          ? 'Reel'
+                          : 'Photo post',
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTheme.blackTextStyle.copyWith(
+                    fontSize: 14,
+                    height: 1.35,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    const Icon(Icons.favorite_border, size: 16),
+                    const SizedBox(width: 4),
+                    Text(item.like, style: AppTheme.greyTextStyle),
+                    const SizedBox(width: 14),
+                    const Icon(Icons.mode_comment_outlined, size: 16),
+                    const SizedBox(width: 4),
+                    Text('${item.commentsCount}',
+                        style: AppTheme.greyTextStyle),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -1510,19 +1644,6 @@ class _GalleryItem extends StatelessWidget {
   }
 }
 
-class _TaggedTab extends StatelessWidget {
-  const _TaggedTab();
-
-  @override
-  Widget build(BuildContext context) {
-    return const _EmptyState(
-      icon: Icons.bookmark,
-      message: 'No tagged posts',
-      subtitle: 'Posts you are tagged in will appear here',
-    );
-  }
-}
-
 class _LoadingState extends StatelessWidget {
   const _LoadingState();
 
@@ -1545,8 +1666,7 @@ class _EmptyState extends StatelessWidget {
   const _EmptyState({
     required this.icon,
     required this.message,
-    this.subtitle,
-  });
+  }) : subtitle = null;
 
   @override
   Widget build(BuildContext context) {

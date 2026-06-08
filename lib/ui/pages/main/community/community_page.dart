@@ -61,9 +61,9 @@ class _CommunityPageState extends State<CommunityPage>
           body: Column(
             children: [
               AppPageHeader(
-                title: 'Spaces',
+                title: 'Community',
                 subtitle: state.invitations.isEmpty
-                    ? 'Find focused groups'
+                    ? 'Find groups and discussions'
                     : '${state.invitations.length} invitation${state.invitations.length == 1 ? '' : 's'} waiting',
                 leadingIcon: Icons.diversity_3_outlined,
                 actionIcon: Icons.add_rounded,
@@ -109,10 +109,10 @@ class _CommunityPageState extends State<CommunityPage>
                           hasScrollBody: false,
                           child: CommunityEmptyState(
                             icon: Icons.diversity_3_outlined,
-                            title: 'No spaces found',
+                            title: 'No groups found',
                             message:
-                                'Create a space for shared interests, focused groups, and useful discussions.',
-                            actionLabel: 'Create space',
+                                'Create a group for shared interests and useful discussions.',
+                            actionLabel: 'Create group',
                             onAction: _openCreateCommunity,
                           ),
                         )
@@ -238,7 +238,7 @@ class _CommunityList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 130),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 130),
       sliver: SliverList.separated(
         itemBuilder: (context, index) {
           final community = communities[index];

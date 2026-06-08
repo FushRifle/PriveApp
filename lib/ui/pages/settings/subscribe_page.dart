@@ -94,11 +94,11 @@ class _SubscribePageState extends State<SubscribePage> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: const LinearGradient(
-                      colors: [AppColors.purple, AppColors.pink],
+                      colors: [AppColors.primary, AppColors.secondary],
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.purple.withOpacity(0.3),
+                        color: AppColors.primary.withOpacity(0.3),
                         blurRadius: 30,
                         offset: const Offset(0, 15),
                       ),
@@ -134,7 +134,7 @@ class _SubscribePageState extends State<SubscribePage> {
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     color: AppColors.white,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
@@ -151,7 +151,7 @@ class _SubscribePageState extends State<SubscribePage> {
                               color: _selectedPlan == 0
                                   ? AppColors.primary
                                   : AppColors.transparent,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             child: Column(
                               children: [
@@ -193,7 +193,7 @@ class _SubscribePageState extends State<SubscribePage> {
                               color: _selectedPlan == 1
                                   ? AppColors.primary
                                   : AppColors.transparent,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             child: Column(
                               children: [
@@ -281,14 +281,14 @@ class _SubscribePageState extends State<SubscribePage> {
                   icon: Icons.cloud_upload,
                   title: 'HD Uploads',
                   description: 'Upload high-quality videos and photos',
-                  color: AppColors.purple,
+                  color: AppColors.primary,
                 ),
                 const SizedBox(height: 20),
                 _buildFeatureItem(
                   icon: Icons.auto_awesome,
                   title: 'Exclusive Filters',
                   description: 'Access premium filters and effects',
-                  color: AppColors.pink,
+                  color: AppColors.secondary,
                 ),
                 const SizedBox(height: 20),
                 _buildFeatureItem(
@@ -387,12 +387,12 @@ class _SubscribePageState extends State<SubscribePage> {
                         height: 60,
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [AppColors.purple, AppColors.pink],
+                            colors: [AppColors.primary, AppColors.secondary],
                           ),
-                          borderRadius: BorderRadius.circular(30),
+                          borderRadius: BorderRadius.circular(8),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.purple.withOpacity(0.3),
+                              color: AppColors.primary.withOpacity(0.3),
                               blurRadius: 20,
                               offset: const Offset(0, 10),
                             ),
@@ -471,7 +471,7 @@ class _SubscribePageState extends State<SubscribePage> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: [
@@ -480,7 +480,7 @@ class _SubscribePageState extends State<SubscribePage> {
             height: 48,
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: color, size: 24),
           ),
@@ -568,7 +568,7 @@ class _SubscribePageState extends State<SubscribePage> {
       builder: (context) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(8),
           ),
           title: Center(
             child: Column(
@@ -614,9 +614,9 @@ class _SubscribePageState extends State<SubscribePage> {
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [AppColors.purple, AppColors.pink],
+                    colors: [AppColors.primary, AppColors.secondary],
                   ),
-                  borderRadius: BorderRadius.circular(25),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Center(
                   child: Text(

@@ -18,6 +18,9 @@ class ReelService {
       final response = await _api.get('/api/reels',
           queryParameters: {
             'page': page,
+            'scope': 'all',
+            'includeFollowing': true,
+            'includeOthers': true,
           },
           forceRefresh: forceRefresh);
       final reels = _readList(response.data);
@@ -31,7 +34,17 @@ class ReelService {
   // Create reel
   Future<Map<String, dynamic>> createReel(Map<String, dynamic> data) async {
     try {
-      final response = await _api.post('/api/reels', data: data);
+      final payload = Map<String, dynamic>.from(data);
+      final text = [
+        payload['caption'],
+        payload['content'],
+      ].whereType<Object>().join(' ');
+      final mentions = _extractMentions(text);
+      if (mentions.isNotEmpty) {
+        payload['mentions'] = mentions;
+      }
+
+      final response = await _api.post('/api/reels', data: payload);
       _invalidateReelCaches();
       return _readMap(response.data);
     } on DioException catch (e) {
@@ -173,5 +186,14 @@ class ReelService {
     if (reelId != null && reelId.isNotEmpty) {
       _api.removeCacheByPath('/api/reels/$reelId');
     }
+  }
+
+  List<String> _extractMentions(String text) {
+    final seen = <String>{};
+    return RegExp(r'(?<![A-Za-z0-9_])@([A-Za-z0-9_]+)')
+        .allMatches(text)
+        .map((match) => match.group(1)!.toLowerCase())
+        .where(seen.add)
+        .toList();
   }
 }

@@ -52,7 +52,7 @@ class HelpPage extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
             color: isDarkMode
                 ? AppColors.darkBorderColor
@@ -144,7 +144,7 @@ class HelpPage extends StatelessWidget {
       collapsedBackgroundColor:
           isDarkMode ? AppColors.darkCard : AppColors.lightCard,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8),
         side: BorderSide(
             color: isDarkMode
                 ? AppColors.darkBorderColor
@@ -184,7 +184,7 @@ class HelpPage extends StatelessWidget {
         Container(
           decoration: BoxDecoration(
             color: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(
                 color: isDarkMode
                     ? AppColors.darkBorderColor
@@ -243,7 +243,7 @@ class HelpPage extends StatelessWidget {
         Container(
           decoration: BoxDecoration(
             color: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(
                 color: isDarkMode
                     ? AppColors.darkBorderColor
@@ -336,7 +336,7 @@ class HelpPage extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         title: Text(
           type,
           style: AppTheme.blackTextStyle.copyWith(fontWeight: FontWeight.bold),
@@ -348,14 +348,14 @@ class HelpPage extends StatelessWidget {
             hintText: 'Please describe the issue...',
             hintStyle: AppTheme.greyTextStyle,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
                   color: isDarkMode
                       ? AppColors.darkBorderColor
                       : AppColors.lightBorderColor),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: AppColors.primary),
             ),
           ),
@@ -381,7 +381,7 @@ class HelpPage extends StatelessWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(8)),
             ),
             child: const Text('Submit'),
           ),

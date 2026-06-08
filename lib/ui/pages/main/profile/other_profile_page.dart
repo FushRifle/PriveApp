@@ -1,4 +1,16 @@
-part of 'profile_page.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/bloc/friends/friends_bloc.dart';
+import 'package:clique/bloc/profile/gallery_profile_cubit.dart';
+import 'package:clique/bloc/profile/profile_bloc.dart';
+import 'package:clique/bloc/user/user_bloc.dart';
+import 'package:clique/core/router/named_routes.dart';
+import 'package:clique/core/services/chat/chat_service.dart';
+import 'package:clique/core/services/friends/friends_service.dart';
+import 'package:clique/ui/pages/main/profile/profile_page.dart';
 
 class OtherProfilePage extends StatefulWidget {
   final int userId;
@@ -29,7 +41,7 @@ class _OtherProfilePageState extends State<OtherProfilePage>
   void initState() {
     super.initState();
 
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_handleTabChanged);
     _scrollController = ScrollController();
     _galleryCubit = GalleryProfileCubit();
@@ -89,7 +101,7 @@ class _OtherProfilePageState extends State<OtherProfilePage>
   void _handleTabChanged() {
     if (_tabController.indexIsChanging) return;
 
-    final profile = _ProfileView.fromSources(
+    final profile = ProfileView.fromSources(
       user: context.read<UserBloc>().state.viewedUser,
       profile: context.read<ProfileBloc>().state.viewedProfile,
     );
@@ -104,7 +116,7 @@ class _OtherProfilePageState extends State<OtherProfilePage>
     _loadUserMedia(userId, type);
   }
 
-  void _loadUserMedia(int userId, _GalleryTabType type) {
+  void _loadUserMedia(int userId, ProfileGalleryTabType type) {
     final mediaType = _mediaType(type);
     final key = '$userId:${mediaType ?? 'all'}';
     if (_loadedMediaKey == key) return;
@@ -118,24 +130,24 @@ class _OtherProfilePageState extends State<OtherProfilePage>
     );
   }
 
-  void _loadMoreMedia(int userId, _GalleryTabType type) {
+  void _loadMoreMedia(int userId, ProfileGalleryTabType type) {
     _galleryCubit.loadMoreMedia(
       userId: userId,
       type: _mediaType(type),
     );
   }
 
-  _GalleryTabType? _tabTypeForIndex(int index) {
-    if (index == 0) return _GalleryTabType.photos;
-    if (index == 1) return _GalleryTabType.videos;
+  ProfileGalleryTabType? _tabTypeForIndex(int index) {
+    if (index == 0) return ProfileGalleryTabType.posts;
+    if (index == 1) return ProfileGalleryTabType.media;
     return null;
   }
 
-  String? _mediaType(_GalleryTabType type) {
-    return type == _GalleryTabType.videos ? 'video' : 'image';
+  String? _mediaType(ProfileGalleryTabType type) {
+    return null;
   }
 
-  int? _profileUserId(_ProfileView profile) {
+  int? _profileUserId(ProfileView profile) {
     return profile.userId != 0 ? profile.userId : profile.id;
   }
 
@@ -173,7 +185,11 @@ class _OtherProfilePageState extends State<OtherProfilePage>
       }
 
       if (!mounted) return;
-      context.read<FriendsBloc>().add(LoadFollowStats());
+      try {
+        context.read<FriendsBloc>().add(LoadFollowStats());
+      } catch (_) {
+        // The other-profile route does not always live under FriendsBloc.
+      }
     } catch (e) {
       if (!mounted) return;
 
@@ -196,7 +212,7 @@ class _OtherProfilePageState extends State<OtherProfilePage>
     }
   }
 
-  Future<void> _openConversation(_ProfileView profile) async {
+  Future<void> _openConversation(ProfileView profile) async {
     final userId = _profileUserId(profile);
     if (userId == null || userId <= 0) return;
 
@@ -206,7 +222,7 @@ class _OtherProfilePageState extends State<OtherProfilePage>
       final conversation = await _chatService.startConversation(
         receiverId: userId,
       );
-      final conversationId = _ProfileView._readInt(
+      final conversationId = _readInt(
         conversation['conversationId'] ?? conversation['id'],
       );
       if (!mounted || conversationId <= 0) return;
@@ -248,11 +264,11 @@ class _OtherProfilePageState extends State<OtherProfilePage>
           builder: (context, userState) {
             return BlocConsumer<ProfileBloc, ProfileState>(
               listenWhen: (previous, current) {
-                final previousProfile = _ProfileView.fromSources(
+                final previousProfile = ProfileView.fromSources(
                   user: userState.viewedUser,
                   profile: previous.viewedProfile,
                 );
-                final currentProfile = _ProfileView.fromSources(
+                final currentProfile = ProfileView.fromSources(
                   user: userState.viewedUser,
                   profile: current.viewedProfile,
                 );
@@ -262,7 +278,7 @@ class _OtherProfilePageState extends State<OtherProfilePage>
                     previousProfile?.id != currentProfile?.id;
               },
               listener: (context, profileState) {
-                final profile = _ProfileView.fromSources(
+                final profile = ProfileView.fromSources(
                   user: userState.viewedUser,
                   profile: profileState.viewedProfile,
                 );
@@ -273,7 +289,7 @@ class _OtherProfilePageState extends State<OtherProfilePage>
                   _loadUserMedia(
                     userId,
                     _tabTypeForIndex(_tabController.index) ??
-                        _GalleryTabType.photos,
+                        ProfileGalleryTabType.posts,
                   );
                 }
               },
@@ -283,12 +299,12 @@ class _OtherProfilePageState extends State<OtherProfilePage>
                     previous.viewedProfile != current.viewedProfile;
               },
               builder: (context, profileState) {
-                final profile = _ProfileView.fromSources(
+                final profile = ProfileView.fromSources(
                   user: userState.viewedUser,
                   profile: profileState.viewedProfile,
                 );
 
-                return _ProfileBody(
+                return ProfileBody(
                   isLoading: userState.isLoading ||
                       profileState.viewedStatus == ProfileStatus.loading,
                   error: userState.error ?? profileState.error,
@@ -308,5 +324,11 @@ class _OtherProfilePageState extends State<OtherProfilePage>
         ),
       ),
     );
+  }
+
+  int _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 }

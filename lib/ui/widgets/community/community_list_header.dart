@@ -43,7 +43,7 @@ class CommunityListHeader extends StatelessWidget {
                 child: _SummaryTile(
                   icon: Icons.diversity_3_outlined,
                   value: '$communityCount',
-                  label: 'Spaces',
+                  label: 'Groups',
                 ),
               ),
               const SizedBox(width: 10),
@@ -68,7 +68,7 @@ class CommunityListHeader extends StatelessWidget {
               textInputAction: TextInputAction.search,
               onSubmitted: (_) => onSearch(),
               decoration: InputDecoration(
-                hintText: 'Search spaces',
+                hintText: 'Search groups',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.tune),

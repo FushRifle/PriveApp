@@ -112,7 +112,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         title: const Text('Set PIN'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -184,7 +184,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         title: const Text('Verify PIN'),
         content: TextField(
           controller: pinController,
@@ -281,7 +281,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: isDarkMode
                         ? AppColors.darkBorderColor
@@ -355,7 +355,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: isDarkMode
                       ? AppColors.darkBorderColor
@@ -416,7 +416,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
                         style: OutlinedButton.styleFrom(
                           side: BorderSide(color: AppColors.primary),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                         ),
                         child: const Text('Change PIN'),
@@ -433,7 +433,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: AppColors.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 children: [

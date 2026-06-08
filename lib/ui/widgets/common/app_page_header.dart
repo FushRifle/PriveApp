@@ -37,7 +37,6 @@ class AppPageHeader extends StatelessWidget {
     final muted = isDark ? AppColors.white.withOpacity(0.65) : AppColors.grey;
     final border =
         isDark ? AppColors.white.withOpacity(0.12) : AppColors.border;
-    final card = isDark ? AppColors.darkCard : AppColors.white;
     final shadow = isDark
         ? AppColors.black.withOpacity(0.25)
         : AppColors.black.withOpacity(0.06);
@@ -111,7 +110,7 @@ class AppPageHeader extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: card,
+                  color: AppColors.primary,
                   shape: BoxShape.circle,
                   border: Border.all(color: border),
                   boxShadow: [

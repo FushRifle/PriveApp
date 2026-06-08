@@ -244,8 +244,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             borderRadius: BorderRadius.circular(50),
                             gradient: const LinearGradient(
                               colors: [
-                                AppColors.purple,
-                                AppColors.pink,
+                                AppColors.primary,
+                                AppColors.secondary,
                               ],
                             ),
                           ),
@@ -321,7 +321,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       width: double.infinity,
                       height: 58,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
+                        borderRadius: BorderRadius.circular(8),
                         color: AppColors.redColor.withOpacity(0.08),
                         border: Border.all(
                           color: AppColors.redColor.withOpacity(0.2),
@@ -370,7 +370,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(26),
+          borderRadius: BorderRadius.circular(8),
           color: isDark ? AppColors.darkCard : AppColors.white,
           boxShadow: [
             BoxShadow(
@@ -513,7 +513,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
           Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(8),
               color: isDark ? AppColors.darkCard : AppColors.white,
               border: Border.all(
                 color: isDark
@@ -548,7 +548,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         width: 42,
         height: 42,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(8),
           color: AppColors.primary.withOpacity(0.1),
         ),
         child: Icon(
@@ -594,7 +594,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         width: 42,
         height: 42,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(8),
           color: AppColors.primary.withOpacity(0.1),
         ),
         child: Icon(
@@ -620,7 +620,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       trailing: DropdownButtonHideUnderline(
         child: DropdownButton<ThemeMode>(
           value: themeMode,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(8),
           dropdownColor: isDark ? AppColors.darkCard : AppColors.white,
           icon: Icon(
             Icons.keyboard_arrow_down_rounded,
@@ -670,7 +670,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         width: 42,
         height: 42,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(8),
           color: AppColors.primary.withOpacity(0.1),
         ),
         child: Icon(
@@ -754,7 +754,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       backgroundColor: isDark ? AppColors.darkCard : AppColors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(28),
+          top: Radius.circular(8),
         ),
       ),
       builder: (_) {
@@ -771,7 +771,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   width: 42,
                   height: 4,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(8),
                     color: AppColors.grey.shade400,
                   ),
                 ),
@@ -788,7 +788,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ...values.map(
                   (e) => ListTile(
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     title: Text(
                       e,
@@ -825,7 +825,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       builder: (_) => AlertDialog(
         backgroundColor: isDark ? AppColors.darkCard : AppColors.white,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(8),
         ),
         title: const Text(
           'Logout',

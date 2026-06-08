@@ -44,7 +44,7 @@ class _CreateCommunityPageState extends State<CreateCommunityPage> {
           backgroundColor: AppColors.background,
           appBar: AppBar(
             backgroundColor: AppColors.background,
-            title: const Text('Create space'),
+            title: const Text('Create group'),
             actions: [
               TextButton(
                 onPressed: isSaving ? null : _submit,
@@ -92,7 +92,7 @@ class _CreateCommunityPageState extends State<CreateCommunityPage> {
                         decoration: const InputDecoration(
                           labelText: 'Description',
                           hintText:
-                              'What should members talk about in this space?',
+                              'What should members discuss in this group?',
                         ),
                         validator: (value) {
                           final description = value?.trim() ?? '';
@@ -157,7 +157,7 @@ class _CreateCommunityPageState extends State<CreateCommunityPage> {
                           ),
                         )
                       : const Icon(Icons.add),
-                  label: Text(isSaving ? 'Creating...' : 'Create space'),
+                  label: Text(isSaving ? 'Creating...' : 'Create group'),
                   style: FilledButton.styleFrom(
                     minimumSize: const Size(double.infinity, 54),
                     shape: RoundedRectangleBorder(
@@ -238,7 +238,7 @@ class _CreateIntro extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isPrivate ? 'Invite-only space' : 'Open community space',
+                  isPrivate ? 'Invite-only group' : 'Open community group',
                   style: AppTheme.blackTextStyle.copyWith(
                     fontWeight: AppTheme.bold,
                     fontSize: 16,
@@ -281,7 +281,7 @@ class _PrivacySelector extends StatelessWidget {
       child: SwitchListTile.adaptive(
         contentPadding: EdgeInsets.zero,
         title: Text(
-          'Private space',
+          'Private group',
           style: AppTheme.blackTextStyle.copyWith(fontWeight: AppTheme.bold),
         ),
         subtitle: Text(

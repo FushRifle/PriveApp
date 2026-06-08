@@ -505,18 +505,18 @@ class _HomeAppBar extends StatelessWidget {
                           if (count <= 0) return const SizedBox.shrink();
 
                           return Positioned(
-                            top: 7,
-                            right: 6,
+                            top: 2,
+                            right: 2,
                             child: Container(
                               constraints: const BoxConstraints(
-                                minWidth: 17,
-                                minHeight: 17,
+                                minWidth: 20,
+                                minHeight: 20,
                               ),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.red,
+                                color: AppColors.white,
                                 borderRadius: BorderRadius.circular(9),
                                 border: Border.all(
                                   color: palette.elevatedCard,
@@ -527,9 +527,9 @@ class _HomeAppBar extends StatelessWidget {
                                 child: Text(
                                   count > 99 ? '99+' : '$count',
                                   style: const TextStyle(
-                                    color: AppColors.white,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.red,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
@@ -783,7 +783,7 @@ class _FeedHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 2, 18, 14),
+      padding: const EdgeInsets.fromLTRB(18, 5, 18, 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [

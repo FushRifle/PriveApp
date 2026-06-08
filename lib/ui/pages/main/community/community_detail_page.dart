@@ -4,11 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/community/community_bloc.dart';
-import 'package:clique/core/models/community_model.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:clique/ui/widgets/community/community_composer.dart';
 import 'package:clique/ui/widgets/community/community_detail_hero.dart';
-import 'package:clique/ui/widgets/community/community_discussion_card.dart';
 import 'package:clique/ui/widgets/community/community_empty_state.dart';
 import 'package:clique/ui/widgets/community/community_group_row.dart';
 import 'package:clique/ui/widgets/community/community_section_title.dart';
@@ -96,7 +92,7 @@ class _CommunityDetailPageState extends State<CommunityDetailPage> {
                           icon: Icons.lock_open_outlined,
                           title: 'Join to participate',
                           message:
-                              'Members can view groups and take part in discussions.',
+                              'Join to view groups and take part in discussions.',
                         ),
                     ],
                   ),
@@ -208,106 +204,7 @@ class _MemberContent extends StatelessWidget {
               },
             ),
           ),
-        const SizedBox(height: 18),
-        const CommunitySectionTitle(title: 'Members'),
-        const SizedBox(height: 8),
-        if (state.members.isEmpty)
-          const CommunityInlineEmpty(
-            icon: Icons.people_alt_outlined,
-            title: 'No members loaded',
-            message: 'Pull to refresh this community.',
-          )
-        else
-          SizedBox(
-            height: 86,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: state.members.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 10),
-              itemBuilder: (context, index) {
-                final member = state.members[index];
-                return _MemberChip(member: member);
-              },
-            ),
-          ),
-        const SizedBox(height: 18),
-        const CommunitySectionTitle(title: 'Discussions'),
-        const SizedBox(height: 8),
-        CommunityComposer(
-          controller: postController,
-          onPost: () => onPost(communityId),
-        ),
-        const SizedBox(height: 12),
-        if (state.posts.isEmpty)
-          const CommunityInlineEmpty(
-            icon: Icons.chat_bubble_outline,
-            title: 'No discussions yet',
-            message: 'Start a useful conversation for the group.',
-          )
-        else
-          ...state.posts.map(
-            (post) => CommunityDiscussionCard(post: post),
-          ),
       ],
-    );
-  }
-}
-
-class _MemberChip extends StatelessWidget {
-  final CommunityMemberModel member;
-
-  const _MemberChip({
-    required this.member,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final user = member.user;
-    final initials = user.name.isNotEmpty ? user.name[0].toUpperCase() : '?';
-
-    return SizedBox(
-      width: 82,
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-            backgroundImage: user.avatar.isNotEmpty
-                ? CachedNetworkImageProvider(user.avatar)
-                : null,
-            child: user.avatar.isEmpty
-                ? Text(
-                    initials,
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  )
-                : null,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            user.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          Text(
-            member.role,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 11,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
