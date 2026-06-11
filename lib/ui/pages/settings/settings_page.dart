@@ -32,7 +32,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   void initState() {
     super.initState();
     context.read<UserBloc>().add(LoadCurrentUser());
-    context.read<SettingsBloc>().add(LoadSettings());
+
+    final settingsBloc = context.read<SettingsBloc>();
+    if (settingsBloc.state.status == SettingsStatus.initial) {
+      settingsBloc.add(LoadSettings());
+    }
   }
 
   @override

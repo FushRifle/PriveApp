@@ -15,6 +15,7 @@ class PostActions extends StatelessWidget {
   final VoidCallback onSave;
   final VoidCallback onShare;
   final VoidCallback onRepost;
+  final VoidCallback? onLikeLongPress;
 
   const PostActions({
     super.key,
@@ -30,6 +31,7 @@ class PostActions extends StatelessWidget {
     required this.onSave,
     required this.onShare,
     required this.onRepost,
+    this.onLikeLongPress,
   });
 
   @override
@@ -60,6 +62,7 @@ class PostActions extends StatelessWidget {
               label: _formatCount(likeCount),
               color: isLiked ? AppColors.redAccent : actionColor,
               onTap: onLike,
+              onLongPress: onLikeLongPress,
               showLabel: !isTiny,
               compact: isSmall,
             ),
@@ -132,6 +135,7 @@ class _ResponsiveAction extends StatelessWidget {
   final String? label;
   final Color color;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
   final bool showLabel;
   final bool compact;
 
@@ -140,6 +144,7 @@ class _ResponsiveAction extends StatelessWidget {
     this.label,
     required this.color,
     required this.onTap,
+    this.onLongPress,
     required this.showLabel,
     required this.compact,
   });
@@ -169,6 +174,12 @@ class _ResponsiveAction extends StatelessWidget {
           HapticFeedback.lightImpact();
           onTap();
         },
+        onLongPress: onLongPress == null
+            ? null
+            : () {
+                HapticFeedback.mediumImpact();
+                onLongPress?.call();
+              },
         borderRadius: BorderRadius.circular(radius),
         child: Container(
           constraints: const BoxConstraints(

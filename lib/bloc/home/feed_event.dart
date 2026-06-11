@@ -52,8 +52,7 @@ class CreateFeedPost extends FeedEvent {
   });
 
   @override
-  List<Object?> get props =>
-      [
+  List<Object?> get props => [
         content,
         attachments,
         postType,
@@ -149,16 +148,21 @@ class LoadMoreComments extends FeedEvent {
 class CreatePostComment extends FeedEvent {
   final int postId;
   final String content;
+  final String? audioUrl;
+  final int? duration;
   final int? replyToCommentId;
 
   const CreatePostComment({
     required this.postId,
     required this.content,
+    this.audioUrl,
+    this.duration,
     this.replyToCommentId,
   });
 
   @override
-  List<Object?> get props => [postId, content, replyToCommentId];
+  List<Object?> get props =>
+      [postId, content, audioUrl, duration, replyToCommentId];
 }
 
 class LikePostComment extends FeedEvent {

@@ -69,6 +69,37 @@ class FeedService {
     return _feedCacheService.readLatestFeed();
   }
 
+  Future<FeedPost?> findPostById(int postId) async {
+    if (postId <= 0) {
+      return null;
+    }
+
+    final cached = getCachedPosts();
+    final cachedMatch =
+        cached?.posts.where((post) => post.id == postId).toList();
+    if (cachedMatch != null && cachedMatch.isNotEmpty) {
+      return cachedMatch.first;
+    }
+
+    for (var page = 1; page <= 20; page++) {
+      final response = await getPosts(
+        page: page,
+        forceRefresh: page == 1,
+      );
+
+      final match = response.posts.where((post) => post.id == postId).toList();
+      if (match.isNotEmpty) {
+        return match.first;
+      }
+
+      if (!response.hasMore) {
+        break;
+      }
+    }
+
+    return null;
+  }
+
   UserMediaResponse? getCachedUserMedia(int userId, String? type) {
     return _feedCacheService.readUserMedia(userId, type);
   }
@@ -287,12 +318,18 @@ class FeedService {
   Future<Comment> addComment({
     required int postId,
     required String content,
+    String? audioUrl,
+    int? duration,
     int? replyToCommentId,
   }) async {
     try {
       final data = <String, dynamic>{
         'content': content,
       };
+      if (audioUrl != null && audioUrl.isNotEmpty) {
+        data['audioUrl'] = audioUrl;
+        data['duration'] = duration ?? 0;
+      }
       if (replyToCommentId != null) {
         data['replyToCommentId'] = replyToCommentId;
       }

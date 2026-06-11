@@ -4,7 +4,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/router/named_routes.dart';
+import 'package:clique/core/services/home/feed_service.dart';
 import 'package:clique/core/services/notification/notification_service.dart';
+import 'package:clique/ui/pages/main/home/post_detail_page.dart';
+import 'package:clique/ui/pages/main/notification/notification_details_page.dart';
 import 'package:clique/ui/widgets/common/app_page_header.dart';
 
 class NotificationPage extends StatefulWidget {
@@ -15,6 +18,7 @@ class NotificationPage extends StatefulWidget {
 }
 
 class _NotificationPageState extends State<NotificationPage> {
+  final FeedService _feedService = FeedService();
   final NotificationService _notificationService = NotificationService();
   final ScrollController _scrollController = ScrollController();
 
@@ -142,8 +146,8 @@ class _NotificationPageState extends State<NotificationPage> {
       if (!mounted) return;
 
       setState(() {
-        final targetIndex =
-            _notifications.indexWhere((notification) => notification['id'] == notificationId);
+        final targetIndex = _notifications
+            .indexWhere((notification) => notification['id'] == notificationId);
         if (targetIndex >= 0) {
           _notifications[targetIndex]['isUnread'] = false;
         }
@@ -188,7 +192,8 @@ class _NotificationPageState extends State<NotificationPage> {
       if (!mounted) return;
 
       setState(() {
-        _notifications.removeWhere((notification) => notification['id'] == notificationId);
+        _notifications.removeWhere(
+            (notification) => notification['id'] == notificationId);
       });
     } catch (e) {
       if (!mounted) return;
@@ -234,21 +239,19 @@ class _NotificationPageState extends State<NotificationPage> {
     final result = <Map<String, dynamic>>[];
 
     for (final entry in grouped.entries) {
-      final items = [...entry.value]
-        ..sort((a, b) {
-          final aTime =
-              DateTime.tryParse(a['createdAt']?.toString() ?? '') ??
-                  DateTime.fromMillisecondsSinceEpoch(0);
-          final bTime =
-              DateTime.tryParse(b['createdAt']?.toString() ?? '') ??
-                  DateTime.fromMillisecondsSinceEpoch(0);
+      final items = [...entry.value]..sort((a, b) {
+          final aTime = DateTime.tryParse(a['createdAt']?.toString() ?? '') ??
+              DateTime.fromMillisecondsSinceEpoch(0);
+          final bTime = DateTime.tryParse(b['createdAt']?.toString() ?? '') ??
+              DateTime.fromMillisecondsSinceEpoch(0);
           return bTime.compareTo(aTime);
         });
 
       final representative = Map<String, dynamic>.from(items.first);
       representative['groupItems'] = items;
       representative['groupCount'] = items.length;
-      representative['isUnread'] = items.any((item) => item['isUnread'] == true);
+      representative['isUnread'] =
+          items.any((item) => item['isUnread'] == true);
       result.add(representative);
     }
 
@@ -281,7 +284,7 @@ class _NotificationPageState extends State<NotificationPage> {
     }
   }
 
-  void _navigateByType(Map<String, dynamic> notification) {
+  Future<void> _navigateByType(Map<String, dynamic> notification) async {
     final type = notification['type']?.toString();
     final data = _asMap(notification['data']);
     final targetId = _readInt(
@@ -369,8 +372,21 @@ class _NotificationPageState extends State<NotificationPage> {
       case 'mention':
         final id = postId > 0 ? postId : targetId;
         if (id > 0) {
-          Navigator.pushNamed(context, NamedRoutes.postDetailScreen,
-              arguments: id);
+          final post = await _feedService.findPostById(id);
+          if (!mounted) return;
+
+          if (post != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => PostDetailPage(
+                  postId: post.id,
+                  initialPost: post,
+                ),
+              ),
+            );
+            return;
+          }
         } else if (reelId > 0) {
           Navigator.pushNamed(context, NamedRoutes.reelsScreen);
         } else if (storyId > 0) {
@@ -379,14 +395,20 @@ class _NotificationPageState extends State<NotificationPage> {
           Navigator.pushNamed(context, NamedRoutes.otherProfileScreen,
               arguments: actorId);
         }
-        break;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => NotificationDetailsPage(notification: notification),
+          ),
+        );
+        return;
       case 'reel_like':
       case 'reel_comment':
       case 'reel_mention':
       case 'reel_share':
       case 'reel_repost':
         Navigator.pushNamed(context, NamedRoutes.reelsScreen);
-        break;
+        return;
       case 'story_like':
       case 'story_comment':
       case 'story_mention':
@@ -396,7 +418,7 @@ class _NotificationPageState extends State<NotificationPage> {
       case 'status_mention':
       case 'status_repost':
         Navigator.pushNamed(context, NamedRoutes.statusScreen);
-        break;
+        return;
       case 'follow':
       case 'friend_request':
       case 'friend_accepted':
@@ -406,7 +428,7 @@ class _NotificationPageState extends State<NotificationPage> {
         } else {
           Navigator.pushNamed(context, NamedRoutes.friendListScreen);
         }
-        break;
+        return;
       case 'match':
         if (actorId > 0) {
           Navigator.pushNamed(context, NamedRoutes.otherProfileScreen,
@@ -414,7 +436,7 @@ class _NotificationPageState extends State<NotificationPage> {
         } else {
           Navigator.pushNamed(context, NamedRoutes.matchScreen);
         }
-        break;
+        return;
       case 'message':
       case 'chat':
         final id = conversationId > 0 ? conversationId : targetId;
@@ -432,9 +454,15 @@ class _NotificationPageState extends State<NotificationPage> {
         } else {
           Navigator.pushNamed(context, NamedRoutes.inboxScreen);
         }
-        break;
+        return;
       default:
-        break;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => NotificationDetailsPage(notification: notification),
+          ),
+        );
+        return;
     }
   }
 
@@ -715,7 +743,7 @@ class _NotificationPageState extends State<NotificationPage> {
               await _markAsRead(id, index);
             }
           }
-          _navigateByType(item);
+          await _navigateByType(item);
         },
         onLongPress: () {
           final ids = groupItems.isNotEmpty

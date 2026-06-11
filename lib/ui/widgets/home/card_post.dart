@@ -7,6 +7,7 @@ import 'package:clique/ui/widgets/ui/document_viewer.dart';
 import 'package:clique/ui/widgets/ui/image_viewer.dart';
 import 'package:clique/ui/widgets/ui/video_viewer.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
@@ -53,6 +54,115 @@ class _CardPostState extends State<CardPost> {
       likeCount += isLiked ? 1 : -1;
       if (likeCount < 0) likeCount = 0;
     });
+  }
+
+  void _showReactionSheet() {
+    HapticFeedback.mediumImpact();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.transparent,
+      builder: (context) {
+        final reactions = const [
+          _ReactionChoice(
+              'Like', Icons.favorite_border_rounded, AppColors.redAccent),
+          _ReactionChoice('Love', Icons.favorite_rounded, AppColors.redAccent),
+          _ReactionChoice(
+              'Fire', Icons.local_fire_department_rounded, AppColors.orange),
+          _ReactionChoice(
+              'Wow', Icons.sentiment_very_satisfied_rounded, AppColors.primary),
+          _ReactionChoice('Respect', Icons.verified_rounded, AppColors.green),
+        ];
+
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.cardColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border.all(color: AppColors.cardBorderColor),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.greyColor.withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: reactions
+                        .map(
+                          (reaction) => Expanded(
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 4),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(16),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  if (!isLiked) {
+                                    _toggleLike();
+                                  }
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                          '${reaction.label} reaction added'),
+                                      duration: const Duration(seconds: 1),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                    horizontal: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: reaction.color.withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: reaction.color.withOpacity(0.18),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        reaction.icon,
+                                        color: reaction.color,
+                                        size: 22,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        reaction.label,
+                                        textAlign: TextAlign.center,
+                                        style: AppTheme.blackTextStyle.copyWith(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _openComments() {
@@ -144,6 +254,7 @@ class _CardPostState extends State<CardPost> {
                   count: likeCount,
                   color: isLiked ? AppColors.redAccent : AppColors.white,
                   onTap: _toggleLike,
+                  onLongPress: _showReactionSheet,
                 ),
                 const SizedBox(height: 20),
                 _buildActionButton(
@@ -193,11 +304,13 @@ class _CardPostState extends State<CardPost> {
     int? count,
     required Color color,
     required VoidCallback onTap,
+    VoidCallback? onLongPress,
   }) {
     final hasCount = count != null && count > 0;
 
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Column(
         children: [
           Stack(
@@ -629,6 +742,14 @@ class _CardPostState extends State<CardPost> {
     final fallback = url.split('/').last.trim();
     return fallback.isEmpty ? 'Document' : fallback;
   }
+}
+
+class _ReactionChoice {
+  final String label;
+  final IconData icon;
+  final Color color;
+
+  const _ReactionChoice(this.label, this.icon, this.color);
 }
 
 class _UserAvatar extends StatelessWidget {

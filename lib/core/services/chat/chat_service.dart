@@ -1,21 +1,32 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:clique/core/local_cache/hive_cache_keys.dart';
 import 'package:clique/core/local_cache/local_cache_service.dart';
 import '../../clients/api_service.dart';
 
 class ChatService {
+  static final ChatService _instance = ChatService._internal();
+  factory ChatService() => _instance;
+
+  ChatService._internal();
+
   final ApiService _api = ApiService();
   final Map<String, List<Map<String, dynamic>>> _messagesCache = {};
   final Map<String, CancelToken> _cancelTokens = {};
+  Timer? _pendingRetryTimer;
+  bool _isRetryingPendingMessages = false;
 
   void setAuthToken(String token) {
     _api.setAuthToken(token);
+    _startPendingRetryLoop();
   }
 
   void clearAuthToken() {
     _api.clearAuthToken();
     _messagesCache.clear();
     _cancelTokens.clear();
+    _stopPendingRetryLoop();
   }
 
   List<Map<String, dynamic>> readCachedConversations({
@@ -257,6 +268,161 @@ class ChatService {
 
   void clearAllCache() {
     _messagesCache.clear();
+  }
+
+  void _startPendingRetryLoop() {
+    if (_pendingRetryTimer != null) {
+      return;
+    }
+
+    _pendingRetryTimer = Timer.periodic(
+      const Duration(seconds: 12),
+      (_) => unawaited(_retryPendingMessages()),
+    );
+  }
+
+  void _stopPendingRetryLoop() {
+    _pendingRetryTimer?.cancel();
+    _pendingRetryTimer = null;
+  }
+
+  Future<void> _retryPendingMessages() async {
+    if (_isRetryingPendingMessages) {
+      return;
+    }
+
+    _isRetryingPendingMessages = true;
+
+    try {
+      final box = LocalCacheService.box(HiveCacheKeys.chatBox);
+      if (box == null) {
+        return;
+      }
+
+      final keys = box.keys.whereType<String>().where(
+            (key) => key.startsWith('${HiveCacheKeys.chatMessagesPrefix}_'),
+          );
+
+      for (final key in keys) {
+        final raw = box.get(key);
+        if (raw is! List) continue;
+
+        final messages = raw
+            .whereType<Map>()
+            .map((message) => Map<String, dynamic>.from(message))
+            .toList();
+        if (messages.isEmpty) continue;
+
+        final pendingMessages = messages.where(_isPendingMessage).toList()
+          ..sort((a, b) {
+            final aTime = DateTime.tryParse(a['createdAt']?.toString() ?? '') ??
+                DateTime.fromMillisecondsSinceEpoch(0);
+            final bTime = DateTime.tryParse(b['createdAt']?.toString() ?? '') ??
+                DateTime.fromMillisecondsSinceEpoch(0);
+            return aTime.compareTo(bTime);
+          });
+
+        if (pendingMessages.isEmpty) continue;
+
+        var updatedMessages = List<Map<String, dynamic>>.from(messages);
+        var didUpdate = false;
+
+        for (final pending in pendingMessages) {
+          final delivered = await _sendPendingMessage(pending);
+          if (delivered == null) {
+            continue;
+          }
+
+          updatedMessages = _replacePendingMessage(
+            updatedMessages,
+            pending,
+            delivered,
+          );
+          didUpdate = true;
+        }
+
+        if (didUpdate) {
+          _messagesCache[key] =
+              List<Map<String, dynamic>>.from(updatedMessages);
+          await box.put(key, updatedMessages);
+        }
+      }
+    } catch (_) {
+      // Keep retrying in the background.
+    } finally {
+      _isRetryingPendingMessages = false;
+    }
+  }
+
+  Future<Map<String, dynamic>?> _sendPendingMessage(
+    Map<String, dynamic> pending,
+  ) async {
+    final receiverId =
+        _readInt(pending['receiverId'] ?? pending['receiver_id']);
+    final message = (pending['message'] ?? '').toString().trim();
+    final messageType =
+        (pending['messageType'] ?? pending['message_type'] ?? 'text')
+            .toString();
+    final mediaUrl = pending['mediaUrl'] ?? pending['media_url'];
+    final replyToId = pending['replyToId'] ?? pending['reply_to_id'];
+
+    if (receiverId <= 0 || message.isEmpty) {
+      return null;
+    }
+
+    try {
+      final payload = <String, dynamic>{
+        'receiverId': receiverId,
+        'message': message,
+        'messageType': messageType,
+        if (mediaUrl != null) 'mediaUrl': mediaUrl,
+        if (replyToId != null) 'replyToId': replyToId,
+      };
+
+      final response = await _api.post(
+        '/api/chat/messages',
+        data: payload,
+      );
+
+      if (response.data is Map<String, dynamic>) {
+        return Map<String, dynamic>.from(response.data);
+      }
+      if (response.data is Map) {
+        return Map<String, dynamic>.from(response.data);
+      }
+      return null;
+    } on DioException {
+      return null;
+    }
+  }
+
+  List<Map<String, dynamic>> _replacePendingMessage(
+    List<Map<String, dynamic>> messages,
+    Map<String, dynamic> pending,
+    Map<String, dynamic> delivered,
+  ) {
+    final pendingId = pending['id'];
+    return messages.map((message) {
+      if (message['id'] == pendingId) {
+        final merged = Map<String, dynamic>.from(delivered);
+        merged['conversationId'] =
+            merged['conversationId'] ?? merged['conversation_id'];
+        merged['isOwn'] = true;
+        return merged;
+      }
+      return message;
+    }).toList();
+  }
+
+  bool _isPendingMessage(Map<String, dynamic> message) {
+    final id = _readInt(message['id']);
+    return id < 0 || id.toString().startsWith('999');
+  }
+
+  int _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   // =========================

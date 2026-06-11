@@ -1,4 +1,3 @@
-import 'package:clique/ui/pages/settings/settings_page.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -426,12 +425,7 @@ class _HomeAppBar extends StatelessWidget {
               GestureDetector(
                 onTap: () {
                   HapticFeedback.lightImpact();
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const SettingsPage(),
-                    ),
-                  );
+                  Navigator.pushNamed(context, NamedRoutes.settingsScreen);
                 },
                 child: _Avatar(
                   palette: palette,

@@ -522,12 +522,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         forceRefresh: true,
         silent: true,
       ));
-    } catch (e) {
+    } catch (_) {
       _messageCache[event.conversationId] = state.messages;
       await _persistMessages(event.conversationId, state.messages);
       emit(state.copyWith(
         messagesStatus: ChatStatus.success,
-        error: e.toString(),
+        clearError: true,
       ));
     } finally {
       _inFlightMessageKeys.remove(sendKey);
@@ -705,15 +705,15 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
         _chatService.clearMessagesCache(event.conversationId);
         add(RefreshConversations());
-      } catch (e) {
-        emit(state.copyWith(
-          messagesStatus: ChatStatus.success,
-          activeConversationId: event.conversationId,
-          error: e.toString(),
-        ));
-      } finally {
-        _inFlightMessageKeys.remove(sendKey);
-      }
+        } catch (_) {
+          emit(state.copyWith(
+            messagesStatus: ChatStatus.success,
+            activeConversationId: event.conversationId,
+            clearError: true,
+          ));
+        } finally {
+          _inFlightMessageKeys.remove(sendKey);
+        }
     }
 
     final stillPending = (_messageCache[event.conversationId] ?? state.messages)

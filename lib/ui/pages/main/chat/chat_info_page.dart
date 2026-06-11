@@ -179,7 +179,6 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
 
           final effectiveMuted =
               chatState.chatSettings?.isMuted ?? conversation.isMuted;
-          _isMuted = effectiveMuted;
 
           return SingleChildScrollView(
             physics: const BouncingScrollPhysics(),

@@ -186,7 +186,7 @@ class FeedPost {
       final category = _labelize(anonymousCategory ?? 'anonymous');
       return category == 'Anonymous' ? 'Anonymous' : 'Anonymous / $category';
     }
-      return switch (postType) {
+    return switch (postType) {
       'poll' => 'Poll',
       'question' => 'Question',
       'daily_prompt' || 'prompt' => 'Daily Prompt',
@@ -333,6 +333,9 @@ class Comment {
   final String userName;
   final String userAvatar;
   final String content;
+  final String audioUrl;
+  final int duration;
+  final bool isVoiceNote;
   final int likes;
   final int dislikes;
   final int replyCount;
@@ -347,6 +350,9 @@ class Comment {
     required this.userName,
     required this.userAvatar,
     required this.content,
+    this.audioUrl = '',
+    this.duration = 0,
+    this.isVoiceNote = false,
     this.likes = 0,
     this.dislikes = 0,
     this.replyCount = 0,
@@ -367,6 +373,10 @@ class Comment {
           json['user_avatar']?.toString() ??
           '',
       content: json['content']?.toString() ?? '',
+      audioUrl:
+          json['audioUrl']?.toString() ?? json['audio_url']?.toString() ?? '',
+      duration: _toInt(json['duration']),
+      isVoiceNote: json['isVoiceNote'] == true || json['is_voice_note'] == true,
       likes: _toInt(
         json['likes'] ??
             json['likesCount'] ??
@@ -407,6 +417,9 @@ class Comment {
         'userName': userName,
         'userAvatar': userAvatar,
         'content': content,
+        'audioUrl': audioUrl,
+        'duration': duration,
+        'isVoiceNote': isVoiceNote,
         'likes': likes,
         'dislikes': dislikes,
         'replyCount': replyCount,
@@ -422,6 +435,9 @@ class Comment {
     String? userName,
     String? userAvatar,
     String? content,
+    String? audioUrl,
+    int? duration,
+    bool? isVoiceNote,
     int? likes,
     int? dislikes,
     int? replyCount,
@@ -436,6 +452,9 @@ class Comment {
       userName: userName ?? this.userName,
       userAvatar: userAvatar ?? this.userAvatar,
       content: content ?? this.content,
+      audioUrl: audioUrl ?? this.audioUrl,
+      duration: duration ?? this.duration,
+      isVoiceNote: isVoiceNote ?? this.isVoiceNote,
       likes: likes ?? this.likes,
       dislikes: dislikes ?? this.dislikes,
       replyCount: replyCount ?? this.replyCount,
@@ -588,10 +607,20 @@ class CreatePostRequest {
 
 class CreateCommentRequest {
   final String content;
+  final String? audioUrl;
+  final int? duration;
 
-  const CreateCommentRequest({required this.content});
+  const CreateCommentRequest({
+    required this.content,
+    this.audioUrl,
+    this.duration,
+  });
 
-  Map<String, dynamic> toJson() => {'content': content};
+  Map<String, dynamic> toJson() => {
+        'content': content,
+        if (audioUrl != null && audioUrl!.isNotEmpty) 'audioUrl': audioUrl,
+        if (duration != null) 'duration': duration,
+      };
 }
 
 // Response Wrappers

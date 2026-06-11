@@ -135,6 +135,111 @@ class _CardPostState extends State<CardPost> {
     }
   }
 
+  void _showReactionSheet() {
+    HapticFeedback.mediumImpact();
+
+    final reactions = <_ReactionChoice>[
+      _ReactionChoice(
+          'Like', Icons.favorite_border_rounded, AppColors.redAccent),
+      _ReactionChoice('Love', Icons.favorite_rounded, AppColors.redAccent),
+      _ReactionChoice(
+          'Fire', Icons.local_fire_department_rounded, AppColors.orange),
+      _ReactionChoice(
+          'Wow', Icons.sentiment_very_satisfied_rounded, AppColors.primary),
+      _ReactionChoice('Respect', Icons.verified_rounded, AppColors.green),
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.cardColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border.all(color: AppColors.cardBorderColor),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.greyColor.withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: reactions
+                        .map(
+                          (reaction) => Expanded(
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 4),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(16),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  if (!_isLiked) {
+                                    _toggleLike();
+                                  }
+                                  _showComingSoon(
+                                      '${reaction.label} reaction added');
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                    horizontal: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: reaction.color.withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: reaction.color.withOpacity(0.18),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        reaction.icon,
+                                        color: reaction.color,
+                                        size: 22,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        reaction.label,
+                                        textAlign: TextAlign.center,
+                                        style: AppTheme.blackTextStyle.copyWith(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _openComments() {
     HapticFeedback.lightImpact();
 
@@ -443,6 +548,7 @@ class _CardPostState extends State<CardPost> {
             children: [
               PostHeader(
                 post: widget.post,
+                isOwnProfile: _isOwnPost,
                 onMoreTap: widget.isDetailView ? null : _showPostOptions,
               ),
               if (widget.post.isPoll)
@@ -475,6 +581,7 @@ class _CardPostState extends State<CardPost> {
                 isSaved: _isSaved,
                 isReposted: _isReposted,
                 onLike: _toggleLike,
+                onLikeLongPress: _showReactionSheet,
                 onComment: _openComments,
                 onSave: _toggleSave,
                 onShare: _share,
@@ -486,6 +593,14 @@ class _CardPostState extends State<CardPost> {
       ),
     );
   }
+}
+
+class _ReactionChoice {
+  final String label;
+  final IconData icon;
+  final Color color;
+
+  const _ReactionChoice(this.label, this.icon, this.color);
 }
 
 class _PollPostBody extends StatelessWidget {

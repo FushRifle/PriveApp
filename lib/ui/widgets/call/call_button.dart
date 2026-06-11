@@ -19,7 +19,8 @@ class CallButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
       icon: const Icon(Icons.call),
-      onSelected: (value) => initiateCall(context, receiver: receiver, callType: value),
+      onSelected: (value) =>
+          initiateCall(context, receiver: receiver, callType: value),
       itemBuilder: (context) => const [
         PopupMenuItem(
           value: 'voice',
@@ -50,16 +51,21 @@ class CallButton extends StatelessWidget {
     required UserInfo receiver,
     required String callType,
   }) async {
-    final hasPermissions = await PermissionService.requestPermissions();
+    final hasPermissions = await PermissionService.checkPermissions();
     if (!context.mounted) return;
 
     if (!hasPermissions) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Camera and microphone permissions required'),
-        ),
-      );
-      return;
+      final granted = await PermissionService.requestPermissions();
+      if (!context.mounted) return;
+
+      if (!granted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Camera and microphone permissions required'),
+          ),
+        );
+        return;
+      }
     }
 
     try {
@@ -71,7 +77,8 @@ class CallButton extends StatelessWidget {
 
       if (!context.mounted) return;
 
-      if (response.liveKitUrl.trim().isEmpty && ApiConfig.liveKitUrl.trim().isEmpty) {
+      if (response.liveKitUrl.trim().isEmpty &&
+          ApiConfig.liveKitUrl.trim().isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Call service is not configured for LiveKit'),

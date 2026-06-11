@@ -18,7 +18,6 @@ import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/services/friends/friends_service.dart';
 
 import 'package:clique/ui/pages/main/profile/edit_profile_page.dart';
-import 'package:clique/ui/pages/settings/settings_page.dart';
 import 'package:clique/ui/pages/social/friends_list_page.dart';
 import 'package:clique/ui/pages/social/insights_page.dart';
 import 'package:clique/ui/widgets/post/post_card.dart';
@@ -525,13 +524,7 @@ class _ProfileSliverAppBar extends StatelessWidget {
           IconButton(
             onPressed: () {
               HapticFeedback.lightImpact();
-
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const SettingsPage(),
-                ),
-              );
+              Navigator.pushNamed(context, NamedRoutes.settingsScreen);
             },
             icon: const Icon(
               Icons.manage_accounts_outlined,

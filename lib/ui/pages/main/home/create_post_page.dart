@@ -131,31 +131,78 @@ class _CreatePostPageState extends State<CreatePostPage> {
       },
       child: Scaffold(
         backgroundColor: AppColors.backgroundColor,
-        body: SafeArea(
-          child: Stack(
-            children: [
-              Column(
-                children: [
-                  _Header(
-                    title: _title,
-                    isFirstStep: _currentStep == PostCreationStep.options,
-                    isSubmitting: _isSubmitting,
-                    canSubmit: _canSubmit,
-                    onBack: _handleBack,
-                    onSubmit: _handleSubmit,
-                  ),
-                  Expanded(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 240),
-                      switchInCurve: Curves.easeOutCubic,
-                      switchOutCurve: Curves.easeInCubic,
-                      child: _buildCurrentStep(),
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.backgroundColor,
+                AppColors.primary.withOpacity(0.04),
+                AppColors.secondary.withOpacity(0.05),
+              ],
+            ),
+          ),
+          child: SafeArea(
+            child: Stack(
+              children: [
+                Positioned(
+                  top: -90,
+                  right: -70,
+                  child: Container(
+                    width: 220,
+                    height: 220,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          AppColors.primary.withOpacity(0.12),
+                          AppColors.transparent,
+                        ],
+                      ),
                     ),
                   ),
-                ],
-              ),
-              if (_isSubmitting) _UploadOverlay(progress: _uploadProgress),
-            ],
+                ),
+                Positioned(
+                  bottom: -100,
+                  left: -80,
+                  child: Container(
+                    width: 240,
+                    height: 240,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          AppColors.secondary.withOpacity(0.10),
+                          AppColors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Column(
+                  children: [
+                    _Header(
+                      title: _title,
+                      isFirstStep: _currentStep == PostCreationStep.options,
+                      isSubmitting: _isSubmitting,
+                      canSubmit: _canSubmit,
+                      onBack: _handleBack,
+                      onSubmit: _handleSubmit,
+                    ),
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 240),
+                        switchInCurve: Curves.easeOutCubic,
+                        switchOutCurve: Curves.easeInCubic,
+                        child: _buildCurrentStep(),
+                      ),
+                    ),
+                  ],
+                ),
+                if (_isSubmitting) _UploadOverlay(progress: _uploadProgress),
+              ],
+            ),
           ),
         ),
       ),
@@ -628,9 +675,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
               anonymousCategory: _postType == PostComposerType.anonymous
                   ? _anonymousCategory
                   : null,
-              pollOptions: _postType == PostComposerType.poll
-                  ? _pollOptions
-                  : null,
+              pollOptions:
+                  _postType == PostComposerType.poll ? _pollOptions : null,
               pollExpirationHours: _postType == PostComposerType.poll
                   ? _pollExpirationHours
                   : null,
@@ -703,9 +749,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
               anonymousCategory: _postType == PostComposerType.anonymous
                   ? _anonymousCategory
                   : null,
-              pollOptions: _postType == PostComposerType.poll
-                  ? _pollOptions
-                  : null,
+              pollOptions:
+                  _postType == PostComposerType.poll ? _pollOptions : null,
               pollExpirationHours: _postType == PostComposerType.poll
                   ? _pollExpirationHours
                   : null,
@@ -2069,9 +2114,8 @@ class _PollComposerPanel extends StatelessWidget {
               return ChoiceChip(
                 label: Text('${hours}h'),
                 selected: selected,
-                onSelected: enabled
-                    ? (_) => onExpirationHoursChanged(hours)
-                    : null,
+                onSelected:
+                    enabled ? (_) => onExpirationHoursChanged(hours) : null,
                 selectedColor: AppColors.primary.withOpacity(0.16),
                 backgroundColor: AppColors.backgroundColor,
                 labelStyle: TextStyle(

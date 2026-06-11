@@ -9,11 +9,13 @@ import 'package:flutter/services.dart';
 class PostHeader extends StatelessWidget {
   final FeedPost post;
   final VoidCallback? onMoreTap;
+  final bool isOwnProfile;
 
   const PostHeader({
     super.key,
     required this.post,
     this.onMoreTap,
+    this.isOwnProfile = false,
   });
 
   @override
@@ -38,8 +40,10 @@ class PostHeader extends StatelessWidget {
                       HapticFeedback.lightImpact();
                       Navigator.pushNamed(
                         context,
-                        NamedRoutes.otherProfileScreen,
-                        arguments: post.user.id,
+                        isOwnProfile
+                            ? NamedRoutes.profileScreen
+                            : NamedRoutes.otherProfileScreen,
+                        arguments: isOwnProfile ? null : post.user.id,
                       );
                     }
                   : null,

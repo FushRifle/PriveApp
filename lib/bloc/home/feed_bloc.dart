@@ -589,6 +589,8 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
       final comment = await _feedService.addComment(
         postId: event.postId,
         content: event.content,
+        audioUrl: event.audioUrl,
+        duration: event.duration,
         replyToCommentId: event.replyToCommentId,
       );
 

@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui';
 
+import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,20 +12,23 @@ import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 
 import 'package:clique/bloc/home/feed_bloc.dart';
-
 import 'package:clique/core/models/feeds_models.dart';
+import 'package:clique/core/clients/cloudinary_service.dart';
 import 'package:clique/core/services/home/feed_service.dart';
 import 'package:clique/core/services/user/user_service.dart';
 
 import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
+import 'package:clique/ui/widgets/chat/audio_message_bubble.dart';
 import 'package:clique/ui/widgets/post/post_card.dart';
 
 class PostDetailPage extends StatefulWidget {
   final int postId;
+  final FeedPost? initialPost;
 
   const PostDetailPage({
     super.key,
     required this.postId,
+    this.initialPost,
   });
 
   @override
@@ -34,7 +39,10 @@ class _PostDetailPageState extends State<PostDetailPage> {
   final TextEditingController _commentController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FeedService _feedService = FeedService();
+  final CloudinaryService _cloudinaryService = CloudinaryService();
   final UserService _userService = UserService();
+  final RecorderController _recorderController = RecorderController();
+  StreamSubscription<Duration>? _recordingDurationSubscription;
 
   FeedPost? _post;
   List<Comment> _comments = [];
@@ -46,6 +54,10 @@ class _PostDetailPageState extends State<PostDetailPage> {
   bool _hasMoreComments = false;
   bool _canSendComment = false;
   bool _didRequestMore = false;
+  bool _isRecordingVoice = false;
+  bool _isStartingVoiceRecording = false;
+  Duration _voiceDuration = Duration.zero;
+  String? _voicePath;
 
   int _commentsPage = 1;
   int _currentUserId = 0;
@@ -60,6 +72,11 @@ class _PostDetailPageState extends State<PostDetailPage> {
     super.initState();
 
     _commentController.addListener(_onCommentChanged);
+    _recordingDurationSubscription =
+        _recorderController.onCurrentDuration.listen((duration) {
+      if (!mounted) return;
+      setState(() => _voiceDuration = duration);
+    });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initialize();
@@ -70,6 +87,11 @@ class _PostDetailPageState extends State<PostDetailPage> {
   void dispose() {
     _commentsTimeoutTimer?.cancel();
     _commentReloadTimer?.cancel();
+    _recordingDurationSubscription?.cancel();
+    if (_isRecordingVoice) {
+      _recorderController.stop();
+    }
+    _recorderController.dispose();
 
     _commentController
       ..removeListener(_onCommentChanged)
@@ -96,6 +118,157 @@ class _PostDetailPageState extends State<PostDetailPage> {
     });
   }
 
+  Future<void> _startVoiceRecording() async {
+    if (_isRecordingVoice || _isStartingVoiceRecording) return;
+
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      _isStartingVoiceRecording = true;
+      _voiceDuration = Duration.zero;
+    });
+
+    try {
+      final hasPermission = await _recorderController.checkPermission();
+      if (!hasPermission) {
+        throw Exception('Microphone permission is required');
+      }
+
+      final file = File(
+        '${Directory.systemTemp.path}/Prive_comment_${DateTime.now().microsecondsSinceEpoch}.m4a',
+      );
+
+      _voicePath = file.path;
+      await _recorderController.record(path: file.path);
+
+      if (!mounted) return;
+
+      setState(() {
+        _isRecordingVoice = true;
+        _isStartingVoiceRecording = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _isRecordingVoice = false;
+        _isStartingVoiceRecording = false;
+        _voicePath = null;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString()),
+          backgroundColor: AppColors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _cancelVoiceRecording() async {
+    final path = _voicePath;
+
+    if (_isRecordingVoice) {
+      await _recorderController.stop();
+    }
+    _recorderController.reset();
+
+    if (path != null) {
+      final file = File(path);
+      if (await file.exists()) {
+        await file.delete();
+      }
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _isRecordingVoice = false;
+      _isStartingVoiceRecording = false;
+      _voiceDuration = Duration.zero;
+      _voicePath = null;
+    });
+  }
+
+  Future<void> _finishVoiceRecording() async {
+    if (!_isRecordingVoice) return;
+
+    final fallbackPath = _voicePath;
+    final recordedDuration = _voiceDuration;
+    final path = await _recorderController.stop();
+    _recorderController.reset();
+
+    if (!mounted) return;
+
+    setState(() {
+      _isRecordingVoice = false;
+      _isStartingVoiceRecording = false;
+      _voiceDuration = Duration.zero;
+      _voicePath = null;
+      _isSendingComment = true;
+    });
+
+    final resolvedPath = path ?? fallbackPath;
+    if (resolvedPath == null) {
+      if (mounted) {
+        setState(() => _isSendingComment = false);
+      }
+      return;
+    }
+
+    final file = File(resolvedPath);
+    if (!await file.exists()) {
+      if (mounted) {
+        setState(() => _isSendingComment = false);
+      }
+      return;
+    }
+
+    if (recordedDuration < const Duration(seconds: 1)) {
+      await file.delete();
+      if (!mounted) return;
+      setState(() => _isSendingComment = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Voice note is too short')),
+      );
+      return;
+    }
+
+    try {
+      final audioUrl = await _cloudinaryService.uploadAudio(
+        file,
+        customFolder: 'prive_comments',
+      );
+      if (!mounted) return;
+
+      context.read<FeedBloc>().add(
+            CreatePostComment(
+              postId: widget.postId,
+              content: '',
+              audioUrl: audioUrl,
+              duration: recordedDuration.inSeconds,
+              replyToCommentId: _replyingToComment?.id,
+            ),
+          );
+
+      setState(() {
+        _replyingToComment = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to send voice note: $error'),
+          backgroundColor: AppColors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSendingComment = false);
+      }
+    }
+  }
+
   Future<List<ComposerTokenSuggestion>> _suggestCommentTokens(
     ComposerTokenType type,
     String query,
@@ -113,23 +286,25 @@ class _PostDetailPageState extends State<PostDetailPage> {
           limit: 8,
         );
 
-        return users.map((user) {
-          final name = (user['name'] ?? user['displayName'] ?? 'User')
-              .toString()
-              .trim();
-          final username = (user['username'] ?? user['handle'] ?? '')
-              .toString()
-              .trim();
-          final bioValue = user['bio']?.toString();
-          final subtitle =
-              bioValue != null ? bioValue.trim() : '';
+        return users
+            .map((user) {
+              final name = (user['name'] ?? user['displayName'] ?? 'User')
+                  .toString()
+                  .trim();
+              final username =
+                  (user['username'] ?? user['handle'] ?? '').toString().trim();
+              final bioValue = user['bio']?.toString();
+              final subtitle = bioValue != null ? bioValue.trim() : '';
 
-          return ComposerTokenSuggestion(
-            value: username.isNotEmpty ? username : name.replaceAll(' ', '_'),
-            label: username.isNotEmpty ? '@$username' : '@$name',
-            subtitle: subtitle.isNotEmpty ? subtitle : null,
-          );
-        }).where((suggestion) => suggestion.value.isNotEmpty).toList();
+              return ComposerTokenSuggestion(
+                value:
+                    username.isNotEmpty ? username : name.replaceAll(' ', '_'),
+                label: username.isNotEmpty ? '@$username' : '@$name',
+                subtitle: subtitle.isNotEmpty ? subtitle : null,
+              );
+            })
+            .where((suggestion) => suggestion.value.isNotEmpty)
+            .toList();
       }
 
       final hashtags = await _feedService.getTrendingHashtags(limit: 12);
@@ -182,6 +357,16 @@ class _PostDetailPageState extends State<PostDetailPage> {
   }
 
   void _loadPostFromBloc() {
+    if (widget.initialPost != null) {
+      if (!mounted) return;
+
+      setState(() {
+        _post = widget.initialPost;
+        _isLoadingPost = false;
+      });
+      return;
+    }
+
     final posts = context.read<FeedBloc>().state.posts;
 
     FeedPost? found;
@@ -462,9 +647,15 @@ class _PostDetailPageState extends State<PostDetailPage> {
           controller: _commentController,
           replyingTo: _replyingToComment,
           onCancelReply: _cancelReply,
-          canSend: _canSendComment && !_isSendingComment,
+          canSend: _canSendComment && !_isSendingComment && !_isRecordingVoice,
           isSending: _isSendingComment,
+          isRecordingVoice: _isRecordingVoice,
+          isStartingVoiceRecording: _isStartingVoiceRecording,
+          voiceDuration: _voiceDuration,
           onSend: () => _addComment(_commentController.text),
+          onStartVoiceRecording: _startVoiceRecording,
+          onCancelVoiceRecording: _cancelVoiceRecording,
+          onFinishVoiceRecording: _finishVoiceRecording,
           suggestionsBuilder: _suggestCommentTokens,
         ),
       ],
@@ -980,14 +1171,21 @@ class _CommentTile extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 7),
-                        Text(
-                          comment.content,
-                          style: AppTheme.greyTextStyle.copyWith(
-                            fontSize: 14,
-                            height: 1.4,
-                            color: AppColors.text,
+                        if (comment.isVoiceNote && comment.audioUrl.isNotEmpty)
+                          AudioMessageBubble(
+                            audioUrl: comment.audioUrl,
+                            isMe: false,
+                            chatColor: AppColors.primary,
+                          )
+                        else
+                          Text(
+                            comment.content,
+                            style: AppTheme.greyTextStyle.copyWith(
+                              fontSize: 14,
+                              height: 1.4,
+                              color: AppColors.text,
+                            ),
                           ),
-                        ),
                         const SizedBox(height: 10),
                         Row(
                           children: [
@@ -1129,7 +1327,13 @@ class _CommentComposer extends StatelessWidget {
   final VoidCallback onCancelReply;
   final bool canSend;
   final bool isSending;
+  final bool isRecordingVoice;
+  final bool isStartingVoiceRecording;
+  final Duration voiceDuration;
   final VoidCallback onSend;
+  final VoidCallback onStartVoiceRecording;
+  final VoidCallback onCancelVoiceRecording;
+  final VoidCallback onFinishVoiceRecording;
   final ComposerTokenSuggestionsBuilder suggestionsBuilder;
 
   const _CommentComposer({
@@ -1139,7 +1343,13 @@ class _CommentComposer extends StatelessWidget {
     required this.onCancelReply,
     required this.canSend,
     required this.isSending,
+    required this.isRecordingVoice,
+    required this.isStartingVoiceRecording,
+    required this.voiceDuration,
     required this.onSend,
+    required this.onStartVoiceRecording,
+    required this.onCancelVoiceRecording,
+    required this.onFinishVoiceRecording,
     required this.suggestionsBuilder,
   });
 
@@ -1216,6 +1426,42 @@ class _CommentComposer extends StatelessWidget {
                     ],
                   ),
                 ),
+              if (isRecordingVoice)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.red.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: AppColors.red.withOpacity(0.16),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.mic,
+                        size: 18,
+                        color: AppColors.red,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Recording voice note ${_formatDuration(voiceDuration)}',
+                          style: AppTheme.greyTextStyle.copyWith(
+                            color: AppColors.red,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: onCancelVoiceRecording,
+                        child: const Text('Cancel'),
+                      ),
+                    ],
+                  ),
+                ),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -1270,6 +1516,54 @@ class _CommentComposer extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   GestureDetector(
+                    onTap: isRecordingVoice
+                        ? onFinishVoiceRecording
+                        : (isStartingVoiceRecording
+                            ? null
+                            : onStartVoiceRecording),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        color: isRecordingVoice
+                            ? AppColors.red
+                            : AppColors.primary.withOpacity(0.12),
+                        shape: BoxShape.circle,
+                        boxShadow: !isRecordingVoice
+                            ? [
+                                BoxShadow(
+                                  color: AppColors.primary.withOpacity(0.2),
+                                  blurRadius: 14,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Center(
+                        child: isStartingVoiceRecording
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  color: AppColors.primary,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Icon(
+                                isRecordingVoice
+                                    ? Icons.stop_rounded
+                                    : Icons.mic_rounded,
+                                size: 20,
+                                color: isRecordingVoice
+                                    ? AppColors.white
+                                    : AppColors.primary,
+                              ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  GestureDetector(
                     onTap: canSend ? onSend : null,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 180),
@@ -1316,6 +1610,12 @@ class _CommentComposer extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _formatDuration(Duration duration) {
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 }
 
