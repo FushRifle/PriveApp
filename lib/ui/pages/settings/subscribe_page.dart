@@ -65,23 +65,15 @@ class _SubscribePageState extends State<SubscribePage> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.backgroundColor,
+        backgroundColor: AppColors.background,
         appBar: AppBar(
           backgroundColor: AppColors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.black),
+            icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary),
             onPressed: () => Navigator.pop(context),
           ),
-          title: Text(
-            'Clique Premium',
-            style: AppTheme.blackTextStyle.copyWith(
-              fontWeight: AppTheme.bold,
-              fontSize: 20,
-            ),
-          ),
-          centerTitle: true,
-        ),
+                 ),
         body: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -133,7 +125,7 @@ class _SubscribePageState extends State<SubscribePage> {
                 Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: AppColors.white,
+                    color: AppColors.card,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -470,7 +462,7 @@ class _SubscribePageState extends State<SubscribePage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: AppColors.card,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(

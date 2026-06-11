@@ -35,14 +35,21 @@ class LoadMoreFeedPosts extends FeedEvent {}
 class CreateFeedPost extends FeedEvent {
   final String content;
   final List<Map<String, dynamic>>? attachments;
+  final String postType;
+  final bool isAnonymous;
+  final String? anonymousCategory;
 
   const CreateFeedPost({
     required this.content,
     this.attachments,
+    this.postType = 'standard',
+    this.isAnonymous = false,
+    this.anonymousCategory,
   });
 
   @override
-  List<Object?> get props => [content, attachments];
+  List<Object?> get props =>
+      [content, attachments, postType, isAnonymous, anonymousCategory];
 }
 
 // Like a post

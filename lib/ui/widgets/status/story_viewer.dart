@@ -528,7 +528,7 @@ class _StoryImage extends StatelessWidget {
     if (url.startsWith('http')) {
       return CachedNetworkImage(
         imageUrl: url,
-        fit: BoxFit.cover,
+        fit: BoxFit.contain,
         memCacheWidth: 1200,
         placeholder: (_, __) => const ColoredBox(
           color: AppColors.black,
@@ -554,7 +554,7 @@ class _StoryImage extends StatelessWidget {
 
     return Image.asset(
       url,
-      fit: BoxFit.cover,
+      fit: BoxFit.fitWidth,
       errorBuilder: (_, __, ___) {
         return const ColoredBox(
           color: AppColors.black,

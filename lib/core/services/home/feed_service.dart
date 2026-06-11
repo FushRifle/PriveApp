@@ -77,9 +77,21 @@ class FeedService {
   Future<Map<String, dynamic>> createPost({
     required String content,
     List<Map<String, dynamic>>? attachments,
+    String postType = 'standard',
+    bool isAnonymous = false,
+    String? anonymousCategory,
   }) async {
     try {
-      final data = <String, dynamic>{'content': content};
+      final data = <String, dynamic>{
+        'content': content,
+        'postType': postType,
+        'isAnonymous': isAnonymous,
+      };
+
+      if (anonymousCategory != null && anonymousCategory.trim().isNotEmpty) {
+        data['anonymousCategory'] = anonymousCategory.trim();
+      }
+
       final mentions = _extractMentions(content);
       if (mentions.isNotEmpty) {
         data['mentions'] = mentions;

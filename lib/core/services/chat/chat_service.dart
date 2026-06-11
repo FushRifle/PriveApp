@@ -5,7 +5,7 @@ import '../../clients/api_service.dart';
 
 class ChatService {
   final ApiService _api = ApiService();
-  final Map<int, List<Map<String, dynamic>>> _messagesCache = {};
+  final Map<String, List<Map<String, dynamic>>> _messagesCache = {};
   final Map<String, CancelToken> _cancelTokens = {};
 
   void setAuthToken(String token) {
@@ -16,6 +16,225 @@ class ChatService {
     _api.clearAuthToken();
     _messagesCache.clear();
     _cancelTokens.clear();
+  }
+
+  List<Map<String, dynamic>> readCachedConversations({
+    int? cacheOwnerId,
+  }) {
+    final keysToCheck = <String>[
+      _conversationsKey(cacheOwnerId: cacheOwnerId),
+      if (cacheOwnerId != null) _conversationsKey(cacheOwnerId: null),
+    ];
+
+    for (final key in keysToCheck) {
+      final cachedInMemory = _messagesCache[key];
+      if (cachedInMemory != null && cachedInMemory.isNotEmpty) {
+        return List<Map<String, dynamic>>.from(cachedInMemory);
+      }
+    }
+
+    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
+    for (final key in keysToCheck) {
+      final raw = box?.get(key);
+      if (raw is! List) continue;
+
+      final conversations = raw
+          .whereType<Map>()
+          .map((conversation) => Map<String, dynamic>.from(conversation))
+          .toList();
+
+      if (conversations.isNotEmpty) {
+        _messagesCache[key] = List<Map<String, dynamic>>.from(conversations);
+        return conversations;
+      }
+    }
+
+    return <Map<String, dynamic>>[];
+  }
+
+  Future<void> cacheConversations(
+    List<Map<String, dynamic>> conversations, {
+    int? cacheOwnerId,
+  }) async {
+    final key = _conversationsKey(cacheOwnerId: cacheOwnerId);
+    final normalized = conversations
+        .map((conversation) => Map<String, dynamic>.from(conversation))
+        .toList();
+    _messagesCache[key] = normalized;
+
+    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
+    await box?.put(key, normalized);
+  }
+
+  Future<void> clearCachedConversations({int? cacheOwnerId}) async {
+    final keysToRemove = <String>[
+      _conversationsKey(cacheOwnerId: cacheOwnerId),
+      if (cacheOwnerId != null) _conversationsKey(cacheOwnerId: null),
+    ];
+
+    for (final key in keysToRemove) {
+      _messagesCache.remove(key);
+    }
+
+    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
+    for (final key in keysToRemove) {
+      await box?.delete(key);
+    }
+  }
+
+  List<Map<String, dynamic>> readCachedMessages(
+    int conversationId, {
+    int? cacheOwnerId,
+  }) {
+    final keysToCheck = <String>[
+      _messagesKey(
+        conversationId,
+        cacheOwnerId: cacheOwnerId,
+      ),
+      if (cacheOwnerId != null)
+        _messagesKey(
+          conversationId,
+          cacheOwnerId: null,
+        ),
+    ];
+
+    for (final memoryKey in keysToCheck) {
+      final cachedInMemory = _messagesCache[memoryKey];
+      if (cachedInMemory != null && cachedInMemory.isNotEmpty) {
+        return List<Map<String, dynamic>>.from(cachedInMemory);
+      }
+    }
+
+    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
+    for (final key in keysToCheck) {
+      final raw = box?.get(key);
+
+      if (raw is! List) {
+        continue;
+      }
+
+      final messages = raw
+          .whereType<Map>()
+          .map((message) => Map<String, dynamic>.from(message))
+          .toList();
+
+      if (messages.isNotEmpty) {
+        _messagesCache[key] = List<Map<String, dynamic>>.from(messages);
+        return messages;
+      }
+    }
+
+    return <Map<String, dynamic>>[];
+  }
+
+  Future<void> cacheMessages(
+    int conversationId,
+    List<Map<String, dynamic>> messages, {
+    int? cacheOwnerId,
+  }) async {
+    final key = _messagesKey(
+      conversationId,
+      cacheOwnerId: cacheOwnerId,
+    );
+    final normalized =
+        messages.map((message) => Map<String, dynamic>.from(message)).toList();
+    _messagesCache[key] = normalized;
+
+    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
+    await box?.put(key, normalized);
+  }
+
+  Future<void> clearCachedMessages(
+    int conversationId, {
+    int? cacheOwnerId,
+  }) async {
+    final keysToRemove = <String>[
+      _messagesKey(
+        conversationId,
+        cacheOwnerId: cacheOwnerId,
+      ),
+      if (cacheOwnerId != null)
+        _messagesKey(
+          conversationId,
+          cacheOwnerId: null,
+        ),
+    ];
+
+    for (final key in keysToRemove) {
+      _messagesCache.remove(key);
+    }
+
+    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
+    for (final key in keysToRemove) {
+      await box?.delete(key);
+    }
+  }
+
+  String? readCachedDraft(
+    int conversationId, {
+    int? cacheOwnerId,
+  }) {
+    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
+    final keysToCheck = <String>[
+      _draftKey(
+        conversationId,
+        cacheOwnerId: cacheOwnerId,
+      ),
+      if (cacheOwnerId != null)
+        _draftKey(
+          conversationId,
+          cacheOwnerId: null,
+        ),
+    ];
+
+    for (final key in keysToCheck) {
+      final value = box?.get(key);
+      if (value is String && value.trim().isNotEmpty) {
+        return value;
+      }
+    }
+
+    return null;
+  }
+
+  Future<void> saveDraft(
+    int conversationId,
+    String draft, {
+    int? cacheOwnerId,
+  }) async {
+    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
+    final key = _draftKey(
+      conversationId,
+      cacheOwnerId: cacheOwnerId,
+    );
+
+    if (draft.trim().isEmpty) {
+      await box?.delete(key);
+      return;
+    }
+
+    await box?.put(key, draft);
+  }
+
+  Future<void> clearDraft(
+    int conversationId, {
+    int? cacheOwnerId,
+  }) async {
+    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
+    final keysToRemove = <String>[
+      _draftKey(
+        conversationId,
+        cacheOwnerId: cacheOwnerId,
+      ),
+      if (cacheOwnerId != null)
+        _draftKey(
+          conversationId,
+          cacheOwnerId: null,
+        ),
+    ];
+    for (final key in keysToRemove) {
+      await box?.delete(key);
+    }
   }
 
   CancelToken _createCancelToken(String key) {
@@ -29,7 +248,11 @@ class ChatService {
   }
 
   void clearMessagesCache(int conversationId) {
-    _messagesCache.remove(conversationId);
+    _messagesCache.removeWhere(
+      (key, _) =>
+          key.startsWith('${HiveCacheKeys.chatMessagesPrefix}_') &&
+          key.endsWith('_$conversationId'),
+    );
   }
 
   void clearAllCache() {
@@ -40,17 +263,41 @@ class ChatService {
   // Conversations
   // =========================
 
-  Future<List<Map<String, dynamic>>> getConversations() async {
+  Future<List<Map<String, dynamic>>> getConversations({
+    bool forceRefresh = false,
+    int? cacheOwnerId,
+  }) async {
     try {
+      if (!forceRefresh) {
+        final cached = readCachedConversations(
+          cacheOwnerId: cacheOwnerId,
+        );
+        if (cached.isNotEmpty) {
+          return cached;
+        }
+      }
+
       final response = await _api.get(
         '/api/chat/conversations',
         forceRefresh: true,
         useCache: false,
       );
 
-      return response.data is List
-          ? List<Map<String, dynamic>>.from(response.data)
-          : [];
+      final conversations = response.data is List
+          ? (response.data as List)
+              .whereType<Map>()
+              .map((conversation) => Map<String, dynamic>.from(conversation))
+              .toList()
+          : <Map<String, dynamic>>[];
+
+      if (conversations.isNotEmpty) {
+        await cacheConversations(
+          conversations,
+          cacheOwnerId: cacheOwnerId,
+        );
+      }
+
+      return conversations;
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -107,12 +354,26 @@ class ChatService {
     int page = 1,
     bool forceRefresh = false,
     bool silent = false,
+    int? cacheOwnerId,
   }) async {
     try {
-      if (!forceRefresh &&
-          page == 1 &&
-          _messagesCache.containsKey(conversationId)) {
-        return _messagesCache[conversationId]!;
+      final memoryKey = _messagesKey(
+        conversationId,
+        cacheOwnerId: cacheOwnerId,
+      );
+
+      if (!forceRefresh && page == 1 && _messagesCache.containsKey(memoryKey)) {
+        return _messagesCache[memoryKey]!;
+      }
+
+      if (!forceRefresh && page == 1) {
+        final cachedMessages = readCachedMessages(
+          conversationId,
+          cacheOwnerId: cacheOwnerId,
+        );
+        if (cachedMessages.isNotEmpty) {
+          return cachedMessages;
+        }
       }
 
       final response = await _api.get(
@@ -134,7 +395,7 @@ class ChatService {
           : <Map<String, dynamic>>[];
 
       if (page == 1) {
-        _messagesCache[conversationId] = messages;
+        _messagesCache[memoryKey] = messages;
       }
 
       return messages;
@@ -268,6 +529,30 @@ class ChatService {
 
   String _cliqueBotKey(int conversationId) {
     return '${HiveCacheKeys.cliqueBotMessagesPrefix}_$conversationId';
+  }
+
+  String _conversationsKey({int? cacheOwnerId}) {
+    return cacheOwnerId == null
+        ? HiveCacheKeys.chatConversationsPrefix
+        : '${HiveCacheKeys.chatConversationsPrefix}_$cacheOwnerId';
+  }
+
+  String _messagesKey(
+    int conversationId, {
+    int? cacheOwnerId,
+  }) {
+    return cacheOwnerId == null
+        ? '${HiveCacheKeys.chatMessagesPrefix}_$conversationId'
+        : '${HiveCacheKeys.chatMessagesPrefix}_${cacheOwnerId}_$conversationId';
+  }
+
+  String _draftKey(
+    int conversationId, {
+    int? cacheOwnerId,
+  }) {
+    return cacheOwnerId == null
+        ? '${HiveCacheKeys.chatDraftPrefix}_$conversationId'
+        : '${HiveCacheKeys.chatDraftPrefix}_${cacheOwnerId}_$conversationId';
   }
 
   String _buildCliqueReply(String input) {

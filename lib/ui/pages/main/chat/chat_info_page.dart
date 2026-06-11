@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:clique/core/models/calls.dart';
+import 'package:clique/ui/widgets/call/call_button.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
@@ -84,6 +86,20 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
   }
 
   bool get _isBot => widget.userName.toLowerCase() == 'Clique';
+
+  void _startCall(String callType) {
+    if (widget.userId <= 0) return;
+    CallButton.initiateCall(
+      context,
+      receiver: UserInfo(
+        id: widget.userId,
+        name: widget.userName,
+        username: widget.userName,
+        avatar: widget.userAvatar,
+      ),
+      callType: callType,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -236,13 +252,13 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                     icon: Icons.call,
                     label: 'Audio',
                     color: AppColors.primary,
-                    onTap: () {}),
+                    onTap: () => _startCall('voice')),
                 const SizedBox(width: 16),
                 _buildActionChip(
                     icon: Icons.videocam,
                     label: 'Video',
                     color: AppColors.primary,
-                    onTap: () {}),
+                    onTap: () => _startCall('video')),
                 const SizedBox(width: 16),
               ],
               _buildActionChip(

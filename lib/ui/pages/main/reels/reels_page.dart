@@ -86,13 +86,13 @@ class _ReelsPageState extends State<ReelsPage> {
                   _handleBack();
                 },
                 child: Scaffold(
-                  backgroundColor: AppColors.black,
+                  backgroundColor: AppColors.backgroundColorDark,
                   body: Stack(
                     children: [
                       showInitialLoader
                           ? const Center(
                               child: CircularProgressIndicator(
-                                color: AppColors.white,
+                                color: AppColors.secondary,
                                 strokeWidth: 2,
                               ),
                             )
@@ -168,7 +168,7 @@ class _ReelsPageState extends State<ReelsPage> {
                             ),
                       // Header
                       Positioned(
-                        top: MediaQuery.of(context).padding.top + 15,
+                        top: MediaQuery.of(context).padding.top + 20,
                         left: 16,
                         right: 16,
                         child: Row(

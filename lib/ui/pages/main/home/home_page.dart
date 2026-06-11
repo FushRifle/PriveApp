@@ -527,8 +527,8 @@ class _HomeAppBar extends StatelessWidget {
                                 child: Text(
                                   count > 99 ? '99+' : '$count',
                                   style: const TextStyle(
-                                    color: AppColors.red,
-                                    fontSize: 11,
+                                    color: AppColors.black,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),

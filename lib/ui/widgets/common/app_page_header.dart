@@ -44,7 +44,7 @@ class AppPageHeader extends StatelessWidget {
     return Container(
       padding: EdgeInsets.fromLTRB(
         16,
-        MediaQuery.paddingOf(context).top + 16,
+        MediaQuery.paddingOf(context).top + 20,
         16,
         12,
       ),

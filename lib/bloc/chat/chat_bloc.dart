@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:clique/core/services/chat/chat_service.dart';
@@ -86,6 +88,82 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     return message.copyWith(isOwn: message.senderId == _currentUserId);
   }
 
+  Future<List<MessageModel>> _loadPersistedMessages(int conversationId) async {
+    final persisted = _chatService.readCachedMessages(
+      conversationId,
+      cacheOwnerId: _currentUserId,
+    );
+    if (persisted.isEmpty) {
+      return const <MessageModel>[];
+    }
+
+    return persisted
+        .map((json) => _ownMessage(MessageModel.fromJson(json)))
+        .toList();
+  }
+
+  Future<void> _persistMessages(
+    int conversationId,
+    List<MessageModel> messages,
+  ) async {
+    await _chatService.cacheMessages(
+      conversationId,
+      messages.map((message) => message.toJson()).toList(),
+      cacheOwnerId: _currentUserId,
+    );
+  }
+
+  Future<List<ConversationModel>> _loadPersistedConversations() async {
+    final persisted = _chatService.readCachedConversations(
+      cacheOwnerId: _currentUserId,
+    );
+    if (persisted.isEmpty) {
+      return const <ConversationModel>[];
+    }
+
+    return persisted.map((json) => ConversationModel.fromJson(json)).toList();
+  }
+
+  Future<void> _persistConversations(
+    List<ConversationModel> conversations,
+  ) async {
+    await _chatService.cacheConversations(
+      conversations.map((conversation) => conversation.toJson()).toList(),
+      cacheOwnerId: _currentUserId,
+    );
+  }
+
+  List<ConversationModel> _updateConversationPreview(
+    List<ConversationModel> conversations, {
+    required int conversationId,
+    required String lastMessage,
+    required String lastMessageType,
+    bool incoming = false,
+  }) {
+    final now = DateTime.now().toIso8601String();
+    final updated = conversations.map((conversation) {
+      if (conversation.id != conversationId) {
+        return conversation;
+      }
+
+      return conversation.copyWith(
+        lastMessage: lastMessage,
+        lastMessageType: lastMessageType,
+        timestamp: now,
+        unreadCount:
+            incoming ? conversation.unreadCount + 1 : conversation.unreadCount,
+      );
+    }).toList();
+
+    updated.sort((a, b) {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return b.timestamp.compareTo(a.timestamp);
+    });
+
+    return updated;
+  }
+
   bool _looksLikeSameDelivery(MessageModel pending, MessageModel delivered) {
     if (!pending.isPending || delivered.isPending) return false;
     if (pending.conversationId != delivered.conversationId) return false;
@@ -130,12 +208,27 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
   Future<void> _onLoadConversations(
       LoadConversations event, Emitter<ChatState> emit) async {
+    await _loadCurrentUserId();
     if (state.conversations.isEmpty) {
       emit(state.copyWith(conversationsStatus: ChatStatus.loading));
     }
 
     try {
-      final data = await _chatService.getConversations();
+      final cachedConversations = state.conversations.isNotEmpty
+          ? state.conversations
+          : await _loadPersistedConversations();
+
+      if (cachedConversations.isNotEmpty) {
+        emit(state.copyWith(
+          conversations: cachedConversations,
+          conversationsStatus: ChatStatus.success,
+          clearError: true,
+        ));
+      }
+
+      final data = await _chatService.getConversations(
+        cacheOwnerId: _currentUserId,
+      );
       final conversations =
           data.map((json) => ConversationModel.fromJson(json)).toList();
       emit(state.copyWith(
@@ -143,6 +236,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         conversationsStatus: ChatStatus.success,
         clearError: true,
       ));
+      await _persistConversations(conversations);
     } catch (e) {
       emit(state.copyWith(
         conversationsStatus: ChatStatus.error,
@@ -153,9 +247,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
   Future<void> _onRefreshConversations(
       RefreshConversations event, Emitter<ChatState> emit) async {
+    await _loadCurrentUserId();
     emit(state.copyWith(conversationsStatus: ChatStatus.refreshing));
     try {
-      final data = await _chatService.getConversations();
+      final data = await _chatService.getConversations(
+        forceRefresh: true,
+        cacheOwnerId: _currentUserId,
+      );
       final conversations =
           data.map((json) => ConversationModel.fromJson(json)).toList();
       emit(state.copyWith(
@@ -163,6 +261,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         conversationsStatus: ChatStatus.success,
         clearError: true,
       ));
+      await _persistConversations(conversations);
     } catch (e) {
       emit(state.copyWith(
         conversationsStatus: ChatStatus.error,
@@ -198,7 +297,15 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     _loadingConversations.add(cacheKey);
 
     try {
-      final cachedMessages = _messageCache[cacheKey] ?? [];
+      final inMemoryMessages = _messageCache[cacheKey];
+      final cachedMessages =
+          inMemoryMessages != null && inMemoryMessages.isNotEmpty
+              ? inMemoryMessages
+              : await _loadPersistedMessages(cacheKey);
+
+      if (cachedMessages.isNotEmpty) {
+        _messageCache[cacheKey] = cachedMessages;
+      }
 
       if (event.page == 1) {
         if (cachedMessages.isNotEmpty) {
@@ -218,11 +325,15 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         }
       }
 
+      final shouldForceRefresh =
+          event.forceRefresh || event.page > 1 || cachedMessages.isNotEmpty;
+
       final data = await _chatService.getMessages(
         event.conversationId,
         page: event.page,
-        forceRefresh: event.forceRefresh,
+        forceRefresh: shouldForceRefresh,
         silent: event.silent,
+        cacheOwnerId: _currentUserId,
       );
 
       final fetchedMessages =
@@ -247,6 +358,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       final finalMessages = _mergeMessages(updatedMessages);
 
       _messageCache[cacheKey] = finalMessages;
+      await _persistMessages(cacheKey, finalMessages);
 
       if (requestId != _messageRequestId ||
           state.activeConversationId != event.conversationId) {
@@ -325,11 +437,21 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     ]);
 
     _messageCache[event.conversationId] = updatedMessages;
+    await _persistMessages(event.conversationId, updatedMessages);
+
+    final updatedConversations = _updateConversationPreview(
+      state.conversations,
+      conversationId: event.conversationId,
+      lastMessage: event.message,
+      lastMessageType: event.messageType,
+    );
+    unawaited(_persistConversations(updatedConversations));
 
     emit(state.copyWith(
       messages: updatedMessages,
       messagesStatus: ChatStatus.success,
       activeConversationId: event.conversationId,
+      conversations: updatedConversations,
     ));
 
     try {
@@ -374,12 +496,22 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       }).toList());
 
       _messageCache[event.conversationId] = replacedMessages;
+      await _persistMessages(event.conversationId, replacedMessages);
+
+      final updatedConversations = _updateConversationPreview(
+        state.conversations,
+        conversationId: event.conversationId,
+        lastMessage: event.message,
+        lastMessageType: event.messageType,
+      );
+      unawaited(_persistConversations(updatedConversations));
 
       emit(state.copyWith(
         messages: replacedMessages,
         messagesStatus: ChatStatus.success,
         activeConversationId: event.conversationId,
         clearError: true,
+        conversations: updatedConversations,
       ));
 
       _chatService.clearMessagesCache(event.conversationId);
@@ -393,6 +525,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       ));
     } catch (e) {
       _messageCache[event.conversationId] = state.messages;
+      await _persistMessages(event.conversationId, state.messages);
       emit(state.copyWith(
         messagesStatus: ChatStatus.success,
         error: e.toString(),
@@ -461,11 +594,19 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     final merged = _mergeMessages(messages);
 
     _messageCache[event.conversationId] = merged;
+    final updatedConversations = _updateConversationPreview(
+      state.conversations,
+      conversationId: event.conversationId,
+      lastMessage: merged.isNotEmpty ? merged.first.message : '',
+      lastMessageType: merged.isNotEmpty ? merged.first.messageType : 'text',
+    );
+    unawaited(_persistConversations(updatedConversations));
     emit(state.copyWith(
       messages: merged,
       messagesStatus: ChatStatus.success,
       activeConversationId: event.conversationId,
       clearError: true,
+      conversations: updatedConversations,
     ));
   }
 
@@ -513,6 +654,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             ...(_messageCache[event.conversationId] ?? state.messages),
           ]);
           _messageCache[event.conversationId] = merged;
+          await _persistMessages(event.conversationId, merged);
           emit(state.copyWith(
             messages: merged,
             messagesStatus: ChatStatus.success,
@@ -542,6 +684,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         }).toList());
 
         _messageCache[event.conversationId] = replacedCachedMessages;
+        await _persistMessages(event.conversationId, replacedCachedMessages);
 
         if (state.messages.any((m) => m.id == pending.id)) {
           final replacedVisibleMessages =
@@ -593,14 +736,23 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       await _chatService.deleteMessage(event.messageId);
       for (final entry in _messageCache.entries) {
         if (entry.value.any((m) => m.id == event.messageId)) {
-          _chatService.clearMessagesCache(entry.key);
-          _messageCache[entry.key] =
+          final updated =
               entry.value.where((m) => m.id != event.messageId).toList();
+          _messageCache[entry.key] = updated;
+          if (updated.isEmpty) {
+            await _chatService.clearCachedMessages(
+              entry.key,
+              cacheOwnerId: _currentUserId,
+            );
+          } else {
+            await _persistMessages(entry.key, updated);
+          }
         }
       }
       emit(state.copyWith(
         messages: state.messages.where((m) => m.id != event.messageId).toList(),
       ));
+      add(RefreshConversations());
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }
@@ -790,6 +942,14 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     try {
       await _chatService.clearChat(event.conversationId);
       _messageCache.remove(event.conversationId);
+      await _chatService.clearCachedMessages(
+        event.conversationId,
+        cacheOwnerId: _currentUserId,
+      );
+      await _chatService.clearDraft(
+        event.conversationId,
+        cacheOwnerId: _currentUserId,
+      );
       emit(state.copyWith(
         messages: const [],
         currentPage: 1,
@@ -798,6 +958,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         activeConversationId: event.conversationId,
         clearError: true,
       ));
+      add(RefreshConversations());
       add(LoadMessages(
         conversationId: event.conversationId,
         page: 1,
@@ -834,6 +995,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     ]);
 
     _messageCache[processedMessage.conversationId] = updatedMessages;
+    unawaited(
+        _persistMessages(processedMessage.conversationId, updatedMessages));
 
     if (state.activeConversationId != processedMessage.conversationId) {
       return;
@@ -858,7 +1021,18 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       }
       return msg;
     }).toList();
-    emit(state.copyWith(messages: updatedMessages));
+    _messageCache[event.conversationId] = updatedMessages;
+    unawaited(_persistMessages(event.conversationId, updatedMessages));
+    final updatedConversations = state.conversations.map((conversation) {
+      if (conversation.id != event.conversationId) return conversation;
+      return conversation.copyWith(unreadCount: 0);
+    }).toList();
+
+    unawaited(_persistConversations(updatedConversations));
+    emit(state.copyWith(
+      messages: updatedMessages,
+      conversations: updatedConversations,
+    ));
   }
 
   void _onTypingStatusReceived(

@@ -18,9 +18,13 @@ class PostHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final avatar = post.user.avatar;
-    final name = post.user.name.trim().isNotEmpty ? post.user.name : 'User';
-    final canOpenProfile = post.user.id > 0;
+    final avatar = post.isAnonymousPost ? '' : post.user.avatar;
+    final name = post.isAnonymousPost
+        ? 'Anonymous'
+        : post.user.name.trim().isNotEmpty
+            ? post.user.name
+            : 'User';
+    final canOpenProfile = post.user.id > 0 && !post.isAnonymousPost;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 12, 12),
@@ -51,6 +55,7 @@ class PostHeader extends StatelessWidget {
                       name: name,
                       time: post.time,
                       isVerified: post.user.verified,
+                      badge: post.contentTypeLabel,
                     ),
                   ),
                 ],
@@ -157,11 +162,13 @@ class _PostUserInfo extends StatelessWidget {
   final String name;
   final String time;
   final bool isVerified;
+  final String badge;
 
   const _PostUserInfo({
     required this.name,
     required this.time,
     required this.isVerified,
+    required this.badge,
   });
 
   @override
@@ -193,16 +200,55 @@ class _PostUserInfo extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 3),
-        Text(
-          time,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: AppTheme.greyTextStyle.copyWith(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          children: [
+            Text(
+              time,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTheme.greyTextStyle.copyWith(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            _TypeBadge(label: badge),
+          ],
         ),
       ],
+    );
+  }
+}
+
+class _TypeBadge extends StatelessWidget {
+  final String label;
+
+  const _TypeBadge({
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final value = label.trim().isEmpty ? 'Post' : label;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: AppColors.primary.withOpacity(0.15),
+        ),
+      ),
+      child: Text(
+        value,
+        style: AppTheme.blackTextStyle.copyWith(
+          color: AppColors.primary,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     );
   }
 }

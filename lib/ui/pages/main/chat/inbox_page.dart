@@ -67,7 +67,7 @@ class _InboxPageState extends State<InboxPage> {
                       state.conversations.isEmpty) {
                     return const Center(
                       child: CircularProgressIndicator(
-                        color: AppColors.primary,
+                        color: AppColors.secondary,
                       ),
                     );
                   }
@@ -78,7 +78,11 @@ class _InboxPageState extends State<InboxPage> {
                   }
 
                   final conversations = _getDisplayConversations(state);
-                  return _buildMessageList(context, conversations);
+
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: _buildMessageList(context, conversations),
+                  );
                 },
               ),
             ),
@@ -223,7 +227,8 @@ class _InboxPageState extends State<InboxPage> {
     );
   }
 
-  Widget _buildMessageItem(BuildContext context, _ChatMessage message) {
+  Widget _buildMessageItem(
+    BuildContext context, _ChatMessage message) {
     final firstLetter =
         message.name.isNotEmpty ? message.name[0].toUpperCase() : 'U';
     final isBot = message.name.toLowerCase() == 'Clique';
@@ -291,8 +296,8 @@ class _InboxPageState extends State<InboxPage> {
           }
         },
         child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(12),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: message.isUnread
                 ? AppColors.primary.withOpacity(0.05)

@@ -13,6 +13,7 @@
 migrate_working_dir/
 *.dart_tool
 *.cursor
+*.vscode
 *.plist
 
 # IntelliJ related
@@ -106,3 +107,6 @@ app.*.map.json
 
 # Hide sensitive API config
 api_config.dart
+
+
+.fvm

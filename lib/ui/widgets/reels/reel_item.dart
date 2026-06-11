@@ -47,7 +47,7 @@ class _ReelItemState extends State<ReelItem>
   bool _isFollowing = false;
   bool _isLiked = false;
   bool _isReposted = false;
-  bool _isMuted = false;
+  bool _isMuted = true;
 
   int _localLikeDelta = 0;
   int _localCommentDelta = 0;

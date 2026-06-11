@@ -137,12 +137,12 @@ class CloudinaryCubit extends Cubit<CloudinaryState> {
         return video == null ? null : File(video.path);
       case UploadType.audio:
       case UploadType.document:
-        final file = await FilePicker.pickFile(
+        final file = await FilePicker.pickFiles(
           type: allowedExtensions == null ? FileType.any : FileType.custom,
           allowedExtensions: allowedExtensions,
         );
-        final path = file?.path;
-        return path == null ? null : File(path);
+        final path = file?.paths;
+        return path == null ? null : File(path as String);
     }
   }
 

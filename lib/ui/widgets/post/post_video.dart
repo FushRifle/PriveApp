@@ -207,7 +207,7 @@ class _PostVideoState extends State<PostVideo>
       }
 
       return FittedBox(
-        fit: BoxFit.cover,
+        fit: BoxFit.fitWidth,
         child: SizedBox(
           width: size.width,
           height: size.height,

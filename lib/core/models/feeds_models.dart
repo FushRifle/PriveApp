@@ -15,6 +15,9 @@ class FeedPost {
   final bool isReposted;
   final List<String> hashtags;
   final DateTime createdAt;
+  final String postType;
+  final bool isAnonymous;
+  final String? anonymousCategory;
 
   FeedPost({
     required this.id,
@@ -32,6 +35,9 @@ class FeedPost {
     this.isReposted = false,
     this.hashtags = const [],
     required this.createdAt,
+    this.postType = 'standard',
+    this.isAnonymous = false,
+    this.anonymousCategory,
   });
 
   factory FeedPost.fromJson(Map<String, dynamic> json) {
@@ -64,6 +70,16 @@ class FeedPost {
       isReposted: json['isReposted'] == true || json['is_reposted'] == true,
       hashtags: _parseStringList(json['hashtags']),
       createdAt: _parseDateTime(json['createdAt'] ?? json['created_at']),
+      postType: (json['postType'] ?? json['post_type'] ?? 'standard')
+          .toString()
+          .trim()
+          .toLowerCase(),
+      isAnonymous: json['isAnonymous'] == true ||
+          json['is_anonymous'] == true ||
+          (json['postType']?.toString().toLowerCase() == 'anonymous') ||
+          (json['post_type']?.toString().toLowerCase() == 'anonymous'),
+      anonymousCategory: json['anonymousCategory']?.toString() ??
+          json['anonymous_category']?.toString(),
     );
   }
 
@@ -83,6 +99,9 @@ class FeedPost {
         'isReposted': isReposted,
         'hashtags': hashtags,
         'createdAt': createdAt.toIso8601String(),
+        'postType': postType,
+        'isAnonymous': isAnonymous,
+        'anonymousCategory': anonymousCategory,
       };
 
   FeedPost copyWith({
@@ -101,6 +120,9 @@ class FeedPost {
     bool? isReposted,
     List<String>? hashtags,
     DateTime? createdAt,
+    String? postType,
+    bool? isAnonymous,
+    String? anonymousCategory,
   }) {
     return FeedPost(
       id: id ?? this.id,
@@ -118,7 +140,41 @@ class FeedPost {
       isReposted: isReposted ?? this.isReposted,
       hashtags: hashtags ?? this.hashtags,
       createdAt: createdAt ?? this.createdAt,
+      postType: postType ?? this.postType,
+      isAnonymous: isAnonymous ?? this.isAnonymous,
+      anonymousCategory: anonymousCategory ?? this.anonymousCategory,
     );
+  }
+
+  bool get isPoll => postType == 'poll';
+  bool get isQuestion => postType == 'question';
+  bool get isDailyPrompt => postType == 'daily_prompt' || postType == 'prompt';
+  bool get isAnonymousPost => isAnonymous || postType == 'anonymous';
+  bool get isStandardPost =>
+      !isPoll && !isQuestion && !isDailyPrompt && !isAnonymousPost;
+
+  String get contentTypeLabel {
+    if (isAnonymousPost) {
+      final category = _labelize(anonymousCategory ?? 'anonymous');
+      return category == 'Anonymous' ? 'Anonymous' : 'Anonymous / $category';
+    }
+    return switch (postType) {
+      'poll' => 'Poll',
+      'question' => 'Question',
+      'daily_prompt' || 'prompt' => 'Daily Prompt',
+      'anonymous' => 'Anonymous',
+      _ => 'Post',
+    };
+  }
+
+  static String _labelize(String value) {
+    final cleaned = value.trim();
+    if (cleaned.isEmpty) return 'Anonymous';
+    return cleaned
+        .split(RegExp(r'[_\-\s]+'))
+        .where((part) => part.isNotEmpty)
+        .map((part) => part[0].toUpperCase() + part.substring(1))
+        .join(' ');
   }
 }
 

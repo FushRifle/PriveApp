@@ -250,6 +250,9 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
       await _feedService.createPost(
         content: event.content,
         attachments: event.attachments,
+        postType: event.postType,
+        isAnonymous: event.isAnonymous,
+        anonymousCategory: event.anonymousCategory,
       );
 
       emit(

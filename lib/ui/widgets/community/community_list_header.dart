@@ -33,7 +33,7 @@ class CommunityListHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12), // Balanced padding
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -46,7 +46,7 @@ class CommunityListHeader extends StatelessWidget {
                   label: 'Groups',
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12), // Modern, slightly wider spacing
               Expanded(
                 child: _SummaryTile(
                   icon: Icons.people_alt_outlined,
@@ -56,11 +56,11 @@ class CommunityListHeader extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           Container(
             decoration: BoxDecoration(
               color: AppColors.card,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12), // Unified squarish-smooth radius
               border: Border.all(color: AppColors.border),
             ),
             child: TextField(
@@ -69,9 +69,10 @@ class CommunityListHeader extends StatelessWidget {
               onSubmitted: (_) => onSearch(),
               decoration: InputDecoration(
                 hintText: 'Search groups',
-                prefixIcon: const Icon(Icons.search),
+                hintStyle: const TextStyle(color: Colors.grey, fontSize: 15),
+                prefixIcon: const Icon(Icons.search, size: 22),
                 suffixIcon: IconButton(
-                  icon: const Icon(Icons.tune),
+                  icon: const Icon(Icons.tune, size: 20),
                   onPressed: onSearch,
                   tooltip: 'Search',
                 ),
@@ -79,15 +80,15 @@ class CommunityListHeader extends StatelessWidget {
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 14,
+                  horizontal: 16,
+                  vertical: 16,
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           SizedBox(
-            height: 40,
+            height: 38, // Slightly lower profile for a slicker look
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemBuilder: (context, index) {
@@ -97,18 +98,20 @@ class CommunityListHeader extends StatelessWidget {
                   selected: selected,
                   label: Text(item.isEmpty ? 'All' : item),
                   onSelected: (_) => onCategoryChanged(item),
-                  selectedColor: AppColors.primary.withOpacity(0.14),
+                  selectedColor: AppColors.primary.withOpacity(0.12), // Subtle accent tint
                   backgroundColor: AppColors.card,
                   showCheckmark: false,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(10), // Matching modern corner profile
                     side: BorderSide(
                       color: selected ? AppColors.primary : AppColors.border,
+                      width: selected ? 1.5 : 1.0,
                     ),
                   ),
                   labelStyle: TextStyle(
                     color: selected ? AppColors.primary : AppColors.text,
                     fontWeight: selected ? AppTheme.bold : AppTheme.medium,
+                    fontSize: 14,
                   ),
                 );
               },
@@ -142,44 +145,49 @@ class _SummaryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12), // Tighter, cleaner inner spacing
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12), // Consistent 12dp rounded corners
         border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+              color: AppColors.primary.withOpacity(0.08), // Softer badge background
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               icon,
               color: AppColors.primary,
-              size: 18,
+              size: 20,
             ),
           ),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: AppTheme.blackTextStyle.copyWith(
-                  fontSize: 18,
-                  fontWeight: AppTheme.bold,
+          const SizedBox(width: 12),
+          Expanded( // Added layout safety to prevent text overflows on small screens
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  value,
+                  style: AppTheme.blackTextStyle.copyWith(
+                    fontSize: 16, // Cleaned up text hierarchy scale
+                    fontWeight: AppTheme.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
-              ),
-            ],
+                const SizedBox(height: 1),
+                Text(
+                  label,
+                  style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ],
       ),

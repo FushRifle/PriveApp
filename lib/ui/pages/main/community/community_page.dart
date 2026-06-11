@@ -7,6 +7,7 @@ import 'package:clique/bloc/community/community_bloc.dart';
 import 'package:clique/core/models/community_model.dart';
 import 'package:clique/ui/pages/main/community/community_detail_page.dart';
 import 'package:clique/ui/pages/main/community/create_community_page.dart';
+
 import 'package:clique/ui/widgets/community/community_card.dart';
 import 'package:clique/ui/widgets/community/community_empty_state.dart';
 import 'package:clique/ui/widgets/community/community_list_header.dart';
@@ -71,7 +72,7 @@ class _CommunityPageState extends State<CommunityPage>
               ),
               Expanded(
                 child: RefreshIndicator(
-                  color: AppColors.primary,
+                  color: AppColors.secondary,
                   onRefresh: () async {
                     context.read<CommunityBloc>().add(const LoadCommunities());
                     await Future<void>.delayed(
@@ -238,7 +239,7 @@ class _CommunityList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 130),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 130),
       sliver: SliverList.separated(
         itemBuilder: (context, index) {
           final community = communities[index];

@@ -73,12 +73,19 @@ dependencies:
   equatable: ^2.0.8
   bloc: ^9.2.0
   open_file: ^3.5.11
-  file_picker: ^12.0.0-beta.4
+  file_picker: ^11.0.2 
   url_launcher: ^6.3.2
   audio_waveforms: ^2.0.2
   just_audio: ^0.10.5
   cloudinary: ^1.2.0
   purchases_flutter: ^10.1.1
+  permission_handler: ^12.0.3
+  vibration: ^3.1.8
+  audioplayers: ^6.7.1
+
+  # Voice & Video Calls (NEW)
+  livekit_client: ^2.6.5
+  device_info_plus: ^12.3.0 
 
 dev_dependencies:
   flutter_test:

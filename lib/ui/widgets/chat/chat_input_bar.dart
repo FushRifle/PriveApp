@@ -11,6 +11,7 @@ import 'package:clique/core/models/feature_access_model.dart';
 import 'package:clique/ui/widgets/premium/feature_gate.dart';
 
 class ChatInputBar extends StatefulWidget {
+  final TextEditingController controller;
   final Function(String) onSendMessage;
   final Function(bool) onTyping;
   final MessageModel? replyingTo;
@@ -23,6 +24,7 @@ class ChatInputBar extends StatefulWidget {
 
   const ChatInputBar({
     super.key,
+    required this.controller,
     required this.onSendMessage,
     required this.onTyping,
     this.replyingTo,
@@ -39,7 +41,6 @@ class ChatInputBar extends StatefulWidget {
 }
 
 class _ChatInputBarState extends State<ChatInputBar> {
-  final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   final RecorderController _recorderController = RecorderController();
   Timer? _typingTimer;
@@ -57,20 +58,20 @@ class _ChatInputBarState extends State<ChatInputBar> {
   @override
   void initState() {
     super.initState();
-    _controller.addListener(_updateTextStatus);
+    widget.controller.addListener(_updateTextStatus);
     _focusNode.addListener(_handleFocusChange);
     _recordingDurationSubscription =
         _recorderController.onCurrentDuration.listen((duration) {
       if (!mounted) return;
       setState(() => _recordingDuration = duration);
     });
+    _updateTextStatus();
   }
 
   @override
   void dispose() {
-    _controller.removeListener(_updateTextStatus);
+    widget.controller.removeListener(_updateTextStatus);
     _focusNode.removeListener(_handleFocusChange);
-    _controller.dispose();
     _focusNode.dispose();
     _recordingDurationSubscription?.cancel();
     if (_isRecording) {
@@ -82,7 +83,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
   }
 
   void _updateTextStatus() {
-    final hasText = _controller.text.trim().isNotEmpty;
+    final hasText = widget.controller.text.trim().isNotEmpty;
     if (_hasText != hasText) {
       if (!mounted) return;
       setState(() {
@@ -115,11 +116,11 @@ class _ChatInputBarState extends State<ChatInputBar> {
   }
 
   void _handleSend() {
-    final text = _controller.text.trim();
+    final text = widget.controller.text.trim();
     if (text.isEmpty) return;
 
     widget.onSendMessage(text);
-    _controller.clear();
+    widget.controller.clear();
     _focusNode.requestFocus();
 
     _typingTimer?.cancel();
@@ -558,7 +559,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                               : null,
                         ),
                         child: TextField(
-                          controller: _controller,
+                          controller: widget.controller,
                           focusNode: _focusNode,
                           style: AppTheme.blackTextStyle.copyWith(fontSize: 15),
                           textCapitalization: TextCapitalization.sentences,

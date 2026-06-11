@@ -11,12 +11,10 @@ import 'package:clique/bloc/profile/profile_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/bloc/friends/friends_bloc.dart';
 import 'package:clique/bloc/insights/insights_bloc.dart';
-import 'package:clique/bloc/match/match_bloc.dart';
 
 import 'package:clique/core/models/gallery_model.dart';
 import 'package:clique/core/services/friends/friends_service.dart';
 
-import 'package:clique/ui/pages/main/match/matches_page.dart';
 import 'package:clique/ui/pages/main/profile/edit_profile_page.dart';
 import 'package:clique/ui/pages/settings/settings_page.dart';
 import 'package:clique/ui/pages/social/friends_list_page.dart';
@@ -521,7 +519,7 @@ class _ProfileSliverAppBar extends StatelessWidget {
               );
             },
             icon: const Icon(
-              Icons.settings_outlined,
+              Icons.manage_accounts_outlined,
               color: AppColors.primary,
               size: 25,
             ),
@@ -611,13 +609,6 @@ class _CoverPlaceholder extends StatelessWidget {
               Icons.photo_camera_back,
               size: 50,
               color: AppColors.greyColor.withOpacity(0.5),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'No cover photo',
-              style: AppTheme.greyTextStyle.copyWith(
-                fontSize: 14,
-              ),
             ),
           ],
         ),
@@ -1019,6 +1010,7 @@ class _InsightsButton extends StatelessWidget {
           );
         },
         child: Container(
+          
           height: 44,
           decoration: BoxDecoration(
             color: AppColors.card,
@@ -1027,8 +1019,10 @@ class _InsightsButton extends StatelessWidget {
           ),
           child: Center(
             child: Row(
+              
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                
                 const Icon(
                   Icons.insights,
                   color: AppColors.primary,
@@ -1036,7 +1030,7 @@ class _InsightsButton extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'View Insights',
+                  'Insights',
                   style: AppTheme.blackTextStyle.copyWith(
                     fontWeight: AppTheme.bold,
                     fontSize: 14,
@@ -1072,40 +1066,18 @@ class _ActionButtons extends StatelessWidget {
     if (isOwnProfile) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Row(
-          children: [
-            Expanded(
-              child: _ActionButton(
-                text: 'EDIT PROFILE',
-                backgroundColor: AppColors.primary,
-                textColor: AppColors.white,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const EditProfilePage(),
-                    ),
-                  );
-                },
+        child: _ActionButton(
+          text: 'EDIT PROFILE',
+          backgroundColor: AppColors.primary,
+          textColor: AppColors.white,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const EditProfilePage(),
               ),
-            ),
-            const SizedBox(width: 12),
-            _IconActionButton(
-              icon: Icons.favorite_outline,
-              color: AppColors.redColor,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => BlocProvider(
-                      create: (_) => MatchBloc(),
-                      child: const MatchesPage(),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ],
+            );
+          },
         ),
       );
     }

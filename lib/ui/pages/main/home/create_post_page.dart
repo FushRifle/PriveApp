@@ -32,6 +32,9 @@ class _CreatePostPageState extends State<CreatePostPage> {
   final List<MediaItem> _mediaItems = [];
   final List<String> _hashtags = [];
 
+  PostComposerType _postType = PostComposerType.post;
+  String _anonymousCategory = 'confession';
+
   bool _isSubmitting = false;
   bool _isPicking = false;
   double _uploadProgress = 0.0;
@@ -125,14 +128,20 @@ class _CreatePostPageState extends State<CreatePostPage> {
   }
 
   String get _title {
-    switch (_currentStep) {
-      case PostCreationStep.options:
-        return 'Create Post';
-      case PostCreationStep.textInput:
-        return 'Write Post';
-      case PostCreationStep.mediaPreview:
-        return 'Preview';
+    if (_currentStep == PostCreationStep.options) {
+      return 'Create Content';
     }
+
+    if (_currentStep == PostCreationStep.mediaPreview) {
+      return 'Preview';
+    }
+
+    return switch (_postType) {
+      PostComposerType.post => 'Write Post',
+      PostComposerType.poll => 'Create Poll',
+      PostComposerType.question => 'Create Question',
+      PostComposerType.anonymous => 'Anonymous Post',
+    };
   }
 
   Widget _buildCurrentStep() {
@@ -157,10 +166,14 @@ class _CreatePostPageState extends State<CreatePostPage> {
       case PostCreationStep.textInput:
         return _TextPostComposer(
           key: const ValueKey('text_input'),
+          postType: _postType,
+          anonymousCategory: _anonymousCategory,
           textController: _textController,
           hashtagController: _hashtagController,
           hashtags: _hashtags,
           enabled: !_isSubmitting,
+          onPostTypeChanged: _setComposerType,
+          onAnonymousCategoryChanged: _setAnonymousCategory,
           onAddHashtag: _addHashtag,
           onRemoveHashtag: _removeHashtag,
         );
@@ -168,11 +181,15 @@ class _CreatePostPageState extends State<CreatePostPage> {
       case PostCreationStep.mediaPreview:
         return _MediaPostComposer(
           key: const ValueKey('media_preview'),
+          postType: _postType,
+          anonymousCategory: _anonymousCategory,
           mediaItems: _mediaItems,
           textController: _textController,
           hashtagController: _hashtagController,
           hashtags: _hashtags,
           enabled: !_isSubmitting,
+          onPostTypeChanged: _setComposerType,
+          onAnonymousCategoryChanged: _setAnonymousCategory,
           onAddHashtag: _addHashtag,
           onRemoveHashtag: _removeHashtag,
           onChangeMedia: _clearMediaAndGoBack,
@@ -236,6 +253,23 @@ class _CreatePostPageState extends State<CreatePostPage> {
     setState(() {
       _hashtags.addAll(tags);
       _hashtagController.clear();
+    });
+  }
+
+  void _setComposerType(PostComposerType nextType) {
+    if (_postType == nextType) return;
+
+    setState(() {
+      _postType = nextType;
+      if (_postType != PostComposerType.anonymous) {
+        _anonymousCategory = 'confession';
+      }
+    });
+  }
+
+  void _setAnonymousCategory(String category) {
+    setState(() {
+      _anonymousCategory = category;
     });
   }
 
@@ -429,6 +463,11 @@ class _CreatePostPageState extends State<CreatePostPage> {
             CreateFeedPost(
               content: content,
               attachments: null,
+              postType: _postType.apiValue,
+              isAnonymous: _postType == PostComposerType.anonymous,
+              anonymousCategory: _postType == PostComposerType.anonymous
+                  ? _anonymousCategory
+                  : null,
             ),
           );
 
@@ -492,6 +531,11 @@ class _CreatePostPageState extends State<CreatePostPage> {
               content: content,
               attachments: attachments.isNotEmpty
                   ? attachments.map((item) => item.toJson()).toList()
+                  : null,
+              postType: _postType.apiValue,
+              isAnonymous: _postType == PostComposerType.anonymous,
+              anonymousCategory: _postType == PostComposerType.anonymous
+                  ? _anonymousCategory
                   : null,
             ),
           );
@@ -1019,19 +1063,27 @@ class _OptionListTile extends StatelessWidget {
 }
 
 class _TextPostComposer extends StatelessWidget {
+  final PostComposerType postType;
+  final String anonymousCategory;
   final TextEditingController textController;
   final TextEditingController hashtagController;
   final List<String> hashtags;
   final bool enabled;
+  final ValueChanged<PostComposerType> onPostTypeChanged;
+  final ValueChanged<String> onAnonymousCategoryChanged;
   final ValueChanged<String> onAddHashtag;
   final ValueChanged<String> onRemoveHashtag;
 
   const _TextPostComposer({
     super.key,
+    required this.postType,
+    required this.anonymousCategory,
     required this.textController,
     required this.hashtagController,
     required this.hashtags,
     required this.enabled,
+    required this.onPostTypeChanged,
+    required this.onAnonymousCategoryChanged,
     required this.onAddHashtag,
     required this.onRemoveHashtag,
   });
@@ -1042,6 +1094,14 @@ class _TextPostComposer extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       child: Column(
         children: [
+          _ComposerTypeSelector(
+            selectedType: postType,
+            anonymousCategory: anonymousCategory,
+            enabled: enabled,
+            onChanged: onPostTypeChanged,
+            onAnonymousCategoryChanged: onAnonymousCategoryChanged,
+          ),
+          const SizedBox(height: 14),
           Expanded(
             child: Container(
               width: double.infinity,
@@ -1089,22 +1149,30 @@ class _TextPostComposer extends StatelessWidget {
 }
 
 class _MediaPostComposer extends StatelessWidget {
+  final PostComposerType postType;
+  final String anonymousCategory;
   final List<MediaItem> mediaItems;
   final TextEditingController textController;
   final TextEditingController hashtagController;
   final List<String> hashtags;
   final bool enabled;
+  final ValueChanged<PostComposerType> onPostTypeChanged;
+  final ValueChanged<String> onAnonymousCategoryChanged;
   final ValueChanged<String> onAddHashtag;
   final ValueChanged<String> onRemoveHashtag;
   final VoidCallback onChangeMedia;
 
   const _MediaPostComposer({
     super.key,
+    required this.postType,
+    required this.anonymousCategory,
     required this.mediaItems,
     required this.textController,
     required this.hashtagController,
     required this.hashtags,
     required this.enabled,
+    required this.onPostTypeChanged,
+    required this.onAnonymousCategoryChanged,
     required this.onAddHashtag,
     required this.onRemoveHashtag,
     required this.onChangeMedia,
@@ -1118,6 +1186,14 @@ class _MediaPostComposer extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _ComposerTypeSelector(
+            selectedType: postType,
+            anonymousCategory: anonymousCategory,
+            enabled: enabled,
+            onChanged: onPostTypeChanged,
+            onAnonymousCategoryChanged: onAnonymousCategoryChanged,
+          ),
+          const SizedBox(height: 14),
           _MediaPreview(
             mediaItems: mediaItems,
             onChangeMedia: onChangeMedia,
@@ -1499,6 +1575,154 @@ class _HashtagChip extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ComposerTypeSelector extends StatelessWidget {
+  final PostComposerType selectedType;
+  final String anonymousCategory;
+  final bool enabled;
+  final ValueChanged<PostComposerType> onChanged;
+  final ValueChanged<String> onAnonymousCategoryChanged;
+
+  const _ComposerTypeSelector({
+    required this.selectedType,
+    required this.anonymousCategory,
+    required this.enabled,
+    required this.onChanged,
+    required this.onAnonymousCategoryChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Content Type',
+          style: AppTheme.blackTextStyle.copyWith(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: PostComposerType.values.map((type) {
+            final isSelected = type == selectedType;
+            return ChoiceChip(
+              label: Text(type.label),
+              selected: isSelected,
+              onSelected: enabled
+                  ? (_) {
+                      HapticFeedback.selectionClick();
+                      onChanged(type);
+                    }
+                  : null,
+              labelStyle: TextStyle(
+                color: isSelected ? AppColors.white : AppColors.text,
+                fontWeight: FontWeight.w700,
+              ),
+              selectedColor: AppColors.primary,
+              backgroundColor: AppColors.cardColor,
+              side: BorderSide(color: AppColors.cardBorderColor),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(999),
+              ),
+            );
+          }).toList(),
+        ),
+        if (selectedType == PostComposerType.anonymous) ...[
+          const SizedBox(height: 14),
+          Text(
+            'Anonymous Category',
+            style: AppTheme.blackTextStyle.copyWith(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: _anonymousCategories.map((category) {
+              final isSelected =
+                  category.toLowerCase() == anonymousCategory.toLowerCase();
+              return _AnonymousCategoryChip(
+                label: category,
+                selected: isSelected,
+                enabled: enabled,
+                onSelected: () =>
+                    onAnonymousCategoryChanged(category.toLowerCase()),
+              );
+            }).toList(),
+          ),
+        ],
+      ],
+    );
+  }
+
+  static const List<String> _anonymousCategories = [
+    'Confession',
+    'Advice',
+    'Relationship',
+    'Rant',
+    'Question',
+  ];
+}
+
+class _AnonymousCategoryChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final bool enabled;
+  final VoidCallback onSelected;
+
+  const _AnonymousCategoryChip({
+    required this.label,
+    required this.selected,
+    required this.enabled,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FilterChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: enabled ? (_) => onSelected() : null,
+      backgroundColor: AppColors.cardColor,
+      selectedColor: AppColors.primary.withOpacity(0.16),
+      labelStyle: TextStyle(
+        color: selected ? AppColors.primary : AppColors.text,
+        fontWeight: FontWeight.w600,
+      ),
+      side: BorderSide(color: AppColors.cardBorderColor),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(999),
+      ),
+    );
+  }
+}
+
+enum PostComposerType {
+  post,
+  poll,
+  question,
+  anonymous;
+
+  String get apiValue => switch (this) {
+        PostComposerType.post => 'standard',
+        PostComposerType.poll => 'poll',
+        PostComposerType.question => 'question',
+        PostComposerType.anonymous => 'anonymous',
+      };
+
+  String get label => switch (this) {
+        PostComposerType.post => 'Post',
+        PostComposerType.poll => 'Poll',
+        PostComposerType.question => 'Question',
+        PostComposerType.anonymous => 'Anonymous',
+      };
 }
 
 class _UploadOverlay extends StatelessWidget {
