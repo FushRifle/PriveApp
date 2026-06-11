@@ -123,6 +123,33 @@ class StatusService {
     }
   }
 
+  Future<Story> updateStory({
+    required String storyId,
+    required String content,
+    List<Attachment>? attachments,
+    String? backgroundColor,
+    String? textAlign,
+    double? fontSize,
+  }) async {
+    try {
+      final data = <String, dynamic>{
+        'content': content,
+      };
+
+      if (attachments != null && attachments.isNotEmpty) {
+        data['attachments'] = attachments.map((a) => a.toJson()).toList();
+      }
+      if (backgroundColor != null) data['backgroundColor'] = backgroundColor;
+      if (textAlign != null) data['textAlign'] = textAlign;
+      if (fontSize != null) data['fontSize'] = fontSize;
+
+      final response = await _api.put('/api/stories/$storyId', data: data);
+      return Story.fromJson(Map<String, dynamic>.from(response.data as Map));
+    } on DioException catch (e) {
+      throw _handleError(e, 'Failed to update story');
+    }
+  }
+
   String _handleError(DioException e, String fallback) {
     final data = e.response?.data;
     if (data is Map) {

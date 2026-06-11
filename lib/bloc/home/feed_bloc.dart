@@ -15,6 +15,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
   bool _isFetchingMorePosts = false;
   final Set<int> _fetchingComments = {};
   final Set<int> _creatingComments = {};
+  final Set<String> _updatingCommentReactions = {};
   final Set<String> _fetchingMedia = {};
 
   bool _disposed = false;
@@ -34,6 +35,8 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     on<GetPostComments>(_onGetPostComments);
     on<LoadMoreComments>(_onLoadMoreComments);
     on<CreatePostComment>(_onCreatePostComment);
+    on<LikePostComment>(_onLikePostComment);
+    on<DislikePostComment>(_onDislikePostComment);
     on<GetUserMedia>(_onGetUserMedia);
     on<LoadMoreUserMedia>(_onLoadMoreUserMedia);
     on<ClearFeedError>(_onClearFeedError);
@@ -253,6 +256,8 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
         postType: event.postType,
         isAnonymous: event.isAnonymous,
         anonymousCategory: event.anonymousCategory,
+        pollOptions: event.pollOptions,
+        pollExpirationHours: event.pollExpirationHours,
       );
 
       emit(
@@ -584,18 +589,40 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
       final comment = await _feedService.addComment(
         postId: event.postId,
         content: event.content,
+        replyToCommentId: event.replyToCommentId,
       );
 
       final existingComments = state.comments[event.postId] ?? [];
+      final replyToCommentId = event.replyToCommentId;
 
       final updatedComments = Map<int, List<Comment>>.from(
         state.comments,
       );
 
-      updatedComments[event.postId] = [
-        comment,
-        ...existingComments,
-      ];
+      if (replyToCommentId != null) {
+        final parentIndex = existingComments.indexWhere(
+          (item) => item.id == replyToCommentId,
+        );
+
+        if (parentIndex >= 0) {
+          final updatedList = List<Comment>.from(existingComments);
+          updatedList[parentIndex] = updatedList[parentIndex].copyWith(
+            replyCount: updatedList[parentIndex].replyCount + 1,
+          );
+          updatedList.insert(parentIndex + 1, comment);
+          updatedComments[event.postId] = updatedList;
+        } else {
+          updatedComments[event.postId] = [
+            comment,
+            ...existingComments,
+          ];
+        }
+      } else {
+        updatedComments[event.postId] = [
+          comment,
+          ...existingComments,
+        ];
+      }
 
       final updatedPosts = state.posts.map((post) {
         if (post.id == event.postId) {
@@ -625,6 +652,172 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
         emit(state.copyWith(isCreatingComment: false));
       }
     }
+  }
+
+  Future<void> _onLikePostComment(
+    LikePostComment event,
+    Emitter<FeedState> emit,
+  ) async {
+    final reactionKey = '${event.postId}:${event.commentId}:like';
+    if (_updatingCommentReactions.contains(reactionKey)) return;
+
+    _updatingCommentReactions.add(reactionKey);
+    final originalComments = state.comments[event.postId] ?? [];
+
+    final updatedComments = _updateCommentReaction(
+      comments: originalComments,
+      commentId: event.commentId,
+      markLiked: true,
+    );
+
+    emit(
+      state.copyWith(
+        comments: {
+          ...state.comments,
+          event.postId: updatedComments,
+        },
+      ),
+    );
+
+    try {
+      final updatedComment = await _feedService.likeComment(
+        postId: event.postId,
+        commentId: event.commentId,
+      );
+      _replaceComment(
+        postId: event.postId,
+        comment: updatedComment,
+        emit: emit,
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          comments: {
+            ...state.comments,
+            event.postId: originalComments,
+          },
+          generalError: e.toString(),
+        ),
+      );
+    } finally {
+      _updatingCommentReactions.remove(reactionKey);
+    }
+  }
+
+  Future<void> _onDislikePostComment(
+    DislikePostComment event,
+    Emitter<FeedState> emit,
+  ) async {
+    final reactionKey = '${event.postId}:${event.commentId}:dislike';
+    if (_updatingCommentReactions.contains(reactionKey)) return;
+
+    _updatingCommentReactions.add(reactionKey);
+    final originalComments = state.comments[event.postId] ?? [];
+
+    final updatedComments = _updateCommentReaction(
+      comments: originalComments,
+      commentId: event.commentId,
+      markDisliked: true,
+    );
+
+    emit(
+      state.copyWith(
+        comments: {
+          ...state.comments,
+          event.postId: updatedComments,
+        },
+      ),
+    );
+
+    try {
+      final updatedComment = await _feedService.dislikeComment(
+        postId: event.postId,
+        commentId: event.commentId,
+      );
+      _replaceComment(
+        postId: event.postId,
+        comment: updatedComment,
+        emit: emit,
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          comments: {
+            ...state.comments,
+            event.postId: originalComments,
+          },
+          generalError: e.toString(),
+        ),
+      );
+    } finally {
+      _updatingCommentReactions.remove(reactionKey);
+    }
+  }
+
+  List<Comment> _updateCommentReaction({
+    required List<Comment> comments,
+    required int commentId,
+    bool markLiked = false,
+    bool markDisliked = false,
+  }) {
+    return comments.map((comment) {
+      if (comment.id != commentId) return comment;
+
+      if (markLiked) {
+        final wasLiked = comment.isLiked;
+        final wasDisliked = comment.isDisliked;
+        return comment.copyWith(
+          isLiked: !wasLiked,
+          isDisliked: false,
+          likes: wasLiked
+              ? (comment.likes - 1).clamp(0, 2147483647).toInt()
+              : comment.likes + 1,
+          dislikes: wasDisliked
+              ? (comment.dislikes - 1).clamp(0, 2147483647).toInt()
+              : comment.dislikes,
+        );
+      }
+
+      if (markDisliked) {
+        final wasLiked = comment.isLiked;
+        final wasDisliked = comment.isDisliked;
+        return comment.copyWith(
+          isLiked: false,
+          isDisliked: !wasDisliked,
+          likes: wasLiked
+              ? (comment.likes - 1).clamp(0, 2147483647).toInt()
+              : comment.likes,
+          dislikes: wasDisliked
+              ? (comment.dislikes - 1).clamp(0, 2147483647).toInt()
+              : comment.dislikes + 1,
+        );
+      }
+
+      return comment;
+    }).toList();
+  }
+
+  void _replaceComment({
+    required int postId,
+    required Comment comment,
+    required Emitter<FeedState> emit,
+  }) {
+    final comments = List<Comment>.from(state.comments[postId] ?? []);
+    final index = comments.indexWhere((item) => item.id == comment.id);
+    if (index >= 0) {
+      comments[index] = comment;
+    } else {
+      comments.insert(0, comment);
+    }
+
+    emit(
+      state.copyWith(
+        comments: {
+          ...state.comments,
+          postId: comments,
+        },
+      ),
+    );
   }
 
   Future<void> _onGetUserMedia(

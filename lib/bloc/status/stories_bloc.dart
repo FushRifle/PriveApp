@@ -15,6 +15,7 @@ class StoriesBloc extends Bloc<StoriesEvent, StoriesState> {
   StoriesBloc() : super(const StoriesState()) {
     on<GetStories>(_onGetStories);
     on<CreateStoryEvent>(_onCreateStory);
+    on<UpdateStoryEvent>(_onUpdateStory);
     on<DeleteStoryEvent>(_onDeleteStory);
     on<MarkStorySeen>(_onMarkStorySeen);
     on<LikeStoryEvent>(_onLikeStory);
@@ -94,6 +95,45 @@ class StoriesBloc extends Bloc<StoriesEvent, StoriesState> {
       emit(state.copyWith(
         status: StoriesStatus.error,
         isCreating: false,
+        error: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onUpdateStory(
+    UpdateStoryEvent event,
+    Emitter<StoriesState> emit,
+  ) async {
+    emit(state.copyWith(
+      status: StoriesStatus.loading,
+      clearError: true,
+    ));
+
+    try {
+      final updatedStory = await _statusService.updateStory(
+        storyId: event.storyId,
+        content: event.content,
+        attachments: event.attachments,
+        backgroundColor: event.backgroundColor,
+        textAlign: event.textAlign,
+        fontSize: event.fontSize,
+      );
+
+      final updatedStories = state.stories.map((story) {
+        if (story.id == event.storyId) {
+          return updatedStory;
+        }
+        return story;
+      }).toList();
+
+      emit(state.copyWith(
+        status: StoriesStatus.loaded,
+        stories: updatedStories,
+        clearError: true,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        status: StoriesStatus.error,
         error: e.toString(),
       ));
     }

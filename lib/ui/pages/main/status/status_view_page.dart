@@ -1,5 +1,6 @@
 import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/models/status_model.dart';
+import 'package:clique/ui/pages/main/status/edit_status_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -185,15 +186,33 @@ class _StatusViewPageState extends State<StatusViewPage>
             // Bottom Actions
             _buildBottomActions(),
 
-            // Pause Indicator
             if (_isPaused && !_replyFocusNode.hasFocus)
-              Container(
-                color: AppColors.black.withOpacity(0.6),
-                child: const Center(
-                  child: Icon(
-                    Icons.pause_circle_filled,
-                    color: AppColors.white,
-                    size: 60,
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 90,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.black.withOpacity(0.28),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: AppColors.white.withOpacity(0.2),
+                      ),
+                    ),
+                    child: Text(
+                      'Paused',
+                      style: TextStyle(
+                        color: AppColors.white.withOpacity(0.9),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -295,15 +314,7 @@ class _StatusViewPageState extends State<StatusViewPage>
       fontWeight: FontWeight.w600,
       height: 1.5,
       letterSpacing: 0.5,
-      shadows: hasMedia
-          ? [
-              const Shadow(
-                blurRadius: 10,
-                color: AppColors.black45,
-                offset: Offset(2, 2),
-              ),
-            ]
-          : null,
+      shadows: null,
     );
   }
 
@@ -382,6 +393,18 @@ class _StatusViewPageState extends State<StatusViewPage>
               Navigator.pushReplacementNamed(context, NamedRoutes.homeScreen);
             },
           ),
+          if (story.isMe)
+            IconButton(
+              icon: const Icon(
+                Icons.more_horiz,
+                color: AppColors.white,
+                size: 28,
+              ),
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                _showStoryOptions(story);
+              },
+            ),
         ],
       ),
     );
@@ -694,6 +717,63 @@ class _StatusViewPageState extends State<StatusViewPage>
         duration: const Duration(seconds: 1),
         backgroundColor: AppColors.primary,
       ),
+    );
+  }
+
+  void _showStoryOptions(Story story) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.edit_outlined),
+                  title: const Text('Edit Status'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => BlocProvider.value(
+                          value: context.read<StoriesBloc>(),
+                          child: EditStatusPage(story: story),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.delete_outline),
+                  title: const Text('Delete Status'),
+                  textColor: AppColors.redColor,
+                  iconColor: AppColors.redColor,
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    context
+                        .read<StoriesBloc>()
+                        .add(DeleteStoryEvent(storyId: story.id));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Status deleted'),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                    Navigator.pop(context);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

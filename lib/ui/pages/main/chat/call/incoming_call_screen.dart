@@ -129,6 +129,15 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                         callId: widget.notification.callId,
                       );
                       if (!context.mounted) return;
+                      if (response.liveKitUrl.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Call service is not configured for LiveKit'),
+                          ),
+                        );
+                        Navigator.pop(context);
+                        return;
+                      }
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(

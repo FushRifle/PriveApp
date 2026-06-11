@@ -107,6 +107,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
 
     _authBloc = AuthBloc();
+    PushNotificationService.instance.setNavigatorKey(_navigatorKey);
   }
 
   @override

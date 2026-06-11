@@ -80,6 +80,8 @@ class FeedService {
     String postType = 'standard',
     bool isAnonymous = false,
     String? anonymousCategory,
+    List<String>? pollOptions,
+    int? pollExpirationHours,
   }) async {
     try {
       final data = <String, dynamic>{
@@ -98,6 +100,12 @@ class FeedService {
       }
       if (attachments != null && attachments.isNotEmpty) {
         data['attachments'] = attachments;
+      }
+      if (pollOptions != null && pollOptions.isNotEmpty) {
+        data['pollOptions'] = pollOptions;
+      }
+      if (pollExpirationHours != null && pollExpirationHours > 0) {
+        data['pollExpirationHours'] = pollExpirationHours;
       }
 
       final response = await _api.post('/api/feed/posts', data: data);
@@ -279,17 +287,57 @@ class FeedService {
   Future<Comment> addComment({
     required int postId,
     required String content,
+    int? replyToCommentId,
   }) async {
     try {
+      final data = <String, dynamic>{
+        'content': content,
+      };
+      if (replyToCommentId != null) {
+        data['replyToCommentId'] = replyToCommentId;
+      }
+
       final response = await _api.post(
         '/api/feed/posts/$postId/comments',
-        data: {'content': content},
+        data: data,
       );
       _invalidatePostCaches(postId);
-      return Comment.fromJson(response.data);
+      return Comment.fromJson(_readCommentMap(response.data));
     } on DioException catch (e) {
       debugPrint('Add comment error: ${e.response?.data}');
       throw e.response?.data['message'] ?? 'Failed to add comment';
+    }
+  }
+
+  Future<Comment> likeComment({
+    required int postId,
+    required int commentId,
+  }) async {
+    try {
+      final response = await _api.post(
+        '/api/feed/posts/$postId/comments/$commentId/like',
+      );
+      _invalidatePostCaches(postId);
+      return Comment.fromJson(_readCommentMap(response.data));
+    } on DioException catch (e) {
+      debugPrint('Like comment error: ${e.response?.data}');
+      throw e.response?.data['message'] ?? 'Failed to like comment';
+    }
+  }
+
+  Future<Comment> dislikeComment({
+    required int postId,
+    required int commentId,
+  }) async {
+    try {
+      final response = await _api.post(
+        '/api/feed/posts/$postId/comments/$commentId/dislike',
+      );
+      _invalidatePostCaches(postId);
+      return Comment.fromJson(_readCommentMap(response.data));
+    } on DioException catch (e) {
+      debugPrint('Dislike comment error: ${e.response?.data}');
+      throw e.response?.data['message'] ?? 'Failed to dislike comment';
     }
   }
 
@@ -413,10 +461,46 @@ class FeedService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getTrendingHashtags({
+    int limit = 20,
+  }) async {
+    try {
+      final response = await _api.get(
+        '/api/feed/hashtags',
+        queryParameters: {'limit': limit},
+      );
+
+      final data = response.data is Map
+          ? response.data['data'] ?? response.data['hashtags'] ?? response.data
+          : response.data;
+
+      if (data is List) {
+        return data
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
+      }
+
+      return const [];
+    } on DioException catch (e) {
+      debugPrint('Get trending hashtags error: ${e.response?.data}');
+      return const [];
+    }
+  }
+
   Map<String, dynamic> _readMap(dynamic data) {
     if (data is Map<String, dynamic>) return data;
     if (data is Map) return Map<String, dynamic>.from(data);
     return {};
+  }
+
+  Map<String, dynamic> _readCommentMap(dynamic data) {
+    final map = _readMap(data);
+    final comment = map['comment'] ?? map['data'] ?? map['item'];
+    if (comment is Map) {
+      return Map<String, dynamic>.from(comment);
+    }
+    return map;
   }
 
   String _readError(dynamic data, String fallback) {

@@ -5,6 +5,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/models/feeds_models.dart';
+import 'package:clique/core/services/home/feed_service.dart';
+import 'package:clique/core/services/user/user_service.dart';
+import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
 
 void customBottomSheetComments(BuildContext context, {required int postId}) =>
     showModalBottomSheet(
@@ -30,6 +33,8 @@ class CommentBottomSheetContent extends StatefulWidget {
 class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
   final TextEditingController _commentController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+  final FeedService _feedService = FeedService();
+  final UserService _userService = UserService();
 
   List<Comment> _comments = [];
   bool _isLoading = true;
@@ -62,6 +67,77 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
     context
         .read<FeedBloc>()
         .add(GetPostComments(postId: widget.postId, page: 1));
+  }
+
+  Future<List<ComposerTokenSuggestion>> _suggestCommentTokens(
+    ComposerTokenType type,
+    String query,
+  ) async {
+    final normalizedQuery = query.trim().toLowerCase();
+
+    try {
+      if (type == ComposerTokenType.mention) {
+        if (normalizedQuery.isEmpty) {
+          return const [];
+        }
+
+        final users = await _userService.searchUsers(
+          normalizedQuery,
+          limit: 8,
+        );
+
+        return users.map((user) {
+          final name = (user['name'] ?? user['displayName'] ?? 'User')
+              .toString()
+              .trim();
+          final username = (user['username'] ?? user['handle'] ?? '')
+              .toString()
+              .trim();
+          final bioValue = user['bio']?.toString();
+          final subtitle =
+              bioValue != null ? bioValue.trim() : '';
+
+          return ComposerTokenSuggestion(
+            value: username.isNotEmpty ? username : name.replaceAll(' ', '_'),
+            label: username.isNotEmpty ? '@$username' : '@$name',
+            subtitle: subtitle.isNotEmpty ? subtitle : null,
+          );
+        }).where((suggestion) => suggestion.value.isNotEmpty).toList();
+      }
+
+      final hashtags = await _feedService.getTrendingHashtags(limit: 12);
+      final seen = <String>{};
+      final values = <String>[
+        ...hashtags.map((item) => item['tag']?.toString().trim() ?? ''),
+        'flutter',
+        'technology',
+        'design',
+        'business',
+        'community',
+        'startup',
+        'gaming',
+        'music',
+      ]
+          .where((tag) => tag.isNotEmpty)
+          .where((tag) => seen.add(tag.toLowerCase()))
+          .toList();
+
+      final filtered = normalizedQuery.isEmpty
+          ? values
+          : values.where((tag) => tag.toLowerCase().contains(normalizedQuery));
+
+      return filtered
+          .map(
+            (tag) => ComposerTokenSuggestion(
+              value: tag.startsWith('#') ? tag.substring(1) : tag,
+              label: '#$tag',
+              subtitle: 'Hashtag',
+            ),
+          )
+          .toList();
+    } catch (_) {
+      return const [];
+    }
   }
 
   void _loadMoreComments() {
@@ -291,10 +367,16 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
           return Column(
             children: [
               _buildCommentCard(
+                comment.id,
                 comment.userAvatar,
                 comment.userName,
                 comment.content,
                 comment.formattedTimeAgo,
+                comment.likes,
+                comment.dislikes,
+                comment.replyCount,
+                comment.isLiked,
+                comment.isDisliked,
                 false,
                 index == 0,
                 index == _comments.length - 1,
@@ -322,9 +404,10 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
       child: Row(
         children: [
           Expanded(
-            child: TextField(
+            child: TokenSuggestionField(
               controller: _commentController,
               focusNode: _focusNode,
+              enabled: !_isPosting,
               decoration: InputDecoration(
                 hintText: 'Write a comment...',
                 hintStyle: AppTheme.greyTextStyle,
@@ -339,9 +422,11 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
                   vertical: 12,
                 ),
               ),
+              style: AppTheme.blackTextStyle,
               maxLines: null,
               textInputAction: TextInputAction.send,
               onSubmitted: (_) => _submitComment(),
+              suggestionsBuilder: _suggestCommentTokens,
             ),
           ),
           const SizedBox(width: 12),
@@ -375,10 +460,16 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
   }
 
   Widget _buildCommentCard(
+    int commentId,
     String imageUrl,
     String name,
     String comment,
     String time,
+    int likes,
+    int dislikes,
+    int replyCount,
+    bool isLiked,
+    bool isDisliked,
     bool isTemp,
     bool isFirst,
     bool isLast,
@@ -480,33 +571,41 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(12, 38),
-                            backgroundColor: AppColors.backgroundColor,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          onPressed: () {
+                        _CommentActionButton(
+                          icon: Icons.thumb_up_outlined,
+                          selectedIcon: Icons.thumb_up,
+                          selected: isLiked,
+                          label: likes > 0 ? '$likes' : 'Like',
+                          onTap: () => context.read<FeedBloc>().add(
+                                LikePostComment(
+                                  postId: widget.postId,
+                                  commentId: commentId,
+                                ),
+                              ),
+                        ),
+                        const SizedBox(width: 8),
+                        _CommentActionButton(
+                          icon: Icons.thumb_down_outlined,
+                          selectedIcon: Icons.thumb_down,
+                          selected: isDisliked,
+                          label: dislikes > 0 ? '$dislikes' : 'Dislike',
+                          onTap: () => context.read<FeedBloc>().add(
+                                DislikePostComment(
+                                  postId: widget.postId,
+                                  commentId: commentId,
+                                ),
+                              ),
+                        ),
+                        const SizedBox(width: 8),
+                        _CommentActionButton(
+                          icon: Icons.reply_rounded,
+                          selectedIcon: Icons.reply_rounded,
+                          selected: false,
+                          label: replyCount > 0 ? '$replyCount replies' : 'Reply',
+                          onTap: () {
                             _commentController.text = '@$name ';
                             _focusNode.requestFocus();
                           },
-                          child: Row(
-                            children: [
-                              Image.asset("assets/images/ic_share.png",
-                                  width: 16),
-                              const SizedBox(width: 8),
-                              Text(
-                                "Reply",
-                                style: AppTheme.blackTextStyle.copyWith(
-                                  fontSize: 12,
-                                  fontWeight: AppTheme.bold,
-                                ),
-                              ),
-                            ],
-                          ),
                         ),
                         const Spacer(),
                         Text(
@@ -524,6 +623,57 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
                 ),
               )
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CommentActionButton extends StatelessWidget {
+  final IconData icon;
+  final IconData selectedIcon;
+  final bool selected;
+  final String label;
+  final VoidCallback onTap;
+
+  const _CommentActionButton({
+    required this.icon,
+    required this.selectedIcon,
+    required this.selected,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        minimumSize: const Size(12, 38),
+        backgroundColor: selected
+            ? AppColors.primary.withOpacity(0.12)
+            : AppColors.backgroundColor,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(
+            color: selected
+                ? AppColors.primary.withOpacity(0.2)
+                : AppColors.transparent,
+          ),
+        ),
+      ),
+      onPressed: onTap,
+      child: Row(
+        children: [
+          Icon(selected ? selectedIcon : icon, size: 16),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: AppTheme.blackTextStyle.copyWith(
+              fontSize: 12,
+              fontWeight: AppTheme.bold,
+            ),
           ),
         ],
       ),

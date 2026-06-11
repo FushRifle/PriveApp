@@ -8,6 +8,7 @@ import 'package:clique/app/configs/theme.dart';
 
 import 'package:clique/bloc/profile/gallery_profile_cubit.dart';
 import 'package:clique/bloc/profile/profile_bloc.dart';
+import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/bloc/friends/friends_bloc.dart';
 import 'package:clique/bloc/insights/insights_bloc.dart';
@@ -20,6 +21,7 @@ import 'package:clique/ui/pages/main/profile/edit_profile_page.dart';
 import 'package:clique/ui/pages/settings/settings_page.dart';
 import 'package:clique/ui/pages/social/friends_list_page.dart';
 import 'package:clique/ui/pages/social/insights_page.dart';
+import 'package:clique/ui/widgets/post/post_card.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({
@@ -48,7 +50,7 @@ class _ProfilePageState extends State<ProfilePage>
   void initState() {
     super.initState();
 
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(_handleTabChanged);
     _scrollController = ScrollController();
     _galleryCubit = GalleryProfileCubit();
@@ -480,6 +482,7 @@ class ProfileBody extends StatelessWidget {
             onLoadMore: () =>
                 onLoadMoreMedia(userId, ProfileGalleryTabType.media),
           ),
+          const _SavedPostsTab(),
         ],
       ),
     );
@@ -1249,6 +1252,7 @@ class _StickyTabBar extends StatelessWidget {
           tabs: const [
             Tab(text: 'POSTS'),
             Tab(text: 'MEDIA'),
+            Tab(text: 'SAVED'),
           ],
         ),
       ),
@@ -1342,6 +1346,109 @@ class _GalleryTab extends StatelessWidget {
 
   List<GalleryModel> _filterItems(List<GalleryModel> items) {
     return items;
+  }
+}
+
+class _SavedPostsTab extends StatefulWidget {
+  const _SavedPostsTab();
+
+  @override
+  State<_SavedPostsTab> createState() => _SavedPostsTabState();
+}
+
+class _SavedPostsTabState extends State<_SavedPostsTab> {
+  int _lastRequestedPostCount = -1;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _ensureFeedLoaded();
+    });
+  }
+
+  void _ensureFeedLoaded() {
+    if (!mounted) return;
+
+    final feedBloc = context.read<FeedBloc>();
+    final state = feedBloc.state;
+    if (state.posts.isEmpty && state.postsStatus == FeedStatus.initial) {
+      feedBloc.add(const GetFeedPosts(page: 1, refresh: true, silent: true));
+    }
+  }
+
+  void _maybeLoadMore(FeedState state) {
+    if (!mounted) return;
+
+    if (!state.hasMorePosts || state.isLoadingMore) return;
+    if (state.posts.length == _lastRequestedPostCount) return;
+
+    final savedPosts = state.posts.where((post) => post.isSaved).toList();
+    if (savedPosts.isNotEmpty) return;
+
+    _lastRequestedPostCount = state.posts.length;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<FeedBloc>().add(LoadMoreFeedPosts());
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<FeedBloc, FeedState>(
+      buildWhen: (previous, current) {
+        return previous.posts != current.posts ||
+            previous.postsStatus != current.postsStatus ||
+            previous.hasMorePosts != current.hasMorePosts ||
+            previous.currentPage != current.currentPage;
+      },
+      builder: (context, state) {
+        _maybeLoadMore(state);
+
+        final savedPosts = state.posts.where((post) => post.isSaved).toList();
+
+        if (state.postsStatus == FeedStatus.loading && savedPosts.isEmpty) {
+          return const _LoadingState();
+        }
+
+        if (savedPosts.isEmpty) {
+          return const _EmptyState(
+            icon: Icons.bookmark_border_rounded,
+            message: 'No saved posts yet',
+            subtitle: 'Tap bookmark on a post to keep it here.',
+          );
+        }
+
+        return ListView.separated(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          physics: const BouncingScrollPhysics(),
+          itemCount: savedPosts.length +
+              (state.hasMorePosts && state.isLoadingMore ? 1 : 0),
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            if (index >= savedPosts.length) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.primary,
+                    strokeWidth: 2,
+                  ),
+                ),
+              );
+            }
+
+            final post = savedPosts[index];
+
+            return CardPost(
+              post: post,
+              isDetailView: false,
+            );
+          },
+        );
+      },
+    );
   }
 }
 
@@ -1666,7 +1773,8 @@ class _EmptyState extends StatelessWidget {
   const _EmptyState({
     required this.icon,
     required this.message,
-  }) : subtitle = null;
+    this.subtitle,
+  });
 
   @override
   Widget build(BuildContext context) {

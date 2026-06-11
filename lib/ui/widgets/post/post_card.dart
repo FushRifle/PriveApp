@@ -1,6 +1,9 @@
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/models/feeds_models.dart';
+import 'package:clique/core/services/user/user_service.dart';
+import 'package:clique/ui/pages/main/home/edit_post_page.dart';
 import 'package:clique/ui/pages/main/home/post_detail_page.dart';
 import 'package:clique/ui/widgets/home/custom_bottom_sheet.dart';
 import 'package:clique/ui/widgets/post/post_actions.dart';
@@ -26,6 +29,7 @@ class CardPost extends StatefulWidget {
 }
 
 class _CardPostState extends State<CardPost> {
+  final UserService _userService = UserService();
   late bool _isLiked;
   late bool _isSaved;
   late bool _isReposted;
@@ -33,6 +37,7 @@ class _CardPostState extends State<CardPost> {
   late int _commentCount;
   late int _shareCount;
   late int _repostCount;
+  bool _isOwnPost = false;
 
   bool get _hasMedia => widget.post.attachments.isNotEmpty;
 
@@ -41,6 +46,7 @@ class _CardPostState extends State<CardPost> {
     super.initState();
 
     _syncPostState();
+    _loadOwnership();
   }
 
   @override
@@ -67,6 +73,23 @@ class _CardPostState extends State<CardPost> {
     _commentCount = widget.post.comments;
     _shareCount = widget.post.shares;
     _repostCount = widget.post.reposts;
+  }
+
+  Future<void> _loadOwnership() async {
+    try {
+      final user = await _userService.getCurrentUser();
+      final currentUserId = _readInt(user['id']);
+      if (!mounted || currentUserId <= 0) return;
+      setState(() {
+        _isOwnPost = widget.post.user.id == currentUserId;
+      });
+    } catch (_) {}
+  }
+
+  int _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   void _openDetail() {
@@ -131,10 +154,21 @@ class _CardPostState extends State<CardPost> {
       backgroundColor: AppColors.transparent,
       builder: (_) {
         return _PostOptionsSheet(
-          canEdit: !_hasMedia,
+          canEdit: _isOwnPost,
           onEdit: () {
             Navigator.pop(context);
-            _showEditDialog();
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => BlocProvider.value(
+                  value: context.read<FeedBloc>(),
+                  child: EditPostPage(
+                    postId: widget.post.id,
+                    initialContent: widget.post.content,
+                  ),
+                ),
+              ),
+            );
           },
           onDelete: () {
             Navigator.pop(context);
@@ -365,75 +399,6 @@ class _CardPostState extends State<CardPost> {
     );
   }
 
-  void _showEditDialog() {
-    final controller = TextEditingController(text: widget.post.content);
-
-    showDialog(
-      context: context,
-      builder: (_) {
-        return AlertDialog(
-          backgroundColor: AppColors.cardColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Text(
-            'Edit Post',
-            style: TextStyle(color: AppColors.text),
-          ),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            minLines: 3,
-            maxLines: 8,
-            maxLength: 2200,
-            style: TextStyle(color: AppColors.text),
-            decoration: InputDecoration(
-              hintText: 'Update your post...',
-              hintStyle: TextStyle(color: AppColors.textHint),
-              filled: true,
-              fillColor: AppColors.backgroundColor,
-              border: const OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                  color: AppColors.greyColor,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                final content = controller.text.trim();
-
-                if (content.isEmpty) return;
-
-                Navigator.pop(context);
-                context.read<FeedBloc>().add(
-                      UpdateFeedPost(
-                        postId: widget.post.id,
-                        content: content,
-                      ),
-                    );
-                _showComingSoon('Post updated');
-              },
-              child: Text(
-                'Save',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    ).whenComplete(controller.dispose);
-  }
-
   void _showComingSoon(String message) {
     if (!mounted) return;
 
@@ -480,7 +445,17 @@ class _CardPostState extends State<CardPost> {
                 post: widget.post,
                 onMoreTap: widget.isDetailView ? null : _showPostOptions,
               ),
-              if (widget.post.content.trim().isNotEmpty)
+              if (widget.post.isPoll)
+                _PollPostBody(
+                  post: widget.post,
+                  isDetailView: widget.isDetailView,
+                )
+              else if (widget.post.isQuestion)
+                _QuestionPostBody(
+                  post: widget.post,
+                  isDetailView: widget.isDetailView,
+                )
+              else if (widget.post.content.trim().isNotEmpty)
                 PostFooter(
                   post: widget.post,
                   isTextOnly: !_hasMedia,
@@ -507,6 +482,203 @@ class _CardPostState extends State<CardPost> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PollPostBody extends StatelessWidget {
+  final FeedPost post;
+  final bool isDetailView;
+
+  const _PollPostBody({
+    required this.post,
+    required this.isDetailView,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final question = post.pollQuestion?.trim().isNotEmpty == true
+        ? post.pollQuestion!.trim()
+        : post.content.trim();
+    final options = post.pollOptions;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.backgroundColor.withOpacity(0.82),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: AppColors.cardBorderColor),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.poll_rounded,
+                  color: AppColors.primary,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Poll',
+                  style: AppTheme.blackTextStyle.copyWith(
+                    color: AppColors.primary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const Spacer(),
+                if (post.pollExpirationHours != null)
+                  Text(
+                    'Expires in ${post.pollExpirationHours}h',
+                    style: AppTheme.greyTextStyle.copyWith(
+                      color: AppColors.textSecondary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              question.isEmpty ? 'Poll question' : question,
+              style: AppTheme.blackTextStyle.copyWith(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: 14),
+            if (options.isNotEmpty)
+              Column(
+                children: options
+                    .map(
+                      (option) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _PollOptionPill(label: option),
+                      ),
+                    )
+                    .toList(),
+              )
+            else
+              Text(
+                'Poll options will appear here once the backend returns them.',
+                style: AppTheme.greyTextStyle.copyWith(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuestionPostBody extends StatelessWidget {
+  final FeedPost post;
+  final bool isDetailView;
+
+  const _QuestionPostBody({
+    required this.post,
+    required this.isDetailView,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final prompt = post.content.trim();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.primary.withOpacity(0.12),
+              AppColors.secondary.withOpacity(0.08),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: AppColors.primary.withOpacity(0.18)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primary.withOpacity(0.12),
+              ),
+              child: const Icon(
+                Icons.question_mark_rounded,
+                color: AppColors.primary,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Question Card',
+                    style: AppTheme.blackTextStyle.copyWith(
+                      color: AppColors.primary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    prompt.isEmpty ? 'Ask the community something' : prompt,
+                    style: AppTheme.blackTextStyle.copyWith(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PollOptionPill extends StatelessWidget {
+  final String label;
+
+  const _PollOptionPill({
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+      decoration: BoxDecoration(
+        color: AppColors.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.cardBorderColor),
+      ),
+      child: Text(
+        label,
+        style: AppTheme.blackTextStyle.copyWith(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );

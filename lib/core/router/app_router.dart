@@ -23,6 +23,7 @@ import 'package:clique/ui/pages/auth/security/two_factor_page.dart';
 import 'package:clique/ui/pages/auth/success_page.dart';
 
 import 'package:clique/ui/pages/main/home/create_post_page.dart';
+import 'package:clique/ui/pages/main/home/edit_post_page.dart';
 import 'package:clique/ui/pages/main/home/post_detail_page.dart';
 import 'package:clique/ui/pages/main/chat/chat_page.dart';
 import 'package:clique/ui/pages/main/community/create_community_page.dart';
@@ -32,6 +33,7 @@ import 'package:clique/core/models/community_model.dart';
 import 'package:clique/ui/pages/main/reels/create_reel_page.dart';
 
 import 'package:clique/ui/pages/main/match/matches_page.dart';
+import 'package:clique/core/models/status_model.dart';
 
 import 'package:clique/ui/pages/main/notification/notification_page.dart';
 
@@ -41,6 +43,7 @@ import 'package:clique/ui/pages/main/profile/other_profile_page.dart';
 import 'package:clique/ui/pages/main/profile/profile_page.dart';
 
 import 'package:clique/ui/pages/main/status/create_status_page.dart';
+import 'package:clique/ui/pages/main/status/edit_status_page.dart';
 import 'package:clique/ui/pages/main/status/status_page.dart';
 
 import 'package:clique/ui/pages/settings/settings_page.dart';
@@ -172,11 +175,46 @@ class AppRouter {
           ),
         );
 
+      case NamedRoutes.editPostScreen:
+        final postArgs = settings.arguments;
+        if (postArgs is! Map) {
+          return _errorRoute('Invalid post edit arguments');
+        }
+
+        final postId = _readInt(postArgs['postId'] ?? postArgs['id']);
+        final initialContent = (postArgs['content'] ?? '').toString();
+        if (postId <= 0) {
+          return _errorRoute('Invalid post ID');
+        }
+
+        return _page(
+          BlocProvider(
+            create: (_) => FeedBloc(),
+            child: EditPostPage(
+              postId: postId,
+              initialContent: initialContent,
+            ),
+          ),
+        );
+
       case NamedRoutes.createStatusScreen:
         return _page(
           BlocProvider(
             create: (_) => StoriesBloc(),
             child: const CreateStatusPage(),
+          ),
+        );
+
+      case NamedRoutes.editStatusScreen:
+        final story = settings.arguments;
+        if (story is! Story) {
+          return _errorRoute('Invalid story');
+        }
+
+        return _page(
+          BlocProvider(
+            create: (_) => StoriesBloc(),
+            child: EditStatusPage(story: story),
           ),
         );
 

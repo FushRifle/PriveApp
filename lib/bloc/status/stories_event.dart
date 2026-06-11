@@ -29,6 +29,28 @@ class CreateStoryEvent extends StoriesEvent {
       [content, attachments, backgroundColor, textAlign, fontSize];
 }
 
+class UpdateStoryEvent extends StoriesEvent {
+  final String storyId;
+  final String content;
+  final List<Attachment>? attachments;
+  final String? backgroundColor;
+  final String? textAlign;
+  final double? fontSize;
+
+  const UpdateStoryEvent({
+    required this.storyId,
+    required this.content,
+    this.attachments,
+    this.backgroundColor,
+    this.textAlign,
+    this.fontSize,
+  });
+
+  @override
+  List<Object?> get props =>
+      [storyId, content, attachments, backgroundColor, textAlign, fontSize];
+}
+
 class DeleteStoryEvent extends StoriesEvent {
   final String storyId;
 

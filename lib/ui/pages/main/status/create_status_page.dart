@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:clique/core/clients/cloudinary_service.dart';
 import 'package:clique/core/services/media_service.dart';
+import 'package:clique/core/services/user/user_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -11,6 +12,7 @@ import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
 import 'package:clique/core/models/status_model.dart';
 import 'package:clique/ui/widgets/common/effect_text.dart';
+import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
 
 class CreateStatusPage extends StatefulWidget {
   const CreateStatusPage({super.key});
@@ -25,6 +27,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   final CloudinaryService _cloudinaryService = CloudinaryService();
   final ImagePicker _imagePicker = ImagePicker();
   final MediaService _mediaService = MediaService();
+  final UserService _userService = UserService();
   StreamSubscription<StoriesState>? _createStorySubscription;
 
   File? _selectedImageFile;
@@ -61,6 +64,104 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   bool get _hasText => _storyContentWithHashtags().isNotEmpty;
   bool get _hasImage => _selectedImageFile != null;
   bool get _hasContent => _hasText || _hasImage;
+
+  Future<List<ComposerTokenSuggestion>> _suggestTokens(
+    ComposerTokenType type,
+    String query,
+  ) async {
+    final normalizedQuery = query.trim().toLowerCase();
+
+    if (type == ComposerTokenType.mention) {
+      if (normalizedQuery.isEmpty) return const [];
+
+      try {
+        final users = await _userService.searchUsers(
+          normalizedQuery,
+          limit: 8,
+        );
+
+        return users
+            .map(
+              (user) => ComposerTokenSuggestion(
+                value: _readSuggestionValue(user),
+                label: _readSuggestionLabel(user),
+                subtitle: _readSuggestionSubtitle(user),
+              ),
+            )
+            .where((suggestion) => suggestion.value.isNotEmpty)
+            .toList();
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    final sourceTags = <String>{
+      ..._hashtags,
+      ..._extractHashtags(_hashtagController.text),
+      'clique',
+      'dailyprompt',
+      'questionoftheday',
+      'discussionstarter',
+      'officialclique',
+    };
+
+    final results = sourceTags
+        .where((tag) => tag.toLowerCase().contains(normalizedQuery))
+        .take(8)
+        .map(
+          (tag) => ComposerTokenSuggestion(
+            value: tag,
+            label: '#$tag',
+            subtitle: 'Hashtag',
+          ),
+        )
+        .toList();
+
+    if (results.isNotEmpty) return results;
+
+    if (normalizedQuery.isEmpty) {
+      return sourceTags
+          .take(8)
+          .map(
+            (tag) => ComposerTokenSuggestion(
+              value: tag,
+              label: '#$tag',
+              subtitle: 'Topic',
+            ),
+          )
+          .toList();
+    }
+
+    return [
+      ComposerTokenSuggestion(
+        value: normalizedQuery.replaceAll(RegExp(r'[^a-z0-9_]+'), ''),
+        label: '#$normalizedQuery',
+        subtitle: 'Create new hashtag',
+      ),
+    ];
+  }
+
+  String _readSuggestionValue(Map<String, dynamic> user) {
+    final username = user['username']?.toString().trim();
+    if (username != null && username.isNotEmpty) return username;
+    final name = user['name']?.toString().trim();
+    if (name != null && name.isNotEmpty) return name.replaceAll(' ', '_');
+    return user['id']?.toString().trim() ?? '';
+  }
+
+  String _readSuggestionLabel(Map<String, dynamic> user) {
+    final name = user['name']?.toString().trim();
+    if (name != null && name.isNotEmpty) return name;
+    final username = user['username']?.toString().trim();
+    if (username != null && username.isNotEmpty) return '@$username';
+    return 'User';
+  }
+
+  String? _readSuggestionSubtitle(Map<String, dynamic> user) {
+    final username = user['username']?.toString().trim();
+    if (username != null && username.isNotEmpty) return '@$username';
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -153,12 +254,12 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
         children: [
           Expanded(
             child: Center(
-              child: TextField(
+              child: TokenSuggestionField(
                 controller: _textController,
-                autofocus: true,
+                enabled: true,
+                suggestionsBuilder: _suggestTokens,
                 textAlign: _textAlign,
                 maxLines: null,
-                cursorColor: AppColors.secondary,
                 style: TextStyle(
                   fontSize: _fontSize,
                   fontWeight: FontWeight.bold,

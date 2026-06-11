@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:clique/core/models/calls.dart';
 import 'package:clique/core/services/calls/call_manager.dart';
 import 'package:clique/core/services/calls/call_service.dart';
@@ -37,6 +39,17 @@ class _OutgoingCallScreenState extends State<OutgoingCallScreen> {
 
   Future<void> _initCall() async {
     final isVideo = widget.callResponse.call.callType == 'video';
+    if (widget.callResponse.liveKitUrl.trim().isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Call service is not configured for LiveKit'),
+        ),
+      );
+      Navigator.pop(context);
+      return;
+    }
+
     await _callManager.joinCall(
       url: widget.callResponse.liveKitUrl,
       token: widget.callResponse.token,
@@ -100,6 +113,7 @@ class _OutgoingCallScreenState extends State<OutgoingCallScreen> {
   @override
   void dispose() {
     _callManager.stopDialTone();
+    unawaited(_callManager.leaveCall());
     super.dispose();
   }
 

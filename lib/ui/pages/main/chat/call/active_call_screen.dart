@@ -42,6 +42,17 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
 
   Future<void> _joinCall() async {
     final isVideo = widget.callResponse.call.callType == 'video';
+    if (widget.callResponse.liveKitUrl.trim().isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Call service is not configured for LiveKit'),
+        ),
+      );
+      Navigator.pop(context);
+      return;
+    }
+
     await _callManager.joinCall(
       url: widget.callResponse.liveKitUrl,
       token: widget.callResponse.token,
@@ -265,6 +276,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    unawaited(_callManager.leaveCall());
     super.dispose();
   }
 }

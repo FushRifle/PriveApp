@@ -883,8 +883,16 @@ class _ChatPageState extends State<ChatPage>
       case 'sky':
       case 'galaxy':
         return 'assets/wallpapers/$wallpaper.png';
+      case 'default':
       default:
-        return null;
+        return _defaultWallpaperAsset();
     }
   }
+
+  String _defaultWallpaperAsset() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark
+        ? 'assets/wallpapers/galaxy.png'
+        : 'assets/wallpapers/modern.png';
+}
 }

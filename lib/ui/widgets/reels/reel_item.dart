@@ -13,9 +13,84 @@ import 'package:clique/bloc/friends/friends_bloc.dart';
 import 'package:clique/bloc/reels/reel_bloc.dart';
 import 'package:clique/core/services/chat/chat_service.dart';
 import 'package:clique/core/services/friends/friends_service.dart';
+import 'package:clique/core/services/home/feed_service.dart';
 import 'package:clique/core/services/reel/reel_service.dart';
+import 'package:clique/core/services/user/user_service.dart';
 import 'package:clique/ui/pages/main/chat/chat_page.dart';
+import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
 import 'package:clique/ui/widgets/common/effect_text.dart';
+
+Future<List<ComposerTokenSuggestion>> _suggestReelComposerTokens(
+  ComposerTokenType type,
+  String query,
+) async {
+  final normalizedQuery = query.trim().toLowerCase();
+  final userService = UserService();
+  final feedService = FeedService();
+
+  try {
+    if (type == ComposerTokenType.mention) {
+      if (normalizedQuery.isEmpty) {
+        return const [];
+      }
+
+      final users = await userService.searchUsers(
+        normalizedQuery,
+        limit: 8,
+      );
+
+      return users.map((user) {
+        final name = (user['name'] ?? user['displayName'] ?? 'User')
+            .toString()
+            .trim();
+        final username = (user['username'] ?? user['handle'] ?? '')
+            .toString()
+            .trim();
+        final bioValue = user['bio']?.toString();
+        final subtitle = bioValue != null ? bioValue.trim() : '';
+
+        return ComposerTokenSuggestion(
+          value: username.isNotEmpty ? username : name.replaceAll(' ', '_'),
+          label: username.isNotEmpty ? '@$username' : '@$name',
+          subtitle: subtitle.isNotEmpty ? subtitle : null,
+        );
+      }).where((suggestion) => suggestion.value.isNotEmpty).toList();
+    }
+
+    final hashtags = await feedService.getTrendingHashtags(limit: 12);
+    final seen = <String>{};
+    final values = <String>[
+      ...hashtags.map((item) => item['tag']?.toString().trim() ?? ''),
+      'reels',
+      'video',
+      'viral',
+      'trending',
+      'funny',
+      'music',
+      'dance',
+      'edit',
+    ]
+        .where((tag) => tag.isNotEmpty)
+        .where((tag) => seen.add(tag.toLowerCase()))
+        .toList();
+
+    final filtered = normalizedQuery.isEmpty
+        ? values
+        : values.where((tag) => tag.toLowerCase().contains(normalizedQuery));
+
+    return filtered
+        .map(
+          (tag) => ComposerTokenSuggestion(
+            value: tag.startsWith('#') ? tag.substring(1) : tag,
+            label: '#$tag',
+            subtitle: 'Hashtag',
+          ),
+        )
+        .toList();
+  } catch (_) {
+    return const [];
+  }
+}
 
 class ReelItem extends StatefulWidget {
   final Map<String, dynamic> reel;
@@ -210,6 +285,7 @@ class _ReelItemState extends State<ReelItem>
 
     if (!_isInitialized || controller == null) return;
 
+    await controller.setVolume(_isMuted ? 0 : 1);
     await controller.play();
 
     if (!mounted) return;
@@ -225,6 +301,7 @@ class _ReelItemState extends State<ReelItem>
     if (!_isInitialized || controller == null) return;
 
     await controller.pause();
+    await controller.setVolume(0);
 
     if (!mounted) return;
 
@@ -428,14 +505,27 @@ class _ReelItemState extends State<ReelItem>
         return AlertDialog(
           backgroundColor: AppColors.cardColor,
           title: const Text('Repost with caption'),
-          content: TextField(
+          content: TokenSuggestionField(
             controller: controller,
             autofocus: true,
             maxLines: 3,
+            minLines: 1,
+            textInputAction: TextInputAction.send,
+            onSubmitted: (_) {
+              final caption = controller.text.trim();
+              Navigator.pop(context);
+              _performRepost(reelId, content: caption);
+            },
+            enabled: true,
+            style: TextStyle(
+              color: AppColors.text,
+              fontSize: 14,
+            ),
             decoration: const InputDecoration(
               hintText: 'Add a caption',
               border: OutlineInputBorder(),
             ),
+            suggestionsBuilder: _suggestReelComposerTokens,
           ),
           actions: [
             TextButton(
@@ -1409,14 +1499,18 @@ class _ReelCommentsSheetState extends State<_ReelCommentsSheet> {
             ),
           ),
         ),
-        child: Row(
+          child: Row(
           children: [
             Expanded(
-              child: TextField(
+              child: TokenSuggestionField(
                 controller: _controller,
                 enabled: !_isSending,
                 minLines: 1,
                 maxLines: 4,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) {
+                  if (!_isSending) _sendComment();
+                },
                 style: TextStyle(
                   color: AppColors.text,
                   fontSize: 14,
@@ -1437,6 +1531,7 @@ class _ReelCommentsSheetState extends State<_ReelCommentsSheet> {
                     vertical: 11,
                   ),
                 ),
+                suggestionsBuilder: _suggestReelComposerTokens,
               ),
             ),
             const SizedBox(width: 10),

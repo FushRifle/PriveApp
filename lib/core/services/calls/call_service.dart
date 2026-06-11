@@ -1,3 +1,4 @@
+import 'package:clique/app/configs/api_config.dart';
 import 'package:clique/core/clients/api_service.dart';
 import 'package:clique/core/models/calls.dart';
 import 'package:dio/dio.dart';
@@ -11,7 +12,7 @@ class CallService {
   }) async {
     try {
       final response = await _api.post(
-        '/api/calls/start',
+        '${ApiConfig.apiPrefix}${ApiConfig.callsEndpoint}/start',
         data: {
           'receiverId': receiverId,
           'callType': callType,
@@ -28,7 +29,7 @@ class CallService {
   Future<CallResponse> acceptCall({required int callId}) async {
     try {
       final response = await _api.post(
-        '/api/calls/accept',
+        '${ApiConfig.apiPrefix}${ApiConfig.callsEndpoint}/accept',
         data: {'callId': callId},
       );
       return CallResponse.fromJson(
@@ -42,7 +43,7 @@ class CallService {
   Future<void> rejectCall({required int callId}) async {
     try {
       await _api.post(
-        '/api/calls/reject',
+        '${ApiConfig.apiPrefix}${ApiConfig.callsEndpoint}/reject',
         data: {'callId': callId},
       );
     } on DioException catch (e) {
@@ -53,7 +54,7 @@ class CallService {
   Future<void> endCall({required int callId}) async {
     try {
       await _api.post(
-        '/api/calls/end',
+        '${ApiConfig.apiPrefix}${ApiConfig.callsEndpoint}/end',
         data: {'callId': callId},
       );
     } on DioException catch (e) {
@@ -64,7 +65,7 @@ class CallService {
   Future<TokenResponse> getToken({required String roomId}) async {
     try {
       final response = await _api.get(
-        '/api/calls/token',
+        '${ApiConfig.apiPrefix}${ApiConfig.callsEndpoint}/token',
         queryParameters: {'roomId': roomId},
         forceRefresh: true,
         useCache: false,
@@ -83,7 +84,7 @@ class CallService {
   }) async {
     try {
       final response = await _api.get(
-        '/api/calls/history',
+        '${ApiConfig.apiPrefix}${ApiConfig.callsEndpoint}/history',
         queryParameters: {'page': page, 'limit': limit},
         forceRefresh: true,
         useCache: false,
@@ -101,7 +102,7 @@ class CallService {
   Future<Call?> getActiveCall() async {
     try {
       final response = await _api.get(
-        '/api/calls/active',
+        '${ApiConfig.apiPrefix}${ApiConfig.callsEndpoint}/active',
         forceRefresh: true,
         useCache: false,
       );
@@ -140,8 +141,22 @@ class CallResponse {
       call: Call.fromJson(Map<String, dynamic>.from(json['call'] as Map)),
       roomId: json['roomId'] as String,
       token: json['token'] as String? ?? '',
-      liveKitUrl: json['liveKitUrl'] as String? ?? '',
+      liveKitUrl: _readLiveKitUrl(json),
     );
+  }
+
+  static String _readLiveKitUrl(Map<String, dynamic> json) {
+    final responseUrl = json['liveKitUrl']?.toString().trim();
+    if (responseUrl != null && responseUrl.isNotEmpty) {
+      return responseUrl;
+    }
+
+    final envUrl = ApiConfig.liveKitUrl.trim();
+    if (envUrl.isNotEmpty) {
+      return envUrl;
+    }
+
+    return '';
   }
 }
 
@@ -157,9 +172,12 @@ class TokenResponse {
   });
 
   factory TokenResponse.fromJson(Map<String, dynamic> json) {
+    final responseUrl = json['url']?.toString().trim();
     return TokenResponse(
       token: json['token'] as String,
-      url: json['url'] as String,
+      url: responseUrl != null && responseUrl.isNotEmpty
+          ? responseUrl
+          : ApiConfig.liveKitUrl,
       roomId: json['roomId'] as String,
     );
   }

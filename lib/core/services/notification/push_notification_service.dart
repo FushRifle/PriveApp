@@ -3,10 +3,13 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../firebase_options.dart';
+import '../../models/calls.dart';
+import '../../services/calls/call_service.dart';
+import '../../../ui/pages/main/chat/call/incoming_call_screen.dart';
 import 'notification_service.dart';
 
 @pragma('vm:entry-point')
@@ -30,6 +33,8 @@ class PushNotificationService with WidgetsBindingObserver {
   StreamSubscription<String>? _tokenRefreshSubscription;
   StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
   StreamSubscription<RemoteMessage>? _openedMessageSubscription;
+  GlobalKey<NavigatorState>? _navigatorKey;
+  IncomingCallNotification? _pendingIncomingCall;
 
   bool _initialized = false;
   bool _firebaseReady = false;
@@ -75,6 +80,18 @@ class PushNotificationService with WidgetsBindingObserver {
         FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
     _openedMessageSubscription =
         FirebaseMessaging.onMessageOpenedApp.listen(_handleOpenedMessage);
+
+    final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+    if (initialMessage != null) {
+      _handleOpenedMessage(initialMessage);
+    }
+  }
+
+  void setNavigatorKey(GlobalKey<NavigatorState> navigatorKey) {
+    _navigatorKey = navigatorKey;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _presentPendingIncomingCall();
+    });
   }
 
   Future<void> syncDeviceToken() async {
@@ -234,10 +251,108 @@ class PushNotificationService with WidgetsBindingObserver {
 
   void _handleForegroundMessage(RemoteMessage message) {
     debugPrint('Foreground push received: ${message.messageId}');
+    _cacheIncomingCall(message);
   }
 
   void _handleOpenedMessage(RemoteMessage message) {
     debugPrint('Push opened: ${message.messageId}');
+    final incomingCall = _readIncomingCallNotification(message);
+    if (incomingCall == null) {
+      return;
+    }
+
+    _pendingIncomingCall = incomingCall;
+    _presentPendingIncomingCall();
+  }
+
+  void _cacheIncomingCall(RemoteMessage message) {
+    final incomingCall = _readIncomingCallNotification(message);
+    if (incomingCall != null) {
+      _pendingIncomingCall = incomingCall;
+    }
+  }
+
+  void _presentPendingIncomingCall() {
+    final pendingCall = _pendingIncomingCall;
+    final navigator = _navigatorKey?.currentState;
+    if (pendingCall == null || navigator == null) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final currentNavigator = _navigatorKey?.currentState;
+      if (currentNavigator == null) return;
+
+      currentNavigator.push(
+        MaterialPageRoute(
+          builder: (_) => IncomingCallScreen(
+            notification: pendingCall,
+            callService: CallService(),
+          ),
+        ),
+      );
+      _pendingIncomingCall = null;
+    });
+  }
+
+  IncomingCallNotification? _readIncomingCallNotification(RemoteMessage message) {
+    final data = <String, dynamic>{...message.data};
+    final type = _readString(data['type'] ?? data['notificationType']);
+    final isCallNotification = type == 'incoming_call' ||
+        type == 'call' ||
+        type == 'incoming-call' ||
+        data.containsKey('callId') ||
+        data.containsKey('roomId');
+
+    if (!isCallNotification) {
+      return null;
+    }
+
+    final callId = _readInt(data['callId'] ?? data['call_id']);
+    final roomId = _readString(data['roomId'] ?? data['room_id']);
+    final callType = _readString(data['callType'] ?? data['call_type']);
+
+    final caller = _readCallerMap(data);
+
+    if (callId <= 0 || roomId.isEmpty || callType.isEmpty) {
+      return null;
+    }
+
+    return IncomingCallNotification(
+      callId: callId,
+      caller: caller,
+      callType: callType,
+      roomId: roomId,
+    );
+  }
+
+  UserInfo _readCallerMap(Map<String, dynamic> data) {
+    final nestedCaller = data['caller'];
+    if (nestedCaller is Map) {
+      try {
+        return UserInfo.fromJson(Map<String, dynamic>.from(nestedCaller));
+      } catch (_) {}
+    }
+
+    return UserInfo(
+      id: _readInt(data['callerId'] ?? data['caller_id']),
+      name: _readString(data['callerName'] ?? data['caller_name'] ?? data['name']).isEmpty
+          ? 'User'
+          : _readString(data['callerName'] ?? data['caller_name'] ?? data['name']),
+      username: _readString(data['callerUsername'] ?? data['caller_username'] ?? data['username']),
+      avatar: _readString(data['callerAvatar'] ?? data['caller_avatar']),
+      verified: data['callerVerified'] == true || data['caller_verified'] == true,
+    );
+  }
+
+  String _readString(dynamic value) {
+    return value?.toString().trim() ?? '';
+  }
+
+  int _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   String get _platformName {

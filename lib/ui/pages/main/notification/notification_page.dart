@@ -139,10 +139,14 @@ class _NotificationPageState extends State<NotificationPage> {
   Future<void> _markAsRead(int notificationId, int index) async {
     try {
       await _notificationService.markAsRead(notificationId);
-      if (!mounted || index >= _notifications.length) return;
+      if (!mounted) return;
 
       setState(() {
-        _notifications[index]['isUnread'] = false;
+        final targetIndex =
+            _notifications.indexWhere((notification) => notification['id'] == notificationId);
+        if (targetIndex >= 0) {
+          _notifications[targetIndex]['isUnread'] = false;
+        }
       });
     } catch (e) {
       debugPrint('Error marking as read: $e');
@@ -181,10 +185,10 @@ class _NotificationPageState extends State<NotificationPage> {
   Future<void> _deleteNotification(int notificationId, int index) async {
     try {
       await _notificationService.deleteNotification(notificationId);
-      if (!mounted || index >= _notifications.length) return;
+      if (!mounted) return;
 
       setState(() {
-        _notifications.removeAt(index);
+        _notifications.removeWhere((notification) => notification['id'] == notificationId);
       });
     } catch (e) {
       if (!mounted) return;
@@ -195,6 +199,85 @@ class _NotificationPageState extends State<NotificationPage> {
           backgroundColor: AppColors.red,
         ),
       );
+    }
+  }
+
+  List<Map<String, dynamic>> _groupNotifications(
+    List<Map<String, dynamic>> notifications,
+  ) {
+    final grouped = <String, List<Map<String, dynamic>>>{};
+    final passthrough = <Map<String, dynamic>>[];
+
+    for (final item in notifications) {
+      final type = item['type']?.toString() ?? 'general';
+      if (!_shouldGroup(type)) {
+        passthrough.add(item);
+        continue;
+      }
+
+      final data = _asMap(item['data']);
+      final actorId = _readInt(
+        item['actorId'] ??
+            data['actorId'] ??
+            data['actorUserId'] ??
+            data['fromUserId'] ??
+            data['likerUserId'] ??
+            data['commenterUserId'] ??
+            data['followerUserId'],
+      );
+
+      final key = '$type:$actorId';
+      grouped.putIfAbsent(key, () => []);
+      grouped[key]!.add(item);
+    }
+
+    final result = <Map<String, dynamic>>[];
+
+    for (final entry in grouped.entries) {
+      final items = [...entry.value]
+        ..sort((a, b) {
+          final aTime =
+              DateTime.tryParse(a['createdAt']?.toString() ?? '') ??
+                  DateTime.fromMillisecondsSinceEpoch(0);
+          final bTime =
+              DateTime.tryParse(b['createdAt']?.toString() ?? '') ??
+                  DateTime.fromMillisecondsSinceEpoch(0);
+          return bTime.compareTo(aTime);
+        });
+
+      final representative = Map<String, dynamic>.from(items.first);
+      representative['groupItems'] = items;
+      representative['groupCount'] = items.length;
+      representative['isUnread'] = items.any((item) => item['isUnread'] == true);
+      result.add(representative);
+    }
+
+    result.addAll(passthrough);
+
+    result.sort((a, b) {
+      final aTime = DateTime.tryParse(a['createdAt']?.toString() ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+      final bTime = DateTime.tryParse(b['createdAt']?.toString() ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+      return bTime.compareTo(aTime);
+    });
+
+    return result;
+  }
+
+  bool _shouldGroup(String type) {
+    switch (type) {
+      case 'like':
+      case 'post_like':
+      case 'comment':
+      case 'post_comment':
+      case 'follow':
+      case 'friend_request':
+      case 'friend_accepted':
+      case 'mention':
+        return true;
+      default:
+        return false;
     }
   }
 
@@ -255,6 +338,22 @@ class _NotificationPageState extends State<NotificationPage> {
           data['entityId'] ??
           data['entity_id'],
     );
+    final reelId = _readInt(
+      notification['reelId'] ??
+          notification['reel_id'] ??
+          data['reelId'] ??
+          data['reel_id'] ??
+          data['targetReelId'] ??
+          data['target_reel_id'],
+    );
+    final storyId = _readInt(
+      notification['storyId'] ??
+          notification['story_id'] ??
+          data['storyId'] ??
+          data['story_id'] ??
+          data['targetStoryId'] ??
+          data['target_story_id'],
+    );
     final conversationId = _readInt(
       data['conversationId'] ??
           data['conversation_id'] ??
@@ -272,10 +371,31 @@ class _NotificationPageState extends State<NotificationPage> {
         if (id > 0) {
           Navigator.pushNamed(context, NamedRoutes.postDetailScreen,
               arguments: id);
+        } else if (reelId > 0) {
+          Navigator.pushNamed(context, NamedRoutes.reelsScreen);
+        } else if (storyId > 0) {
+          Navigator.pushNamed(context, NamedRoutes.statusScreen);
         } else if (actorId > 0) {
           Navigator.pushNamed(context, NamedRoutes.otherProfileScreen,
               arguments: actorId);
         }
+        break;
+      case 'reel_like':
+      case 'reel_comment':
+      case 'reel_mention':
+      case 'reel_share':
+      case 'reel_repost':
+        Navigator.pushNamed(context, NamedRoutes.reelsScreen);
+        break;
+      case 'story_like':
+      case 'story_comment':
+      case 'story_mention':
+      case 'story_repost':
+      case 'status_like':
+      case 'status_comment':
+      case 'status_mention':
+      case 'status_repost':
+        Navigator.pushNamed(context, NamedRoutes.statusScreen);
         break;
       case 'follow':
       case 'friend_request':
@@ -323,20 +443,30 @@ class _NotificationPageState extends State<NotificationPage> {
     final message = (notification['content'] ?? notification['message'] ?? '')
         .toString()
         .trim();
+    final groupCount = _readInt(notification['groupCount']);
 
     switch (type) {
       case 'like':
       case 'post_like':
+        if (groupCount > 1) {
+          return 'liked $groupCount of your posts.';
+        }
         return message.toLowerCase().contains('profile')
             ? 'liked your profile.'
             : 'liked your post.';
       case 'comment':
       case 'post_comment':
+        if (groupCount > 1) {
+          return 'commented on $groupCount of your posts.';
+        }
         final snippet = notification['snippet'] ?? '';
         return snippet.toString().isNotEmpty
             ? 'commented: "$snippet"'
             : 'commented on your post.';
       case 'follow':
+        if (groupCount > 1) {
+          return 'and $groupCount others started following you.';
+        }
         return 'started following you.';
       case 'mention':
         return 'mentioned you in a comment.';
@@ -353,6 +483,8 @@ class _NotificationPageState extends State<NotificationPage> {
 
   @override
   Widget build(BuildContext context) {
+    final visibleNotifications = _groupNotifications(_notifications);
+
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: AppColors.transparent,
@@ -368,13 +500,13 @@ class _NotificationPageState extends State<NotificationPage> {
             title: 'Notifications',
             subtitle: _notifications.isEmpty
                 ? 'Recent activity'
-                : '${_notifications.where((n) => n['isUnread'] == true).length} unread',
+                : '${visibleNotifications.where((n) => n['isUnread'] == true).length} unread',
             leadingIcon: Icons.arrow_back_ios_new,
             onLeadingTap: () => Navigator.pop(context),
-            actionIcon: _notifications.any((n) => n['isUnread'] == true)
+            actionIcon: visibleNotifications.any((n) => n['isUnread'] == true)
                 ? Icons.done_all_rounded
                 : Icons.notifications_outlined,
-            onActionTap: _notifications.any((n) => n['isUnread'] == true)
+            onActionTap: visibleNotifications.any((n) => n['isUnread'] == true)
                 ? _markAllAsRead
                 : null,
           ),
@@ -422,14 +554,14 @@ class _NotificationPageState extends State<NotificationPage> {
                                   controller: _scrollController,
                                   padding: const EdgeInsets.only(
                                       top: 8, bottom: 100),
-                                  itemCount: _notifications.length + 1,
+                                  itemCount: visibleNotifications.length + 1,
                                   itemBuilder: (context, index) {
                                     if (index == 0) {
                                       return _buildNewestHeader();
                                     }
                                     final notificationIndex = index - 1;
                                     return _buildNotificationItem(
-                                      _notifications[notificationIndex],
+                                      visibleNotifications[notificationIndex],
                                       notificationIndex,
                                     );
                                   },
@@ -539,6 +671,8 @@ class _NotificationPageState extends State<NotificationPage> {
     final bool isUnread = item['isUnread'] ?? false;
     final data = _asMap(item['data']);
     final type = item['type']?.toString() ?? 'general';
+    final groupItems = (item['groupItems'] as List?)?.cast<Map>() ?? const [];
+    final groupCount = _readInt(item['groupCount']);
     final String avatar =
         (item['actorAvatar'] ?? data['actorAvatar'] ?? '').toString();
     final String actorName = _actorName(item);
@@ -571,12 +705,26 @@ class _NotificationPageState extends State<NotificationPage> {
         onTap: () async {
           HapticFeedback.lightImpact();
           if (isUnread) {
-            await _markAsRead(item['id'], index);
+            final ids = groupItems.isNotEmpty
+                ? groupItems
+                    .map((entry) => _readInt(entry['id']))
+                    .where((value) => value > 0)
+                    .toList()
+                : [_readInt(item['id'])];
+            for (final id in ids) {
+              await _markAsRead(id, index);
+            }
           }
           _navigateByType(item);
         },
         onLongPress: () {
-          _showDeleteDialog(item['id'], index);
+          final ids = groupItems.isNotEmpty
+              ? groupItems
+                  .map((entry) => _readInt(entry['id']))
+                  .where((value) => value > 0)
+                  .toList()
+              : [_readInt(item['id'])];
+          _showDeleteDialog(ids, index);
         },
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -662,7 +810,11 @@ class _NotificationPageState extends State<NotificationPage> {
                             style: const TextStyle(fontWeight: FontWeight.w800),
                           ),
                           TextSpan(
-                            text: content,
+                            text: groupCount > 1 && _shouldGroup(type)
+                                ? (type == 'like' || type == 'post_like'
+                                    ? 'liked $groupCount of your posts.'
+                                    : content)
+                                : content,
                             style: TextStyle(
                               color: isUnread
                                   ? AppColors.blackColor
@@ -696,7 +848,9 @@ class _NotificationPageState extends State<NotificationPage> {
                         const SizedBox(width: 8),
                         Flexible(
                           child: Text(
-                            _notificationActionLabel(type),
+                            groupCount > 1 && _shouldGroup(type)
+                                ? '$groupCount updates'
+                                : _notificationActionLabel(type),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: AppTheme.greyTextStyle.copyWith(
@@ -860,7 +1014,7 @@ class _NotificationPageState extends State<NotificationPage> {
     return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 
-  void _showDeleteDialog(int notificationId, int index) {
+  void _showDeleteDialog(List<int> notificationIds, int index) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -881,7 +1035,9 @@ class _NotificationPageState extends State<NotificationPage> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              _deleteNotification(notificationId, index);
+              for (final id in notificationIds) {
+                _deleteNotification(id, index);
+              }
             },
             child: Text(
               'Delete',

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:clique/app/configs/api_config.dart';
 import 'package:clique/core/models/calls.dart';
 import 'package:clique/core/services/calls/call_service.dart';
 import 'package:clique/core/services/calls/permission_service.dart';
@@ -69,6 +70,16 @@ class CallButton extends StatelessWidget {
       );
 
       if (!context.mounted) return;
+
+      if (response.liveKitUrl.trim().isEmpty && ApiConfig.liveKitUrl.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Call service is not configured for LiveKit'),
+          ),
+        );
+        return;
+      }
+
       await Navigator.push(
         context,
         MaterialPageRoute(

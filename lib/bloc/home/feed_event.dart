@@ -38,6 +38,8 @@ class CreateFeedPost extends FeedEvent {
   final String postType;
   final bool isAnonymous;
   final String? anonymousCategory;
+  final List<String>? pollOptions;
+  final int? pollExpirationHours;
 
   const CreateFeedPost({
     required this.content,
@@ -45,11 +47,21 @@ class CreateFeedPost extends FeedEvent {
     this.postType = 'standard',
     this.isAnonymous = false,
     this.anonymousCategory,
+    this.pollOptions,
+    this.pollExpirationHours,
   });
 
   @override
   List<Object?> get props =>
-      [content, attachments, postType, isAnonymous, anonymousCategory];
+      [
+        content,
+        attachments,
+        postType,
+        isAnonymous,
+        anonymousCategory,
+        pollOptions,
+        pollExpirationHours,
+      ];
 }
 
 // Like a post
@@ -137,11 +149,42 @@ class LoadMoreComments extends FeedEvent {
 class CreatePostComment extends FeedEvent {
   final int postId;
   final String content;
+  final int? replyToCommentId;
 
-  const CreatePostComment({required this.postId, required this.content});
+  const CreatePostComment({
+    required this.postId,
+    required this.content,
+    this.replyToCommentId,
+  });
 
   @override
-  List<Object?> get props => [postId, content];
+  List<Object?> get props => [postId, content, replyToCommentId];
+}
+
+class LikePostComment extends FeedEvent {
+  final int postId;
+  final int commentId;
+
+  const LikePostComment({
+    required this.postId,
+    required this.commentId,
+  });
+
+  @override
+  List<Object?> get props => [postId, commentId];
+}
+
+class DislikePostComment extends FeedEvent {
+  final int postId;
+  final int commentId;
+
+  const DislikePostComment({
+    required this.postId,
+    required this.commentId,
+  });
+
+  @override
+  List<Object?> get props => [postId, commentId];
 }
 
 // Get user media (gallery)

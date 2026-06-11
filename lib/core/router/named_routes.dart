@@ -18,7 +18,9 @@ class NamedRoutes {
   static const statusViewScreen = '/status-view-screen';
   static const statusScreen = '/status-screen';
   static const createPostScreen = '/create-post-screen';
+  static const editPostScreen = '/edit-post-screen';
   static const createStatusScreen = '/create-status-screen';
+  static const editStatusScreen = '/edit-status-screen';
   static const createReelScreen = '/create-reel-screen';
   static const createCommunityScreen = '/create-community-screen';
   static const communityGroupChatScreen = '/community-group-chat-screen';

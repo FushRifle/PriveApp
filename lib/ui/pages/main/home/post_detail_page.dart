@@ -12,8 +12,10 @@ import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 
 import 'package:clique/core/models/feeds_models.dart';
+import 'package:clique/core/services/home/feed_service.dart';
 import 'package:clique/core/services/user/user_service.dart';
 
+import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
 import 'package:clique/ui/widgets/post/post_card.dart';
 
 class PostDetailPage extends StatefulWidget {
@@ -31,10 +33,12 @@ class PostDetailPage extends StatefulWidget {
 class _PostDetailPageState extends State<PostDetailPage> {
   final TextEditingController _commentController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FeedService _feedService = FeedService();
   final UserService _userService = UserService();
 
   FeedPost? _post;
   List<Comment> _comments = [];
+  Comment? _replyingToComment;
 
   bool _isLoadingPost = true;
   bool _isLoadingComments = false;
@@ -90,6 +94,77 @@ class _PostDetailPageState extends State<PostDetailPage> {
     setState(() {
       _canSendComment = canSend;
     });
+  }
+
+  Future<List<ComposerTokenSuggestion>> _suggestCommentTokens(
+    ComposerTokenType type,
+    String query,
+  ) async {
+    final normalizedQuery = query.trim().toLowerCase();
+
+    try {
+      if (type == ComposerTokenType.mention) {
+        if (normalizedQuery.isEmpty) {
+          return const [];
+        }
+
+        final users = await _userService.searchUsers(
+          normalizedQuery,
+          limit: 8,
+        );
+
+        return users.map((user) {
+          final name = (user['name'] ?? user['displayName'] ?? 'User')
+              .toString()
+              .trim();
+          final username = (user['username'] ?? user['handle'] ?? '')
+              .toString()
+              .trim();
+          final bioValue = user['bio']?.toString();
+          final subtitle =
+              bioValue != null ? bioValue.trim() : '';
+
+          return ComposerTokenSuggestion(
+            value: username.isNotEmpty ? username : name.replaceAll(' ', '_'),
+            label: username.isNotEmpty ? '@$username' : '@$name',
+            subtitle: subtitle.isNotEmpty ? subtitle : null,
+          );
+        }).where((suggestion) => suggestion.value.isNotEmpty).toList();
+      }
+
+      final hashtags = await _feedService.getTrendingHashtags(limit: 12);
+      final seen = <String>{};
+      final values = <String>[
+        ...hashtags.map((item) => item['tag']?.toString().trim() ?? ''),
+        'flutter',
+        'technology',
+        'design',
+        'business',
+        'community',
+        'startup',
+        'gaming',
+        'music',
+      ]
+          .where((tag) => tag.isNotEmpty)
+          .where((tag) => seen.add(tag.toLowerCase()))
+          .toList();
+
+      final filtered = normalizedQuery.isEmpty
+          ? values
+          : values.where((tag) => tag.toLowerCase().contains(normalizedQuery));
+
+      return filtered
+          .map(
+            (tag) => ComposerTokenSuggestion(
+              value: tag.startsWith('#') ? tag.substring(1) : tag,
+              label: '#$tag',
+              subtitle: 'Hashtag',
+            ),
+          )
+          .toList();
+    } catch (_) {
+      return const [];
+    }
   }
 
   Future<void> _loadCurrentUser() async {
@@ -192,6 +267,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
           CreatePostComment(
             postId: widget.postId,
             content: value,
+            replyToCommentId: _replyingToComment?.id,
           ),
         );
 
@@ -204,11 +280,25 @@ class _PostDetailPageState extends State<PostDetailPage> {
 
         setState(() {
           _isSendingComment = false;
+          _replyingToComment = null;
         });
 
         _loadComments(reset: true);
       },
     );
+  }
+
+  void _beginReply(Comment comment) {
+    setState(() {
+      _replyingToComment = comment;
+    });
+  }
+
+  void _cancelReply() {
+    if (!mounted) return;
+    setState(() {
+      _replyingToComment = null;
+    });
   }
 
   bool get _isOwnPost {
@@ -346,6 +436,19 @@ class _PostDetailPageState extends State<PostDetailPage> {
               hasMore: _hasMoreComments,
               onRetry: _retryLoadComments,
               onLoadMore: _loadMoreComments,
+              onLike: (comment) => context.read<FeedBloc>().add(
+                    LikePostComment(
+                      postId: widget.postId,
+                      commentId: comment.id,
+                    ),
+                  ),
+              onDislike: (comment) => context.read<FeedBloc>().add(
+                    DislikePostComment(
+                      postId: widget.postId,
+                      commentId: comment.id,
+                    ),
+                  ),
+              onReply: _beginReply,
             ),
             SliverToBoxAdapter(
               child: SizedBox(
@@ -357,9 +460,12 @@ class _PostDetailPageState extends State<PostDetailPage> {
         _CommentComposer(
           avatar: post.user.avatar,
           controller: _commentController,
+          replyingTo: _replyingToComment,
+          onCancelReply: _cancelReply,
           canSend: _canSendComment && !_isSendingComment,
           isSending: _isSendingComment,
           onSend: () => _addComment(_commentController.text),
+          suggestionsBuilder: _suggestCommentTokens,
         ),
       ],
     );
@@ -695,6 +801,9 @@ class _CommentsSection extends StatelessWidget {
   final bool hasMore;
   final VoidCallback onRetry;
   final VoidCallback onLoadMore;
+  final ValueChanged<Comment> onLike;
+  final ValueChanged<Comment> onDislike;
+  final ValueChanged<Comment> onReply;
 
   const _CommentsSection({
     required this.comments,
@@ -703,6 +812,9 @@ class _CommentsSection extends StatelessWidget {
     required this.hasMore,
     required this.onRetry,
     required this.onLoadMore,
+    required this.onLike,
+    required this.onDislike,
+    required this.onReply,
   });
 
   @override
@@ -766,6 +878,9 @@ class _CommentsSection extends StatelessWidget {
                 comment: comments[index],
                 isFirst: index == 0,
                 isLast: index == comments.length - 1,
+                onLike: onLike,
+                onDislike: onDislike,
+                onReply: onReply,
               ),
             );
           },
@@ -780,11 +895,17 @@ class _CommentTile extends StatelessWidget {
   final Comment comment;
   final bool isFirst;
   final bool isLast;
+  final ValueChanged<Comment> onLike;
+  final ValueChanged<Comment> onDislike;
+  final ValueChanged<Comment> onReply;
 
   const _CommentTile({
     required this.comment,
     required this.isFirst,
     required this.isLast,
+    required this.onLike,
+    required this.onDislike,
+    required this.onReply,
   });
 
   @override
@@ -867,6 +988,41 @@ class _CommentTile extends StatelessWidget {
                             color: AppColors.text,
                           ),
                         ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            _ActionChip(
+                              icon: comment.isLiked
+                                  ? Icons.thumb_up
+                                  : Icons.thumb_up_outlined,
+                              label: comment.likes > 0
+                                  ? comment.likes.toString()
+                                  : 'Like',
+                              selected: comment.isLiked,
+                              onTap: () => onLike(comment),
+                            ),
+                            const SizedBox(width: 8),
+                            _ActionChip(
+                              icon: comment.isDisliked
+                                  ? Icons.thumb_down
+                                  : Icons.thumb_down_outlined,
+                              label: comment.dislikes > 0
+                                  ? comment.dislikes.toString()
+                                  : 'Dislike',
+                              selected: comment.isDisliked,
+                              onTap: () => onDislike(comment),
+                            ),
+                            const SizedBox(width: 8),
+                            _ActionChip(
+                              icon: Icons.reply_rounded,
+                              label: comment.replyCount > 0
+                                  ? '${comment.replyCount} replies'
+                                  : 'Reply',
+                              selected: false,
+                              onTap: () => onReply(comment),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -876,6 +1032,61 @@ class _CommentTile extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ActionChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ActionChip({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(999),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppColors.primary.withOpacity(0.12)
+              : AppColors.backgroundColor.withOpacity(0.72),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: selected
+                ? AppColors.primary.withOpacity(0.28)
+                : AppColors.cardBorderColor,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 15,
+              color: selected ? AppColors.primary : AppColors.textSecondary,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: AppTheme.greyTextStyle.copyWith(
+                color: selected ? AppColors.primary : AppColors.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -914,16 +1125,22 @@ class _ThreadAvatar extends StatelessWidget {
 class _CommentComposer extends StatelessWidget {
   final String avatar;
   final TextEditingController controller;
+  final Comment? replyingTo;
+  final VoidCallback onCancelReply;
   final bool canSend;
   final bool isSending;
   final VoidCallback onSend;
+  final ComposerTokenSuggestionsBuilder suggestionsBuilder;
 
   const _CommentComposer({
     required this.avatar,
     required this.controller,
+    required this.replyingTo,
+    required this.onCancelReply,
     required this.canSend,
     required this.isSending,
     required this.onSend,
+    required this.suggestionsBuilder,
   });
 
   @override
@@ -961,92 +1178,138 @@ class _CommentComposer extends StatelessWidget {
               ),
             ],
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: _Avatar(
-                  avatar: avatar,
-                  size: 40,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+              if (replyingTo != null)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.circular(26),
+                    color: AppColors.primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(18),
                     border: Border.all(
-                      color: AppColors.cardBorderColor,
+                      color: AppColors.primary.withOpacity(0.14),
                     ),
                   ),
-                  child: TextField(
-                    controller: controller,
-                    enabled: !isSending,
-                    minLines: 1,
-                    maxLines: 4,
-                    textInputAction: TextInputAction.newline,
-                    keyboardType: TextInputType.multiline,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      height: 1.3,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: 'Reply to this thread...',
-                      hintStyle: AppTheme.greyTextStyle.copyWith(
-                        fontSize: 14,
-                        color: AppColors.textHint,
-                      ),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: 13,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              GestureDetector(
-                onTap: canSend ? onSend : null,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: canSend
-                        ? AppColors.primary
-                        : AppColors.textHint.withOpacity(0.18),
-                    shape: BoxShape.circle,
-                    boxShadow: canSend
-                        ? [
-                            BoxShadow(
-                              color: AppColors.primary.withOpacity(0.28),
-                              blurRadius: 14,
-                              offset: const Offset(0, 6),
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: Center(
-                    child: isSending
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              color: AppColors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : Icon(
-                            Icons.send_rounded,
-                            size: 20,
-                            color: canSend ? AppColors.white : AppColors.grey,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Replying to ${replyingTo!.userName}',
+                          style: AppTheme.greyTextStyle.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700,
                           ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: onCancelReply,
+                        icon: const Icon(
+                          Icons.close,
+                          size: 18,
+                          color: AppColors.primary,
+                        ),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
                   ),
                 ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: _Avatar(
+                      avatar: avatar,
+                      size: 40,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(26),
+                        border: Border.all(
+                          color: AppColors.cardBorderColor,
+                        ),
+                      ),
+                      child: TokenSuggestionField(
+                        controller: controller,
+                        enabled: !isSending,
+                        minLines: 1,
+                        maxLines: 4,
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (_) {
+                          if (canSend) onSend();
+                        },
+                        style: const TextStyle(
+                          fontSize: 15,
+                          height: 1.3,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: replyingTo != null
+                              ? 'Write a reply...'
+                              : 'Reply to this thread...',
+                          hintStyle: AppTheme.greyTextStyle.copyWith(
+                            fontSize: 14,
+                            color: AppColors.textHint,
+                          ),
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 13,
+                          ),
+                        ),
+                        suggestionsBuilder: suggestionsBuilder,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: canSend ? onSend : null,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        color: canSend
+                            ? AppColors.primary
+                            : AppColors.textHint.withOpacity(0.18),
+                        shape: BoxShape.circle,
+                        boxShadow: canSend
+                            ? [
+                                BoxShadow(
+                                  color: AppColors.primary.withOpacity(0.28),
+                                  blurRadius: 14,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Center(
+                        child: isSending
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  color: AppColors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Icon(
+                                Icons.send_rounded,
+                                size: 20,
+                                color:
+                                    canSend ? AppColors.white : AppColors.grey,
+                              ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

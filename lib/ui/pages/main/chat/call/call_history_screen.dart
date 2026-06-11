@@ -23,6 +23,7 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
   }
 
   Future<void> _loadHistory() async {
+    final hasHistory = _history.isNotEmpty;
     setState(() {
       _isLoading = true;
       _error = null;
@@ -41,7 +42,7 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
       if (!mounted) return;
       setState(() {
         _error = e.toString();
-        _isLoading = false;
+        _isLoading = !hasHistory;
       });
     }
   }
@@ -63,11 +64,11 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
   }
 
   Widget _buildBody() {
-    if (_isLoading) {
+    if (_isLoading && _history.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_error != null) {
+    if (_error != null && _history.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -89,14 +90,57 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _loadHistory,
-      child: ListView.builder(
-        itemCount: _history.length,
-        itemBuilder: (context, index) {
-          return CallHistoryItem(call: _history[index]);
-        },
-      ),
+    return Stack(
+      children: [
+        RefreshIndicator(
+          onRefresh: _loadHistory,
+          child: ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            itemCount: _history.length,
+            itemBuilder: (context, index) {
+              return CallHistoryItem(call: _history[index]);
+            },
+          ),
+        ),
+        if (_isLoading && _history.isNotEmpty)
+          const Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            child: LinearProgressIndicator(minHeight: 2),
+          ),
+        if (_error != null && _history.isNotEmpty)
+          Positioned(
+            left: 16,
+            right: 16,
+            top: 12,
+            child: Material(
+              color: Theme.of(context).colorScheme.surface.withOpacity(0.95),
+              elevation: 2,
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Row(
+                  children: [
+                    const Icon(Icons.wifi_off, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'History could not refresh right now',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _loadHistory,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

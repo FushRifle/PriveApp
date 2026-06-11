@@ -6,6 +6,8 @@ import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/core/clients/cloudinary_service.dart';
 import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/core/services/media_service.dart';
+import 'package:clique/core/services/user/user_service.dart';
+import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -24,16 +26,34 @@ class CreatePostPage extends StatefulWidget {
 class _CreatePostPageState extends State<CreatePostPage> {
   final TextEditingController _textController = TextEditingController();
   final TextEditingController _hashtagController = TextEditingController();
+  final List<TextEditingController> _pollOptionControllers = [
+    TextEditingController(),
+    TextEditingController(),
+  ];
 
   final ImagePicker _imagePicker = ImagePicker();
   final CloudinaryService _cloudinaryService = CloudinaryService();
   final MediaService _mediaService = MediaService();
+  final UserService _userService = UserService();
 
   final List<MediaItem> _mediaItems = [];
   final List<String> _hashtags = [];
+  final List<String> _trendingHashtags = const [
+    'technology',
+    'flutter',
+    'design',
+    'startups',
+    'business',
+    'gaming',
+    'movies',
+    'sports',
+    'music',
+    'fitness',
+  ];
 
   PostComposerType _postType = PostComposerType.post;
   String _anonymousCategory = 'confession';
+  int _pollExpirationHours = 24;
 
   bool _isSubmitting = false;
   bool _isPicking = false;
@@ -46,6 +66,9 @@ class _CreatePostPageState extends State<CreatePostPage> {
     super.initState();
 
     _textController.addListener(_onComposerChanged);
+    for (final controller in _pollOptionControllers) {
+      controller.addListener(_onComposerChanged);
+    }
   }
 
   @override
@@ -53,6 +76,9 @@ class _CreatePostPageState extends State<CreatePostPage> {
     _textController.removeListener(_onComposerChanged);
     _textController.dispose();
     _hashtagController.dispose();
+    for (final controller in _pollOptionControllers) {
+      controller.dispose();
+    }
     _cloudinaryService.cancelAllUploads();
     super.dispose();
   }
@@ -72,6 +98,10 @@ class _CreatePostPageState extends State<CreatePostPage> {
         _extractHashtags(_hashtagController.text).isNotEmpty;
 
     if (_currentStep == PostCreationStep.textInput) {
+      if (_postType == PostComposerType.poll) {
+        return _textController.text.trim().isNotEmpty &&
+            _pollOptions.length >= 2;
+      }
       return hasText || hasTags;
     }
 
@@ -81,6 +111,11 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
     return false;
   }
+
+  List<String> get _pollOptions => _pollOptionControllers
+      .map((controller) => controller.text.trim())
+      .where((value) => value.isNotEmpty)
+      .toList();
 
   @override
   Widget build(BuildContext context) {
@@ -176,6 +211,13 @@ class _CreatePostPageState extends State<CreatePostPage> {
           onAnonymousCategoryChanged: _setAnonymousCategory,
           onAddHashtag: _addHashtag,
           onRemoveHashtag: _removeHashtag,
+          suggestionsBuilder: _suggestTokens,
+          pollOptionControllers: _pollOptionControllers,
+          pollExpirationHours: _pollExpirationHours,
+          onPollExpirationHoursChanged: (hours) =>
+              setState(() => _pollExpirationHours = hours),
+          onAddPollOption: _addPollOption,
+          onRemovePollOption: _removePollOption,
         );
 
       case PostCreationStep.mediaPreview:
@@ -193,6 +235,13 @@ class _CreatePostPageState extends State<CreatePostPage> {
           onAddHashtag: _addHashtag,
           onRemoveHashtag: _removeHashtag,
           onChangeMedia: _clearMediaAndGoBack,
+          suggestionsBuilder: _suggestTokens,
+          pollOptionControllers: _pollOptionControllers,
+          pollExpirationHours: _pollExpirationHours,
+          onPollExpirationHoursChanged: (hours) =>
+              setState(() => _pollExpirationHours = hours),
+          onAddPollOption: _addPollOption,
+          onRemovePollOption: _removePollOption,
         );
     }
   }
@@ -271,6 +320,117 @@ class _CreatePostPageState extends State<CreatePostPage> {
     setState(() {
       _anonymousCategory = category;
     });
+  }
+
+  void _addPollOption() {
+    setState(() {
+      _pollOptionControllers.add(TextEditingController());
+    });
+  }
+
+  void _removePollOption(int index) {
+    if (_pollOptionControllers.length <= 2) return;
+
+    setState(() {
+      _pollOptionControllers[index].dispose();
+      _pollOptionControllers.removeAt(index);
+    });
+  }
+
+  Future<List<ComposerTokenSuggestion>> _suggestTokens(
+    ComposerTokenType type,
+    String query,
+  ) async {
+    final normalizedQuery = query.trim().toLowerCase();
+
+    if (type == ComposerTokenType.mention) {
+      if (normalizedQuery.isEmpty) {
+        return const [];
+      }
+
+      try {
+        final users = await _userService.searchUsers(
+          normalizedQuery,
+          limit: 8,
+        );
+
+        return users
+            .map(
+              (user) => ComposerTokenSuggestion(
+                value: _readSuggestionValue(user),
+                label: _readSuggestionLabel(user),
+                subtitle: _readSuggestionSubtitle(user),
+              ),
+            )
+            .where((suggestion) => suggestion.value.isNotEmpty)
+            .toList();
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    final sourceTags = <String>{
+      ..._trendingHashtags,
+      ..._hashtags,
+      ..._extractHashtags(_hashtagController.text),
+    };
+
+    final results = sourceTags
+        .where((tag) => tag.toLowerCase().contains(normalizedQuery))
+        .take(8)
+        .map(
+          (tag) => ComposerTokenSuggestion(
+            value: tag,
+            label: '#$tag',
+            subtitle: 'Hashtag',
+          ),
+        )
+        .toList();
+
+    if (results.isNotEmpty) return results;
+
+    if (normalizedQuery.isEmpty) {
+      return _trendingHashtags
+          .take(8)
+          .map(
+            (tag) => ComposerTokenSuggestion(
+              value: tag,
+              label: '#$tag',
+              subtitle: 'Popular topic',
+            ),
+          )
+          .toList();
+    }
+
+    return [
+      ComposerTokenSuggestion(
+        value: normalizedQuery.replaceAll(RegExp(r'[^a-z0-9_]+'), ''),
+        label: '#$normalizedQuery',
+        subtitle: 'Create new hashtag',
+      ),
+    ];
+  }
+
+  String _readSuggestionValue(Map<String, dynamic> user) {
+    final username = user['username']?.toString().trim();
+    if (username != null && username.isNotEmpty) return username;
+    final name = user['name']?.toString().trim();
+    if (name != null && name.isNotEmpty) return name.replaceAll(' ', '_');
+    return user['id']?.toString().trim() ?? '';
+  }
+
+  String _readSuggestionLabel(Map<String, dynamic> user) {
+    final name = user['name']?.toString().trim();
+    if (name != null && name.isNotEmpty) return name;
+    final username = user['username']?.toString().trim();
+    if (username != null && username.isNotEmpty) return '@$username';
+    return 'User';
+  }
+
+  String? _readSuggestionSubtitle(Map<String, dynamic> user) {
+    final username = user['username']?.toString().trim();
+    if (username != null && username.isNotEmpty) return '@$username';
+    return null;
   }
 
   void _removeHashtag(String tag) {
@@ -468,6 +628,12 @@ class _CreatePostPageState extends State<CreatePostPage> {
               anonymousCategory: _postType == PostComposerType.anonymous
                   ? _anonymousCategory
                   : null,
+              pollOptions: _postType == PostComposerType.poll
+                  ? _pollOptions
+                  : null,
+              pollExpirationHours: _postType == PostComposerType.poll
+                  ? _pollExpirationHours
+                  : null,
             ),
           );
 
@@ -536,6 +702,12 @@ class _CreatePostPageState extends State<CreatePostPage> {
               isAnonymous: _postType == PostComposerType.anonymous,
               anonymousCategory: _postType == PostComposerType.anonymous
                   ? _anonymousCategory
+                  : null,
+              pollOptions: _postType == PostComposerType.poll
+                  ? _pollOptions
+                  : null,
+              pollExpirationHours: _postType == PostComposerType.poll
+                  ? _pollExpirationHours
                   : null,
             ),
           );
@@ -1067,12 +1239,18 @@ class _TextPostComposer extends StatelessWidget {
   final String anonymousCategory;
   final TextEditingController textController;
   final TextEditingController hashtagController;
+  final List<TextEditingController> pollOptionControllers;
   final List<String> hashtags;
   final bool enabled;
   final ValueChanged<PostComposerType> onPostTypeChanged;
   final ValueChanged<String> onAnonymousCategoryChanged;
   final ValueChanged<String> onAddHashtag;
   final ValueChanged<String> onRemoveHashtag;
+  final int pollExpirationHours;
+  final ValueChanged<int> onPollExpirationHoursChanged;
+  final VoidCallback onAddPollOption;
+  final ValueChanged<int> onRemovePollOption;
+  final ComposerTokenSuggestionsBuilder suggestionsBuilder;
 
   const _TextPostComposer({
     super.key,
@@ -1080,12 +1258,18 @@ class _TextPostComposer extends StatelessWidget {
     required this.anonymousCategory,
     required this.textController,
     required this.hashtagController,
+    required this.pollOptionControllers,
     required this.hashtags,
     required this.enabled,
     required this.onPostTypeChanged,
     required this.onAnonymousCategoryChanged,
     required this.onAddHashtag,
     required this.onRemoveHashtag,
+    required this.pollExpirationHours,
+    required this.onPollExpirationHoursChanged,
+    required this.onAddPollOption,
+    required this.onRemovePollOption,
+    required this.suggestionsBuilder,
   });
 
   @override
@@ -1111,12 +1295,11 @@ class _TextPostComposer extends StatelessWidget {
                 borderRadius: BorderRadius.circular(22),
                 border: Border.all(color: AppColors.cardBorderColor),
               ),
-              child: TextField(
+              child: TokenSuggestionField(
                 controller: textController,
                 enabled: enabled,
-                autofocus: true,
+                suggestionsBuilder: suggestionsBuilder,
                 maxLines: null,
-                keyboardType: TextInputType.multiline,
                 style: AppTheme.blackTextStyle.copyWith(
                   fontSize: 20,
                   height: 1.38,
@@ -1133,6 +1316,23 @@ class _TextPostComposer extends StatelessWidget {
               ),
             ),
           ),
+          if (postType == PostComposerType.poll) ...[
+            const SizedBox(height: 14),
+            _PollComposerPanel(
+              enabled: enabled,
+              optionControllers: pollOptionControllers,
+              expirationHours: pollExpirationHours,
+              onExpirationHoursChanged: onPollExpirationHoursChanged,
+              onAddOption: onAddPollOption,
+              onRemoveOption: onRemovePollOption,
+            ),
+          ],
+          if (postType == PostComposerType.question) ...[
+            const SizedBox(height: 14),
+            _QuestionPromptPanel(
+              enabled: enabled,
+            ),
+          ],
           const SizedBox(height: 14),
           _HashtagInput(
             controller: hashtagController,
@@ -1141,6 +1341,7 @@ class _TextPostComposer extends StatelessWidget {
             compact: false,
             onAddHashtag: onAddHashtag,
             onRemoveHashtag: onRemoveHashtag,
+            suggestionsBuilder: suggestionsBuilder,
           ),
         ],
       ),
@@ -1154,6 +1355,7 @@ class _MediaPostComposer extends StatelessWidget {
   final List<MediaItem> mediaItems;
   final TextEditingController textController;
   final TextEditingController hashtagController;
+  final List<TextEditingController> pollOptionControllers;
   final List<String> hashtags;
   final bool enabled;
   final ValueChanged<PostComposerType> onPostTypeChanged;
@@ -1161,6 +1363,11 @@ class _MediaPostComposer extends StatelessWidget {
   final ValueChanged<String> onAddHashtag;
   final ValueChanged<String> onRemoveHashtag;
   final VoidCallback onChangeMedia;
+  final int pollExpirationHours;
+  final ValueChanged<int> onPollExpirationHoursChanged;
+  final VoidCallback onAddPollOption;
+  final ValueChanged<int> onRemovePollOption;
+  final ComposerTokenSuggestionsBuilder suggestionsBuilder;
 
   const _MediaPostComposer({
     super.key,
@@ -1169,6 +1376,7 @@ class _MediaPostComposer extends StatelessWidget {
     required this.mediaItems,
     required this.textController,
     required this.hashtagController,
+    required this.pollOptionControllers,
     required this.hashtags,
     required this.enabled,
     required this.onPostTypeChanged,
@@ -1176,6 +1384,11 @@ class _MediaPostComposer extends StatelessWidget {
     required this.onAddHashtag,
     required this.onRemoveHashtag,
     required this.onChangeMedia,
+    required this.pollExpirationHours,
+    required this.onPollExpirationHoursChanged,
+    required this.onAddPollOption,
+    required this.onRemovePollOption,
+    required this.suggestionsBuilder,
   });
 
   @override
@@ -1202,7 +1415,25 @@ class _MediaPostComposer extends StatelessWidget {
           _CaptionInput(
             controller: textController,
             enabled: enabled,
+            suggestionsBuilder: suggestionsBuilder,
           ),
+          if (postType == PostComposerType.poll) ...[
+            const SizedBox(height: 14),
+            _PollComposerPanel(
+              enabled: enabled,
+              optionControllers: pollOptionControllers,
+              expirationHours: pollExpirationHours,
+              onExpirationHoursChanged: onPollExpirationHoursChanged,
+              onAddOption: onAddPollOption,
+              onRemoveOption: onRemovePollOption,
+            ),
+          ],
+          if (postType == PostComposerType.question) ...[
+            const SizedBox(height: 14),
+            _QuestionPromptPanel(
+              enabled: enabled,
+            ),
+          ],
           const SizedBox(height: 14),
           _HashtagInput(
             controller: hashtagController,
@@ -1211,6 +1442,7 @@ class _MediaPostComposer extends StatelessWidget {
             compact: true,
             onAddHashtag: onAddHashtag,
             onRemoveHashtag: onRemoveHashtag,
+            suggestionsBuilder: suggestionsBuilder,
           ),
         ],
       ),
@@ -1409,10 +1641,12 @@ class _LargeFilePreview extends StatelessWidget {
 class _CaptionInput extends StatelessWidget {
   final TextEditingController controller;
   final bool enabled;
+  final ComposerTokenSuggestionsBuilder suggestionsBuilder;
 
   const _CaptionInput({
     required this.controller,
     required this.enabled,
+    required this.suggestionsBuilder,
   });
 
   @override
@@ -1425,9 +1659,10 @@ class _CaptionInput extends StatelessWidget {
           color: AppColors.cardBorderColor,
         ),
       ),
-      child: TextField(
+      child: TokenSuggestionField(
         controller: controller,
         enabled: enabled,
+        suggestionsBuilder: suggestionsBuilder,
         maxLines: 4,
         minLines: 2,
         style: AppTheme.blackTextStyle.copyWith(
@@ -1454,6 +1689,7 @@ class _HashtagInput extends StatelessWidget {
   final bool compact;
   final ValueChanged<String> onAddHashtag;
   final ValueChanged<String> onRemoveHashtag;
+  final ComposerTokenSuggestionsBuilder suggestionsBuilder;
 
   const _HashtagInput({
     required this.controller,
@@ -1462,6 +1698,7 @@ class _HashtagInput extends StatelessWidget {
     required this.compact,
     required this.onAddHashtag,
     required this.onRemoveHashtag,
+    required this.suggestionsBuilder,
   });
 
   @override
@@ -1484,13 +1721,15 @@ class _HashtagInput extends StatelessWidget {
                     color: AppColors.cardBorderColor,
                   ),
                 ),
-          child: TextField(
+          child: TokenSuggestionField(
             controller: controller,
             enabled: enabled,
+            suggestionsBuilder: suggestionsBuilder,
+            supportedTokenTypes: const [ComposerTokenType.hashtag],
             style: AppTheme.blackTextStyle.copyWith(
               fontSize: 15,
             ),
-            textInputAction: TextInputAction.done,
+            textAlign: TextAlign.start,
             decoration: InputDecoration(
               hintText: 'Add hashtags',
               hintStyle: AppTheme.greyTextStyle.copyWith(
@@ -1507,7 +1746,6 @@ class _HashtagInput extends StatelessWidget {
                 vertical: 14,
               ),
             ),
-            onSubmitted: onAddHashtag,
           ),
         ),
         if (hashtags.isNotEmpty) ...[
@@ -1700,6 +1938,228 @@ class _AnonymousCategoryChip extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(999),
       ),
+    );
+  }
+}
+
+class _QuestionPromptPanel extends StatelessWidget {
+  final bool enabled;
+
+  const _QuestionPromptPanel({
+    required this.enabled,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.primary.withOpacity(0.14)),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.question_mark_rounded,
+            color: AppColors.primary,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              enabled
+                  ? 'Write a sharp question and let the feed handle the discussion.'
+                  : 'Question cards are being prepared.',
+              style: AppTheme.greyTextStyle.copyWith(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PollComposerPanel extends StatelessWidget {
+  final bool enabled;
+  final List<TextEditingController> optionControllers;
+  final int expirationHours;
+  final ValueChanged<int> onExpirationHoursChanged;
+  final VoidCallback onAddOption;
+  final ValueChanged<int> onRemoveOption;
+
+  const _PollComposerPanel({
+    required this.enabled,
+    required this.optionControllers,
+    required this.expirationHours,
+    required this.onExpirationHoursChanged,
+    required this.onAddOption,
+    required this.onRemoveOption,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final durations = [12, 24, 48, 72];
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.cardBorderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.poll_rounded, color: AppColors.primary),
+              const SizedBox(width: 10),
+              Text(
+                'Poll Options',
+                style: AppTheme.blackTextStyle.copyWith(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: enabled ? onAddOption : null,
+                icon: const Icon(Icons.add),
+                label: const Text('Add option'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...optionControllers.asMap().entries.map(
+            (entry) {
+              final index = entry.key;
+              final controller = entry.value;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _PollOptionField(
+                  controller: controller,
+                  enabled: enabled,
+                  index: index + 1,
+                  canRemove: optionControllers.length > 2,
+                  onRemove: () => onRemoveOption(index),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Expiration',
+            style: AppTheme.blackTextStyle.copyWith(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: durations.map((hours) {
+              final selected = hours == expirationHours;
+              return ChoiceChip(
+                label: Text('${hours}h'),
+                selected: selected,
+                onSelected: enabled
+                    ? (_) => onExpirationHoursChanged(hours)
+                    : null,
+                selectedColor: AppColors.primary.withOpacity(0.16),
+                backgroundColor: AppColors.backgroundColor,
+                labelStyle: TextStyle(
+                  color: selected ? AppColors.primary : AppColors.text,
+                  fontWeight: FontWeight.w700,
+                ),
+                side: BorderSide(
+                  color: selected
+                      ? AppColors.primary.withOpacity(0.26)
+                      : AppColors.cardBorderColor,
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PollOptionField extends StatelessWidget {
+  final TextEditingController controller;
+  final bool enabled;
+  final int index;
+  final bool canRemove;
+  final VoidCallback onRemove;
+
+  const _PollOptionField({
+    required this.controller,
+    required this.enabled,
+    required this.index,
+    required this.canRemove,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Text(
+            '$index',
+            style: const TextStyle(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w800,
+              fontSize: 12,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: TextField(
+            controller: controller,
+            enabled: enabled,
+            decoration: InputDecoration(
+              hintText: 'Option $index',
+              filled: true,
+              fillColor: AppColors.backgroundColor,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: AppColors.cardBorderColor),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: AppColors.cardBorderColor),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
+            ),
+          ),
+        ),
+        if (canRemove) ...[
+          const SizedBox(width: 8),
+          IconButton(
+            onPressed: enabled ? onRemove : null,
+            icon: const Icon(Icons.close_rounded),
+          ),
+        ],
+      ],
     );
   }
 }

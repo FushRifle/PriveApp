@@ -18,6 +18,9 @@ class FeedPost {
   final String postType;
   final bool isAnonymous;
   final String? anonymousCategory;
+  final String? pollQuestion;
+  final List<String> pollOptions;
+  final int? pollExpirationHours;
 
   FeedPost({
     required this.id,
@@ -38,6 +41,9 @@ class FeedPost {
     this.postType = 'standard',
     this.isAnonymous = false,
     this.anonymousCategory,
+    this.pollQuestion,
+    this.pollOptions = const [],
+    this.pollExpirationHours,
   });
 
   factory FeedPost.fromJson(Map<String, dynamic> json) {
@@ -80,6 +86,19 @@ class FeedPost {
           (json['post_type']?.toString().toLowerCase() == 'anonymous'),
       anonymousCategory: json['anonymousCategory']?.toString() ??
           json['anonymous_category']?.toString(),
+      pollQuestion: json['pollQuestion']?.toString() ??
+          json['poll_question']?.toString() ??
+          json['pollTitle']?.toString() ??
+          json['poll_title']?.toString(),
+      pollOptions: _parseStringList(
+        json['pollOptions'] ?? json['poll_options'] ?? json['options'],
+      ),
+      pollExpirationHours: _toIntOrNull(
+        json['pollExpirationHours'] ??
+            json['poll_expiration_hours'] ??
+            json['expiresInHours'] ??
+            json['expires_in_hours'],
+      ),
     );
   }
 
@@ -102,6 +121,9 @@ class FeedPost {
         'postType': postType,
         'isAnonymous': isAnonymous,
         'anonymousCategory': anonymousCategory,
+        'pollQuestion': pollQuestion,
+        'pollOptions': pollOptions,
+        'pollExpirationHours': pollExpirationHours,
       };
 
   FeedPost copyWith({
@@ -123,6 +145,9 @@ class FeedPost {
     String? postType,
     bool? isAnonymous,
     String? anonymousCategory,
+    String? pollQuestion,
+    List<String>? pollOptions,
+    int? pollExpirationHours,
   }) {
     return FeedPost(
       id: id ?? this.id,
@@ -143,6 +168,9 @@ class FeedPost {
       postType: postType ?? this.postType,
       isAnonymous: isAnonymous ?? this.isAnonymous,
       anonymousCategory: anonymousCategory ?? this.anonymousCategory,
+      pollQuestion: pollQuestion ?? this.pollQuestion,
+      pollOptions: pollOptions ?? this.pollOptions,
+      pollExpirationHours: pollExpirationHours ?? this.pollExpirationHours,
     );
   }
 
@@ -158,7 +186,7 @@ class FeedPost {
       final category = _labelize(anonymousCategory ?? 'anonymous');
       return category == 'Anonymous' ? 'Anonymous' : 'Anonymous / $category';
     }
-    return switch (postType) {
+      return switch (postType) {
       'poll' => 'Poll',
       'question' => 'Question',
       'daily_prompt' || 'prompt' => 'Daily Prompt',
@@ -305,6 +333,12 @@ class Comment {
   final String userName;
   final String userAvatar;
   final String content;
+  final int likes;
+  final int dislikes;
+  final int replyCount;
+  final bool isLiked;
+  final bool isDisliked;
+  final int? parentCommentId;
   final DateTime createdAt;
 
   const Comment({
@@ -313,6 +347,12 @@ class Comment {
     required this.userName,
     required this.userAvatar,
     required this.content,
+    this.likes = 0,
+    this.dislikes = 0,
+    this.replyCount = 0,
+    this.isLiked = false,
+    this.isDisliked = false,
+    this.parentCommentId,
     required this.createdAt,
   });
 
@@ -327,6 +367,36 @@ class Comment {
           json['user_avatar']?.toString() ??
           '',
       content: json['content']?.toString() ?? '',
+      likes: _toInt(
+        json['likes'] ??
+            json['likesCount'] ??
+            json['likes_count'] ??
+            json['likeCount'] ??
+            json['like_count'] ??
+            json['_count']?['likes'],
+      ),
+      dislikes: _toInt(
+        json['dislikes'] ??
+            json['dislikesCount'] ??
+            json['dislikes_count'] ??
+            json['dislikeCount'] ??
+            json['dislike_count'] ??
+            json['_count']?['dislikes'],
+      ),
+      replyCount: _toInt(
+        json['replyCount'] ??
+            json['repliesCount'] ??
+            json['reply_count'] ??
+            json['_count']?['replies'],
+      ),
+      isLiked: json['isLiked'] == true || json['is_liked'] == true,
+      isDisliked: json['isDisliked'] == true || json['is_disliked'] == true,
+      parentCommentId: _toIntOrNull(
+        json['parentCommentId'] ??
+            json['parent_comment_id'] ??
+            json['replyToCommentId'] ??
+            json['reply_to_comment_id'],
+      ),
       createdAt: _parseDateTime(json['createdAt'] ?? json['created_at']),
     );
   }
@@ -337,6 +407,12 @@ class Comment {
         'userName': userName,
         'userAvatar': userAvatar,
         'content': content,
+        'likes': likes,
+        'dislikes': dislikes,
+        'replyCount': replyCount,
+        'isLiked': isLiked,
+        'isDisliked': isDisliked,
+        'parentCommentId': parentCommentId,
         'createdAt': createdAt.toIso8601String(),
       };
 
@@ -346,6 +422,12 @@ class Comment {
     String? userName,
     String? userAvatar,
     String? content,
+    int? likes,
+    int? dislikes,
+    int? replyCount,
+    bool? isLiked,
+    bool? isDisliked,
+    int? parentCommentId,
     DateTime? createdAt,
   }) {
     return Comment(
@@ -354,6 +436,12 @@ class Comment {
       userName: userName ?? this.userName,
       userAvatar: userAvatar ?? this.userAvatar,
       content: content ?? this.content,
+      likes: likes ?? this.likes,
+      dislikes: dislikes ?? this.dislikes,
+      replyCount: replyCount ?? this.replyCount,
+      isLiked: isLiked ?? this.isLiked,
+      isDisliked: isDisliked ?? this.isDisliked,
+      parentCommentId: parentCommentId ?? this.parentCommentId,
       createdAt: createdAt ?? this.createdAt,
     );
   }
