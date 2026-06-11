@@ -11,6 +11,7 @@ import 'package:clique/bloc/match/match_bloc.dart';
 import 'package:clique/bloc/reels/reel_bloc.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
 import 'package:clique/bloc/community/community_bloc.dart';
+import 'package:clique/bloc/settings/settings_bloc.dart';
 
 import 'package:clique/ui/pages/auth/demographic_page.dart';
 import 'package:clique/ui/pages/auth/onboarding_page.dart';
@@ -35,6 +36,7 @@ import 'package:clique/ui/pages/main/match/matches_page.dart';
 import 'package:clique/ui/pages/main/notification/notification_page.dart';
 
 import 'package:clique/ui/pages/main/profile/edit_profile_page.dart';
+import 'package:clique/ui/pages/main/profile/account_switch_page.dart';
 import 'package:clique/ui/pages/main/profile/other_profile_page.dart';
 import 'package:clique/ui/pages/main/profile/profile_page.dart';
 
@@ -112,6 +114,11 @@ class AppRouter {
       case NamedRoutes.editProfileScreen:
         return _page(
           const EditProfilePage(),
+        );
+
+      case NamedRoutes.accountSwitchScreen:
+        return _page(
+          const AccountSwitchPage(),
         );
 
       case NamedRoutes.friendListScreen:
@@ -230,7 +237,10 @@ class AppRouter {
 
       case NamedRoutes.settingsScreen:
         return _page(
-          const SettingsPage(),
+          BlocProvider(
+            create: (_) => SettingsBloc()..add(LoadSettings()),
+            child: const SettingsPage(),
+          ),
         );
 
       case NamedRoutes.aboutScreen:

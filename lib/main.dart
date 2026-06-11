@@ -12,8 +12,10 @@ import 'package:cloudinary_url_gen/cloudinary.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/router/auth_guard.dart';
+import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/app/configs/api_config.dart';
+import 'package:clique/core/services/security/app_lock_service.dart';
 import 'package:clique/core/providers/theme_provider.dart';
 import 'package:clique/bloc/cloudinary/cloudinary_cubit.dart';
 import 'package:clique/bloc/profile/profile_bloc.dart';
@@ -88,11 +90,15 @@ class MyApp extends ConsumerStatefulWidget {
 
 class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   late final AuthBloc _authBloc;
+  final AppLockService _appLockService = AppLockService.instance;
 
   final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
       GlobalKey<ScaffoldMessengerState>();
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   DateTime? _lastAuthCheck;
+  bool _isPresentingAppLock = false;
+  bool _isAppUnlocked = false;
 
   @override
   void initState() {
@@ -125,12 +131,42 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
 
         _authBloc.add(CheckAuthStatus());
       }
+
+      _maybePresentAppLock();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _isAppUnlocked = false;
     }
   }
 
   @override
   void didChangePlatformBrightness() {
     setState(() {});
+  }
+
+  Future<void> _maybePresentAppLock() async {
+    if (_isPresentingAppLock || _isAppUnlocked) return;
+
+    final authState = _authBloc.state;
+    if (!authState.isAuthenticated || authState.token == null) return;
+
+    final isEnabled = await _appLockService.isEnabled();
+    if (!isEnabled) return;
+
+    final navigator = _navigatorKey.currentState;
+    if (navigator == null) return;
+
+    _isPresentingAppLock = true;
+    try {
+      final unlocked = await navigator.pushNamed<bool>(
+        NamedRoutes.lockScreenScreen,
+      );
+      if (unlocked == true) {
+        _isAppUnlocked = true;
+      }
+    } finally {
+      _isPresentingAppLock = false;
+    }
   }
 
   @override
@@ -178,6 +214,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
                 context.read<FeatureAccessCubit>()
                   ..load()
                   ..configureRevenueCat(userID);
+                _maybePresentAppLock();
               }
               if (state.status == AuthStatus.unauthenticated) {
                 PushNotificationService.instance.deleteDeviceToken();
@@ -194,6 +231,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
               title: 'Clique',
               debugShowCheckedModeBanner: false,
               scaffoldMessengerKey: _scaffoldMessengerKey,
+              navigatorKey: _navigatorKey,
               theme: AppTheme.lightTheme,
               darkTheme: AppTheme.darkTheme,
               themeMode: themeMode,

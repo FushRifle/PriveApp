@@ -227,8 +227,7 @@ class _InboxPageState extends State<InboxPage> {
     );
   }
 
-  Widget _buildMessageItem(
-    BuildContext context, _ChatMessage message) {
+  Widget _buildMessageItem(BuildContext context, _ChatMessage message) {
     final firstLetter =
         message.name.isNotEmpty ? message.name[0].toUpperCase() : 'U';
     final isBot = message.name.toLowerCase() == 'Clique';

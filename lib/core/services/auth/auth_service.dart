@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:clique/core/clients/api_service.dart';
 import 'package:clique/core/clients/supabase_client.dart';
+import 'package:clique/core/local_cache/local_cache_service.dart';
 
 class AuthService {
   final ApiService _api = ApiService();
@@ -229,6 +230,7 @@ class AuthService {
 
     // Clear all stored credentials
     await _storage.deleteAll();
+    await LocalCacheService.clearAll();
   }
 
   // GET CURRENT TOKEN

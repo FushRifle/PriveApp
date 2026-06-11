@@ -14,6 +14,10 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     on<ToggleNotifications>(_onToggleNotifications);
     on<TogglePrivateAccount>(_onTogglePrivateAccount);
     on<ToggleTwoFactorAuth>(_onToggleTwoFactorAuth);
+    on<ToggleAppLock>(_onToggleAppLock);
+    on<ToggleAppLockBiometric>(_onToggleAppLockBiometric);
+    on<ToggleAppLockPin>(_onToggleAppLockPin);
+    on<ChangeAppLockTimeout>(_onChangeAppLockTimeout);
     on<ChangeLanguage>(_onChangeLanguage);
     on<ChangeTheme>(_onChangeTheme);
     on<ChangeVideoQuality>(_onChangeVideoQuality);
@@ -43,6 +47,10 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         notificationsEnabled: settings['notificationsEnabled'] ?? true,
         privateAccount: settings['privateAccount'] ?? false,
         twoFactorAuth: settings['twoFactorAuth'] ?? false,
+        appLockEnabled: settings['appLockEnabled'] ?? false,
+        appLockBiometricEnabled: settings['appLockBiometricEnabled'] ?? false,
+        appLockPinEnabled: settings['appLockPinEnabled'] ?? false,
+        appLockTimeoutSeconds: settings['appLockTimeoutSeconds'] ?? 0,
         language: settings['language']?.toString() ?? 'en',
         videoQuality: settings['videoQuality']?.toString() ?? 'auto',
         theme: settings['theme']?.toString() ?? 'system',
@@ -83,6 +91,12 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
             event.notificationsEnabled ?? state.notificationsEnabled,
         privateAccount: event.privateAccount ?? state.privateAccount,
         twoFactorAuth: event.twoFactorAuth ?? state.twoFactorAuth,
+        appLockEnabled: event.appLockEnabled ?? state.appLockEnabled,
+        appLockBiometricEnabled:
+            event.appLockBiometricEnabled ?? state.appLockBiometricEnabled,
+        appLockPinEnabled: event.appLockPinEnabled ?? state.appLockPinEnabled,
+        appLockTimeoutSeconds:
+            event.appLockTimeoutSeconds ?? state.appLockTimeoutSeconds,
         language: event.language ?? state.language,
         videoQuality: event.videoQuality ?? state.videoQuality,
         theme: event.theme ?? state.theme,
@@ -101,6 +115,10 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         notificationsEnabled: event.notificationsEnabled,
         privateAccount: event.privateAccount,
         twoFactorAuth: event.twoFactorAuth,
+        appLockEnabled: event.appLockEnabled,
+        appLockBiometricEnabled: event.appLockBiometricEnabled,
+        appLockPinEnabled: event.appLockPinEnabled,
+        appLockTimeoutSeconds: event.appLockTimeoutSeconds,
         language: event.language,
         videoQuality: event.videoQuality,
         theme: event.theme,
@@ -152,6 +170,62 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   ) async {
     await _onUpdateSettings(
       UpdateSettings(twoFactorAuth: event.enabled),
+      emit,
+    );
+  }
+
+  Future<void> _onToggleAppLock(
+    ToggleAppLock event,
+    Emitter<SettingsState> emit,
+  ) async {
+    await _onUpdateSettings(
+      UpdateSettings(
+        appLockEnabled: event.enabled,
+        appLockBiometricEnabled:
+            event.enabled ? state.getAppLockBiometricEnabled : false,
+        appLockPinEnabled: event.enabled ? state.getAppLockPinEnabled : false,
+        appLockTimeoutSeconds:
+            event.enabled ? state.getAppLockTimeoutSeconds : 0,
+      ),
+      emit,
+    );
+  }
+
+  Future<void> _onToggleAppLockBiometric(
+    ToggleAppLockBiometric event,
+    Emitter<SettingsState> emit,
+  ) async {
+    await _onUpdateSettings(
+      UpdateSettings(
+        appLockBiometricEnabled: event.enabled,
+        appLockEnabled: event.enabled || state.getAppLockPinEnabled,
+      ),
+      emit,
+    );
+  }
+
+  Future<void> _onToggleAppLockPin(
+    ToggleAppLockPin event,
+    Emitter<SettingsState> emit,
+  ) async {
+    await _onUpdateSettings(
+      UpdateSettings(
+        appLockPinEnabled: event.enabled,
+        appLockEnabled: event.enabled || state.getAppLockBiometricEnabled,
+      ),
+      emit,
+    );
+  }
+
+  Future<void> _onChangeAppLockTimeout(
+    ChangeAppLockTimeout event,
+    Emitter<SettingsState> emit,
+  ) async {
+    await _onUpdateSettings(
+      UpdateSettings(
+        appLockTimeoutSeconds: event.seconds,
+        appLockEnabled: state.getAppLockEnabled,
+      ),
       emit,
     );
   }

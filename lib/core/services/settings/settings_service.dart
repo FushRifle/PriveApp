@@ -17,6 +17,10 @@ class SettingsService {
     bool? notificationsEnabled,
     bool? privateAccount,
     bool? twoFactorAuth,
+    bool? appLockEnabled,
+    bool? appLockBiometricEnabled,
+    bool? appLockPinEnabled,
+    int? appLockTimeoutSeconds,
     String? language,
     String? videoQuality,
     String? theme,
@@ -32,6 +36,16 @@ class SettingsService {
       }
       if (privateAccount != null) data['privateAccount'] = privateAccount;
       if (twoFactorAuth != null) data['twoFactorAuth'] = twoFactorAuth;
+      if (appLockEnabled != null) data['appLockEnabled'] = appLockEnabled;
+      if (appLockBiometricEnabled != null) {
+        data['appLockBiometricEnabled'] = appLockBiometricEnabled;
+      }
+      if (appLockPinEnabled != null) {
+        data['appLockPinEnabled'] = appLockPinEnabled;
+      }
+      if (appLockTimeoutSeconds != null) {
+        data['appLockTimeoutSeconds'] = appLockTimeoutSeconds;
+      }
       if (language != null) data['language'] = language;
       if (videoQuality != null) data['videoQuality'] = videoQuality;
       if (theme != null) data['theme'] = theme;

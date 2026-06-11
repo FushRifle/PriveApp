@@ -15,6 +15,10 @@ class UpdateSettings extends SettingsEvent {
   final bool? notificationsEnabled;
   final bool? privateAccount;
   final bool? twoFactorAuth;
+  final bool? appLockEnabled;
+  final bool? appLockBiometricEnabled;
+  final bool? appLockPinEnabled;
+  final int? appLockTimeoutSeconds;
   final String? language;
   final String? videoQuality;
   final String? theme;
@@ -27,6 +31,10 @@ class UpdateSettings extends SettingsEvent {
     this.notificationsEnabled,
     this.privateAccount,
     this.twoFactorAuth,
+    this.appLockEnabled,
+    this.appLockBiometricEnabled,
+    this.appLockPinEnabled,
+    this.appLockTimeoutSeconds,
     this.language,
     this.videoQuality,
     this.theme,
@@ -41,6 +49,10 @@ class UpdateSettings extends SettingsEvent {
         notificationsEnabled,
         privateAccount,
         twoFactorAuth,
+        appLockEnabled,
+        appLockBiometricEnabled,
+        appLockPinEnabled,
+        appLockTimeoutSeconds,
         language,
         videoQuality,
         theme,
@@ -77,6 +89,42 @@ class ToggleTwoFactorAuth extends SettingsEvent {
 
   @override
   List<Object?> get props => [enabled];
+}
+
+class ToggleAppLock extends SettingsEvent {
+  final bool enabled;
+
+  const ToggleAppLock({required this.enabled});
+
+  @override
+  List<Object?> get props => [enabled];
+}
+
+class ToggleAppLockBiometric extends SettingsEvent {
+  final bool enabled;
+
+  const ToggleAppLockBiometric({required this.enabled});
+
+  @override
+  List<Object?> get props => [enabled];
+}
+
+class ToggleAppLockPin extends SettingsEvent {
+  final bool enabled;
+
+  const ToggleAppLockPin({required this.enabled});
+
+  @override
+  List<Object?> get props => [enabled];
+}
+
+class ChangeAppLockTimeout extends SettingsEvent {
+  final int seconds;
+
+  const ChangeAppLockTimeout({required this.seconds});
+
+  @override
+  List<Object?> get props => [seconds];
 }
 
 class ChangeLanguage extends SettingsEvent {

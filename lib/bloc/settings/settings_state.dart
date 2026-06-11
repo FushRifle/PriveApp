@@ -5,6 +5,10 @@ class SettingsState extends Equatable {
   final bool? notificationsEnabled;
   final bool? privateAccount;
   final bool? twoFactorAuth;
+  final bool? appLockEnabled;
+  final bool? appLockBiometricEnabled;
+  final bool? appLockPinEnabled;
+  final int? appLockTimeoutSeconds;
   final String? language;
   final String? videoQuality;
   final String? theme;
@@ -25,6 +29,10 @@ class SettingsState extends Equatable {
     this.notificationsEnabled,
     this.privateAccount,
     this.twoFactorAuth,
+    this.appLockEnabled,
+    this.appLockBiometricEnabled,
+    this.appLockPinEnabled,
+    this.appLockTimeoutSeconds,
     this.language,
     this.videoQuality,
     this.theme,
@@ -44,6 +52,10 @@ class SettingsState extends Equatable {
   bool get getNotificationsEnabled => notificationsEnabled ?? true;
   bool get getPrivateAccount => privateAccount ?? false;
   bool get getTwoFactorAuth => twoFactorAuth ?? false;
+  bool get getAppLockEnabled => appLockEnabled ?? false;
+  bool get getAppLockBiometricEnabled => appLockBiometricEnabled ?? false;
+  bool get getAppLockPinEnabled => appLockPinEnabled ?? false;
+  int get getAppLockTimeoutSeconds => appLockTimeoutSeconds ?? 0;
   String get getLanguage => language ?? 'en';
   String get getVideoQuality => videoQuality ?? 'auto';
   String get getTheme => theme ?? 'system';
@@ -56,6 +68,10 @@ class SettingsState extends Equatable {
     bool? notificationsEnabled,
     bool? privateAccount,
     bool? twoFactorAuth,
+    bool? appLockEnabled,
+    bool? appLockBiometricEnabled,
+    bool? appLockPinEnabled,
+    int? appLockTimeoutSeconds,
     String? language,
     String? videoQuality,
     String? theme,
@@ -75,6 +91,12 @@ class SettingsState extends Equatable {
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
       privateAccount: privateAccount ?? this.privateAccount,
       twoFactorAuth: twoFactorAuth ?? this.twoFactorAuth,
+      appLockEnabled: appLockEnabled ?? this.appLockEnabled,
+      appLockBiometricEnabled:
+          appLockBiometricEnabled ?? this.appLockBiometricEnabled,
+      appLockPinEnabled: appLockPinEnabled ?? this.appLockPinEnabled,
+      appLockTimeoutSeconds:
+          appLockTimeoutSeconds ?? this.appLockTimeoutSeconds,
       language: language ?? this.language,
       videoQuality: videoQuality ?? this.videoQuality,
       theme: theme ?? this.theme,
@@ -96,6 +118,10 @@ class SettingsState extends Equatable {
         notificationsEnabled,
         privateAccount,
         twoFactorAuth,
+        appLockEnabled,
+        appLockBiometricEnabled,
+        appLockPinEnabled,
+        appLockTimeoutSeconds,
         language,
         videoQuality,
         theme,

@@ -102,6 +102,52 @@ class UserService {
     }
   }
 
+  Future<Map<String, dynamic>> getProfileSwitchState() async {
+    try {
+      final response = await _api.get('/api/users/profiles');
+      return _asMap(response.data);
+    } on DioException catch (e) {
+      throw _handleError(e, 'Failed to load profile switch state');
+    }
+  }
+
+  Future<Map<String, dynamic>> linkProfile(int profileUserId) async {
+    try {
+      final response = await _api.post(
+        '/api/users/profiles/link',
+        data: {
+          'profileUserId': profileUserId,
+        },
+      );
+      return _asMap(response.data);
+    } on DioException catch (e) {
+      throw _handleError(e, 'Failed to link profile');
+    }
+  }
+
+  Future<Map<String, dynamic>> switchProfile(int profileUserId) async {
+    try {
+      final response = await _api.post(
+        '/api/users/profiles/switch',
+        data: {
+          'profileUserId': profileUserId,
+        },
+      );
+      return _asMap(response.data);
+    } on DioException catch (e) {
+      throw _handleError(e, 'Failed to switch profile');
+    }
+  }
+
+  Future<Map<String, dynamic>> unlinkProfile(int profileUserId) async {
+    try {
+      final response = await _api.delete('/api/users/profiles/$profileUserId');
+      return _asMap(response.data);
+    } on DioException catch (e) {
+      throw _handleError(e, 'Failed to unlink profile');
+    }
+  }
+
 // Update demographic info
   Future<void> updateDemographicInfo({
     required int age,

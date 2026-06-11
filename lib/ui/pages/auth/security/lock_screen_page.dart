@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:clique/app/configs/colors.dart';
+import 'package:clique/core/services/security/app_lock_service.dart';
 
 class LockScreenPage extends StatefulWidget {
   const LockScreenPage({super.key});
@@ -11,11 +12,14 @@ class LockScreenPage extends StatefulWidget {
 
 class _LockScreenPageState extends State<LockScreenPage> {
   final LocalAuthentication _localAuth = LocalAuthentication();
-  
+  final AppLockService _appLockService = AppLockService.instance;
+
+  bool _isBiometricAvailable = false;
   bool _isBiometricEnabled = false;
   bool _isPinEnabled = false;
   String _savedPin = '';
   bool _isVerifying = false;
+  bool _isLoading = true;
   String? _error;
 
   @override
@@ -35,20 +39,33 @@ class _LockScreenPageState extends State<LockScreenPage> {
       final isAvailable = await _localAuth.canCheckBiometrics;
       final isDeviceSupported = await _localAuth.isDeviceSupported();
       setState(() {
-        _isBiometricEnabled = isAvailable && isDeviceSupported;
+        _isBiometricAvailable = isAvailable && isDeviceSupported;
       });
     } catch (e) {
       debugPrint('Biometric check error: $e');
     }
   }
 
-  void _loadSettings() {
-    // Load from shared preferences or secure storage
-    // For now, using demo data
-    setState(() {
-      _isPinEnabled = false;
-      _savedPin = '';
-    });
+  Future<void> _loadSettings() async {
+    try {
+      final settings = await _appLockService.load();
+      final savedPin = await _appLockService.getPin() ?? '';
+
+      if (!mounted) return;
+
+      setState(() {
+        _isBiometricEnabled = settings.biometricEnabled;
+        _isPinEnabled = settings.pinEnabled;
+        _savedPin = savedPin;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Failed to load app lock settings: $e';
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _enableBiometric() async {
@@ -64,11 +81,17 @@ class _LockScreenPageState extends State<LockScreenPage> {
       );
 
       if (isAuthenticated) {
-        setState(() {
-          _isPinEnabled = false;
-          _savedPin = '';
-        });
-        await _saveBiometricEnabled(true);
+        await _appLockService.save(
+          biometricEnabled: true,
+          pinEnabled: _isPinEnabled,
+          timeoutSeconds: 0,
+          pin: _isPinEnabled ? _savedPin : null,
+        );
+        if (mounted) {
+          setState(() {
+            _isBiometricEnabled = true;
+          });
+        }
         _showSuccessSheet('Biometric lock enabled successfully');
       } else {
         setState(() {
@@ -87,10 +110,11 @@ class _LockScreenPageState extends State<LockScreenPage> {
   }
 
   Future<void> _disableBiometric() async {
-    await _saveBiometricEnabled(false);
-    setState(() {
-      _isBiometricEnabled = false;
-    });
+    await _persistLockState(
+      biometricEnabled: false,
+      pinEnabled: _isPinEnabled,
+      pin: _isPinEnabled ? _savedPin : null,
+    );
     _showSnackBar('Biometric lock disabled');
   }
 
@@ -110,11 +134,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
       builder: (context) => const ModernPinSetupSheet(),
     ).then((pin) {
       if (pin != null && pin is String && pin.isNotEmpty) {
-        setState(() {
-          _savedPin = pin;
-          _isPinEnabled = true;
-        });
-        _showSuccessSheet('PIN enabled successfully');
+        _savePin(pin);
       }
     });
   }
@@ -127,25 +147,54 @@ class _LockScreenPageState extends State<LockScreenPage> {
       builder: (context) => ModernPinVerifySheet(savedPin: _savedPin),
     ).then((success) {
       if (success == true) {
-        setState(() {
-          _isPinEnabled = true;
-        });
-        _showSuccessSheet('PIN enabled successfully');
+        _showModernPinSetup();
       }
     });
   }
 
   Future<void> _disablePin() async {
-    setState(() {
-      _isPinEnabled = false;
-      _savedPin = '';
-    });
+    await _appLockService.clearPin();
+    await _persistLockState(
+      biometricEnabled: _isBiometricEnabled,
+      pinEnabled: false,
+      pin: null,
+    );
     _showSnackBar('PIN lock disabled');
   }
 
-  Future<void> _saveBiometricEnabled(bool enabled) async {
-    // Save to shared preferences or secure storage
-    // For now, just update state
+  Future<void> _savePin(String pin) async {
+    await _persistLockState(
+      biometricEnabled: _isBiometricEnabled,
+      pinEnabled: true,
+      pin: pin,
+    );
+    if (!mounted) return;
+    setState(() {
+      _savedPin = pin;
+      _isPinEnabled = true;
+    });
+    _showSuccessSheet('PIN enabled successfully');
+  }
+
+  Future<void> _persistLockState({
+    required bool biometricEnabled,
+    required bool pinEnabled,
+    String? pin,
+  }) async {
+    await _appLockService.save(
+      biometricEnabled: biometricEnabled,
+      pinEnabled: pinEnabled,
+      timeoutSeconds: 0,
+      pin: pin,
+    );
+    if (!mounted) return;
+    setState(() {
+      _isBiometricEnabled = biometricEnabled;
+      _isPinEnabled = pinEnabled;
+      if (!pinEnabled) {
+        _savedPin = '';
+      }
+    });
   }
 
   void _showSuccessSheet(String message) {
@@ -211,6 +260,12 @@ class _LockScreenPageState extends State<LockScreenPage> {
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
+            if (_isLoading)
+              const Padding(
+                padding: EdgeInsets.only(top: 48, bottom: 24),
+                child: CircularProgressIndicator(),
+              ),
+
             // Header Illustration
             Container(
               margin: const EdgeInsets.only(bottom: 32),
@@ -260,7 +315,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
             ),
 
             // Biometric Section
-            if (_isBiometricEnabled)
+            if (_isBiometricAvailable)
               Container(
                 margin: const EdgeInsets.only(bottom: 20),
                 decoration: BoxDecoration(
@@ -543,7 +598,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
 // Success Sheet
 class SuccessSheet extends StatelessWidget {
   final String message;
-  
+
   const SuccessSheet({
     super.key,
     required this.message,
@@ -552,13 +607,13 @@ class SuccessSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     Future.delayed(const Duration(seconds: 2), () {
       if (context.mounted) {
         Navigator.pop(context);
       }
     });
-    
+
     return Container(
       height: 400,
       decoration: BoxDecoration(
@@ -595,9 +650,9 @@ class SuccessSheet extends StatelessWidget {
               );
             },
           ),
-          
+
           const SizedBox(height: 32),
-          
+
           // Success text
           Text(
             'Success!',
@@ -607,9 +662,9 @@ class SuccessSheet extends StatelessWidget {
               color: isDarkMode ? Colors.white : Colors.black,
             ),
           ),
-          
+
           const SizedBox(height: 12),
-          
+
           Text(
             message,
             style: TextStyle(
@@ -618,9 +673,9 @@ class SuccessSheet extends StatelessWidget {
             ),
             textAlign: TextAlign.center,
           ),
-          
+
           const SizedBox(height: 48),
-          
+
           // Done button
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -672,7 +727,7 @@ class _ModernPinSetupSheetState extends State<ModernPinSetupSheet> {
         setState(() {
           _pin += digit;
         });
-        
+
         if (_pin.length == 4) {
           _moveToConfirm();
         }
@@ -682,7 +737,7 @@ class _ModernPinSetupSheetState extends State<ModernPinSetupSheet> {
         setState(() {
           _confirmPin += digit;
         });
-        
+
         if (_confirmPin.length == 4) {
           _verifyAndClose();
         }
@@ -707,14 +762,6 @@ class _ModernPinSetupSheetState extends State<ModernPinSetupSheet> {
   void _moveToConfirm() {
     setState(() {
       _isSettingPin = false;
-    });
-  }
-
-  void _resetPin() {
-    setState(() {
-      _pin = '';
-      _confirmPin = '';
-      _isSettingPin = true;
     });
   }
 
@@ -768,7 +815,7 @@ class _ModernPinSetupSheetState extends State<ModernPinSetupSheet> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
       height: MediaQuery.of(context).size.height * 0.85,
       decoration: BoxDecoration(
@@ -787,9 +834,9 @@ class _ModernPinSetupSheetState extends State<ModernPinSetupSheet> {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          
+
           const SizedBox(height: 32),
-          
+
           // Title and progress indicator
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -814,7 +861,7 @@ class _ModernPinSetupSheetState extends State<ModernPinSetupSheet> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                
+
                 // Step indicator
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -831,17 +878,17 @@ class _ModernPinSetupSheetState extends State<ModernPinSetupSheet> {
                     _buildStep(2, _isSettingPin),
                   ],
                 ),
-                
+
                 const SizedBox(height: 48),
-                
+
                 // PIN dots
                 _buildPinDots(_isSettingPin ? _pin : _confirmPin, 4),
-                
+
                 const SizedBox(height: 48),
               ],
             ),
           ),
-          
+
           // Numpad
           Expanded(
             child: Container(
@@ -856,7 +903,8 @@ class _ModernPinSetupSheetState extends State<ModernPinSetupSheet> {
                       physics: const NeverScrollableScrollPhysics(),
                       children: [
                         for (int i = 1; i <= 9; i++)
-                          _buildNumpadButton(i.toString(), () => _addDigit(i.toString())),
+                          _buildNumpadButton(
+                              i.toString(), () => _addDigit(i.toString())),
                         _buildNumpadButton('delete', _removeLastDigit),
                         _buildNumpadButton('0', () => _addDigit('0')),
                         _buildNumpadButton(
@@ -877,7 +925,7 @@ class _ModernPinSetupSheetState extends State<ModernPinSetupSheet> {
                       ],
                     ),
                   ),
-                  
+
                   // Cancel button
                   TextButton(
                     onPressed: _isLoading ? null : () => Navigator.pop(context),
@@ -924,11 +972,12 @@ class _ModernPinSetupSheetState extends State<ModernPinSetupSheet> {
     );
   }
 
-  Widget _buildNumpadButton(String label, VoidCallback onTap, {bool isEnabled = true}) {
+  Widget _buildNumpadButton(String label, VoidCallback onTap,
+      {bool isEnabled = true}) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final isDelete = label == 'delete';
     final isCheck = label == 'check';
-    
+
     return Padding(
       padding: const EdgeInsets.all(8),
       child: InkWell(
@@ -946,10 +995,12 @@ class _ModernPinSetupSheetState extends State<ModernPinSetupSheet> {
           child: Center(
             child: isDelete
                 ? Icon(Icons.backspace_outlined,
-                    color: isEnabled ? AppColors.primary : Colors.grey, size: 28)
+                    color: isEnabled ? AppColors.primary : Colors.grey,
+                    size: 28)
                 : isCheck
                     ? Icon(Icons.check_circle,
-                        color: isEnabled ? AppColors.primary : Colors.grey, size: 32)
+                        color: isEnabled ? AppColors.primary : Colors.grey,
+                        size: 32)
                     : Text(
                         label,
                         style: TextStyle(
@@ -970,7 +1021,7 @@ class _ModernPinSetupSheetState extends State<ModernPinSetupSheet> {
 // Modern PIN Verify Sheet
 class ModernPinVerifySheet extends StatefulWidget {
   final String savedPin;
-  
+
   const ModernPinVerifySheet({
     super.key,
     required this.savedPin,
@@ -991,7 +1042,7 @@ class _ModernPinVerifySheetState extends State<ModernPinVerifySheet> {
         _pin += digit;
         _error = null;
       });
-      
+
       if (_pin.length == 4) {
         _verifyPin();
       }
@@ -1044,7 +1095,7 @@ class _ModernPinVerifySheetState extends State<ModernPinVerifySheet> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
       height: MediaQuery.of(context).size.height * 0.70,
       decoration: BoxDecoration(
@@ -1063,9 +1114,9 @@ class _ModernPinVerifySheetState extends State<ModernPinVerifySheet> {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          
+
           const SizedBox(height: 32),
-          
+
           // Title
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -1087,17 +1138,18 @@ class _ModernPinVerifySheetState extends State<ModernPinVerifySheet> {
                   ),
                 ),
                 const SizedBox(height: 48),
-                
+
                 // PIN dots
                 _buildPinDots(_pin, 4),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Error message
                 if (_error != null)
                   Container(
                     margin: const EdgeInsets.only(top: 16),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
                       color: Colors.red.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
@@ -1110,12 +1162,12 @@ class _ModernPinVerifySheetState extends State<ModernPinVerifySheet> {
                       ),
                     ),
                   ),
-                
+
                 const SizedBox(height: 48),
               ],
             ),
           ),
-          
+
           // Numpad
           Expanded(
             child: Container(
@@ -1130,14 +1182,15 @@ class _ModernPinVerifySheetState extends State<ModernPinVerifySheet> {
                       physics: const NeverScrollableScrollPhysics(),
                       children: [
                         for (int i = 1; i <= 9; i++)
-                          _buildNumpadButton(i.toString(), () => _addDigit(i.toString())),
+                          _buildNumpadButton(
+                              i.toString(), () => _addDigit(i.toString())),
                         _buildNumpadButton('delete', _removeLastDigit),
                         _buildNumpadButton('0', () => _addDigit('0')),
                         _buildNumpadButton('check', () {}, isEnabled: false),
                       ],
                     ),
                   ),
-                  
+
                   // Cancel button
                   TextButton(
                     onPressed: _isLoading ? null : () => Navigator.pop(context),
@@ -1158,11 +1211,12 @@ class _ModernPinVerifySheetState extends State<ModernPinVerifySheet> {
     );
   }
 
-  Widget _buildNumpadButton(String label, VoidCallback onTap, {bool isEnabled = true}) {
+  Widget _buildNumpadButton(String label, VoidCallback onTap,
+      {bool isEnabled = true}) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final isDelete = label == 'delete';
     final isCheck = label == 'check';
-    
+
     return Padding(
       padding: const EdgeInsets.all(8),
       child: InkWell(
@@ -1180,10 +1234,12 @@ class _ModernPinVerifySheetState extends State<ModernPinVerifySheet> {
           child: Center(
             child: isDelete
                 ? Icon(Icons.backspace_outlined,
-                    color: isEnabled ? AppColors.primary : Colors.grey, size: 28)
+                    color: isEnabled ? AppColors.primary : Colors.grey,
+                    size: 28)
                 : isCheck
                     ? Icon(Icons.check_circle,
-                        color: isEnabled ? AppColors.primary : Colors.grey, size: 32)
+                        color: isEnabled ? AppColors.primary : Colors.grey,
+                        size: 32)
                     : Text(
                         label,
                         style: TextStyle(

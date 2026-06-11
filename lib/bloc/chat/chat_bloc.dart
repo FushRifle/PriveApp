@@ -209,9 +209,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   Future<void> _onLoadConversations(
       LoadConversations event, Emitter<ChatState> emit) async {
     await _loadCurrentUserId();
-    if (state.conversations.isEmpty) {
-      emit(state.copyWith(conversationsStatus: ChatStatus.loading));
-    }
 
     try {
       final cachedConversations = state.conversations.isNotEmpty
@@ -224,6 +221,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           conversationsStatus: ChatStatus.success,
           clearError: true,
         ));
+      } else if (state.conversations.isEmpty) {
+        emit(state.copyWith(conversationsStatus: ChatStatus.loading));
       }
 
       final data = await _chatService.getConversations(

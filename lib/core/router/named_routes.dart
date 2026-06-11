@@ -9,6 +9,7 @@ class NamedRoutes {
   static const profileScreen = '/profile-screen';
   static const otherProfileScreen = '/profile-screen/other';
   static const editProfileScreen = '/edit_profile-screen';
+  static const accountSwitchScreen = '/account-switch-screen';
   static const insightsScreen = '/insights-screen';
   static const friendListScreen = '/friends-screen';
   static const matchScreen = '/match-screen';

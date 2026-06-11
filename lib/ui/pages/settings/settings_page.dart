@@ -1,5 +1,6 @@
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/core/router/named_routes.dart';
+import 'package:clique/bloc/settings/settings_bloc.dart';
 import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/core/providers/theme_provider.dart';
@@ -31,6 +32,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   void initState() {
     super.initState();
     context.read<UserBloc>().add(LoadCurrentUser());
+    context.read<SettingsBloc>().add(LoadSettings());
   }
 
   @override
@@ -65,284 +67,316 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         builder: (context, state) {
           final user = state.currentUser ?? _user;
 
-          return Scaffold(
-            backgroundColor: isDark
-                ? AppColors.darkBackground
-                : AppColors.settingsLightBackground,
-            appBar: AppBar(
-              backgroundColor: AppColors.transparent,
-              elevation: 0,
-              centerTitle: true,
-              leading: IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  color: isDark ? AppColors.white : AppColors.black,
-                ),
-              ),
-              title: Text(
-                'Settings',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: isDark ? AppColors.white : AppColors.black,
-                ),
-              ),
-            ),
-            body: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 18,
-                vertical: 10,
-              ),
-              child: Column(
-                children: [
-                  _buildProfileCard(user, isDark),
-                  const SizedBox(height: 28),
-                  _section(
-                    'Appearance',
-                    [
-                      _themeDropdownTile(
-                        isDark: isDark,
-                        icon: Icons.dark_mode_rounded,
-                        themeMode: themeMode,
-                        onChanged: (mode) async {
-                          if (mode == null) return;
-
-                          await ref
-                              .read(themeModeProvider.notifier)
-                              .setThemeMode(mode);
-                        },
-                      ),
-                      _divider(isDark),
-                      _tile(
-                        isDark: isDark,
-                        icon: Icons.language_rounded,
-                        title: 'Language',
-                        subtitle: selectedLanguage,
-                        onTap: _showLanguagePicker,
-                      ),
-                    ],
-                    isDark,
-                  ),
-                  _section(
-                    'Privacy',
-                    [
-                      _switchTile(
-                        isDark: isDark,
-                        icon: Icons.lock_outline_rounded,
-                        title: 'Private Account',
-                        subtitle: 'Only approved users can see your content',
-                        value: privateAccount,
-                        onChanged: (v) {
-                          setState(() {
-                            privateAccount = v;
-                          });
-                        },
-                      ),
-                      _divider(isDark),
-                      _switchTile(
-                        isDark: isDark,
-                        icon: Icons.notifications_active_outlined,
-                        title: 'Notifications',
-                        subtitle: 'Push notifications',
-                        value: notificationsEnabled,
-                        onChanged: (v) {
-                          setState(() {
-                            notificationsEnabled = v;
-                          });
-                        },
-                      ),
-                    ],
-                    isDark,
-                  ),
-                  _section(
-                    'Security',
-                    [
-                      _switchTile(
-                        isDark: isDark,
-                        icon: Icons.security_rounded,
-                        title: 'Two Factor Authentication',
-                        subtitle: 'Extra security layer',
-                        value: twoFactor,
-                        onChanged: (v) {
-                          setState(() {
-                            twoFactor = v;
-                          });
-
-                          if (v) {
-                            Navigator.pushNamed(
-                              context,
-                              NamedRoutes.twoFactorScreen,
-                            );
-                          }
-                        },
-                      ),
-                      _divider(isDark),
-                      _tile(
-                        isDark: isDark,
-                        icon: Icons.password_rounded,
-                        title: 'Change Password',
-                        subtitle: 'Update password',
-                        onTap: () {
-                          Navigator.pushNamed(
-                            context,
-                            NamedRoutes.changePasswordScreen,
-                          );
-                        },
-                      ),
-                      _divider(isDark),
-                      _tile(
-                        isDark: isDark,
-                        icon: Icons.fingerprint_rounded,
-                        title: 'App Lock',
-                        subtitle: 'Biometric & PIN',
-                        onTap: () {
-                          Navigator.pushNamed(
-                            context,
-                            NamedRoutes.lockScreenScreen,
-                          );
-                        },
-                      ),
-                    ],
-                    isDark,
-                  ),
-                  _section(
-                    'Storage',
-                    [
-                      _tile(
-                        isDark: isDark,
-                        icon: Icons.high_quality_rounded,
-                        title: 'Video Quality',
-                        subtitle: selectedQuality,
-                        onTap: _showQualityPicker,
-                      ),
-                      _divider(isDark),
-                      _tile(
-                        isDark: isDark,
-                        icon: Icons.download_rounded,
-                        title: 'Downloads',
-                        subtitle: 'Manage downloads',
-                        onTap: () {},
-                      ),
-                    ],
-                    isDark,
-                  ),
-                  _section(
-                    'Premium',
-                    [
-                      _tile(
-                        isDark: isDark,
-                        icon: Icons.workspace_premium_rounded,
-                        title: 'Clique Premium',
-                        subtitle: 'Unlock exclusive features',
-                        trailing: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(50),
-                            gradient: const LinearGradient(
-                              colors: [
-                                AppColors.primary,
-                                AppColors.secondary,
-                              ],
-                            ),
-                          ),
-                          child: const Text(
-                            'PREMIUM',
-                            style: TextStyle(
-                              color: AppColors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const SubscribePage(),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                    isDark,
-                  ),
-                  _section(
-                    'About',
-                    [
-                      _tile(
-                        isDark: isDark,
-                        icon: Icons.info_outline_rounded,
-                        title: 'About Clique',
-                        subtitle: 'Version 1.0.0',
-                        onTap: () {
-                          Navigator.pushNamed(
-                            context,
-                            NamedRoutes.aboutScreen,
-                          );
-                        },
-                      ),
-                      _divider(isDark),
-                      _tile(
-                        isDark: isDark,
-                        icon: Icons.description_outlined,
-                        title: 'Terms of Service',
-                        subtitle: 'Read our policies',
-                        onTap: () {
-                          Navigator.pushNamed(
-                            context,
-                            NamedRoutes.termsScreen,
-                          );
-                        },
-                      ),
-                      _divider(isDark),
-                      _tile(
-                        isDark: isDark,
-                        icon: Icons.privacy_tip_outlined,
-                        title: 'Privacy Policy',
-                        subtitle: 'Your privacy matters',
-                        onTap: () {
-                          Navigator.pushNamed(
-                            context,
-                            NamedRoutes.privacyScreen,
-                          );
-                        },
-                      ),
-                    ],
-                    isDark,
-                  ),
-                  const SizedBox(height: 30),
-                  GestureDetector(
-                    onTap: _showLogoutDialog,
-                    child: Container(
-                      width: double.infinity,
-                      height: 58,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        color: AppColors.redColor.withOpacity(0.08),
-                        border: Border.all(
-                          color: AppColors.redColor.withOpacity(0.2),
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'Logout',
-                          style: TextStyle(
-                            color: AppColors.redColor,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
+          return BlocBuilder<SettingsBloc, SettingsState>(
+            builder: (context, settingsState) {
+              return Scaffold(
+                backgroundColor: isDark
+                    ? AppColors.darkBackground
+                    : AppColors.settingsLightBackground,
+                appBar: AppBar(
+                  backgroundColor: AppColors.transparent,
+                  elevation: 0,
+                  centerTitle: true,
+                  leading: IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: isDark ? AppColors.white : AppColors.black,
                     ),
                   ),
-                  const SizedBox(height: 40),
-                ],
-              ),
-            ),
+                  title: Text(
+                    'Settings',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? AppColors.white : AppColors.black,
+                    ),
+                  ),
+                ),
+                body: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 10,
+                  ),
+                  child: Column(
+                    children: [
+                      _buildProfileCard(user, isDark),
+                      const SizedBox(height: 28),
+                      _section(
+                        'Appearance',
+                        [
+                          _themeDropdownTile(
+                            isDark: isDark,
+                            icon: Icons.dark_mode_rounded,
+                            themeMode: themeMode,
+                            onChanged: (mode) async {
+                              if (mode == null) return;
+
+                              await ref
+                                  .read(themeModeProvider.notifier)
+                                  .setThemeMode(mode);
+                            },
+                          ),
+                          _divider(isDark),
+                          _tile(
+                            isDark: isDark,
+                            icon: Icons.language_rounded,
+                            title: 'Language',
+                            subtitle: selectedLanguage,
+                            onTap: _showLanguagePicker,
+                          ),
+                        ],
+                        isDark,
+                      ),
+                      _section(
+                        'Privacy',
+                        [
+                          _switchTile(
+                            isDark: isDark,
+                            icon: Icons.lock_outline_rounded,
+                            title: 'Private Account',
+                            subtitle:
+                                'Only approved users can see your content',
+                            value: privateAccount,
+                            onChanged: (v) {
+                              setState(() {
+                                privateAccount = v;
+                              });
+                            },
+                          ),
+                          _divider(isDark),
+                          _switchTile(
+                            isDark: isDark,
+                            icon: Icons.notifications_active_outlined,
+                            title: 'Notifications',
+                            subtitle: 'Push notifications',
+                            value: notificationsEnabled,
+                            onChanged: (v) {
+                              setState(() {
+                                notificationsEnabled = v;
+                              });
+                            },
+                          ),
+                        ],
+                        isDark,
+                      ),
+                      _section(
+                        'Security',
+                        [
+                          _switchTile(
+                            isDark: isDark,
+                            icon: Icons.security_rounded,
+                            title: 'Two Factor Authentication',
+                            subtitle: 'Extra security layer',
+                            value: twoFactor,
+                            onChanged: (v) {
+                              setState(() {
+                                twoFactor = v;
+                              });
+
+                              if (v) {
+                                Navigator.pushNamed(
+                                  context,
+                                  NamedRoutes.twoFactorScreen,
+                                );
+                              }
+                            },
+                          ),
+                          _divider(isDark),
+                          _tile(
+                            isDark: isDark,
+                            icon: Icons.password_rounded,
+                            title: 'Change Password',
+                            subtitle: 'Update password',
+                            onTap: () {
+                              Navigator.pushNamed(
+                                context,
+                                NamedRoutes.changePasswordScreen,
+                              );
+                            },
+                          ),
+                          _divider(isDark),
+                          _tile(
+                            isDark: isDark,
+                            icon: Icons.fingerprint_rounded,
+                            title: 'App Lock',
+                            subtitle: settingsState.getAppLockEnabled
+                                ? 'Enabled with biometric/PIN'
+                                : 'Disabled',
+                            trailing: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: settingsState.getAppLockEnabled
+                                    ? AppColors.primary.withOpacity(0.12)
+                                    : AppColors.greyColor.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                settingsState.getAppLockEnabled ? 'On' : 'Off',
+                                style: TextStyle(
+                                  color: settingsState.getAppLockEnabled
+                                      ? AppColors.primary
+                                      : AppColors.greyColor,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            onTap: () async {
+                              final settingsBloc = context.read<SettingsBloc>();
+                              await Navigator.pushNamed(
+                                context,
+                                NamedRoutes.lockScreenScreen,
+                              );
+                              if (!mounted) return;
+                              settingsBloc.add(LoadSettings());
+                            },
+                          ),
+                        ],
+                        isDark,
+                      ),
+                      _section(
+                        'Storage',
+                        [
+                          _tile(
+                            isDark: isDark,
+                            icon: Icons.high_quality_rounded,
+                            title: 'Video Quality',
+                            subtitle: selectedQuality,
+                            onTap: _showQualityPicker,
+                          ),
+                          _divider(isDark),
+                          _tile(
+                            isDark: isDark,
+                            icon: Icons.download_rounded,
+                            title: 'Downloads',
+                            subtitle: 'Manage downloads',
+                            onTap: () {},
+                          ),
+                        ],
+                        isDark,
+                      ),
+                      _section(
+                        'Premium',
+                        [
+                          _tile(
+                            isDark: isDark,
+                            icon: Icons.workspace_premium_rounded,
+                            title: 'Clique Premium',
+                            subtitle: 'Unlock exclusive features',
+                            trailing: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(50),
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    AppColors.primary,
+                                    AppColors.secondary,
+                                  ],
+                                ),
+                              ),
+                              child: const Text(
+                                'PREMIUM',
+                                style: TextStyle(
+                                  color: AppColors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const SubscribePage(),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                        isDark,
+                      ),
+                      _section(
+                        'About',
+                        [
+                          _tile(
+                            isDark: isDark,
+                            icon: Icons.info_outline_rounded,
+                            title: 'About Clique',
+                            subtitle: 'Version 1.0.0',
+                            onTap: () {
+                              Navigator.pushNamed(
+                                context,
+                                NamedRoutes.aboutScreen,
+                              );
+                            },
+                          ),
+                          _divider(isDark),
+                          _tile(
+                            isDark: isDark,
+                            icon: Icons.description_outlined,
+                            title: 'Terms of Service',
+                            subtitle: 'Read our policies',
+                            onTap: () {
+                              Navigator.pushNamed(
+                                context,
+                                NamedRoutes.termsScreen,
+                              );
+                            },
+                          ),
+                          _divider(isDark),
+                          _tile(
+                            isDark: isDark,
+                            icon: Icons.privacy_tip_outlined,
+                            title: 'Privacy Policy',
+                            subtitle: 'Your privacy matters',
+                            onTap: () {
+                              Navigator.pushNamed(
+                                context,
+                                NamedRoutes.privacyScreen,
+                              );
+                            },
+                          ),
+                        ],
+                        isDark,
+                      ),
+                      const SizedBox(height: 30),
+                      GestureDetector(
+                        onTap: _showLogoutDialog,
+                        child: Container(
+                          width: double.infinity,
+                          height: 58,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            color: AppColors.redColor.withOpacity(0.08),
+                            border: Border.all(
+                              color: AppColors.redColor.withOpacity(0.2),
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Logout',
+                              style: TextStyle(
+                                color: AppColors.redColor,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                    ],
+                  ),
+                ),
+              );
+            },
           );
         },
       ),

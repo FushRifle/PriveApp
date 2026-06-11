@@ -13,6 +13,7 @@ import 'package:clique/bloc/friends/friends_bloc.dart';
 import 'package:clique/bloc/insights/insights_bloc.dart';
 
 import 'package:clique/core/models/gallery_model.dart';
+import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/services/friends/friends_service.dart';
 
 import 'package:clique/ui/pages/main/profile/edit_profile_page.dart';
@@ -91,6 +92,13 @@ class _ProfilePageState extends State<ProfilePage>
     _profileRequested = false;
     _loadedMediaKey = null;
     _loadProfile();
+  }
+
+  void _openAccountSwitcher() {
+    Navigator.pushNamed(
+      context,
+      NamedRoutes.accountSwitchScreen,
+    );
   }
 
   void _handleTabChanged() {
@@ -223,6 +231,7 @@ class _ProfilePageState extends State<ProfilePage>
                       _isFollowing = !_isFollowing;
                     });
                   },
+                  onOpenAccountSwitcher: _openAccountSwitcher,
                   onLoadMoreMedia: _loadMoreMedia,
                 );
               },
@@ -390,6 +399,7 @@ class ProfileBody extends StatelessWidget {
   final VoidCallback onRetry;
   final VoidCallback onToggleFollow;
   final ValueChanged<ProfileView>? onMessage;
+  final VoidCallback? onOpenAccountSwitcher;
   final void Function(int userId, ProfileGalleryTabType type) onLoadMoreMedia;
 
   const ProfileBody({
@@ -404,6 +414,7 @@ class ProfileBody extends StatelessWidget {
     required this.onRetry,
     required this.onToggleFollow,
     this.onMessage,
+    this.onOpenAccountSwitcher,
     required this.onLoadMoreMedia,
   });
 
@@ -445,6 +456,7 @@ class ProfileBody extends StatelessWidget {
               isFollowing: isFollowing,
               onToggleFollow: onToggleFollow,
               onMessage: onMessage,
+              onOpenAccountSwitcher: onOpenAccountSwitcher,
             ),
           ),
           _StickyTabBar(
@@ -623,6 +635,7 @@ class _ProfileHeader extends StatelessWidget {
   final bool isFollowing;
   final VoidCallback onToggleFollow;
   final ValueChanged<ProfileView>? onMessage;
+  final VoidCallback? onOpenAccountSwitcher;
 
   const _ProfileHeader({
     required this.profile,
@@ -630,6 +643,7 @@ class _ProfileHeader extends StatelessWidget {
     required this.isFollowing,
     required this.onToggleFollow,
     this.onMessage,
+    this.onOpenAccountSwitcher,
   });
 
   @override
@@ -670,6 +684,7 @@ class _ProfileHeader extends StatelessWidget {
             isFollowing: isFollowing,
             onToggleFollow: onToggleFollow,
             onMessage: onMessage,
+            onOpenAccountSwitcher: onOpenAccountSwitcher,
           ),
           const SizedBox(height: 20),
         ],
@@ -1010,7 +1025,6 @@ class _InsightsButton extends StatelessWidget {
           );
         },
         child: Container(
-          
           height: 44,
           decoration: BoxDecoration(
             color: AppColors.card,
@@ -1019,10 +1033,8 @@ class _InsightsButton extends StatelessWidget {
           ),
           child: Center(
             child: Row(
-              
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                
                 const Icon(
                   Icons.insights,
                   color: AppColors.primary,
@@ -1052,6 +1064,7 @@ class _ActionButtons extends StatelessWidget {
   final bool isFollowing;
   final VoidCallback onToggleFollow;
   final ValueChanged<ProfileView>? onMessage;
+  final VoidCallback? onOpenAccountSwitcher;
 
   const _ActionButtons({
     required this.profile,
@@ -1059,6 +1072,7 @@ class _ActionButtons extends StatelessWidget {
     required this.isFollowing,
     required this.onToggleFollow,
     this.onMessage,
+    this.onOpenAccountSwitcher,
   });
 
   @override
@@ -1066,18 +1080,32 @@ class _ActionButtons extends StatelessWidget {
     if (isOwnProfile) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: _ActionButton(
-          text: 'EDIT PROFILE',
-          backgroundColor: AppColors.primary,
-          textColor: AppColors.white,
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const EditProfilePage(),
+        child: Column(
+          children: [
+            _ActionButton(
+              text: 'EDIT PROFILE',
+              backgroundColor: AppColors.primary,
+              textColor: AppColors.white,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const EditProfilePage(),
+                  ),
+                );
+              },
+            ),
+            if (onOpenAccountSwitcher != null) ...[
+              const SizedBox(height: 12),
+              _ActionButton(
+                text: 'SWITCH ACCOUNT',
+                backgroundColor: AppColors.transparent,
+                textColor: AppColors.primary,
+                hasBorder: true,
+                onTap: onOpenAccountSwitcher!,
               ),
-            );
-          },
+            ],
+          ],
         ),
       );
     }
