@@ -43,6 +43,7 @@ class SendMessage extends ChatEvent {
   final int? replyToId;
   final String? replyToMessage;
   final String? replyToSender;
+  final String? replyToStreamMessageId;
   const SendMessage({
     required this.conversationId,
     required this.receiverId,
@@ -52,10 +53,19 @@ class SendMessage extends ChatEvent {
     this.replyToId,
     this.replyToMessage,
     this.replyToSender,
+    this.replyToStreamMessageId,
   });
   @override
   List<Object?> get props =>
-      [conversationId, receiverId, message, messageType, mediaUrl, replyToId];
+      [
+        conversationId,
+        receiverId,
+        message,
+        messageType,
+        mediaUrl,
+        replyToId,
+        replyToStreamMessageId,
+      ];
 }
 
 class LoadCliqueBotMessages extends ChatEvent {

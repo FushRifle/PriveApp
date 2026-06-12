@@ -1,209 +1,244 @@
 import 'dart:async';
 
 import 'package:clique/core/models/calls.dart';
-import 'package:clique/core/services/calls/call_manager.dart';
 import 'package:clique/core/services/calls/call_service.dart';
-import 'package:clique/ui/pages/main/chat/call/active_call_screen.dart';
-import 'package:clique/ui/widgets/chat/user_avatar.dart';
-import 'package:flutter/material.dart' hide ConnectionState;
-import 'package:livekit_client/livekit_client.dart';
+import 'package:clique/core/services/calls/stream_call_service.dart';
+import 'package:flutter/material.dart';
+import 'package:stream_video_flutter/stream_video_flutter.dart' as stream;
 
 class OutgoingCallScreen extends StatefulWidget {
-  final CallResponse callResponse;
+  final CallResponse? callResponse;
   final UserInfo receiver;
+  final String? callType;
 
   const OutgoingCallScreen({
     super.key,
-    required this.callResponse,
+    this.callResponse,
     required this.receiver,
-  });
+    this.callType,
+  }) : assert(callResponse != null || callType != null);
 
   @override
   State<OutgoingCallScreen> createState() => _OutgoingCallScreenState();
 }
 
 class _OutgoingCallScreenState extends State<OutgoingCallScreen> {
-  final CallManager _callManager = CallManager();
   final CallService _callService = CallService();
-  bool _isConnecting = true;
-  String _status = 'Calling...';
-  bool _navigatedToActiveCall = false;
+  stream.Call? _call;
+  CallResponse? _backendCall;
+  bool _isBootstrapping = true;
   bool _isCancelling = false;
+  String _status = 'Preparing call...';
 
   @override
   void initState() {
     super.initState();
-    _setupCallManagerCallbacks();
-    _initCall();
-    _callManager.playDialTone();
-    _checkCallTimeout();
+    _backendCall = widget.callResponse;
+    unawaited(_bootstrapCall());
   }
 
-  void _setupCallManagerCallbacks() {
-    _callManager.onConnectionStateChanged((state) {
-      if (!mounted) return;
-      setState(() {
-        _isConnecting = state != ConnectionState.connected;
-        _status = state == ConnectionState.connected ? 'Connected' : 'Calling...';
-      });
+  Future<void> _bootstrapCall() async {
+    if (_backendCall == null && widget.callType == null) return;
+
+    setState(() {
+      _isBootstrapping = true;
+      _status = _backendCall == null ? 'Starting call...' : 'Connecting...';
     });
 
-    _callManager.onParticipantJoined((_) {
-      _goToActiveCall();
-    });
+    try {
+      final backendCall = _backendCall ??
+          await _callService.startCall(
+            receiverId: widget.receiver.id,
+            callType: widget.callType ?? 'voice',
+          );
 
-    _callManager.onParticipantLeft((_) {
       if (!mounted) return;
-      setState(() {
-        _status = 'Participant left';
-      });
-    });
-  }
+      if (_isCancelling) {
+        return;
+      }
 
-  Future<void> _initCall() async {
-    final isVideo = widget.callResponse.call.callType == 'video';
-    if (widget.callResponse.liveKitUrl.trim().isEmpty) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Call service is not configured for LiveKit'),
-        ),
+      final streamCall = await StreamCallService.instance.prepareOutgoingCall(
+        callId: backendCall.roomId,
+        memberIds: [widget.receiver.id.toString()],
+        isVideo: backendCall.call.callType == 'video',
       );
-      Navigator.pop(context);
-      return;
+
+      if (!mounted) return;
+      setState(() {
+        _backendCall = backendCall;
+        _call = streamCall;
+        _isBootstrapping = false;
+        _status = 'Calling...';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _status = e.toString();
+        _isBootstrapping = false;
+      });
+      await _showErrorAndExit(_status);
     }
-
-    await _callManager.joinCall(
-      url: widget.callResponse.liveKitUrl,
-      token: widget.callResponse.token,
-      roomId: widget.callResponse.roomId,
-      isPublisher: true,
-      enableVideo: isVideo,
-    );
-    if (!mounted) return;
-    if (_callManager.remoteParticipants.isNotEmpty) {
-      _goToActiveCall();
-    }
   }
 
-  void _goToActiveCall() {
-    if (_navigatedToActiveCall || !mounted) return;
-    _navigatedToActiveCall = true;
-    _callManager.stopDialTone();
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ActiveCallScreen(
-          callResponse: widget.callResponse,
-          isCaller: true,
-        ),
-      ),
-    );
-  }
-
-  void _checkCallTimeout() {
-    Future.delayed(const Duration(seconds: 45), () async {
-      if (!_isConnecting || !mounted || _navigatedToActiveCall) return;
-      await _cancelCall(showNoAnswer: true);
-    });
-  }
-
-  Future<void> _cancelCall({bool showNoAnswer = false}) async {
+  Future<void> _cancelCall() async {
     if (_isCancelling) return;
     _isCancelling = true;
-    await _callManager.stopDialTone();
-    await _callManager.leaveCall();
+
     try {
-      await _callService.endCall(callId: widget.callResponse.call.id);
+      await _call?.reject(reason: stream.CallRejectReason.cancel());
     } catch (_) {}
-    if (!mounted) return;
-    if (showNoAnswer) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No answer')),
-      );
+
+    final backendCall = _backendCall;
+    if (backendCall != null) {
+      try {
+        await _callService.endCall(callId: backendCall.call.id);
+      } catch (_) {}
     }
-    Navigator.pop(context);
+
+    if (mounted) {
+      Navigator.pop(context);
+    }
+
     _isCancelling = false;
+  }
+
+  Future<void> _showErrorAndExit(String message) async {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+    Navigator.pop(context);
+  }
+
+  Future<void> _handleDisconnected(
+    stream.CallDisconnectedProperties properties,
+  ) async {
+    if (_isCancelling) return;
+
+    final backendCall = _backendCall;
+    if (backendCall != null) {
+      try {
+        await _callService.endCall(callId: backendCall.call.id);
+      } catch (_) {}
+    }
+
+    if (mounted && Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
   }
 
   @override
   void dispose() {
-    _callManager.stopDialTone();
-    if (!_isCancelling) {
-      unawaited(_callService.endCall(callId: widget.callResponse.call.id));
+    final backendCall = _backendCall;
+    if (!_isCancelling && backendCall != null) {
+      unawaited(_callService.endCall(callId: backendCall.call.id));
     }
-    unawaited(_callManager.leaveCall());
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final call = _call;
+    if (call != null) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: SafeArea(
+          child: stream.StreamCallContainer(
+            call: call,
+            onCancelCallTap: _cancelCall,
+            onCallDisconnected: _handleDisconnected,
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 60),
-            Text(
-              widget.receiver.name,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              widget.receiver.username,
-              style: const TextStyle(
-                color: Colors.grey,
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 40),
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.green, width: 3),
-              ),
-              child: UserAvatar(
-                avatarUrl: widget.receiver.avatar,
-                name: widget.receiver.name,
-                size: 100,
-              ),
-            ),
-            const SizedBox(height: 40),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.grey[900],
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                _status,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
-              ),
-            ),
-            const Spacer(),
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: GestureDetector(
-                onTap: _cancelCall,
-                child: Container(
-                  width: 70,
-                  height: 70,
-                  decoration: const BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    widget.receiver.name,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  child: const Icon(Icons.call_end, color: Colors.white, size: 32),
-                ),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.receiver.username,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.green, width: 3),
+                    ),
+                    child: CircleAvatar(
+                      backgroundImage: widget.receiver.avatar.isNotEmpty
+                          ? NetworkImage(widget.receiver.avatar)
+                          : null,
+                      backgroundColor: Colors.grey[800],
+                      child: widget.receiver.avatar.isEmpty
+                          ? Text(
+                              widget.receiver.name.isNotEmpty
+                                  ? widget.receiver.name[0].toUpperCase()
+                                  : '?',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            )
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[900],
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      _status,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (_isBootstrapping)
+                    const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                ],
               ),
             ),
-            const SizedBox(height: 20),
-          ],
+          ),
         ),
       ),
     );

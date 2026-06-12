@@ -127,6 +127,7 @@ class ConversationModel {
 class MessageModel {
   final int id;
   final int conversationId; // ADD THIS
+  final String? streamMessageId;
   final int senderId;
   final int receiverId;
   final String message;
@@ -142,6 +143,7 @@ class MessageModel {
   const MessageModel({
     required this.id,
     required this.conversationId, // ADD THIS
+    this.streamMessageId,
     required this.senderId,
     required this.receiverId,
     required this.message,
@@ -159,6 +161,8 @@ class MessageModel {
     return MessageModel(
       id: json['id'] ?? 0,
       conversationId: json['conversationId'] ?? json['conversation_id'] ?? 0,
+      streamMessageId:
+          json['streamMessageId'] ?? json['stream_message_id'] ?? json['streamId'],
       senderId: json['senderId'] ?? json['sender_id'] ?? 0,
       receiverId: json['receiverId'] ?? json['receiver_id'] ?? 0,
       message: json['message'] ?? '',
@@ -177,6 +181,7 @@ class MessageModel {
     return {
       'id': id,
       'conversationId': conversationId, // ADD THIS
+      'streamMessageId': streamMessageId,
       'senderId': senderId,
       'receiverId': receiverId,
       'message': message,
@@ -194,6 +199,7 @@ class MessageModel {
   MessageModel copyWith({
     int? id,
     int? conversationId,
+    String? streamMessageId,
     int? senderId,
     int? receiverId,
     String? message,
@@ -209,6 +215,7 @@ class MessageModel {
     return MessageModel(
       id: id ?? this.id,
       conversationId: conversationId ?? this.conversationId,
+      streamMessageId: streamMessageId ?? this.streamMessageId,
       senderId: senderId ?? this.senderId,
       receiverId: receiverId ?? this.receiverId,
       message: message ?? this.message,

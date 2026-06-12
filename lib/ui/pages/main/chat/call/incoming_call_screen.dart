@@ -1,9 +1,10 @@
+import 'dart:async';
+
 import 'package:clique/core/models/calls.dart';
-import 'package:clique/core/services/calls/call_manager.dart';
 import 'package:clique/core/services/calls/call_service.dart';
-import 'package:clique/ui/pages/main/chat/call/active_call_screen.dart';
-import 'package:clique/ui/widgets/chat/user_avatar.dart';
+import 'package:clique/core/services/calls/stream_call_service.dart';
 import 'package:flutter/material.dart';
+import 'package:stream_video_flutter/stream_video_flutter.dart' as stream;
 
 class IncomingCallScreen extends StatefulWidget {
   final IncomingCallNotification notification;
@@ -19,161 +20,154 @@ class IncomingCallScreen extends StatefulWidget {
   State<IncomingCallScreen> createState() => _IncomingCallScreenState();
 }
 
-class _IncomingCallScreenState extends State<IncomingCallScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  final CallManager _callManager = CallManager();
+class _IncomingCallScreenState extends State<IncomingCallScreen> {
+  stream.Call? _call;
+  bool _isPreparing = true;
+  bool _isResponding = false;
+  String _status = 'Incoming call...';
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    )..repeat(reverse: true);
-
-    _callManager.playRingtone();
+    unawaited(_bootstrapCall());
   }
 
-  @override
-  void dispose() {
-    _animationController.dispose();
-    _callManager.stopRingtone();
-    super.dispose();
+  Future<void> _bootstrapCall() async {
+    try {
+      final call = await StreamCallService.instance.prepareIncomingCall(
+        callId: widget.notification.roomId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _call = call;
+        _isPreparing = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _status = e.toString();
+        _isPreparing = false;
+      });
+      await _showErrorAndExit(_status);
+    }
+  }
+
+  Future<void> _acceptCall() async {
+    if (_isResponding || _call == null) return;
+    _isResponding = true;
+
+    try {
+      await widget.callService.acceptCall(callId: widget.notification.callId);
+      await _call!.accept();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    } finally {
+      _isResponding = false;
+    }
+  }
+
+  Future<void> _declineCall() async {
+    if (_isResponding || _call == null) return;
+    _isResponding = true;
+
+    try {
+      await widget.callService.rejectCall(callId: widget.notification.callId);
+      await _call!.reject(reason: stream.CallRejectReason.decline());
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    } finally {
+      _isResponding = false;
+    }
+  }
+
+  Future<void> _handleDisconnected(
+    stream.CallDisconnectedProperties properties,
+  ) async {
+    if (_isResponding) return;
+
+    try {
+      await widget.callService.endCall(callId: widget.notification.callId);
+    } catch (_) {}
+
+    if (mounted && Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
+  }
+
+  Future<void> _showErrorAndExit(String message) async {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+    Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
+    final call = _call;
+    if (call != null) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: SafeArea(
+          child: stream.StreamCallContainer(
+            call: call,
+            onAcceptCallTap: _acceptCall,
+            onDeclineCallTap: _declineCall,
+            onCallDisconnected: _handleDisconnected,
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 60),
-            Text(
-              widget.notification.caller.name,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                widget.notification.caller.name,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              widget.notification.caller.username,
-              style: const TextStyle(
-                color: Colors.grey,
-                fontSize: 16,
+              const SizedBox(height: 8),
+              Text(
+                widget.notification.caller.username,
+                style: const TextStyle(
+                  color: Colors.grey,
+                  fontSize: 16,
+                ),
               ),
-            ),
-            const SizedBox(height: 40),
-            AnimatedBuilder(
-              animation: _animationController,
-              builder: (context, child) {
-                return Container(
-                  width: 120 + (20 * _animationController.value),
-                  height: 120 + (20 * _animationController.value),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.green
-                          .withOpacity(1 - _animationController.value),
-                      width: 3,
-                    ),
-                  ),
-                  child: UserAvatar(
-                    avatarUrl: widget.notification.caller.avatar,
-                    name: widget.notification.caller.name,
-                    size: 100,
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 60),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.grey[900],
-                borderRadius: BorderRadius.circular(20),
+              const SizedBox(height: 24),
+              Text(
+                _status,
+                style: const TextStyle(color: Colors.white70),
               ),
-              child: Text(
-                'Incoming ${widget.notification.callType} call',
-                style: const TextStyle(color: Colors.white, fontSize: 14),
-              ),
-            ),
-            const Spacer(),
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildActionButton(
-                    icon: Icons.call_end,
-                    color: Colors.red,
-                    onTap: () async {
-                      await _callManager.stopRingtone();
-                      await widget.callService.rejectCall(
-                        callId: widget.notification.callId,
-                      );
-                      if (context.mounted) Navigator.pop(context);
-                    },
-                  ),
-                  _buildActionButton(
-                    icon: widget.notification.callType == 'video'
-                        ? Icons.videocam
-                        : Icons.call,
-                    color: Colors.green,
-                    onTap: () async {
-                      await _callManager.stopRingtone();
-                      final response = await widget.callService.acceptCall(
-                        callId: widget.notification.callId,
-                      );
-                      if (!context.mounted) return;
-                      if (response.liveKitUrl.trim().isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Call service is not configured for LiveKit'),
-                          ),
-                        );
-                        Navigator.pop(context);
-                        return;
-                      }
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ActiveCallScreen(
-                            callResponse: response,
-                            isCaller: false,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: 12),
+              if (_isPreparing)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
+          ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 70,
-        height: 70,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, color: Colors.white, size: 32),
       ),
     );
   }

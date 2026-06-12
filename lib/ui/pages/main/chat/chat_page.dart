@@ -297,15 +297,17 @@ class _ChatPageState extends State<ChatPage>
     }
 
     context.read<ChatBloc>().add(
-          SendMessage(
-            conversationId: widget.conversationId,
-            receiverId: widget.userId,
-            message: text.trim(),
-            messageType: 'text',
-            replyToId: _replyingTo?.id,
-            replyToMessage: _replyingTo?.message,
-            replyToSender: _replyingTo?.isOwn == true ? 'You' : widget.userName,
-          ),
+            SendMessage(
+              conversationId: widget.conversationId,
+              receiverId: widget.userId,
+              message: text.trim(),
+              messageType: 'text',
+              replyToId: _replyingTo?.id,
+              replyToMessage: _replyingTo?.message,
+              replyToSender: _replyingTo?.isOwn == true ? 'You' : widget.userName,
+              replyToStreamMessageId:
+                  _replyingTo?.streamMessageId ?? _replyingTo?.id.toString(),
+            ),
         );
 
     setState(() {
@@ -367,12 +369,14 @@ class _ChatPageState extends State<ChatPage>
                 default:
                   messageText = 'Sent a file';
               }
-              context.read<ChatBloc>().add(SendMessage(
+                context.read<ChatBloc>().add(SendMessage(
                     conversationId: widget.conversationId,
                     receiverId: widget.userId,
                     message: messageText,
                     messageType: state.uploadType!.name,
                     mediaUrl: state.uploadedUrl,
+                    replyToStreamMessageId:
+                        _replyingTo?.streamMessageId ?? _replyingTo?.id.toString(),
                   ));
               _scrollToBottom();
             },

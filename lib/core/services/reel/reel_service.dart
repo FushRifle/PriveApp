@@ -5,6 +5,12 @@ class ReelService {
   final ApiService _api = ApiService();
   final Map<int, List<dynamic>> _reelsCache = {};
 
+  List<dynamic>? readCachedReels({int page = 1}) {
+    final cached = _reelsCache[page];
+    if (cached == null || cached.isEmpty) return null;
+    return List<dynamic>.from(cached);
+  }
+
   // Get reels with pagination
   Future<List<dynamic>> getReels({
     int page = 1,

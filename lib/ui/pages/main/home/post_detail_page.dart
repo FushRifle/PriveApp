@@ -17,8 +17,8 @@ import 'package:clique/core/clients/cloudinary_service.dart';
 import 'package:clique/core/services/home/feed_service.dart';
 import 'package:clique/core/services/user/user_service.dart';
 
+import 'package:clique/ui/widgets/comments/comment_widgets.dart';
 import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
-import 'package:clique/ui/widgets/chat/audio_message_bubble.dart';
 import 'package:clique/ui/widgets/post/post_card.dart';
 
 class PostDetailPage extends StatefulWidget {
@@ -1137,8 +1137,9 @@ class _CommentTile extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _ThreadAvatar(
-                    avatar: comment.userAvatar,
+                  CommentAvatar(
+                    imageUrl: comment.userAvatar,
+                    fallback: comment.userName,
                     size: 40,
                   ),
                   const SizedBox(width: 12),
@@ -1171,11 +1172,14 @@ class _CommentTile extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 7),
-                        if (comment.isVoiceNote && comment.audioUrl.isNotEmpty)
-                          AudioMessageBubble(
+                        if (comment.hasVoiceNote)
+                          CommentVoiceNoteCard(
+                            avatar: comment.userAvatar,
+                            name: comment.userName,
                             audioUrl: comment.audioUrl,
-                            isMe: false,
-                            chatColor: AppColors.primary,
+                            duration: comment.duration,
+                            timeLabel: comment.formattedTimeAgo,
+                            isTemp: false,
                           )
                         else
                           Text(
@@ -1189,7 +1193,7 @@ class _CommentTile extends StatelessWidget {
                         const SizedBox(height: 10),
                         Row(
                           children: [
-                            _ActionChip(
+                            CommentActionChip(
                               icon: comment.isLiked
                                   ? Icons.thumb_up
                                   : Icons.thumb_up_outlined,
@@ -1200,7 +1204,7 @@ class _CommentTile extends StatelessWidget {
                               onTap: () => onLike(comment),
                             ),
                             const SizedBox(width: 8),
-                            _ActionChip(
+                            CommentActionChip(
                               icon: comment.isDisliked
                                   ? Icons.thumb_down
                                   : Icons.thumb_down_outlined,
@@ -1211,7 +1215,7 @@ class _CommentTile extends StatelessWidget {
                               onTap: () => onDislike(comment),
                             ),
                             const SizedBox(width: 8),
-                            _ActionChip(
+                            CommentActionChip(
                               icon: Icons.reply_rounded,
                               label: comment.replyCount > 0
                                   ? '${comment.replyCount} replies'
@@ -1230,92 +1234,6 @@ class _CommentTile extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _ActionChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _ActionChip({
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(999),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected
-              ? AppColors.primary.withOpacity(0.12)
-              : AppColors.backgroundColor.withOpacity(0.72),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: selected
-                ? AppColors.primary.withOpacity(0.28)
-                : AppColors.cardBorderColor,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 15,
-              color: selected ? AppColors.primary : AppColors.textSecondary,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: AppTheme.greyTextStyle.copyWith(
-                color: selected ? AppColors.primary : AppColors.textSecondary,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ThreadAvatar extends StatelessWidget {
-  final String avatar;
-  final double size;
-
-  const _ThreadAvatar({
-    required this.avatar,
-    required this.size,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size + 4,
-      height: size + 4,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: AppColors.card,
-        border: Border.all(
-          color: AppColors.primary.withOpacity(0.16),
-          width: 2,
-        ),
-      ),
-      padding: const EdgeInsets.all(2),
-      child: _Avatar(
-        avatar: avatar,
-        size: size,
-      ),
     );
   }
 }
@@ -1556,7 +1474,7 @@ class _CommentComposer extends StatelessWidget {
                                     : Icons.mic_rounded,
                                 size: 20,
                                 color: isRecordingVoice
-                                    ? AppColors.white
+                                    ? AppColors.secondary
                                     : AppColors.primary,
                               ),
                       ),
@@ -1590,7 +1508,7 @@ class _CommentComposer extends StatelessWidget {
                                 width: 18,
                                 height: 18,
                                 child: CircularProgressIndicator(
-                                  color: AppColors.white,
+                                  color: AppColors.secondary,
                                   strokeWidth: 2,
                                 ),
                               )
@@ -1693,9 +1611,9 @@ class _PostOptionsSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.vertical(
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: const BorderRadius.vertical(
           top: Radius.circular(30),
         ),
       ),

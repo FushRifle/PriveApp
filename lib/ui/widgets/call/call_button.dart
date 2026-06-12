@@ -1,14 +1,7 @@
-import 'dart:async';
-
-import 'package:clique/app/configs/api_config.dart';
-import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/core/models/calls.dart';
-import 'package:clique/core/services/calls/call_service.dart';
 import 'package:clique/core/services/calls/permission_service.dart';
-import 'package:clique/ui/pages/main/chat/call/active_call_screen.dart';
 import 'package:clique/ui/pages/main/chat/call/outgoing_call_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 class CallButton extends StatelessWidget {
   final UserInfo receiver;
@@ -54,6 +47,8 @@ class CallButton extends StatelessWidget {
     required UserInfo receiver,
     required String callType,
   }) async {
+    final navigator = Navigator.of(context);
+
     final hasPermissions = await PermissionService.checkPermissions();
     if (!context.mounted) return;
 
@@ -71,87 +66,13 @@ class CallButton extends StatelessWidget {
       }
     }
 
-    try {
-      final callService = CallService();
-      final currentUserId = _readCurrentUserId(
-        context.read<AuthBloc>().state.user,
-      );
-
-      final activeCall = await callService.getActiveCall();
-      if (!context.mounted) return;
-
-      if (activeCall != null &&
-          (activeCall.callerId == receiver.id ||
-              activeCall.receiverId == receiver.id)) {
-        final tokenResponse =
-            await callService.getToken(roomId: activeCall.roomId);
-        if (!context.mounted) return;
-
-        final response = CallResponse(
-          call: activeCall,
-          roomId: tokenResponse.roomId,
-          token: tokenResponse.token,
-          liveKitUrl: tokenResponse.url,
-        );
-
-        final isCaller =
-            currentUserId != null && activeCall.callerId == currentUserId;
-
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => isCaller
-                ? OutgoingCallScreen(
-                    callResponse: response,
-                    receiver: receiver,
-                  )
-                : ActiveCallScreen(
-                    callResponse: response,
-                    isCaller: false,
-                  ),
-          ),
-        );
-        return;
-      }
-
-      final response = await callService.startCall(
-        receiverId: receiver.id,
-        callType: callType,
-      );
-
-      if (!context.mounted) return;
-
-      if (response.liveKitUrl.trim().isEmpty &&
-          ApiConfig.liveKitUrl.trim().isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Call service is not configured for LiveKit'),
-          ),
-        );
-        return;
-      }
-
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => OutgoingCallScreen(
-            callResponse: response,
-            receiver: receiver,
-          ),
+    await navigator.push(
+      MaterialPageRoute(
+        builder: (_) => OutgoingCallScreen(
+          receiver: receiver,
+          callType: callType,
         ),
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to start call: $e')),
-      );
-    }
-  }
-
-  static int? _readCurrentUserId(Map<String, dynamic>? user) {
-    final rawId = user?['id'];
-    if (rawId is int) return rawId;
-    if (rawId is String) return int.tryParse(rawId);
-    return null;
+      ),
+    );
   }
 }

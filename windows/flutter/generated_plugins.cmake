@@ -5,14 +5,22 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   app_links
   audioplayers_windows
+  battery_plus
   connectivity_plus
+  desktop_drop
   file_selector_windows
   firebase_core
   flutter_secure_storage_windows
   flutter_webrtc
+  gal
   livekit_client
   local_auth_windows
+  media_kit_video
   permission_handler_windows
+  record_windows
+  share_plus
+  stream_webrtc_flutter
+  thumblr_windows
   url_launcher_windows
 )
 

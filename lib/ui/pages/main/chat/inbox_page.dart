@@ -66,8 +66,11 @@ class _InboxPageState extends State<InboxPage> {
               onRefresh: _refreshConversations,
               child: BlocBuilder<ChatBloc, ChatState>(
                 builder: (context, state) {
+                  final conversations = _getDisplayConversations(state);
+                  final hasCachedOrLiveConversations = conversations.isNotEmpty;
+
                   if (state.conversationsStatus == ChatStatus.loading &&
-                      state.conversations.isEmpty) {
+                      !hasCachedOrLiveConversations) {
                     return const Center(
                       child: CircularProgressIndicator(
                         color: AppColors.secondary,
@@ -76,11 +79,9 @@ class _InboxPageState extends State<InboxPage> {
                   }
 
                   if (state.conversationsStatus == ChatStatus.error &&
-                      state.conversations.isEmpty) {
+                      !hasCachedOrLiveConversations) {
                     return _buildErrorWidget(state.error);
                   }
-
-                  final conversations = _getDisplayConversations(state);
 
                   return Padding(
                     padding: const EdgeInsets.only(top: 14),

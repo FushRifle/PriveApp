@@ -62,15 +62,14 @@ class CallService {
     }
   }
 
-  Future<TokenResponse> getToken({required String roomId}) async {
+  Future<StreamAuthResponse> getStreamAuth() async {
     try {
       final response = await _api.get(
-        '${ApiConfig.apiPrefix}${ApiConfig.callsEndpoint}/token',
-        queryParameters: {'roomId': roomId},
+        '${ApiConfig.apiPrefix}${ApiConfig.callsEndpoint}/stream-auth',
         forceRefresh: true,
         useCache: false,
       );
-      return TokenResponse.fromJson(
+      return StreamAuthResponse.fromJson(
         Map<String, dynamic>.from(response.data as Map),
       );
     } on DioException catch (e) {
@@ -126,59 +125,36 @@ class CallService {
 class CallResponse {
   final Call call;
   final String roomId;
-  final String token;
-  final String liveKitUrl;
 
   const CallResponse({
     required this.call,
     required this.roomId,
-    required this.token,
-    required this.liveKitUrl,
   });
 
   factory CallResponse.fromJson(Map<String, dynamic> json) {
     return CallResponse(
       call: Call.fromJson(Map<String, dynamic>.from(json['call'] as Map)),
       roomId: json['roomId'] as String,
-      token: json['token'] as String? ?? '',
-      liveKitUrl: _readLiveKitUrl(json),
     );
-  }
-
-  static String _readLiveKitUrl(Map<String, dynamic> json) {
-    final responseUrl = json['liveKitUrl']?.toString().trim();
-    if (responseUrl != null && responseUrl.isNotEmpty) {
-      return responseUrl;
-    }
-
-    final envUrl = ApiConfig.liveKitUrl.trim();
-    if (envUrl.isNotEmpty) {
-      return envUrl;
-    }
-
-    return '';
   }
 }
 
-class TokenResponse {
+class StreamAuthResponse {
+  final String apiKey;
   final String token;
-  final String url;
-  final String roomId;
+  final UserInfo user;
 
-  const TokenResponse({
+  const StreamAuthResponse({
+    required this.apiKey,
     required this.token,
-    required this.url,
-    required this.roomId,
+    required this.user,
   });
 
-  factory TokenResponse.fromJson(Map<String, dynamic> json) {
-    final responseUrl = json['url']?.toString().trim();
-    return TokenResponse(
+  factory StreamAuthResponse.fromJson(Map<String, dynamic> json) {
+    return StreamAuthResponse(
+      apiKey: json['apiKey']?.toString().trim() ?? '',
       token: json['token'] as String,
-      url: responseUrl != null && responseUrl.isNotEmpty
-          ? responseUrl
-          : ApiConfig.liveKitUrl,
-      roomId: json['roomId'] as String,
+      user: UserInfo.fromJson(Map<String, dynamic>.from(json['user'] as Map)),
     );
   }
 }

@@ -16,6 +16,7 @@ import 'package:clique/core/services/friends/friends_service.dart';
 import 'package:clique/core/services/home/feed_service.dart';
 import 'package:clique/core/services/reel/reel_service.dart';
 import 'package:clique/core/services/user/user_service.dart';
+import 'package:clique/ui/widgets/comments/comment_widgets.dart';
 import 'package:clique/ui/pages/main/chat/chat_page.dart';
 import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
 import 'package:clique/ui/widgets/common/effect_text.dart';
@@ -39,22 +40,24 @@ Future<List<ComposerTokenSuggestion>> _suggestReelComposerTokens(
         limit: 8,
       );
 
-      return users.map((user) {
-        final name = (user['name'] ?? user['displayName'] ?? 'User')
-            .toString()
-            .trim();
-        final username = (user['username'] ?? user['handle'] ?? '')
-            .toString()
-            .trim();
-        final bioValue = user['bio']?.toString();
-        final subtitle = bioValue != null ? bioValue.trim() : '';
+      return users
+          .map((user) {
+            final name = (user['name'] ?? user['displayName'] ?? 'User')
+                .toString()
+                .trim();
+            final username =
+                (user['username'] ?? user['handle'] ?? '').toString().trim();
+            final bioValue = user['bio']?.toString();
+            final subtitle = bioValue != null ? bioValue.trim() : '';
 
-        return ComposerTokenSuggestion(
-          value: username.isNotEmpty ? username : name.replaceAll(' ', '_'),
-          label: username.isNotEmpty ? '@$username' : '@$name',
-          subtitle: subtitle.isNotEmpty ? subtitle : null,
-        );
-      }).where((suggestion) => suggestion.value.isNotEmpty).toList();
+            return ComposerTokenSuggestion(
+              value: username.isNotEmpty ? username : name.replaceAll(' ', '_'),
+              label: username.isNotEmpty ? '@$username' : '@$name',
+              subtitle: subtitle.isNotEmpty ? subtitle : null,
+            );
+          })
+          .where((suggestion) => suggestion.value.isNotEmpty)
+          .toList();
     }
 
     final hashtags = await feedService.getTrendingHashtags(limit: 12);
@@ -1499,7 +1502,7 @@ class _ReelCommentsSheetState extends State<_ReelCommentsSheet> {
             ),
           ),
         ),
-          child: Row(
+        child: Row(
           children: [
             Expanded(
               child: TokenSuggestionField(
@@ -1922,7 +1925,7 @@ class _CommentTile extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _MiniAvatar(
+        CommentAvatar(
           imageUrl: avatar,
           fallback: name,
         ),
@@ -1983,7 +1986,7 @@ class _ShareFriendTile extends StatelessWidget {
           ),
           child: Row(
             children: [
-              _MiniAvatar(
+              CommentAvatar(
                 imageUrl: friend.avatar ?? '',
                 fallback: friend.name,
               ),
@@ -2052,53 +2055,6 @@ class _ShareFriendTile extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MiniAvatar extends StatelessWidget {
-  final String imageUrl;
-  final String fallback;
-
-  const _MiniAvatar({
-    required this.imageUrl,
-    required this.fallback,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final initial =
-        fallback.trim().isNotEmpty ? fallback.trim()[0].toUpperCase() : 'U';
-
-    return Container(
-      width: 42,
-      height: 42,
-      decoration: BoxDecoration(
-        color: AppColors.backgroundColor,
-        shape: BoxShape.circle,
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: imageUrl.startsWith('http')
-          ? CachedNetworkImage(
-              imageUrl: imageUrl,
-              fit: BoxFit.cover,
-              placeholder: (_, __) => _fallback(initial),
-              errorWidget: (_, __, ___) => _fallback(initial),
-            )
-          : _fallback(initial),
-    );
-  }
-
-  Widget _fallback(String initial) {
-    return Center(
-      child: Text(
-        initial,
-        style: TextStyle(
-          color: AppColors.text,
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
         ),
       ),
     );

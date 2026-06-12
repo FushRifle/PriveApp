@@ -362,6 +362,8 @@ class Comment {
     required this.createdAt,
   });
 
+  bool get hasVoiceNote => isVoiceNote || audioUrl.trim().isNotEmpty;
+
   factory Comment.fromJson(Map<String, dynamic> json) {
     return Comment(
       id: _toInt(json['id']),

@@ -16,6 +16,7 @@ class PostActions extends StatelessWidget {
   final VoidCallback onShare;
   final VoidCallback onRepost;
   final VoidCallback? onLikeLongPress;
+  final Key? likeActionKey;
   final IconData? selectedReactionIcon;
   final Color? selectedReactionColor;
   final String? selectedReactionLabel;
@@ -36,6 +37,7 @@ class PostActions extends StatelessWidget {
     required this.onShare,
     required this.onRepost,
     this.onLikeLongPress,
+    this.likeActionKey,
     this.selectedReactionIcon,
     this.selectedReactionColor,
     this.selectedReactionLabel,
@@ -51,7 +53,11 @@ class PostActions extends StatelessWidget {
     final isSmall = width < 390;
 
     final horizontalPadding = isSmall ? 10.0 : 16.0;
-    final gap = isTiny ? 6.0 : isSmall ? 8.0 : 10.0;
+    final gap = isTiny
+        ? 6.0
+        : isSmall
+            ? 8.0
+            : 10.0;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -65,12 +71,11 @@ class PostActions extends StatelessWidget {
           if (showLikeAction) ...[
             Flexible(
               child: _ResponsiveAction(
+                key: likeActionKey,
                 icon: isLiked
                     ? (selectedReactionIcon ?? Icons.favorite_rounded)
                     : Icons.favorite_border_rounded,
-                label: isLiked && selectedReactionLabel != null
-                    ? selectedReactionLabel!
-                    : _formatCount(likeCount),
+                label: _formatCount(likeCount),
                 color: isLiked
                     ? (selectedReactionColor ?? AppColors.redAccent)
                     : actionColor,
@@ -154,6 +159,7 @@ class _ResponsiveAction extends StatelessWidget {
   final bool compact;
 
   const _ResponsiveAction({
+    super.key,
     required this.icon,
     this.label,
     required this.color,

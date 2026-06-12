@@ -10,6 +10,7 @@ import 'package:clique/ui/widgets/post/post_actions.dart';
 import 'package:clique/ui/widgets/post/post_footer.dart';
 import 'package:clique/ui/widgets/post/post_header.dart';
 import 'package:clique/ui/widgets/post/post_media.dart';
+import 'package:clique/ui/widgets/post/post_reaction_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -30,6 +31,7 @@ class CardPost extends StatefulWidget {
 
 class _CardPostState extends State<CardPost> {
   final UserService _userService = UserService();
+  final GlobalKey _likeActionKey = GlobalKey();
   late bool _isLiked;
   late bool _isSaved;
   late bool _isReposted;
@@ -158,107 +160,43 @@ class _CardPostState extends State<CardPost> {
   }
 
   void _showReactionSheet() {
-    HapticFeedback.mediumImpact();
+    final box = _likeActionKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) {
+      showPostReactionPicker(
+        context,
+        onSelected: _applyReaction,
+      );
+      return;
+    }
 
-    final reactions = <_ReactionChoice>[
-      _ReactionChoice(
-          'Like', Icons.thumb_up_rounded, AppColors.primary),
-      _ReactionChoice('Love', Icons.favorite_rounded, AppColors.redAccent),
-      _ReactionChoice(
-          'Fire', Icons.local_fire_department_rounded, AppColors.orange),
-      _ReactionChoice(
-          'Wow', Icons.sentiment_very_satisfied_rounded, AppColors.primary),
-      _ReactionChoice('Respect', Icons.verified_rounded, AppColors.green),
-    ];
+    final overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox?;
+    if (overlay == null) {
+      showPostReactionPicker(
+        context,
+        onSelected: _applyReaction,
+      );
+      return;
+    }
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.transparent,
-      builder: (context) {
-        return Container(
-          decoration: BoxDecoration(
-            color: AppColors.cardColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border.all(color: AppColors.cardBorderColor),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 42,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppColors.greyColor.withOpacity(0.25),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: reactions
-                        .map(
-                          (reaction) => Expanded(
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 4),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(16),
-                                onTap: () {
-                                  Navigator.pop(context);
-                                  _applyReaction(reaction);
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                    horizontal: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: reaction.color.withOpacity(0.08),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: reaction.color.withOpacity(0.18),
-                                    ),
-                                  ),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        reaction.icon,
-                                        color: reaction.color,
-                                        size: 22,
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        reaction.label,
-                                        textAlign: TextAlign.center,
-                                        style: AppTheme.blackTextStyle.copyWith(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+    final topLeft = box.localToGlobal(Offset.zero, ancestor: overlay);
+    final bottomRight =
+        box.localToGlobal(box.size.bottomRight(Offset.zero), ancestor: overlay);
+    final anchor = Rect.fromLTRB(
+      topLeft.dx,
+      topLeft.dy,
+      bottomRight.dx,
+      bottomRight.dy,
+    );
+
+    showPostReactionPicker(
+      context,
+      onSelected: _applyReaction,
+      anchorRect: anchor,
     );
   }
 
-  void _applyReaction(_ReactionChoice reaction) {
+  void _applyReaction(PostReaction reaction) {
     final wasLiked = _isLiked;
 
     setState(() {
@@ -622,6 +560,7 @@ class _CardPostState extends State<CardPost> {
                 isReposted: _isReposted,
                 onLike: _toggleLike,
                 onLikeLongPress: _showReactionSheet,
+                likeActionKey: _likeActionKey,
                 onComment: _openComments,
                 onSave: _toggleSave,
                 onShare: _share,
@@ -637,14 +576,6 @@ class _CardPostState extends State<CardPost> {
       ),
     );
   }
-}
-
-class _ReactionChoice {
-  final String label;
-  final IconData icon;
-  final Color color;
-
-  const _ReactionChoice(this.label, this.icon, this.color);
 }
 
 class _PollPostBody extends StatelessWidget {

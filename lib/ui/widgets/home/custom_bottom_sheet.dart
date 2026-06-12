@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:audio_waveforms/audio_waveforms.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,7 +11,7 @@ import 'package:clique/core/clients/cloudinary_service.dart';
 import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/core/services/home/feed_service.dart';
 import 'package:clique/core/services/user/user_service.dart';
-import 'package:clique/ui/widgets/chat/audio_message_bubble.dart';
+import 'package:clique/ui/widgets/comments/comment_widgets.dart';
 import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
 
 void customBottomSheetComments(BuildContext context, {required int postId}) =>
@@ -746,35 +745,10 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 49,
-                height: 49,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.backgroundColor,
-                  border: Border.all(
-                    color: AppColors.primary.withOpacity(0.16),
-                    width: 2,
-                  ),
-                ),
-                padding: const EdgeInsets.all(2),
-                child: ClipOval(
-                  child: imageUrl.startsWith('http')
-                      ? CachedNetworkImage(
-                          imageUrl: imageUrl,
-                          fit: BoxFit.cover,
-                          errorWidget: (context, error, stackTrace) {
-                            return Container(
-                              color: AppColors.greyColor.withOpacity(0.2),
-                              child: const Icon(Icons.person, size: 25),
-                            );
-                          },
-                        )
-                      : Container(
-                          color: AppColors.greyColor.withOpacity(0.2),
-                          child: const Icon(Icons.person, size: 25),
-                        ),
-                ),
+              CommentAvatar(
+                imageUrl: imageUrl,
+                fallback: name,
+                size: 49,
               ),
               const SizedBox(width: 12),
               Flexible(
@@ -808,11 +782,15 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
                       ],
                     ),
                     const SizedBox(height: 4),
-                    if (isVoiceNote && audioUrl.isNotEmpty)
-                      AudioMessageBubble(
+                    if (isVoiceNote || audioUrl.isNotEmpty)
+                      CommentVoiceNoteCard(
+                        avatar: imageUrl,
+                        name: name,
                         audioUrl: audioUrl,
-                        isMe: false,
-                        chatColor: AppColors.primary,
+                        duration: duration,
+                        timeLabel: time,
+                        isTemp: isTemp,
+                        isCompact: true,
                       )
                     else if (comment.isNotEmpty)
                       Text(
@@ -828,27 +806,13 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
                                 fontWeight: AppTheme.medium,
                               ),
                       ),
-                    if (isVoiceNote && audioUrl.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                          duration > 0
-                              ? '${duration}s voice note'
-                              : 'Voice note',
-                          style: AppTheme.greyTextStyle.copyWith(
-                            fontSize: 12,
-                            fontWeight: AppTheme.medium,
-                          ),
-                        ),
-                      )
-                    else
-                      const SizedBox(height: 6),
+                    const SizedBox(height: 6),
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          _CommentReactionButton(
+                          CommentReactionButton(
                             likes: likes,
                             dislikes: dislikes,
                             isLiked: isLiked,
@@ -867,9 +831,8 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
                                 ),
                           ),
                           const SizedBox(width: 8),
-                          _CommentActionButton(
+                          CommentActionChip(
                             icon: Icons.reply_rounded,
-                            selectedIcon: Icons.reply_rounded,
                             selected: false,
                             label: replyCount > 0
                                 ? '$replyCount replies'
@@ -880,9 +843,8 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
                             },
                           ),
                           const SizedBox(width: 8),
-                          _CommentActionButton(
+                          CommentActionChip(
                             icon: Icons.thumb_up_outlined,
-                            selectedIcon: Icons.thumb_up,
                             selected: isLiked,
                             label: likes > 0 ? '$likes' : 'Like',
                             onTap: () => context.read<FeedBloc>().add(
@@ -893,9 +855,8 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
                                 ),
                           ),
                           const SizedBox(width: 8),
-                          _CommentActionButton(
+                          CommentActionChip(
                             icon: Icons.thumb_down_outlined,
-                            selectedIcon: Icons.thumb_down,
                             selected: isDisliked,
                             label: dislikes > 0 ? '$dislikes' : 'Dislike',
                             onTap: () => context.read<FeedBloc>().add(
@@ -932,207 +893,6 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _CommentActionButton extends StatelessWidget {
-  final IconData icon;
-  final IconData selectedIcon;
-  final bool selected;
-  final String label;
-  final VoidCallback onTap;
-
-  const _CommentActionButton({
-    required this.icon,
-    required this.selectedIcon,
-    required this.selected,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        minimumSize: const Size(12, 38),
-        backgroundColor: selected
-            ? AppColors.primary.withOpacity(0.12)
-            : AppColors.backgroundColor,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-          side: BorderSide(
-            color: selected
-                ? AppColors.primary.withOpacity(0.2)
-                : AppColors.transparent,
-          ),
-        ),
-      ),
-      onPressed: onTap,
-      child: Row(
-        children: [
-          Icon(selected ? selectedIcon : icon, size: 16),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: AppTheme.blackTextStyle.copyWith(
-              fontSize: 12,
-              fontWeight: AppTheme.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CommentReactionButton extends StatelessWidget {
-  final int likes;
-  final int dislikes;
-  final bool isLiked;
-  final bool isDisliked;
-  final VoidCallback onLike;
-  final VoidCallback onDislike;
-
-  const _CommentReactionButton({
-    required this.likes,
-    required this.dislikes,
-    required this.isLiked,
-    required this.isDisliked,
-    required this.onLike,
-    required this.onDislike,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final label = isLiked
-        ? (likes > 0 ? '$likes Reacted' : 'Reacted')
-        : isDisliked
-            ? (dislikes > 0 ? '$dislikes Reacted' : 'Reacted')
-            : 'React';
-
-    return _CommentActionButton(
-      icon: isDisliked ? Icons.thumb_down : Icons.emoji_emotions_outlined,
-      selectedIcon: isLiked ? Icons.thumb_up : Icons.emoji_emotions,
-      selected: isLiked || isDisliked,
-      label: label,
-      onTap: () {
-        showModalBottomSheet(
-          context: context,
-          backgroundColor: AppColors.transparent,
-          builder: (sheetContext) {
-            return Container(
-              decoration: BoxDecoration(
-                color: AppColors.cardColor,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(24)),
-                border: Border.all(color: AppColors.cardBorderColor),
-              ),
-              child: SafeArea(
-                top: false,
-                child: Padding(
-                  padding:
-                      const EdgeInsets.fromLTRB(16, 10, 16, 18),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: AppColors.greyColor.withOpacity(0.25),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _ReactionTile(
-                            icon: Icons.thumb_up,
-                            label: 'Like',
-                            color: AppColors.primary,
-                            onTap: () {
-                              Navigator.pop(sheetContext);
-                              onLike();
-                            },
-                          ),
-                          _ReactionTile(
-                            icon: Icons.thumb_down,
-                            label: 'Dislike',
-                            color: AppColors.redAccent,
-                            onTap: () {
-                              Navigator.pop(sheetContext);
-                              onDislike();
-                            },
-                          ),
-                          _ReactionTile(
-                            icon: Icons.emoji_emotions_outlined,
-                            label: 'React',
-                            color: AppColors.secondary,
-                            onTap: () {
-                              Navigator.pop(sheetContext);
-                              onLike();
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-class _ReactionTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _ReactionTile({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 96,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: color.withOpacity(0.16)),
-          ),
-          child: Column(
-            children: [
-              Icon(icon, color: color),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: AppTheme.blackTextStyle.copyWith(
-                  fontSize: 12,
-                  fontWeight: AppTheme.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

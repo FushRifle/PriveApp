@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -16,6 +18,8 @@ import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/app/configs/api_config.dart';
 import 'package:clique/core/services/security/app_lock_service.dart';
+import 'package:clique/core/services/calls/stream_call_service.dart';
+import 'package:clique/core/services/chat/stream_chat_service.dart';
 import 'package:clique/core/providers/theme_provider.dart';
 import 'package:clique/bloc/cloudinary/cloudinary_cubit.dart';
 import 'package:clique/bloc/profile/profile_bloc.dart';
@@ -131,8 +135,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
         _authBloc.add(CheckAuthStatus());
       }
     } else if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
-    }
+        state == AppLifecycleState.inactive) {}
   }
 
   @override
@@ -181,6 +184,8 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
             listener: (context, state) {
               if (state.status == AuthStatus.authenticated) {
                 PushNotificationService.instance.syncDeviceToken();
+                unawaited(StreamCallService.instance.connect());
+                unawaited(StreamChatService.instance.connect().catchError((_) {}));
                 final userID = state.user?['id']?.toString() ?? '';
                 context.read<FeatureAccessCubit>()
                   ..load()
@@ -188,6 +193,8 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
               }
               if (state.status == AuthStatus.unauthenticated) {
                 PushNotificationService.instance.deleteDeviceToken();
+                unawaited(StreamCallService.instance.disconnect());
+                unawaited(StreamChatService.instance.disconnect());
                 LocalCacheService.clearAll();
                 context.read<UserBloc>()
                   ..clearAuthToken()

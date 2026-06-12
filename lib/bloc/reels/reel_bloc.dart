@@ -44,9 +44,21 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     }
 
     try {
+      final cachedReels = _reelService.readCachedReels(page: event.page);
+      if (cachedReels != null && cachedReels.isNotEmpty) {
+        emit(state.copyWith(
+          reels: _dedupeReels(cachedReels),
+          currentPage: event.page,
+          hasMore: cachedReels.length >= _pageSize,
+          status: ReelStatus.success,
+          isLoading: false,
+          clearError: true,
+        ));
+      }
+
       final reels = await _reelService.getReels(
         page: event.page,
-        forceRefresh: false,
+        forceRefresh: cachedReels == null || cachedReels.isEmpty,
       );
 
       emit(state.copyWith(
@@ -83,6 +95,18 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     ));
 
     try {
+      final cachedReels = _reelService.readCachedReels(page: 1);
+      if (cachedReels != null && cachedReels.isNotEmpty) {
+        emit(state.copyWith(
+          reels: _dedupeReels(cachedReels),
+          currentPage: 1,
+          hasMore: cachedReels.length >= _pageSize,
+          status: ReelStatus.success,
+          isRefreshing: false,
+          clearError: true,
+        ));
+      }
+
       final reels = await _reelService.getReels(
         page: 1,
         forceRefresh: true,
@@ -130,6 +154,18 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
 
     try {
       final nextPage = state.currentPage + 1;
+      final cachedReels = _reelService.readCachedReels(page: nextPage);
+      if (cachedReels != null && cachedReels.isNotEmpty) {
+        emit(state.copyWith(
+          reels: _dedupeReels([...state.reels, ...cachedReels]),
+          currentPage: nextPage,
+          hasMore: cachedReels.length >= _pageSize,
+          status: ReelStatus.success,
+          isLoadingMore: false,
+          clearError: true,
+        ));
+      }
+
       final newReels = await _reelService.getReels(page: nextPage);
 
       final updatedReels = _dedupeReels([...state.reels, ...newReels]);

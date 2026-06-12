@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:clique/core/local_cache/hive_cache_keys.dart';
 import 'package:clique/core/local_cache/local_cache_service.dart';
+import 'package:clique/core/services/chat/stream_chat_service.dart';
+import 'package:stream_chat/stream_chat.dart' as stream;
 import '../../clients/api_service.dart';
 
 class ChatService {
@@ -12,21 +14,26 @@ class ChatService {
   ChatService._internal();
 
   final ApiService _api = ApiService();
+  final StreamChatService _streamChatService = StreamChatService.instance;
   final Map<String, List<Map<String, dynamic>>> _messagesCache = {};
   final Map<String, CancelToken> _cancelTokens = {};
+  final Set<String> _sendingMessageKeys = {};
   Timer? _pendingRetryTimer;
   bool _isRetryingPendingMessages = false;
 
   void setAuthToken(String token) {
     _api.setAuthToken(token);
     _startPendingRetryLoop();
+    unawaited(_streamChatService.connect().catchError((_) {}));
   }
 
   void clearAuthToken() {
     _api.clearAuthToken();
     _messagesCache.clear();
     _cancelTokens.clear();
+    _sendingMessageKeys.clear();
     _stopPendingRetryLoop();
+    unawaited(_streamChatService.disconnect());
   }
 
   List<Map<String, dynamic>> readCachedConversations({
@@ -328,6 +335,21 @@ class ChatService {
         var didUpdate = false;
 
         for (final pending in pendingMessages) {
+          final pendingKey = _messageKey(
+            receiverId:
+                _readInt(pending['receiverId'] ?? pending['receiver_id']),
+            message: (pending['message'] ?? '').toString(),
+            messageType:
+                (pending['messageType'] ?? pending['message_type'] ?? 'text')
+                    .toString(),
+            mediaUrl: pending['mediaUrl'] ?? pending['media_url'],
+            replyToId: pending['replyToId'] ?? pending['reply_to_id'],
+          );
+
+          if (_sendingMessageKeys.contains(pendingKey)) {
+            continue;
+          }
+
           final delivered = await _sendPendingMessage(pending);
           if (delivered == null) {
             continue;
@@ -370,6 +392,20 @@ class ChatService {
       return null;
     }
 
+    final key = _messageKey(
+      receiverId: receiverId,
+      message: message,
+      messageType: messageType,
+      mediaUrl: mediaUrl,
+      replyToId: replyToId,
+    );
+
+    if (_sendingMessageKeys.contains(key)) {
+      return null;
+    }
+
+    _sendingMessageKeys.add(key);
+
     try {
       final payload = <String, dynamic>{
         'receiverId': receiverId,
@@ -393,6 +429,8 @@ class ChatService {
       return null;
     } on DioException {
       return null;
+    } finally {
+      _sendingMessageKeys.remove(key);
     }
   }
 
@@ -419,10 +457,259 @@ class ChatService {
     return id < 0 || id.toString().startsWith('999');
   }
 
+  String _messageKey({
+    required int receiverId,
+    required String message,
+    required String messageType,
+    String? mediaUrl,
+    int? replyToId,
+  }) {
+    return [
+      receiverId,
+      message.trim(),
+      messageType.trim().toLowerCase(),
+      mediaUrl?.trim() ?? '',
+      replyToId?.toString() ?? '',
+    ].join('|');
+  }
+
   int _readInt(dynamic value) {
     if (value is int) return value;
     if (value is num) return value.toInt();
     return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  Future<List<Map<String, dynamic>>> _loadStreamMessages(
+    int conversationId,
+  ) async {
+    final state = await _streamChatService.watchChannel(conversationId);
+    return _mapStreamMessages(
+      state.messages ?? const <stream.Message>[],
+      conversationId,
+      receiverId: _peerUserIdFromState(state),
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> _loadStreamMessagesPage(
+    int conversationId, {
+    required int page,
+  }) async {
+    final state = await _streamChatService.queryChannelMessages(
+      conversationId,
+      page: page,
+    );
+    return _mapStreamMessages(
+      state.messages ?? const <stream.Message>[],
+      conversationId,
+      receiverId: _peerUserIdFromState(state),
+    );
+  }
+
+  Future<Map<String, dynamic>?> _sendStreamMessage({
+    required int conversationId,
+    required int receiverId,
+    required String message,
+    required String messageType,
+    String? mediaUrl,
+    String? replyToStreamMessageId,
+  }) async {
+    try {
+      final channel = _streamChatService.channelForConversation(
+        conversationId,
+        receiverId: receiverId,
+      );
+      await channel.watch(presence: true);
+
+      final attachments = <stream.Attachment>[];
+      if (mediaUrl != null && mediaUrl.trim().isNotEmpty) {
+        attachments.add(
+          stream.Attachment(
+            type: messageType,
+            assetUrl: mediaUrl,
+            imageUrl: messageType == 'image' ? mediaUrl : null,
+            thumbUrl: messageType == 'video' ? mediaUrl : null,
+          ),
+        );
+      }
+
+      final response = await channel.sendMessage(
+        stream.Message(
+          text: message,
+          parentId: replyToStreamMessageId,
+          attachments: attachments,
+        ),
+      );
+
+      return _streamMessageToJson(
+        response.message,
+        conversationId: conversationId,
+        receiverId: receiverId,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> _deleteStreamMessage(int messageId) async {
+    final resolved = await _findStreamMessageByLocalId(messageId);
+    final channel = resolved.$1;
+    final message = resolved.$2;
+    if (channel == null || message == null) return false;
+
+    try {
+      await channel.deleteMessage(message, hard: false);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> _flagStreamMessage(int messageId) async {
+    final message = await _findStreamMessageByLocalId(messageId);
+    if (message.$2 == null) return false;
+
+    try {
+      await _streamChatService.client.flagMessage(message.$2!.id);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<(stream.Channel?, stream.Message?)> _findStreamMessageByLocalId(
+    int messageId,
+  ) async {
+    for (final channel in _streamChatService.client.state.channels.values) {
+      final messages = channel.state?.messages ?? const <stream.Message>[];
+      for (final message in messages) {
+        if (message.id.hashCode == messageId || message.id == messageId.toString()) {
+          return (channel, message);
+        }
+      }
+    }
+    return (null, null);
+  }
+
+  List<Map<String, dynamic>> _mapStreamMessages(
+    List<stream.Message> messages,
+    int conversationId,
+    {int? receiverId}
+  ) {
+    final currentUserId = _streamChatService.currentUserId;
+    final currentUserIdInt = _streamChatService.currentUserIdAsInt();
+    final peerId = receiverId ?? 0;
+
+    final mapped = messages.map((message) {
+      final senderId = _readInt(message.user?.id);
+      final replyParentId = _readInt(message.parentId) != 0
+          ? _readInt(message.parentId)
+          : (message.parentId != null ? _stableMessageId(message.parentId!) : 0);
+      final mediaUrl = _readStreamMediaUrl(message);
+      final messageType = _readStreamMessageType(message, mediaUrl);
+      final isOwn = currentUserId != null && message.user?.id == currentUserId;
+
+      return <String, dynamic>{
+        'id': _stableMessageId(message.id),
+        'streamMessageId': message.id,
+        'conversationId': conversationId,
+        'senderId': senderId,
+        'receiverId': senderId == currentUserIdInt ? peerId : currentUserIdInt,
+        'message': message.text ?? '',
+        'messageType': messageType,
+        'mediaUrl': mediaUrl,
+        'replyToId': replyParentId > 0 ? replyParentId : null,
+        'replyToMessage': message.quotedMessage?.text,
+        'replyToSender': message.quotedMessage?.user?.name,
+        'isRead': true,
+        'isOwn': isOwn,
+        'createdAt': message.createdAt.toIso8601String(),
+      };
+    }).toList();
+
+    mapped.sort((a, b) {
+      final aTime = DateTime.tryParse(a['createdAt']?.toString() ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+      final bTime = DateTime.tryParse(b['createdAt']?.toString() ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+      return bTime.compareTo(aTime);
+    });
+
+    return mapped;
+  }
+
+  int _peerUserIdFromState(stream.ChannelState state) {
+    final currentUserId = _streamChatService.currentUserId;
+    final currentUserIdInt = _streamChatService.currentUserIdAsInt();
+
+    for (final member in state.members ?? const <stream.Member>[]) {
+      final memberUser = member.user;
+      if (memberUser == null) {
+        continue;
+      }
+      final userId = _readInt(memberUser.id);
+      if (currentUserId != null && memberUser.id == currentUserId) {
+        continue;
+      }
+      if (userId != 0 && userId != currentUserIdInt) {
+        return userId;
+      }
+    }
+
+    return 0;
+  }
+
+  Map<String, dynamic> _streamMessageToJson(
+    stream.Message message, {
+    required int conversationId,
+    required int receiverId,
+  }) {
+    final senderId = _readInt(message.user?.id);
+    final mediaUrl = _readStreamMediaUrl(message);
+    final messageType = _readStreamMessageType(message, mediaUrl);
+    final isOwn = message.user?.id == _streamChatService.currentUserId;
+
+    return <String, dynamic>{
+      'id': _stableMessageId(message.id),
+      'streamMessageId': message.id,
+      'conversationId': conversationId,
+      'senderId': senderId,
+      'receiverId': receiverId,
+      'message': message.text ?? '',
+      'messageType': messageType,
+      'mediaUrl': mediaUrl,
+      'replyToId': _readInt(message.parentId) != 0
+          ? _readInt(message.parentId)
+          : (message.parentId != null ? _stableMessageId(message.parentId!) : 0),
+      'replyToMessage': message.quotedMessage?.text,
+      'replyToSender': message.quotedMessage?.user?.name,
+      'isRead': true,
+      'isOwn': isOwn,
+      'createdAt': message.createdAt.toIso8601String(),
+    };
+  }
+
+  int _stableMessageId(String id) {
+    if (id.isEmpty) return 0;
+    return id.hashCode;
+  }
+
+  String _readStreamMessageType(stream.Message message, String? mediaUrl) {
+    if (mediaUrl != null && mediaUrl.isNotEmpty) {
+      final attachmentType =
+          message.attachments.isNotEmpty ? message.attachments.first.type : null;
+      return attachmentType ?? 'image';
+    }
+    return 'text';
+  }
+
+  String? _readStreamMediaUrl(stream.Message message) {
+    if (message.attachments.isEmpty) return null;
+
+    final attachment = message.attachments.first;
+    return attachment.assetUrl ??
+        attachment.imageUrl ??
+        attachment.thumbUrl ??
+        attachment.titleLink;
   }
 
   // =========================
@@ -532,6 +819,25 @@ class ChatService {
         return _messagesCache[memoryKey]!;
       }
 
+      try {
+        await _streamChatService.connect();
+        final streamMessages = page == 1
+            ? await _loadStreamMessages(conversationId)
+            : await _loadStreamMessagesPage(
+                conversationId,
+                page: page,
+              );
+
+        if (streamMessages.isNotEmpty) {
+          if (page == 1) {
+            _messagesCache[memoryKey] = streamMessages;
+          }
+          return streamMessages;
+        }
+      } catch (_) {
+        // Fall through to the existing REST path.
+      }
+
       if (!forceRefresh && page == 1) {
         final cachedMessages = readCachedMessages(
           conversationId,
@@ -575,13 +881,49 @@ class ChatService {
   }
 
   Future<Map<String, dynamic>?> sendMessage({
+    int? conversationId,
     required int receiverId,
     required String message,
     String messageType = 'text',
     String? mediaUrl,
     int? replyToId,
+    String? replyToStreamMessageId,
   }) async {
+    final key = _messageKey(
+      receiverId: receiverId,
+      message: message,
+      messageType: messageType,
+      mediaUrl: mediaUrl,
+      replyToId: replyToId,
+    );
+
+    if (_sendingMessageKeys.contains(key)) {
+      return null;
+    }
+
+    _sendingMessageKeys.add(key);
+
     try {
+      try {
+        await _streamChatService.connect();
+        final streamResponse = await _sendStreamMessage(
+          conversationId: conversationId ?? receiverId,
+          receiverId: receiverId,
+          message: message,
+          messageType: messageType,
+          mediaUrl: mediaUrl,
+          replyToStreamMessageId: replyToStreamMessageId,
+        );
+
+        if (streamResponse != null) {
+          clearAllCache();
+          _api.removeCacheByPath('/api/chat');
+          return streamResponse;
+        }
+      } catch (_) {
+        // Fall through to the existing REST path.
+      }
+
       final data = {
         'receiverId': receiverId,
         'message': message,
@@ -605,6 +947,8 @@ class ChatService {
       return null;
     } on DioException catch (e) {
       throw _handleError(e);
+    } finally {
+      _sendingMessageKeys.remove(key);
     }
   }
 
@@ -740,6 +1084,18 @@ class ChatService {
 
   Future<void> deleteMessage(int messageId) async {
     try {
+      try {
+        await _streamChatService.connect();
+        final deleted = await _deleteStreamMessage(messageId);
+        if (deleted) {
+          clearAllCache();
+          _api.removeCacheByPath('/api/chat');
+          return;
+        }
+      } catch (_) {
+        // Fall through to REST.
+      }
+
       await _api.delete(
         '/api/chat/messages/$messageId',
       );
@@ -755,6 +1111,16 @@ class ChatService {
     String reason,
   ) async {
     try {
+      try {
+        await _streamChatService.connect();
+        final flagged = await _flagStreamMessage(messageId);
+        if (flagged) {
+          return;
+        }
+      } catch (_) {
+        // Fall through to REST.
+      }
+
       await _api.post(
         '/api/chat/messages/report',
         data: {
@@ -768,6 +1134,14 @@ class ChatService {
   }
 
   Future<void> markAsRead(int conversationId) async {
+    try {
+      await _streamChatService.connect();
+      await _streamChatService
+          .channelForConversation(conversationId)
+          .markRead();
+      return;
+    } catch (_) {}
+
     try {
       await _api.post(
         '/api/chat/messages/$conversationId/read',
@@ -783,6 +1157,17 @@ class ChatService {
     int conversationId,
     bool isTyping,
   ) async {
+    try {
+      await _streamChatService.connect();
+      final channel = _streamChatService.channelForConversation(conversationId);
+      if (isTyping) {
+        await channel.startTyping();
+      } else {
+        await channel.stopTyping();
+      }
+      return;
+    } catch (_) {}
+
     try {
       await _api.post(
         '/api/chat/typing',

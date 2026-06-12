@@ -507,11 +507,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
     try {
       final response = await _chatService.sendMessage(
+        conversationId: event.conversationId,
         receiverId: event.receiverId,
         message: event.message,
         messageType: event.messageType,
         mediaUrl: event.mediaUrl,
         replyToId: event.replyToId,
+        replyToStreamMessageId: event.replyToStreamMessageId,
       );
 
       MessageModel? realMessage;
@@ -521,6 +523,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         realMessage = MessageModel(
           id: parsed.id,
           conversationId: parsed.conversationId,
+          streamMessageId: parsed.streamMessageId,
           senderId: parsed.senderId,
           receiverId: parsed.receiverId,
           message: parsed.message,
@@ -715,13 +718,15 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           continue;
         }
 
-        final response = await _chatService.sendMessage(
-          receiverId: pending.receiverId,
-          message: pending.message,
-          messageType: pending.messageType,
-          mediaUrl: pending.mediaUrl,
-          replyToId: pending.replyToId,
-        );
+      final response = await _chatService.sendMessage(
+        conversationId: event.conversationId,
+        receiverId: pending.receiverId,
+        message: pending.message,
+        messageType: pending.messageType,
+        mediaUrl: pending.mediaUrl,
+        replyToId: pending.replyToId,
+        replyToStreamMessageId: pending.streamMessageId,
+      );
 
         if (response == null) continue;
 

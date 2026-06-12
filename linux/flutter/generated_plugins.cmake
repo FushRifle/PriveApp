@@ -4,12 +4,16 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   audioplayers_linux
+  desktop_drop
   file_selector_linux
   flutter_secure_storage_linux
   flutter_webrtc
   gtk
   livekit_client
+  media_kit_video
   open_file_linux
+  record_linux
+  stream_webrtc_flutter
   url_launcher_linux
 )
 
