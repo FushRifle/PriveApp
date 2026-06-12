@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
+import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
 import 'package:clique/ui/pages/main/chat/chat_page.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:clique/core/services/chat/chat_service.dart';
 import 'package:clique/ui/widgets/common/app_page_header.dart';
 
 class InboxPage extends StatefulWidget {
@@ -17,6 +19,7 @@ class InboxPage extends StatefulWidget {
 
 class _InboxPageState extends State<InboxPage> {
   final _refreshIndicatorKey = GlobalKey<RefreshIndicatorState>();
+  final ChatService _chatService = ChatService();
 
   @override
   void initState() {
@@ -131,25 +134,51 @@ class _InboxPageState extends State<InboxPage> {
 
   List<_ChatMessage> _getDisplayConversations(ChatState state) {
     final conversations = <_ChatMessage>[];
-    final sortedConversations = List.of(state.conversations);
+    final ownerId = _readCurrentUserId();
+    final cachedConversations = _chatService.readCachedConversations(
+      cacheOwnerId: ownerId,
+    );
+    final mergedSource = <ConversationModel>[];
+    final byId = <int, ConversationModel>{};
+
+    for (final conv in cachedConversations) {
+      try {
+        final model = ConversationModel.fromJson(conv);
+        byId[model.id] = model;
+      } catch (_) {}
+    }
+
+    for (final conv in state.conversations) {
+      byId[conv.id] = conv;
+    }
+
+    mergedSource.addAll(byId.values);
+
+    final sortedConversations = List.of(mergedSource);
     sortedConversations.sort((a, b) {
       if (a.isPinned && !b.isPinned) return -1;
       if (!a.isPinned && b.isPinned) return 1;
-      return b.timestamp.compareTo(a.timestamp);
+      return _parseTime(b.timestamp).compareTo(_parseTime(a.timestamp));
     });
 
     for (final conv in sortedConversations) {
       final isBot = conv.name.toLowerCase() == 'Clique' ||
           conv.username.toLowerCase() == 'Clique';
+      final latestCachedMessage = _latestCachedMessage(
+        conv.id,
+        ownerId: ownerId,
+      );
+      final displayMessage = _pickDisplayMessage(conv, latestCachedMessage);
+      final displayTime = _pickDisplayTime(conv, latestCachedMessage);
 
       conversations.add(_ChatMessage(
         id: conv.id.toString(),
         userId: conv.userId,
         name: conv.name,
-        message: conv.lastMessage.isNotEmpty
-            ? conv.lastMessage
+        message: displayMessage.isNotEmpty
+            ? displayMessage
             : (isBot ? 'Welcome to Clique! 🤖' : 'No messages yet'),
-        time: _formatTimestamp(conv.timestamp),
+        time: _formatTimestamp(displayTime),
         avatar: conv.avatar,
         isUnread: conv.unreadCount > 0,
         isOnline: conv.isOnline,
@@ -160,6 +189,60 @@ class _InboxPageState extends State<InboxPage> {
     }
 
     return conversations;
+  }
+
+  Map<String, dynamic>? _latestCachedMessage(
+    int conversationId, {
+    int? ownerId,
+  }) {
+    final messages = _chatService.readCachedMessages(
+      conversationId,
+      cacheOwnerId: ownerId,
+    );
+    if (messages.isEmpty) return null;
+
+    Map<String, dynamic>? latest;
+    DateTime latestTime = DateTime.fromMillisecondsSinceEpoch(0);
+
+    for (final message in messages) {
+      final parsed = _parseTime(message['createdAt']?.toString() ?? '');
+      if (parsed.isAfter(latestTime)) {
+        latest = message;
+        latestTime = parsed;
+      }
+    }
+
+    return latest;
+  }
+
+  String _pickDisplayMessage(
+    ConversationModel conversation,
+    Map<String, dynamic>? cachedMessage,
+  ) {
+    final cachedText = cachedMessage?['message']?.toString().trim() ?? '';
+    if (cachedText.isNotEmpty) return cachedText;
+    return conversation.lastMessage.trim();
+  }
+
+  String _pickDisplayTime(
+    ConversationModel conversation,
+    Map<String, dynamic>? cachedMessage,
+  ) {
+    final cachedTime = cachedMessage?['createdAt']?.toString().trim() ?? '';
+    if (cachedTime.isNotEmpty) return cachedTime;
+    return conversation.timestamp;
+  }
+
+  int? _readCurrentUserId() {
+    final user = context.read<AuthBloc>().state.user;
+    final rawId = user?['id'];
+    if (rawId is int) return rawId;
+    if (rawId is String) return int.tryParse(rawId);
+    return null;
+  }
+
+  DateTime _parseTime(String value) {
+    return DateTime.tryParse(value) ?? DateTime.fromMillisecondsSinceEpoch(0);
   }
 
   String _formatTimestamp(String timestamp) {

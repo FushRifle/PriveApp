@@ -74,14 +74,6 @@ class MessageBubble extends StatelessWidget {
                                 ? AppColors.darkCardBorder
                                 : AppColors.lightCardBorder,
                           ),
-                    boxShadow: [
-                      BoxShadow(
-                        color:
-                            AppColors.black.withOpacity(isDark ? 0.16 : 0.05),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,

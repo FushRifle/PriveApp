@@ -478,6 +478,7 @@ class _ChatPageState extends State<ChatPage>
                     onCancelReply: () => setState(() => _replyingTo = null),
                     sendButtonColor: _getChatColor(),
                     onPickImage: () => _pickImage(ImageSource.gallery),
+                    onPickCamera: () => _pickImage(ImageSource.camera),
                     onPickVideo: _pickVideo,
                     onPickDocument: _pickDocument,
                     onSendVoice: (file) => _sendMedia(file, UploadType.audio),

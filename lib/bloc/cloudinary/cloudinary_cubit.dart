@@ -142,7 +142,8 @@ class CloudinaryCubit extends Cubit<CloudinaryState> {
           allowedExtensions: allowedExtensions,
         );
         final path = file?.paths;
-        return path == null ? null : File(path as String);
+        if (path == null || path.isEmpty || path.first == null) return null;
+        return File(path.first!);
     }
   }
 

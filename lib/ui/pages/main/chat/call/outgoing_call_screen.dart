@@ -129,6 +129,9 @@ class _OutgoingCallScreenState extends State<OutgoingCallScreen> {
   @override
   void dispose() {
     _callManager.stopDialTone();
+    if (!_isCancelling) {
+      unawaited(_callService.endCall(callId: widget.callResponse.call.id));
+    }
     unawaited(_callManager.leaveCall());
     super.dispose();
   }

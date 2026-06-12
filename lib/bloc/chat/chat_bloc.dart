@@ -164,6 +164,50 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     return updated;
   }
 
+  List<ConversationModel> _mergeConversations(
+    List<ConversationModel> fetched,
+    List<ConversationModel> cached,
+  ) {
+    final mergedById = <int, ConversationModel>{};
+
+    for (final conversation in fetched) {
+      mergedById[conversation.id] = conversation;
+    }
+
+    for (final conversation in cached) {
+      final existing = mergedById[conversation.id];
+      if (existing == null) {
+        mergedById[conversation.id] = conversation;
+        continue;
+      }
+
+      final existingTime = _parseConversationTime(existing.timestamp);
+      final cachedTime = _parseConversationTime(conversation.timestamp);
+      if (cachedTime.isAfter(existingTime)) {
+        mergedById[conversation.id] = conversation;
+        continue;
+      }
+
+      if (conversation.lastMessage.isNotEmpty &&
+          existing.lastMessage.isEmpty) {
+        mergedById[conversation.id] = conversation;
+      }
+    }
+
+    final merged = mergedById.values.toList();
+    merged.sort((a, b) {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return _parseConversationTime(b.timestamp)
+          .compareTo(_parseConversationTime(a.timestamp));
+    });
+    return merged;
+  }
+
+  DateTime _parseConversationTime(String timestamp) {
+    return DateTime.tryParse(timestamp) ?? DateTime.fromMillisecondsSinceEpoch(0);
+  }
+
   bool _looksLikeSameDelivery(MessageModel pending, MessageModel delivered) {
     if (!pending.isPending || delivered.isPending) return false;
     if (pending.conversationId != delivered.conversationId) return false;
@@ -230,12 +274,16 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       );
       final conversations =
           data.map((json) => ConversationModel.fromJson(json)).toList();
+      final mergedConversations = _mergeConversations(
+        conversations,
+        cachedConversations,
+      );
       emit(state.copyWith(
-        conversations: conversations,
+        conversations: mergedConversations,
         conversationsStatus: ChatStatus.success,
         clearError: true,
       ));
-      await _persistConversations(conversations);
+      await _persistConversations(mergedConversations);
     } catch (e) {
       emit(state.copyWith(
         conversationsStatus: ChatStatus.error,
@@ -255,12 +303,18 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       );
       final conversations =
           data.map((json) => ConversationModel.fromJson(json)).toList();
+      final mergedConversations = _mergeConversations(
+        conversations,
+        state.conversations.isNotEmpty
+            ? state.conversations
+            : await _loadPersistedConversations(),
+      );
       emit(state.copyWith(
-        conversations: conversations,
+        conversations: mergedConversations,
         conversationsStatus: ChatStatus.success,
         clearError: true,
       ));
-      await _persistConversations(conversations);
+      await _persistConversations(mergedConversations);
     } catch (e) {
       emit(state.copyWith(
         conversationsStatus: ChatStatus.error,
@@ -341,11 +395,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       List<MessageModel> updatedMessages = [];
 
       if (event.page == 1) {
-        final optimisticMessages = cachedMessages.where((m) => m.isPending);
-
         updatedMessages = [
           ...fetchedMessages,
-          ...optimisticMessages,
+          ...cachedMessages,
         ];
       } else {
         updatedMessages = [

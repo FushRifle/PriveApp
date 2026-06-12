@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
@@ -14,6 +15,7 @@ class ChatInputBar extends StatefulWidget {
   final VoidCallback onCancelReply;
   final Color sendButtonColor;
   final VoidCallback onPickImage;
+  final VoidCallback onPickCamera;
   final VoidCallback onPickVideo;
   final VoidCallback onPickDocument;
   final ValueChanged<File> onSendVoice;
@@ -27,6 +29,7 @@ class ChatInputBar extends StatefulWidget {
     required this.onCancelReply,
     required this.sendButtonColor,
     required this.onPickImage,
+    required this.onPickCamera,
     required this.onPickVideo,
     required this.onPickDocument,
     required this.onSendVoice,
@@ -135,6 +138,11 @@ class _ChatInputBarState extends State<ChatInputBar> {
     });
 
     try {
+      final status = await Permission.microphone.request();
+      if (!status.isGranted) {
+        throw Exception('Microphone permission is required');
+      }
+
       final hasPermission = await _recorderController.checkPermission();
       if (!hasPermission) {
         throw Exception('Microphone permission is required');
@@ -267,7 +275,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                 _buildAttachmentOption(
                     Icons.camera_alt, 'Camera', AppColors.attachmentCyan, () {
                   Navigator.pop(context);
-                  widget.onPickImage();
+                  widget.onPickCamera();
                 }),
                 _buildAttachmentOption(
                     Icons.videocam, 'Video', AppColors.attachmentGreen, () {

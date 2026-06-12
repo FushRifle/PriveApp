@@ -280,6 +280,9 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    if (!_isEndingCall) {
+      unawaited(_callService.endCall(callId: widget.callResponse.call.id));
+    }
     unawaited(_callManager.leaveCall());
     super.dispose();
   }
