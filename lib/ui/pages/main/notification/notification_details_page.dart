@@ -7,6 +7,7 @@ import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/core/services/home/feed_service.dart';
 import 'package:clique/ui/pages/main/home/post_detail_page.dart';
+import 'package:clique/ui/widgets/common/effect_text.dart';
 import 'package:clique/ui/widgets/home/card_post.dart';
 
 class NotificationDetailsPage extends StatefulWidget {
@@ -133,14 +134,16 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
                   const SizedBox(height: 16),
                   _InfoCard(
                     title: 'Activity',
-                    child: Text(
-                      content.isNotEmpty
+                    child: EffectText(
+                      text: content.isNotEmpty
                           ? content
                           : 'This notification has no additional message.',
                       style: AppTheme.blackTextStyle.copyWith(
                         fontSize: 15,
                         height: 1.45,
                       ),
+                      hashtagColor: AppColors.primary,
+                      mentionColor: AppColors.secondary,
                     ),
                   ),
                   const SizedBox(height: 16),

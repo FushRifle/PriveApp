@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'package:clique/app/configs/colors.dart';
+import 'package:clique/core/router/named_routes.dart';
+import 'package:clique/core/services/user/user_service.dart';
 import 'package:clique/ui/pages/main/home/hashtag_feed_page.dart';
 
 class EffectText extends StatelessWidget {
@@ -28,6 +30,41 @@ class EffectText extends StatelessWidget {
   static final RegExp _effectPattern = RegExp(
     r'(?<![A-Za-z0-9_])([#@][A-Za-z0-9_]+)',
   );
+
+  Future<void> _handleMentionTap(BuildContext context, String token) async {
+    final query = token.replaceFirst('@', '').trim();
+    if (query.isEmpty) return;
+
+    try {
+      final userService = UserService();
+      final results = await userService.searchUsers(query, limit: 5);
+      if (!context.mounted || results.isEmpty) return;
+
+      final match = results.firstWhere(
+        (user) {
+          final handle = (user['username'] ?? user['handle'] ?? '')
+              .toString()
+              .trim()
+              .toLowerCase();
+          final name = (user['name'] ?? user['displayName'] ?? '')
+              .toString()
+              .trim()
+              .toLowerCase();
+          return handle == query.toLowerCase() || name == query.toLowerCase();
+        },
+        orElse: () => results.first,
+      );
+
+      final userId = match['id'];
+      if (userId is int && userId > 0) {
+        Navigator.pushNamed(
+          context,
+          NamedRoutes.otherProfileScreen,
+          arguments: userId,
+        );
+      }
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +106,17 @@ class EffectText extends StatelessWidget {
           ),
         );
       } else {
-        spans.add(TextSpan(text: token, style: tokenStyle));
+        spans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.baseline,
+            baseline: TextBaseline.alphabetic,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _handleMentionTap(context, token),
+              child: Text(token, style: tokenStyle),
+            ),
+          ),
+        );
       }
 
       cursor = match.end;

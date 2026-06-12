@@ -29,15 +29,42 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
   Duration _callDuration = Duration.zero;
   Timer? _timer;
   String? _callStatus;
+  bool _isEndingCall = false;
 
   @override
   void initState() {
     super.initState();
     _callManager = CallManager();
     _callService = CallService();
+    _setupCallManagerCallbacks();
     _joinCall();
     _startTimer();
-    _setupCallManagerCallbacks();
+  }
+
+  void _setupCallManagerCallbacks() {
+    _callManager.onConnectionStateChanged((state) {
+      if (!mounted) return;
+      setState(() {
+        _callStatus = state.toString();
+        _isMuted = !_callManager.isMicrophoneEnabled;
+        _isCameraOn = _callManager.isCameraEnabled;
+      });
+      if (state == ConnectionState.disconnected) {
+        _endCall(notifyBackend: false);
+      }
+    });
+
+    _callManager.onParticipantJoined((_) {
+      if (mounted) setState(() {});
+    });
+
+    _callManager.onParticipantLeft((_) {
+      if (mounted) setState(() {});
+    });
+
+    _callManager.onTrackSubscribed((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   Future<void> _joinCall() async {
@@ -60,32 +87,6 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
       isPublisher: true,
       enableVideo: isVideo,
     );
-
-    _callManager.onConnectionStateChanged((state) {
-      if (!mounted) return;
-      setState(() {
-        _callStatus = state.toString();
-        _isMuted = !_callManager.isMicrophoneEnabled;
-        _isCameraOn = _callManager.isCameraEnabled;
-      });
-      if (state == ConnectionState.disconnected) {
-        _endCall(notifyBackend: false);
-      }
-    });
-  }
-
-  void _setupCallManagerCallbacks() {
-    _callManager.onParticipantJoined((_) {
-      if (mounted) setState(() {});
-    });
-
-    _callManager.onParticipantLeft((_) {
-      if (mounted) setState(() {});
-    });
-
-    _callManager.onTrackSubscribed((_) {
-      if (mounted) setState(() {});
-    });
   }
 
   void _startTimer() {
@@ -120,6 +121,8 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
   }
 
   Future<void> _endCall({bool notifyBackend = true}) async {
+    if (_isEndingCall) return;
+    _isEndingCall = true;
     _timer?.cancel();
     await _callManager.leaveCall();
     if (notifyBackend) {
@@ -130,6 +133,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
     if (mounted) {
       Navigator.pop(context);
     }
+    _isEndingCall = false;
   }
 
   String _formatDuration(Duration duration) {

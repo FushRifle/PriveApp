@@ -843,64 +843,88 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
                       )
                     else
                       const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        _CommentActionButton(
-                          icon: Icons.thumb_up_outlined,
-                          selectedIcon: Icons.thumb_up,
-                          selected: isLiked,
-                          label: likes > 0 ? '$likes' : 'Like',
-                          onTap: () => context.read<FeedBloc>().add(
-                                LikePostComment(
-                                  postId: widget.postId,
-                                  commentId: commentId,
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _CommentReactionButton(
+                            likes: likes,
+                            dislikes: dislikes,
+                            isLiked: isLiked,
+                            isDisliked: isDisliked,
+                            onLike: () => context.read<FeedBloc>().add(
+                                  LikePostComment(
+                                    postId: widget.postId,
+                                    commentId: commentId,
+                                  ),
+                                ),
+                            onDislike: () => context.read<FeedBloc>().add(
+                                  DislikePostComment(
+                                    postId: widget.postId,
+                                    commentId: commentId,
+                                  ),
+                                ),
+                          ),
+                          const SizedBox(width: 8),
+                          _CommentActionButton(
+                            icon: Icons.reply_rounded,
+                            selectedIcon: Icons.reply_rounded,
+                            selected: false,
+                            label: replyCount > 0
+                                ? '$replyCount replies'
+                                : 'Reply',
+                            onTap: () {
+                              _commentController.text = '@$name ';
+                              _focusNode.requestFocus();
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          _CommentActionButton(
+                            icon: Icons.thumb_up_outlined,
+                            selectedIcon: Icons.thumb_up,
+                            selected: isLiked,
+                            label: likes > 0 ? '$likes' : 'Like',
+                            onTap: () => context.read<FeedBloc>().add(
+                                  LikePostComment(
+                                    postId: widget.postId,
+                                    commentId: commentId,
+                                  ),
+                                ),
+                          ),
+                          const SizedBox(width: 8),
+                          _CommentActionButton(
+                            icon: Icons.thumb_down_outlined,
+                            selectedIcon: Icons.thumb_down,
+                            selected: isDisliked,
+                            label: dislikes > 0 ? '$dislikes' : 'Dislike',
+                            onTap: () => context.read<FeedBloc>().add(
+                                  DislikePostComment(
+                                    postId: widget.postId,
+                                    commentId: commentId,
+                                  ),
+                                ),
+                          ),
+                          const SizedBox(width: 8),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                time,
+                                style: AppTheme.greyTextStyle.copyWith(
+                                  fontSize: 12,
+                                  fontWeight: AppTheme.medium,
                                 ),
                               ),
-                        ),
-                        _CommentActionButton(
-                          icon: Icons.thumb_down_outlined,
-                          selectedIcon: Icons.thumb_down,
-                          selected: isDisliked,
-                          label: dislikes > 0 ? '$dislikes' : 'Dislike',
-                          onTap: () => context.read<FeedBloc>().add(
-                                DislikePostComment(
-                                  postId: widget.postId,
-                                  commentId: commentId,
-                                ),
+                              const SizedBox(width: 8),
+                              Image.asset(
+                                "assets/images/ic_calendar.png",
+                                width: 14,
                               ),
-                        ),
-                        _CommentActionButton(
-                          icon: Icons.reply_rounded,
-                          selectedIcon: Icons.reply_rounded,
-                          selected: false,
-                          label:
-                              replyCount > 0 ? '$replyCount replies' : 'Reply',
-                          onTap: () {
-                            _commentController.text = '@$name ';
-                            _focusNode.requestFocus();
-                          },
-                        ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              time,
-                              style: AppTheme.greyTextStyle.copyWith(
-                                fontSize: 12,
-                                fontWeight: AppTheme.medium,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Image.asset(
-                              "assets/images/ic_calendar.png",
-                              width: 14,
-                            ),
-                          ],
-                        ),
-                      ],
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -959,6 +983,156 @@ class _CommentActionButton extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CommentReactionButton extends StatelessWidget {
+  final int likes;
+  final int dislikes;
+  final bool isLiked;
+  final bool isDisliked;
+  final VoidCallback onLike;
+  final VoidCallback onDislike;
+
+  const _CommentReactionButton({
+    required this.likes,
+    required this.dislikes,
+    required this.isLiked,
+    required this.isDisliked,
+    required this.onLike,
+    required this.onDislike,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final label = isLiked
+        ? (likes > 0 ? '$likes Reacted' : 'Reacted')
+        : isDisliked
+            ? (dislikes > 0 ? '$dislikes Reacted' : 'Reacted')
+            : 'React';
+
+    return _CommentActionButton(
+      icon: isDisliked ? Icons.thumb_down : Icons.emoji_emotions_outlined,
+      selectedIcon: isLiked ? Icons.thumb_up : Icons.emoji_emotions,
+      selected: isLiked || isDisliked,
+      label: label,
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          backgroundColor: AppColors.transparent,
+          builder: (sheetContext) {
+            return Container(
+              decoration: BoxDecoration(
+                color: AppColors.cardColor,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(24)),
+                border: Border.all(color: AppColors.cardBorderColor),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding:
+                      const EdgeInsets.fromLTRB(16, 10, 16, 18),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.greyColor.withOpacity(0.25),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _ReactionTile(
+                            icon: Icons.thumb_up,
+                            label: 'Like',
+                            color: AppColors.primary,
+                            onTap: () {
+                              Navigator.pop(sheetContext);
+                              onLike();
+                            },
+                          ),
+                          _ReactionTile(
+                            icon: Icons.thumb_down,
+                            label: 'Dislike',
+                            color: AppColors.redAccent,
+                            onTap: () {
+                              Navigator.pop(sheetContext);
+                              onDislike();
+                            },
+                          ),
+                          _ReactionTile(
+                            icon: Icons.emoji_emotions_outlined,
+                            label: 'React',
+                            color: AppColors.secondary,
+                            onTap: () {
+                              Navigator.pop(sheetContext);
+                              onLike();
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _ReactionTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ReactionTile({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 96,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: color.withOpacity(0.16)),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: color),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: AppTheme.blackTextStyle.copyWith(
+                  fontSize: 12,
+                  fontWeight: AppTheme.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

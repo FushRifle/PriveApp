@@ -21,6 +21,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
   bool _isVerifying = false;
   bool _isLoading = true;
   String? _error;
+  bool _didAutoPrompt = false;
 
   @override
   void initState() {
@@ -59,6 +60,11 @@ class _LockScreenPageState extends State<LockScreenPage> {
         _savedPin = savedPin;
         _isLoading = false;
       });
+
+      if (!_didAutoPrompt) {
+        _didAutoPrompt = true;
+        await _maybeAutoUnlock();
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -66,6 +72,12 @@ class _LockScreenPageState extends State<LockScreenPage> {
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _maybeAutoUnlock() async {
+    if (!_isBiometricEnabled || !_isBiometricAvailable) return;
+    if (_isVerifying) return;
+    await _enableBiometric();
   }
 
   Future<void> _enableBiometric() async {

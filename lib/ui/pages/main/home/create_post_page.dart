@@ -130,6 +130,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
         }
       },
       child: Scaffold(
+        resizeToAvoidBottomInset: true,
         backgroundColor: AppColors.backgroundColor,
         body: Container(
           decoration: BoxDecoration(
@@ -1319,8 +1320,14 @@ class _TextPostComposer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        8,
+        20,
+        24 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
       child: Column(
         children: [
           _ComposerTypeSelector(
@@ -1331,33 +1338,32 @@ class _TextPostComposer extends StatelessWidget {
             onAnonymousCategoryChanged: onAnonymousCategoryChanged,
           ),
           const SizedBox(height: 14),
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
-              decoration: BoxDecoration(
-                color: AppColors.cardColor,
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: AppColors.cardBorderColor),
+          Container(
+            width: double.infinity,
+            height: 280,
+            padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
+            decoration: BoxDecoration(
+              color: AppColors.cardColor,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: AppColors.cardBorderColor),
+            ),
+            child: TokenSuggestionField(
+              controller: textController,
+              enabled: enabled,
+              suggestionsBuilder: suggestionsBuilder,
+              maxLines: null,
+              style: AppTheme.blackTextStyle.copyWith(
+                fontSize: 20,
+                height: 1.38,
+                fontWeight: FontWeight.w500,
               ),
-              child: TokenSuggestionField(
-                controller: textController,
-                enabled: enabled,
-                suggestionsBuilder: suggestionsBuilder,
-                maxLines: null,
-                style: AppTheme.blackTextStyle.copyWith(
+              decoration: InputDecoration(
+                hintText: "What's on your mind?",
+                hintStyle: AppTheme.greyTextStyle.copyWith(
                   fontSize: 20,
-                  height: 1.38,
                   fontWeight: FontWeight.w500,
                 ),
-                decoration: InputDecoration(
-                  hintText: "What's on your mind?",
-                  hintStyle: AppTheme.greyTextStyle.copyWith(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  border: InputBorder.none,
-                ),
+                border: InputBorder.none,
               ),
             ),
           ),
@@ -1893,22 +1899,32 @@ class _ComposerTypeSelector extends StatelessWidget {
           runSpacing: 10,
           children: PostComposerType.values.map((type) {
             final isSelected = type == selectedType;
+            final isPollOff = type == PostComposerType.poll;
             return ChoiceChip(
-              label: Text(type.label),
+              label: Text(isPollOff ? 'Poll (Off)' : type.label),
               selected: isSelected,
-              onSelected: enabled
+              onSelected: enabled && !isPollOff
                   ? (_) {
                       HapticFeedback.selectionClick();
                       onChanged(type);
                     }
                   : null,
               labelStyle: TextStyle(
-                color: isSelected ? AppColors.white : AppColors.text,
+                color: isPollOff
+                    ? AppColors.textHint
+                    : isSelected
+                        ? AppColors.white
+                        : AppColors.text,
                 fontWeight: FontWeight.w700,
               ),
-              selectedColor: AppColors.primary,
+              selectedColor:
+                  isPollOff ? AppColors.cardColor : AppColors.primary,
               backgroundColor: AppColors.cardColor,
-              side: BorderSide(color: AppColors.cardBorderColor),
+              side: BorderSide(
+                color: isPollOff
+                    ? AppColors.cardBorderColor.withOpacity(0.6)
+                    : AppColors.cardBorderColor,
+              ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(999),
               ),

@@ -250,7 +250,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     );
 
     try {
-      await _feedService.createPost(
+      final createdPost = await _feedService.createPost(
         content: event.content,
         attachments: event.attachments,
         postType: event.postType,
@@ -263,12 +263,12 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
       emit(
         state.copyWith(
           isCreatingPost: false,
+          posts: [
+            createdPost,
+            ...state.posts.where((post) => post.id != createdPost.id),
+          ],
+          postsStatus: state.posts.isEmpty ? FeedStatus.loaded : state.postsStatus,
         ),
-      );
-
-      await _onRefreshFeed(
-        RefreshFeed(),
-        emit,
       );
     } catch (e) {
       emit(
@@ -433,6 +433,13 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     Emitter<FeedState> emit,
   ) async {
     final originalPosts = state.posts;
+    final sourcePost = state.posts.cast<FeedPost?>().firstWhere(
+          (post) => post?.id == event.postId,
+          orElse: () => null,
+        );
+
+    if (sourcePost == null) return;
+
     final updatedPosts = state.posts.map((post) {
       if (post.id == event.postId && !post.isReposted) {
         return post.copyWith(
@@ -447,9 +454,32 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     emit(state.copyWith(posts: updatedPosts));
 
     try {
+      final createdPost = await _feedService.createPost(
+        content: sourcePost.content,
+        attachments: sourcePost.attachments
+            .map((attachment) => attachment.toJson())
+            .toList(),
+        postType: sourcePost.isPoll ? 'poll' : 'standard',
+        isAnonymous: false,
+        anonymousCategory: null,
+        pollOptions: sourcePost.pollOptions.isNotEmpty
+            ? sourcePost.pollOptions
+            : null,
+        pollExpirationHours: sourcePost.pollExpirationHours,
+      );
+
       await _feedService.repost(
         postId: event.postId,
         content: event.content,
+      );
+
+      emit(
+        state.copyWith(
+          posts: [
+            createdPost,
+            ...state.posts.where((post) => post.id != createdPost.id),
+          ],
+        ),
       );
     } catch (e) {
       emit(state.copyWith(posts: originalPosts, generalError: e.toString()));

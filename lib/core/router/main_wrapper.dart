@@ -89,7 +89,7 @@ class _MainWrapperState extends State<MainWrapper> with AutomaticKeepAliveClient
                   },
                   children: [
                     _DeferredTab(enabled: _visitedTabs.contains(0), child: const HomePage(key: PageStorageKey('home_page'))),
-                    _DeferredTab(enabled: _visitedTabs.contains(1), child: ReelsPage(key: PageStorageKey('reels_page'), onBack: () => _onTabChanged(0))),
+                    _DeferredTab(enabled: _visitedTabs.contains(1), child: ReelsPage(key: PageStorageKey('reels_page'), onBack: () => _onTabChanged(0), isVisible: _currentIndex == 1)),
                     _DeferredTab(enabled: _visitedTabs.contains(2), child: const _CommunityTabScope(key: PageStorageKey('community_page'), child: CommunityPage())),
                     _DeferredTab(enabled: _visitedTabs.contains(3), child: const _ChatTabScope(key: PageStorageKey('inbox_page'), child: InboxPage())),
                   ],

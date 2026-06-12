@@ -9,6 +9,7 @@ import 'package:clique/core/services/notification/notification_service.dart';
 import 'package:clique/ui/pages/main/home/post_detail_page.dart';
 import 'package:clique/ui/pages/main/notification/notification_details_page.dart';
 import 'package:clique/ui/widgets/common/app_page_header.dart';
+import 'package:clique/ui/widgets/common/effect_text.dart';
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
@@ -824,35 +825,22 @@ class _NotificationPageState extends State<NotificationPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    RichText(
+                    EffectText(
+                      text:
+                          '$actorName ${groupCount > 1 && _shouldGroup(type) ? (type == 'like' || type == 'post_like' ? 'liked $groupCount of your posts.' : content) : content}',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      text: TextSpan(
-                        style: AppTheme.blackTextStyle.copyWith(
-                          fontSize: 14,
-                          height: 1.3,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: '$actorName ',
-                            style: const TextStyle(fontWeight: FontWeight.w800),
-                          ),
-                          TextSpan(
-                            text: groupCount > 1 && _shouldGroup(type)
-                                ? (type == 'like' || type == 'post_like'
-                                    ? 'liked $groupCount of your posts.'
-                                    : content)
-                                : content,
-                            style: TextStyle(
-                              color: isUnread
-                                  ? AppColors.blackColor
-                                  : AppColors.greyColor,
-                              fontWeight:
-                                  isUnread ? FontWeight.w600 : FontWeight.w400,
-                            ),
-                          ),
-                        ],
+                      style: AppTheme.blackTextStyle.copyWith(
+                        fontSize: 14,
+                        height: 1.3,
+                        color: isUnread
+                            ? AppColors.blackColor
+                            : AppColors.greyColor,
+                        fontWeight:
+                            isUnread ? FontWeight.w600 : FontWeight.w400,
                       ),
+                      hashtagColor: AppColors.primary,
+                      mentionColor: AppColors.secondary,
                     ),
                     const SizedBox(height: 8),
                     Row(

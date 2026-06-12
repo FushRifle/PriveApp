@@ -10,10 +10,12 @@ import 'package:clique/ui/widgets/reels/reel_item.dart';
 
 class ReelsPage extends StatefulWidget {
   final VoidCallback? onBack;
+  final bool isVisible;
 
   const ReelsPage({
     super.key,
     this.onBack,
+    this.isVisible = true,
   });
 
   @override
@@ -150,7 +152,8 @@ class _ReelsPageState extends State<ReelsPage> {
                                   color: AppColors.white,
                                   child: ReelItem(
                                     reel: reels[index],
-                                    isActive: index == _currentIndex,
+                                    isActive: widget.isVisible &&
+                                        index == _currentIndex,
                                     onNextReel: () {
                                       if (index < reels.length - 1) {
                                         _pageController.nextPage(

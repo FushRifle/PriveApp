@@ -37,78 +37,66 @@ class MessageBubble extends StatelessWidget {
     );
 
     return RepaintBoundary(
-      child: Dismissible(
-        key: ValueKey(
-            'message_${message.id}_${message.createdAt.millisecondsSinceEpoch}'),
-        direction:
-            isMe ? DismissDirection.endToStart : DismissDirection.startToEnd,
-        background: Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.1),
-            borderRadius: borderRadius,
-          ),
-          alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-          padding: EdgeInsets.only(right: isMe ? 20 : 0, left: !isMe ? 20 : 0),
-          child: const Icon(Icons.reply, color: AppColors.primary, size: 24),
-        ),
-        confirmDismiss: (_) async {
-          onReply?.call();
-          return false;
-        },
-        child: Padding(
-          padding: EdgeInsets.only(
-              bottom: 8, top: 4, left: isMe ? 42 : 2, right: isMe ? 2 : 42),
-          child: Row(
-            mainAxisAlignment:
-                isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (!isMe) ...[
-                _Avatar(userAvatar: userAvatar),
-                const SizedBox(width: 8),
-              ],
-              Flexible(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onLongPress: () => _showMessageOptions(context),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                    decoration: BoxDecoration(
-                      color: isMe ? chatColor : otherBubbleColor,
-                      borderRadius: borderRadius,
-                      border: isMe
-                          ? null
-                          : Border.all(
-                              color: isDark
-                                  ? AppColors.darkCardBorder
-                                  : AppColors.lightCardBorder,
-                            ),
-                      boxShadow: [
-                        BoxShadow(
-                          color:
-                              AppColors.black.withOpacity(isDark ? 0.16 : 0.05),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (message.replyToId != null) _buildReplyPreview(isMe),
-                        _buildMessageContent(isMe, context, otherTextColor),
-                        const SizedBox(height: 4),
-                        _buildTimeAndStatus(isMe),
-                      ],
-                    ),
+      child: Padding(
+        padding: EdgeInsets.only(
+            bottom: 8, top: 4, left: isMe ? 42 : 2, right: isMe ? 2 : 42),
+        child: Row(
+          mainAxisAlignment:
+              isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (!isMe) ...[
+              _Avatar(userAvatar: userAvatar),
+              const SizedBox(width: 8),
+            ],
+            Flexible(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onLongPress: () => _showMessageOptions(context),
+                onHorizontalDragEnd: (details) {
+                  final velocity = details.primaryVelocity ?? 0;
+                  final shouldReply =
+                      isMe ? velocity < -180 : velocity > 180;
+                  if (shouldReply) {
+                    onReply?.call();
+                  }
+                },
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                  decoration: BoxDecoration(
+                    color: isMe ? chatColor : otherBubbleColor,
+                    borderRadius: borderRadius,
+                    border: isMe
+                        ? null
+                        : Border.all(
+                            color: isDark
+                                ? AppColors.darkCardBorder
+                                : AppColors.lightCardBorder,
+                          ),
+                    boxShadow: [
+                      BoxShadow(
+                        color:
+                            AppColors.black.withOpacity(isDark ? 0.16 : 0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (message.replyToId != null) _buildReplyPreview(isMe),
+                      _buildMessageContent(isMe, context, otherTextColor),
+                      const SizedBox(height: 4),
+                      _buildTimeAndStatus(isMe),
+                    ],
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

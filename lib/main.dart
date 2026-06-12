@@ -97,8 +97,6 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   DateTime? _lastAuthCheck;
-  bool _isPresentingAppLock = false;
-  bool _isAppUnlocked = false;
 
   @override
   void initState() {
@@ -132,42 +130,14 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
 
         _authBloc.add(CheckAuthStatus());
       }
-
-      _maybePresentAppLock();
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
-      _isAppUnlocked = false;
     }
   }
 
   @override
   void didChangePlatformBrightness() {
     setState(() {});
-  }
-
-  Future<void> _maybePresentAppLock() async {
-    if (_isPresentingAppLock || _isAppUnlocked) return;
-
-    final authState = _authBloc.state;
-    if (!authState.isAuthenticated || authState.token == null) return;
-
-    final isEnabled = await _appLockService.isEnabled();
-    if (!isEnabled) return;
-
-    final navigator = _navigatorKey.currentState;
-    if (navigator == null) return;
-
-    _isPresentingAppLock = true;
-    try {
-      final unlocked = await navigator.pushNamed<bool>(
-        NamedRoutes.lockScreenScreen,
-      );
-      if (unlocked == true) {
-        _isAppUnlocked = true;
-      }
-    } finally {
-      _isPresentingAppLock = false;
-    }
   }
 
   @override
@@ -215,7 +185,6 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
                 context.read<FeatureAccessCubit>()
                   ..load()
                   ..configureRevenueCat(userID);
-                _maybePresentAppLock();
               }
               if (state.status == AuthStatus.unauthenticated) {
                 PushNotificationService.instance.deleteDeviceToken();
@@ -237,13 +206,112 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
               darkTheme: AppTheme.darkTheme,
               themeMode: themeMode,
               scrollBehavior: const CustomScrollBehavior(),
-              home: const AuthGuard(),
+              home: _SecurityGate(
+                appLockService: _appLockService,
+                child: const AuthGuard(),
+              ),
               onGenerateRoute: AppRouter.onGenerateRoute,
             ),
           );
         },
       ),
     );
+  }
+}
+
+class _SecurityGate extends StatefulWidget {
+  final Widget child;
+  final AppLockService appLockService;
+
+  const _SecurityGate({
+    required this.child,
+    required this.appLockService,
+  });
+
+  @override
+  State<_SecurityGate> createState() => _SecurityGateState();
+}
+
+class _SecurityGateState extends State<_SecurityGate>
+    with WidgetsBindingObserver {
+  bool _isLoading = true;
+  bool _isUnlocked = false;
+  bool _isPrompting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _bootstrap();
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _bootstrap(forcePrompt: true);
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _isUnlocked = false;
+    }
+  }
+
+  Future<void> _bootstrap({bool forcePrompt = false}) async {
+    if (_isPrompting) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final settings = await widget.appLockService.loadCached();
+      if (!mounted) return;
+
+      if (!settings.enabled) {
+        setState(() {
+          _isUnlocked = true;
+          _isLoading = false;
+        });
+        return;
+      }
+
+      if (_isUnlocked && !forcePrompt) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      _isPrompting = true;
+      final unlocked = await Navigator.of(context).pushNamed<bool>(
+        NamedRoutes.lockScreenScreen,
+      );
+      if (!mounted) return;
+
+      setState(() {
+        _isUnlocked = unlocked == true;
+        _isLoading = false;
+      });
+    } finally {
+      _isPrompting = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading && !_isUnlocked) {
+      return Scaffold(
+        backgroundColor: AppColors.backgroundColor,
+        body: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    return widget.child;
   }
 }
 

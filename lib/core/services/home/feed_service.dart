@@ -105,7 +105,7 @@ class FeedService {
   }
 
   // Create post
-  Future<Map<String, dynamic>> createPost({
+  Future<FeedPost> createPost({
     required String content,
     List<Map<String, dynamic>>? attachments,
     String postType = 'standard',
@@ -141,7 +141,7 @@ class FeedService {
 
       final response = await _api.post('/api/feed/posts', data: data);
       _invalidateFeedCaches();
-      return response.data;
+      return FeedPost.fromJson(_readMap(response.data));
     } on DioException catch (e) {
       debugPrint('Create post error: ${e.response?.data}');
       throw e.response?.data['message'] ?? 'Failed to create post';
@@ -211,7 +211,7 @@ class FeedService {
     }
   }
 
-  Future<Map<String, dynamic>> repost({
+  Future<FeedPost> repost({
     required int postId,
     String content = '',
   }) async {
@@ -221,7 +221,7 @@ class FeedService {
         data: {'content': content},
       );
       _invalidateFeedCaches();
-      return _readMap(response.data);
+      return FeedPost.fromJson(_readMap(response.data));
     } on DioException catch (e) {
       debugPrint('Repost error: ${e.response?.data}');
       throw e.response?.data['message'] ??

@@ -28,13 +28,36 @@ class _OutgoingCallScreenState extends State<OutgoingCallScreen> {
   bool _isConnecting = true;
   String _status = 'Calling...';
   bool _navigatedToActiveCall = false;
+  bool _isCancelling = false;
 
   @override
   void initState() {
     super.initState();
+    _setupCallManagerCallbacks();
     _initCall();
     _callManager.playDialTone();
     _checkCallTimeout();
+  }
+
+  void _setupCallManagerCallbacks() {
+    _callManager.onConnectionStateChanged((state) {
+      if (!mounted) return;
+      setState(() {
+        _isConnecting = state != ConnectionState.connected;
+        _status = state == ConnectionState.connected ? 'Connected' : 'Calling...';
+      });
+    });
+
+    _callManager.onParticipantJoined((_) {
+      _goToActiveCall();
+    });
+
+    _callManager.onParticipantLeft((_) {
+      if (!mounted) return;
+      setState(() {
+        _status = 'Participant left';
+      });
+    });
   }
 
   Future<void> _initCall() async {
@@ -57,20 +80,10 @@ class _OutgoingCallScreenState extends State<OutgoingCallScreen> {
       isPublisher: true,
       enableVideo: isVideo,
     );
-
-    _callManager.onConnectionStateChanged((state) {
-      if (!mounted) return;
-      setState(() {
-        _isConnecting = state != ConnectionState.connected;
-        if (state == ConnectionState.connected) {
-          _status = 'Connected';
-        }
-      });
-    });
-
-    _callManager.onParticipantJoined((_) {
+    if (!mounted) return;
+    if (_callManager.remoteParticipants.isNotEmpty) {
       _goToActiveCall();
-    });
+    }
   }
 
   void _goToActiveCall() {
@@ -96,6 +109,8 @@ class _OutgoingCallScreenState extends State<OutgoingCallScreen> {
   }
 
   Future<void> _cancelCall({bool showNoAnswer = false}) async {
+    if (_isCancelling) return;
+    _isCancelling = true;
     await _callManager.stopDialTone();
     await _callManager.leaveCall();
     try {
@@ -108,6 +123,7 @@ class _OutgoingCallScreenState extends State<OutgoingCallScreen> {
       );
     }
     Navigator.pop(context);
+    _isCancelling = false;
   }
 
   @override

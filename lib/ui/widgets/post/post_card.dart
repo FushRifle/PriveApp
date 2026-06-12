@@ -37,6 +37,9 @@ class _CardPostState extends State<CardPost> {
   late int _commentCount;
   late int _shareCount;
   late int _repostCount;
+  IconData? _selectedReactionIcon;
+  Color? _selectedReactionColor;
+  String? _selectedReactionLabel;
   bool _isOwnPost = false;
 
   bool get _hasMedia => widget.post.attachments.isNotEmpty;
@@ -73,6 +76,15 @@ class _CardPostState extends State<CardPost> {
     _commentCount = widget.post.comments;
     _shareCount = widget.post.shares;
     _repostCount = widget.post.reposts;
+    if (_isLiked) {
+      _selectedReactionIcon = Icons.favorite_rounded;
+      _selectedReactionColor = AppColors.redAccent;
+      _selectedReactionLabel = 'Love';
+    } else {
+      _selectedReactionIcon = null;
+      _selectedReactionColor = null;
+      _selectedReactionLabel = null;
+    }
   }
 
   Future<void> _loadOwnership() async {
@@ -122,6 +134,16 @@ class _CardPostState extends State<CardPost> {
       if (_likeCount < 0) {
         _likeCount = 0;
       }
+
+      if (_isLiked) {
+        _selectedReactionIcon = Icons.favorite_rounded;
+        _selectedReactionColor = AppColors.redAccent;
+        _selectedReactionLabel = 'Love';
+      } else {
+        _selectedReactionIcon = null;
+        _selectedReactionColor = null;
+        _selectedReactionLabel = null;
+      }
     });
 
     if (wasLiked) {
@@ -140,7 +162,7 @@ class _CardPostState extends State<CardPost> {
 
     final reactions = <_ReactionChoice>[
       _ReactionChoice(
-          'Like', Icons.favorite_border_rounded, AppColors.redAccent),
+          'Like', Icons.thumb_up_rounded, AppColors.primary),
       _ReactionChoice('Love', Icons.favorite_rounded, AppColors.redAccent),
       _ReactionChoice(
           'Fire', Icons.local_fire_department_rounded, AppColors.orange),
@@ -187,11 +209,7 @@ class _CardPostState extends State<CardPost> {
                                 borderRadius: BorderRadius.circular(16),
                                 onTap: () {
                                   Navigator.pop(context);
-                                  if (!_isLiked) {
-                                    _toggleLike();
-                                  }
-                                  _showComingSoon(
-                                      '${reaction.label} reaction added');
+                                  _applyReaction(reaction);
                                 },
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
@@ -238,6 +256,28 @@ class _CardPostState extends State<CardPost> {
         );
       },
     );
+  }
+
+  void _applyReaction(_ReactionChoice reaction) {
+    final wasLiked = _isLiked;
+
+    setState(() {
+      _isLiked = true;
+      _selectedReactionIcon = reaction.icon;
+      _selectedReactionColor = reaction.color;
+      _selectedReactionLabel = reaction.label;
+      if (!wasLiked) {
+        _likeCount += 1;
+      }
+    });
+
+    if (!wasLiked) {
+      context.read<FeedBloc>().add(
+            LikeFeedPost(postId: widget.post.id),
+          );
+    }
+
+    _showComingSoon('${reaction.label} reaction added');
   }
 
   void _openComments() {
@@ -586,6 +626,10 @@ class _CardPostState extends State<CardPost> {
                 onSave: _toggleSave,
                 onShare: _share,
                 onRepost: _repost,
+                selectedReactionIcon: _selectedReactionIcon,
+                selectedReactionColor: _selectedReactionColor,
+                selectedReactionLabel: _selectedReactionLabel,
+                showLikeAction: !widget.post.isPoll,
               ),
             ],
           ),
@@ -682,13 +726,7 @@ class _PollPostBody extends StatelessWidget {
                     .toList(),
               )
             else
-              Text(
-                'Poll options will appear here once the backend returns them.',
-                style: AppTheme.greyTextStyle.copyWith(
-                  color: AppColors.textSecondary,
-                  fontSize: 12,
-                ),
-              ),
+              const SizedBox.shrink(),
           ],
         ),
       ),

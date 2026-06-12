@@ -16,6 +16,10 @@ class PostActions extends StatelessWidget {
   final VoidCallback onShare;
   final VoidCallback onRepost;
   final VoidCallback? onLikeLongPress;
+  final IconData? selectedReactionIcon;
+  final Color? selectedReactionColor;
+  final String? selectedReactionLabel;
+  final bool showLikeAction;
 
   const PostActions({
     super.key,
@@ -32,6 +36,10 @@ class PostActions extends StatelessWidget {
     required this.onShare,
     required this.onRepost,
     this.onLikeLongPress,
+    this.selectedReactionIcon,
+    this.selectedReactionColor,
+    this.selectedReactionLabel,
+    this.showLikeAction = true,
   });
 
   @override
@@ -54,20 +62,26 @@ class PostActions extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Flexible(
-            child: _ResponsiveAction(
-              icon: isLiked
-                  ? Icons.favorite_rounded
-                  : Icons.favorite_border_rounded,
-              label: _formatCount(likeCount),
-              color: isLiked ? AppColors.redAccent : actionColor,
-              onTap: onLike,
-              onLongPress: onLikeLongPress,
-              showLabel: !isTiny,
-              compact: isSmall,
+          if (showLikeAction) ...[
+            Flexible(
+              child: _ResponsiveAction(
+                icon: isLiked
+                    ? (selectedReactionIcon ?? Icons.favorite_rounded)
+                    : Icons.favorite_border_rounded,
+                label: isLiked && selectedReactionLabel != null
+                    ? selectedReactionLabel!
+                    : _formatCount(likeCount),
+                color: isLiked
+                    ? (selectedReactionColor ?? AppColors.redAccent)
+                    : actionColor,
+                onTap: onLike,
+                onLongPress: onLikeLongPress,
+                showLabel: !isTiny,
+                compact: isSmall,
+              ),
             ),
-          ),
-          SizedBox(width: gap),
+            SizedBox(width: gap),
+          ],
           Flexible(
             child: _ResponsiveAction(
               icon: Icons.mode_comment_outlined,
