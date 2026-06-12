@@ -27,6 +27,12 @@ class ChatService {
     unawaited(_streamChatService.connect().catchError((_) {}));
   }
 
+  Future<void> ensureStreamConnected() {
+    return _streamChatService.ensureConnected();
+  }
+
+  Stream<stream.Event> get streamEvents => _streamChatService.events;
+
   void clearAuthToken() {
     _api.clearAuthToken();
     _messagesCache.clear();
@@ -582,7 +588,8 @@ class ChatService {
     for (final channel in _streamChatService.client.state.channels.values) {
       final messages = channel.state?.messages ?? const <stream.Message>[];
       for (final message in messages) {
-        if (message.id.hashCode == messageId || message.id == messageId.toString()) {
+        if (message.id.hashCode == messageId ||
+            message.id == messageId.toString()) {
           return (channel, message);
         }
       }
@@ -591,10 +598,8 @@ class ChatService {
   }
 
   List<Map<String, dynamic>> _mapStreamMessages(
-    List<stream.Message> messages,
-    int conversationId,
-    {int? receiverId}
-  ) {
+      List<stream.Message> messages, int conversationId,
+      {int? receiverId}) {
     final currentUserId = _streamChatService.currentUserId;
     final currentUserIdInt = _streamChatService.currentUserIdAsInt();
     final peerId = receiverId ?? 0;
@@ -603,7 +608,9 @@ class ChatService {
       final senderId = _readInt(message.user?.id);
       final replyParentId = _readInt(message.parentId) != 0
           ? _readInt(message.parentId)
-          : (message.parentId != null ? _stableMessageId(message.parentId!) : 0);
+          : (message.parentId != null
+              ? _stableMessageId(message.parentId!)
+              : 0);
       final mediaUrl = _readStreamMediaUrl(message);
       final messageType = _readStreamMessageType(message, mediaUrl);
       final isOwn = currentUserId != null && message.user?.id == currentUserId;
@@ -679,7 +686,9 @@ class ChatService {
       'mediaUrl': mediaUrl,
       'replyToId': _readInt(message.parentId) != 0
           ? _readInt(message.parentId)
-          : (message.parentId != null ? _stableMessageId(message.parentId!) : 0),
+          : (message.parentId != null
+              ? _stableMessageId(message.parentId!)
+              : 0),
       'replyToMessage': message.quotedMessage?.text,
       'replyToSender': message.quotedMessage?.user?.name,
       'isRead': true,
@@ -695,8 +704,9 @@ class ChatService {
 
   String _readStreamMessageType(stream.Message message, String? mediaUrl) {
     if (mediaUrl != null && mediaUrl.isNotEmpty) {
-      final attachmentType =
-          message.attachments.isNotEmpty ? message.attachments.first.type : null;
+      final attachmentType = message.attachments.isNotEmpty
+          ? message.attachments.first.type
+          : null;
       return attachmentType ?? 'image';
     }
     return 'text';
@@ -730,6 +740,22 @@ class ChatService {
         }
       }
 
+      try {
+        await _streamChatService.connect();
+        final streamConversations = await _loadStreamConversations(
+          cacheOwnerId: cacheOwnerId,
+        );
+        if (streamConversations.isNotEmpty) {
+          await cacheConversations(
+            streamConversations,
+            cacheOwnerId: cacheOwnerId,
+          );
+          return streamConversations;
+        }
+      } catch (_) {
+        // Fall through to the existing REST path.
+      }
+
       final response = await _api.get(
         '/api/chat/conversations',
         forceRefresh: true,
@@ -754,6 +780,129 @@ class ChatService {
     } on DioException catch (e) {
       throw _handleError(e);
     }
+  }
+
+  Future<List<Map<String, dynamic>>> _loadStreamConversations({
+    int? cacheOwnerId,
+  }) async {
+    final currentUserId = _streamChatService.currentUserId;
+    if (currentUserId == null || currentUserId.isEmpty) {
+      return <Map<String, dynamic>>[];
+    }
+
+    final channels = await _streamChatService.client.queryChannelsOnline(
+      filter: stream.Filter.and([
+        stream.Filter.equal('type', 'messaging'),
+        stream.Filter.contains('members', currentUserId),
+      ]),
+      sort: [
+        stream.SortOption<stream.ChannelState>.desc('last_message_at'),
+      ],
+      state: true,
+      watch: true,
+      presence: true,
+      messageLimit: 1,
+    );
+
+    final conversations = channels.map((channel) {
+      final state = channel.state;
+      final members = state?.members ?? const <stream.Member>[];
+      final peer = _findPeerMember(members, currentUserId);
+      final messages = state?.messages;
+      final latestMessage =
+          messages != null && messages.isNotEmpty ? messages.last : null;
+      final unreadCount = (state?.read ?? const <stream.Read>[])
+              .userReadOf(
+                userId: currentUserId,
+              )
+              ?.unreadMessages ??
+          0;
+      final lastMessage = latestMessage?.text ?? '';
+      final lastMessageAt = channel.lastMessageAt ??
+          latestMessage?.createdAt ??
+          channel.createdAt ??
+          DateTime.now();
+
+      return <String, dynamic>{
+        'id': _readInt(channel.id),
+        'userId': _readInt(peer?.user?.id),
+        'name': _readStreamConversationName(peer),
+        'username': _readStreamConversationUsername(peer),
+        'avatar': peer?.user?.image ?? '',
+        'age': 0,
+        'verified': peer?.user?.extraData['verified'] == true,
+        'lastMessage': lastMessage,
+        'lastMessageType': latestMessage != null
+            ? _readStreamMessageType(
+                latestMessage, _readStreamMediaUrl(latestMessage))
+            : 'text',
+        'timestamp': lastMessageAt.toIso8601String(),
+        'unreadCount': unreadCount,
+        'isOnline': peer?.user?.online ?? false,
+        'isTyping': false,
+        'isPinned': channel.isPinned,
+        'isMuted': channel.isMuted,
+        'muteUntil': null,
+        'conversationId': _readInt(channel.id),
+        'channelId': channel.id,
+        'lastMessageId': latestMessage?.id,
+        'lastMessageCreatedAt': latestMessage?.createdAt.toIso8601String(),
+        'cacheOwnerId': cacheOwnerId,
+      };
+    }).toList();
+
+    conversations.sort((a, b) {
+      if ((a['isPinned'] == true) && (b['isPinned'] != true)) return -1;
+      if ((a['isPinned'] != true) && (b['isPinned'] == true)) return 1;
+      final aTime = DateTime.tryParse(a['timestamp']?.toString() ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+      final bTime = DateTime.tryParse(b['timestamp']?.toString() ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+      return bTime.compareTo(aTime);
+    });
+
+    return conversations;
+  }
+
+  stream.Member? _findPeerMember(
+    List<stream.Member> members,
+    String currentUserId,
+  ) {
+    for (final member in members) {
+      final memberUser = member.user;
+      if (memberUser == null || memberUser.id == currentUserId) {
+        continue;
+      }
+      return member;
+    }
+    return members.isNotEmpty ? members.first : null;
+  }
+
+  String _readStreamConversationName(stream.Member? peer) {
+    final user = peer?.user;
+    if (user == null) return 'User';
+    final name = user.name.trim();
+    if (name.isNotEmpty) return name;
+    final username = _readStreamConversationUsername(peer).trim();
+    if (username.isNotEmpty) return username;
+    return user.id;
+  }
+
+  String _readStreamConversationUsername(stream.Member? peer) {
+    final user = peer?.user;
+    if (user == null) return '';
+
+    final extraUsername = user.extraData['username'];
+    if (extraUsername is String && extraUsername.trim().isNotEmpty) {
+      return extraUsername.trim();
+    }
+
+    final extraHandle = user.extraData['handle'];
+    if (extraHandle is String && extraHandle.trim().isNotEmpty) {
+      return extraHandle.trim();
+    }
+
+    return '';
   }
 
   Future<Map<String, dynamic>> getConversationInfo(

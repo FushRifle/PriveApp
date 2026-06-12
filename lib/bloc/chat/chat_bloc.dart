@@ -17,6 +17,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final Set<int> _loadingConversations = {};
   final Set<String> _inFlightMessageKeys = {};
   int _messageRequestId = 0;
+  StreamSubscription? _streamEventSubscription;
 
   ChatBloc() : super(const ChatState()) {
     on<LoadConversations>(_onLoadConversations);
@@ -50,11 +51,38 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   void setAuthToken(String token) {
     _chatService.setAuthToken(token);
     _userService.setAuthToken(token);
+    unawaited(_bindStreamEvents());
   }
 
   void clearAuthToken() {
+    _streamEventSubscription?.cancel();
+    _streamEventSubscription = null;
     _chatService.clearAuthToken();
     _userService.clearAuthToken();
+  }
+
+  Future<void> _bindStreamEvents() async {
+    try {
+      await _chatService.ensureStreamConnected();
+      if (_streamEventSubscription != null) {
+        return;
+      }
+
+      _streamEventSubscription = _chatService.streamEvents.listen((event) {
+        switch (event.type) {
+          case 'message.new':
+          case 'notification.message_new':
+          case 'message.deleted':
+          case 'notification.mark_read':
+          case 'notification.mark_unread':
+          case 'channel.updated':
+          case 'channel.deleted':
+          case 'member.added':
+          case 'member.removed':
+            add(RefreshConversations());
+        }
+      });
+    } catch (_) {}
   }
 
   Future<void> _loadCurrentUserId() async {
@@ -188,8 +216,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         continue;
       }
 
-      if (conversation.lastMessage.isNotEmpty &&
-          existing.lastMessage.isEmpty) {
+      if (conversation.lastMessage.isNotEmpty && existing.lastMessage.isEmpty) {
         mergedById[conversation.id] = conversation;
       }
     }
@@ -205,7 +232,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   }
 
   DateTime _parseConversationTime(String timestamp) {
-    return DateTime.tryParse(timestamp) ?? DateTime.fromMillisecondsSinceEpoch(0);
+    return DateTime.tryParse(timestamp) ??
+        DateTime.fromMillisecondsSinceEpoch(0);
   }
 
   bool _looksLikeSameDelivery(MessageModel pending, MessageModel delivered) {
@@ -270,6 +298,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       }
 
       final data = await _chatService.getConversations(
+        forceRefresh: true,
         cacheOwnerId: _currentUserId,
       );
       final conversations =
@@ -718,15 +747,15 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           continue;
         }
 
-      final response = await _chatService.sendMessage(
-        conversationId: event.conversationId,
-        receiverId: pending.receiverId,
-        message: pending.message,
-        messageType: pending.messageType,
-        mediaUrl: pending.mediaUrl,
-        replyToId: pending.replyToId,
-        replyToStreamMessageId: pending.streamMessageId,
-      );
+        final response = await _chatService.sendMessage(
+          conversationId: event.conversationId,
+          receiverId: pending.receiverId,
+          message: pending.message,
+          messageType: pending.messageType,
+          mediaUrl: pending.mediaUrl,
+          replyToId: pending.replyToId,
+          replyToStreamMessageId: pending.streamMessageId,
+        );
 
         if (response == null) continue;
 
@@ -762,15 +791,15 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
         _chatService.clearMessagesCache(event.conversationId);
         add(RefreshConversations());
-        } catch (_) {
-          emit(state.copyWith(
-            messagesStatus: ChatStatus.success,
-            activeConversationId: event.conversationId,
-            clearError: true,
-          ));
-        } finally {
-          _inFlightMessageKeys.remove(sendKey);
-        }
+      } catch (_) {
+        emit(state.copyWith(
+          messagesStatus: ChatStatus.success,
+          activeConversationId: event.conversationId,
+          clearError: true,
+        ));
+      } finally {
+        _inFlightMessageKeys.remove(sendKey);
+      }
     }
 
     final stillPending = (_messageCache[event.conversationId] ?? state.messages)
@@ -1032,7 +1061,15 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   void _onResetChatState(ResetChatState event, Emitter<ChatState> emit) {
     _currentUserId = null;
     _inFlightMessageKeys.clear();
+    _streamEventSubscription?.cancel();
+    _streamEventSubscription = null;
     emit(const ChatState());
+  }
+
+  @override
+  Future<void> close() async {
+    await _streamEventSubscription?.cancel();
+    return super.close();
   }
 
   void _onNewMessageReceived(

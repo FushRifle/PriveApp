@@ -44,6 +44,8 @@ class StreamChatService {
     }
   }
 
+  Future<void> ensureConnected() => connect();
+
   Future<void> _connectInternal() async {
     final auth = await _getStreamAuth();
     final userId = auth.user.id.toString();
@@ -107,6 +109,8 @@ class StreamChatService {
       await client.dispose();
     } catch (_) {}
   }
+
+  Stream<stream.Event> get events => client.on();
 
   String? get currentUserId => _connectedUserId;
 
