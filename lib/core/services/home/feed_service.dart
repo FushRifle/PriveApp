@@ -22,38 +22,18 @@ class FeedService {
     bool forceRefresh = false,
   }) async {
     try {
-      final response = await _api.get(
-        '/api/feed/posts',
-        queryParameters: {'page': page},
+      final response = await _getPostsWithFallback(
+        page: page,
         forceRefresh: forceRefresh,
       );
 
       debugPrint('Posts response status: ${response.statusCode}');
 
-      if (response.data is Map) {
-        final postsResponse = PostsResponse.fromJson(response.data);
-        if (page == 1) {
-          await _feedCacheService.saveLatestFeed(postsResponse);
-        }
-        return postsResponse;
+      final postsResponse = _parsePostsResponse(response.data, page);
+      if (page == 1) {
+        await _feedCacheService.saveLatestFeed(postsResponse);
       }
-
-      if (response.data is List) {
-        final posts = (response.data as List)
-            .map((json) => FeedPost.fromJson(json))
-            .toList();
-        final postsResponse = PostsResponse(
-          posts: posts,
-          hasMore: posts.length == 10,
-          page: page,
-        );
-        if (page == 1) {
-          await _feedCacheService.saveLatestFeed(postsResponse);
-        }
-        return postsResponse;
-      }
-
-      return PostsResponse(posts: [], hasMore: false, page: page);
+      return postsResponse;
     } on DioException catch (e) {
       debugPrint('Get posts error: ${e.response?.data}');
       if (page == 1) {
@@ -64,6 +44,46 @@ class FeedService {
       }
       throw _readError(e.response?.data, 'Failed to get posts');
     }
+  }
+
+  Future<Response> _getPostsWithFallback({
+    required int page,
+    required bool forceRefresh,
+  }) async {
+    try {
+      return await _api.get(
+        '/api/feed/posts',
+        queryParameters: {'page': page},
+        forceRefresh: forceRefresh,
+      );
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      if (status == 404) {
+        return await _api.get(
+          '/api/posts',
+          queryParameters: {'page': page},
+          forceRefresh: forceRefresh,
+        );
+      }
+      rethrow;
+    }
+  }
+
+  PostsResponse _parsePostsResponse(dynamic data, int page) {
+    if (data is Map) {
+      return PostsResponse.fromJson(Map<String, dynamic>.from(data));
+    }
+
+    if (data is List) {
+      final posts = data.map((json) => FeedPost.fromJson(json)).toList();
+      return PostsResponse(
+        posts: posts,
+        hasMore: posts.length == 10,
+        page: page,
+      );
+    }
+
+    return PostsResponse(posts: [], hasMore: false, page: page);
   }
 
   PostsResponse? getCachedPosts() {
@@ -116,6 +136,17 @@ class FeedService {
       return null;
     } on DioException catch (e) {
       debugPrint('Get post by id error: ${e.response?.data}');
+      if (e.response?.statusCode == 404) {
+        try {
+          final fallback = await _api.get('/api/posts/$postId');
+          if (fallback.data is Map) {
+            return FeedPost.fromJson(_readMap(fallback.data));
+          }
+        } on DioException catch (fallbackError) {
+          debugPrint('Get post by id fallback error: ${fallbackError.response?.data}');
+        }
+      }
+
       final cached = getCachedPosts();
       final cachedMatch = cached?.posts
           .where((post) => post.id == postId)

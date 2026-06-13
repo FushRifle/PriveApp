@@ -8,6 +8,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
+import 'package:clique/core/services/calls/stream_call_service.dart';
+import 'package:clique/core/services/chat/stream_chat_service.dart';
+
 import 'package:cloudinary_flutter/cloudinary_context.dart';
 import 'package:cloudinary_url_gen/cloudinary.dart';
 
@@ -18,8 +21,7 @@ import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/app/configs/api_config.dart';
 import 'package:clique/core/services/security/app_lock_service.dart';
-import 'package:clique/core/services/calls/stream_call_service.dart';
-import 'package:clique/core/services/chat/stream_chat_service.dart';
+
 import 'package:clique/core/providers/theme_provider.dart';
 import 'package:clique/bloc/cloudinary/cloudinary_cubit.dart';
 import 'package:clique/bloc/profile/profile_bloc.dart';
@@ -276,7 +278,7 @@ class _SecurityGateState extends State<_SecurityGate>
     setState(() => _isLoading = true);
 
     try {
-      final settings = await widget.appLockService.loadCached();
+      final settings = await widget.appLockService.load();
       if (!mounted) return;
 
       if (!settings.enabled) {

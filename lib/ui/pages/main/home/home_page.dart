@@ -19,6 +19,7 @@ import 'package:clique/ui/pages/main/home/create_post_page.dart';
 import 'package:clique/ui/pages/main/status/status_page.dart';
 import 'package:clique/ui/pages/main/status/status_view_page.dart';
 
+import 'package:clique/ui/widgets/home/home_feed_shimmer.dart';
 import 'package:clique/ui/widgets/post/normal-post/post_card.dart';
 import 'package:clique/ui/widgets/status/status_widget.dart';
 
@@ -239,14 +240,8 @@ class _HomePageState extends State<HomePage>
 
                     if (state.postsStatus == FeedStatus.loading &&
                         posts.isEmpty) {
-                      return SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            color: palette.primary,
-                            strokeWidth: 3,
-                          ),
-                        ),
+                      return const SliverToBoxAdapter(
+                        child: HomeFeedLoadingShimmer(),
                       );
                     }
 

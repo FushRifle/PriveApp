@@ -1,0 +1,100 @@
+import 'package:flutter/material.dart';
+import 'package:clique/core/models/profile_view.dart';
+import 'package:clique/ui/widgets/profile/profile_gallery.dart';
+import 'package:clique/ui/widgets/profile/profile_header.dart';
+
+class ProfileBody extends StatelessWidget {
+  final bool isLoading;
+  final String? error;
+  final ProfileView? profile;
+  final bool isOwnProfile;
+  final bool isFollowing;
+  final TabController tabController;
+  final ScrollController scrollController;
+  final VoidCallback onRetry;
+  final VoidCallback onToggleFollow;
+  final ValueChanged<ProfileView>? onMessage;
+  final VoidCallback? onOpenAccountSwitcher;
+  final void Function(int userId, ProfileGalleryTabType type) onLoadMoreMedia;
+
+  const ProfileBody({
+    super.key,
+    required this.isLoading,
+    required this.error,
+    required this.profile,
+    required this.isOwnProfile,
+    required this.isFollowing,
+    required this.tabController,
+    required this.scrollController,
+    required this.onRetry,
+    required this.onToggleFollow,
+    this.onMessage,
+    this.onOpenAccountSwitcher,
+    required this.onLoadMoreMedia,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading && profile == null) {
+      return const ProfileLoadingState();
+    }
+
+    if (error != null && profile == null) {
+      return ProfileErrorState(message: error!, onRetry: onRetry);
+    }
+
+    final currentProfile = profile;
+    if (currentProfile == null) {
+      return const ProfileLoadingState();
+    }
+
+    final userId =
+        currentProfile.userId != 0 ? currentProfile.userId : currentProfile.id;
+
+    return NestedScrollView(
+      controller: scrollController,
+      physics: const BouncingScrollPhysics(),
+      headerSliverBuilder: (context, innerBoxIsScrolled) {
+        return [
+          ProfileCoverHeader(
+            profile: currentProfile,
+            isOwnProfile: isOwnProfile,
+          ),
+          const SliverToBoxAdapter(
+            child: SizedBox(height: 22),
+          ),
+          SliverToBoxAdapter(
+            child: ProfileHeaderCard(
+              profile: currentProfile,
+              isOwnProfile: isOwnProfile,
+              isFollowing: isFollowing,
+              onToggleFollow: onToggleFollow,
+              onMessage: onMessage,
+              onOpenAccountSwitcher: onOpenAccountSwitcher,
+            ),
+          ),
+          ProfileStickyTabBar(tabController: tabController),
+        ];
+      },
+      body: TabBarView(
+        controller: tabController,
+        physics: const BouncingScrollPhysics(),
+        children: [
+          ProfileGalleryTab(
+            userId: userId,
+            type: ProfileGalleryTabType.posts,
+            onLoadMore: () =>
+                onLoadMoreMedia(userId, ProfileGalleryTabType.posts),
+          ),
+          ProfileGalleryTab(
+            userId: userId,
+            type: ProfileGalleryTabType.media,
+            onLoadMore: () =>
+                onLoadMoreMedia(userId, ProfileGalleryTabType.media),
+          ),
+          const ProfileSavedPostsTab(),
+        ],
+      ),
+    );
+  }
+}
