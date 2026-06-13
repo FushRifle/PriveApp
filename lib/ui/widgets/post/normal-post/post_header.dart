@@ -60,6 +60,7 @@ class PostHeader extends StatelessWidget {
                       name: name,
                       time: post.time,
                       isVerified: post.user.verified,
+                      isOfficial: post.isAIPost,
                       badge: post.contentTypeLabel,
                     ),
                   ),
@@ -175,12 +176,14 @@ class _PostUserInfo extends StatelessWidget {
   final String name;
   final String time;
   final bool isVerified;
+  final bool isOfficial;
   final String badge;
 
   const _PostUserInfo({
     required this.name,
     required this.time,
     required this.isVerified,
+    required this.isOfficial,
     required this.badge,
   });
 
@@ -210,6 +213,10 @@ class _PostUserInfo extends StatelessWidget {
                 color: AppColors.primary,
               ),
             ],
+            if (isOfficial) ...[
+              const SizedBox(width: 4),
+              const _OfficialBadge(),
+            ],
           ],
         ),
         const SizedBox(height: 3),
@@ -230,6 +237,53 @@ class _PostUserInfo extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _OfficialBadge extends StatelessWidget {
+  const _OfficialBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFFFFD86B),
+            Color(0xFFF4B73F),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFF4B73F).withOpacity(0.25),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          Icon(
+            Icons.verified_rounded,
+            size: 12,
+            color: AppColors.white,
+          ),
+          SizedBox(width: 3),
+          Text(
+            'Official',
+            style: TextStyle(
+              color: AppColors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              height: 1,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

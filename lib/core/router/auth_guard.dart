@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lottie/lottie.dart';
@@ -169,9 +167,7 @@ class _BootstrapperState extends State<_Bootstrapper> {
       }
 
       if (futures.isNotEmpty) {
-        await Future.wait(futures).timeout(
-          const Duration(seconds: 15),
-        );
+        await Future.wait(futures);
       }
 
       if (!mounted) return;
@@ -186,13 +182,6 @@ class _BootstrapperState extends State<_Bootstrapper> {
         _hasUser = userBloc.state.currentUser != null;
         _isOnboarded = _readOnboarded(userBloc.state.currentUser);
         _loading = false;
-      });
-    } on TimeoutException {
-      if (!mounted) return;
-
-      setState(() {
-        _loading = false;
-        _error = 'Connection timeout';
       });
     } catch (e) {
       if (!mounted) return;

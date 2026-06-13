@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/models/feeds_models.dart';
@@ -23,6 +25,7 @@ class PollPostBody extends StatefulWidget {
 class _PollPostBodyState extends State<PollPostBody> {
   final FeedService _feedService = FeedService();
   final Set<int> _selectedOptionIds = <int>{};
+  Timer? _autoSubmitTimer;
 
   FeedPoll? _poll;
   bool _isLoading = true;
@@ -43,6 +46,12 @@ class _PollPostBodyState extends State<PollPostBody> {
     if (oldWidget.post.id != widget.post.id) {
       _loadPoll();
     }
+  }
+
+  @override
+  void dispose() {
+    _autoSubmitTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadPoll({bool forceRefresh = false}) async {
@@ -103,6 +112,16 @@ class _PollPostBodyState extends State<PollPostBody> {
           ..clear()
           ..add(option.id);
       }
+    });
+
+    _scheduleAutoSubmit();
+  }
+
+  void _scheduleAutoSubmit() {
+    _autoSubmitTimer?.cancel();
+    _autoSubmitTimer = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted || !_canVote || _selectedOptionIds.isEmpty) return;
+      _submitVote();
     });
   }
 
@@ -264,10 +283,6 @@ class _PollPostBodyState extends State<PollPostBody> {
                 )
                 .toList(),
           ),
-        if (_canVote) ...[
-          const SizedBox(height: 4),
-          _buildVoteButton(poll),
-        ],
       ],
     );
   }
@@ -466,43 +481,6 @@ class _PollPostBodyState extends State<PollPostBody> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildVoteButton(FeedPoll poll) {
-    final hasSelection = _selectedOptionIds.isNotEmpty;
-
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: !_isVoting && hasSelection ? _submitVote : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          disabledBackgroundColor: AppColors.primary.withOpacity(0.35),
-          foregroundColor: AppColors.white,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          elevation: 0,
-        ),
-        child: _isVoting
-            ? const SizedBox(
-                height: 18,
-                width: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.2,
-                  color: AppColors.white,
-                ),
-              )
-            : Text(
-                poll.isMultipleChoice ? 'Submit votes' : 'Vote now',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
       ),
     );
   }

@@ -159,7 +159,7 @@ class _HomePageState extends State<HomePage>
 
     final position = _scrollController.position;
 
-    if (position.pixels >= position.maxScrollExtent - 700) {
+    if (position.extentAfter <= 1800) {
       final feedBloc = context.read<FeedBloc>();
       final state = feedBloc.state;
 
@@ -205,6 +205,7 @@ class _HomePageState extends State<HomePage>
             onRefresh: _refresh,
             child: CustomScrollView(
               controller: _scrollController,
+              cacheExtent: 3200,
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ),
@@ -317,19 +318,10 @@ class _HomePageState extends State<HomePage>
 
     final realPosts = <FeedPost>[];
     final aiPosts = <FeedPost>[];
-    DateTime? lastOfficialPostAt;
-    const officialSpacing = Duration(hours: 3);
 
     for (final post in orderedPosts) {
       if (post.isAIPost) {
-        if (lastOfficialPostAt != null &&
-            lastOfficialPostAt.difference(post.createdAt) <
-                officialSpacing) {
-          continue;
-        }
-
         aiPosts.add(post);
-        lastOfficialPostAt = post.createdAt;
       } else {
         realPosts.add(post);
       }
@@ -395,7 +387,6 @@ class _HomePageState extends State<HomePage>
 
     if (created != true || !context.mounted) return;
 
-    context.read<StoriesBloc>().add(GetStories());
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Story shared successfully'),
@@ -446,7 +437,7 @@ class _HomePageState extends State<HomePage>
   }
 }
 
-class _HomeAppBar extends StatelessWidget {
+class _HomeAppBar extends StatefulWidget {
   static final NotificationService _notificationService = NotificationService();
 
   final _HomePalette palette;
@@ -454,6 +445,26 @@ class _HomeAppBar extends StatelessWidget {
   const _HomeAppBar({
     required this.palette,
   });
+
+  @override
+  State<_HomeAppBar> createState() => _HomeAppBarState();
+}
+
+class _HomeAppBarState extends State<_HomeAppBar> {
+  late Future<Map<String, dynamic>> _notificationsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _notificationsFuture = _loadNotifications();
+  }
+
+  Future<Map<String, dynamic>> _loadNotifications() {
+    return _HomeAppBar._notificationService.getNotifications(
+      page: 1,
+      pageSize: 1,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -474,7 +485,7 @@ class _HomeAppBar extends StatelessWidget {
             16,
             12,
           ),
-          color: palette.background,
+          color: widget.palette.background,
           child: Row(
             children: [
               GestureDetector(
@@ -483,7 +494,7 @@ class _HomeAppBar extends StatelessWidget {
                   Navigator.pushNamed(context, NamedRoutes.settingsScreen);
                 },
                 child: _Avatar(
-                  palette: palette,
+                  palette: widget.palette,
                   avatar: avatar,
                   fallback: fallback,
                   size: 44,
@@ -497,7 +508,7 @@ class _HomeAppBar extends StatelessWidget {
                     Text(
                       'Clique',
                       style: AppTheme.blackTextStyle.copyWith(
-                        color: palette.text,
+                        color: widget.palette.text,
                         fontSize: 24,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -0.5,
@@ -506,7 +517,7 @@ class _HomeAppBar extends StatelessWidget {
                     Text(
                       'Your Vibe, Your Clique.',
                       style: AppTheme.greyTextStyle.copyWith(
-                        color: palette.mutedText,
+                        color: widget.palette.mutedText,
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                       ),
@@ -525,10 +536,10 @@ class _HomeAppBar extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.primary,
                     shape: BoxShape.circle,
-                    border: Border.all(color: palette.border),
+                    border: Border.all(color: widget.palette.border),
                     boxShadow: [
                       BoxShadow(
-                        color: palette.shadow,
+                        color: widget.palette.shadow,
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
@@ -537,16 +548,13 @@ class _HomeAppBar extends StatelessWidget {
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.notifications_outlined,
                         color: AppColors.white,
                         size: 22,
                       ),
                       FutureBuilder<Map<String, dynamic>>(
-                        future: _notificationService.getNotifications(
-                          page: 1,
-                          pageSize: 1,
-                        ),
+                        future: _notificationsFuture,
                         builder: (context, snapshot) {
                           final count = _readInt(
                             snapshot.data?['unreadCount'],
@@ -568,7 +576,7 @@ class _HomeAppBar extends StatelessWidget {
                                 color: AppColors.white,
                                 borderRadius: BorderRadius.circular(9),
                                 border: Border.all(
-                                  color: palette.elevatedCard,
+                                  color: widget.palette.elevatedCard,
                                   width: 1.5,
                                 ),
                               ),

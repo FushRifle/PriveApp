@@ -13,7 +13,7 @@ class StatusService {
     _api.clearAuthToken();
   }
 
-  Future<List<Story>> getStories() async {
+  Future<List<Story>> getStories({bool forceRefresh = true}) async {
     try {
       final response = await _api.get(
         '/api/stories',
@@ -21,7 +21,7 @@ class StatusService {
           'scope': 'following',
           'followingOnly': true,
         },
-        forceRefresh: true,
+        forceRefresh: forceRefresh,
       );
       final data = response.data;
 
@@ -40,7 +40,7 @@ class StatusService {
     }
   }
 
-  Future<void> createStory({
+  Future<Story?> createStory({
     required String content,
     List<Attachment>? attachments,
     String? backgroundColor,
@@ -63,7 +63,14 @@ class StatusService {
       if (textAlign != null) data['textAlign'] = textAlign;
       if (fontSize != null) data['fontSize'] = fontSize;
 
-      await _api.post('/api/stories', data: data);
+      final response = await _api.post('/api/stories', data: data);
+      final responseData = response.data;
+
+      if (responseData is Map) {
+        return Story.fromJson(Map<String, dynamic>.from(responseData));
+      }
+
+      return null;
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to create story');
     }

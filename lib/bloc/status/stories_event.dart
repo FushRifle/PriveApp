@@ -7,7 +7,18 @@ abstract class StoriesEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class GetStories extends StoriesEvent {}
+class GetStories extends StoriesEvent {
+  final bool refresh;
+  final bool silent;
+
+  const GetStories({
+    this.refresh = false,
+    this.silent = false,
+  });
+
+  @override
+  List<Object?> get props => [refresh, silent];
+}
 
 class CreateStoryEvent extends StoriesEvent {
   final String content;

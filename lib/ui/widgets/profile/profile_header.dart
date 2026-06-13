@@ -26,7 +26,7 @@ class ProfileCoverHeader extends StatelessWidget {
     final coverUrl = _coverUrl;
 
     return SliverAppBar(
-      expandedHeight: 150,
+      expandedHeight: 130,
       stretch: true,
       pinned: true,
       backgroundColor: AppColors.black,
@@ -113,9 +113,9 @@ class ProfileCoverImage extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppColors.primary.withOpacity(0.2),
+              AppColors.card.withOpacity(0.2),
               AppColors.secondary.withOpacity(0.16),
-              AppColors.black.withOpacity(0.12),
+              AppColors.background.withOpacity(0.12),
             ],
           ),
         ),
@@ -217,7 +217,7 @@ class ProfileHeaderCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               ProfileIdentityRow(
                 profile: profile,
                 isOwnProfile: isOwnProfile,
@@ -339,7 +339,7 @@ class ProfileIdentityRow extends StatelessWidget {
             letterSpacing: -0.3,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
         GestureDetector(
           onTap: isOwnProfile && onOpenAccountSwitcher != null
               ? () {

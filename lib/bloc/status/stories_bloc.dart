@@ -40,7 +40,9 @@ class StoriesBloc extends Bloc<StoriesEvent, StoriesState> {
     if (_isLoadingStories) return;
 
     final now = DateTime.now();
-    if (_lastStoriesRequest != null &&
+    if (!event.refresh &&
+        !event.silent &&
+        _lastStoriesRequest != null &&
         now.difference(_lastStoriesRequest!) < const Duration(seconds: 2)) {
       return;
     }
@@ -51,7 +53,9 @@ class StoriesBloc extends Bloc<StoriesEvent, StoriesState> {
     emit(state.copyWith(status: StoriesStatus.loading, clearError: true));
 
     try {
-      final stories = await _statusService.getStories();
+      final stories = await _statusService.getStories(
+        forceRefresh: event.refresh,
+      );
       emit(state.copyWith(
         status: StoriesStatus.loaded,
         stories: stories,
@@ -77,7 +81,7 @@ class StoriesBloc extends Bloc<StoriesEvent, StoriesState> {
     ));
 
     try {
-      await _statusService.createStory(
+      final createdStory = await _statusService.createStory(
         content: event.content,
         attachments: event.attachments,
         backgroundColor: event.backgroundColor,
@@ -85,12 +89,18 @@ class StoriesBloc extends Bloc<StoriesEvent, StoriesState> {
         fontSize: event.fontSize,
       );
 
+      final updatedStories = [
+        if (createdStory != null) createdStory,
+        ...state.stories.where((story) => story.id != createdStory?.id),
+      ];
+
       emit(state.copyWith(
         status: StoriesStatus.loaded,
         isCreating: false,
+        stories: updatedStories,
         clearError: true,
       ));
-      add(GetStories());
+      add(const GetStories(refresh: true, silent: true));
     } catch (e) {
       emit(state.copyWith(
         status: StoriesStatus.error,

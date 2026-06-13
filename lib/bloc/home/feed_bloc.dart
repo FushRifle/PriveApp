@@ -9,8 +9,6 @@ part 'feed_state.dart';
 class FeedBloc extends Bloc<FeedEvent, FeedState> {
   final FeedService _feedService = FeedService();
 
-  DateTime? _lastFeedRequest;
-
   bool _isFetchingPosts = false;
   bool _isFetchingMorePosts = false;
   final Set<int> _fetchingComments = {};
@@ -61,17 +59,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
 
     if (_isFetchingPosts || _isFetchingMorePosts) return;
 
-    final now = DateTime.now();
-
-    if (_lastFeedRequest != null &&
-        now.difference(_lastFeedRequest!) < const Duration(seconds: 2) &&
-        !event.refresh) {
-      return;
-    }
-
     _isFetchingPosts = true;
-
-    _lastFeedRequest = now;
 
     try {
       if (!event.silent && (event.refresh || state.posts.isEmpty)) {
@@ -104,23 +92,11 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
         forceRefresh: event.refresh,
       );
 
-      final existingIds = state.posts.map((e) => e.id).toSet();
-
-      final filteredPosts = response.posts.where(
-        (post) {
-          if (event.page == 1 || event.refresh) {
-            return true;
-          }
-
-          return !existingIds.contains(post.id);
-        },
-      ).toList();
-
       final updatedPosts = event.page == 1 || event.refresh
-          ? filteredPosts
+          ? response.posts
           : [
               ...state.posts,
-              ...filteredPosts,
+              ...response.posts,
             ];
 
       emit(
@@ -204,20 +180,12 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
         page: nextPage,
       );
 
-      final existingIds = state.posts.map((e) => e.id).toSet();
-
-      final filteredPosts = response.posts
-          .where(
-            (post) => !existingIds.contains(post.id),
-          )
-          .toList();
-
       emit(
         state.copyWith(
           postsStatus: FeedStatus.loaded,
           posts: [
             ...state.posts,
-            ...filteredPosts,
+            ...response.posts,
           ],
           currentPage: nextPage,
           hasMorePosts: response.hasMore,
