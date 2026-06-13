@@ -8,7 +8,7 @@ import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/core/services/home/feed_service.dart';
 import 'package:clique/ui/pages/main/home/post_detail_page.dart';
 import 'package:clique/ui/widgets/common/effect_text.dart';
-import 'package:clique/ui/widgets/post/post_card.dart';
+import 'package:clique/ui/widgets/post/normal-post/post_card.dart';
 
 class NotificationDetailsPage extends StatefulWidget {
   final Map<String, dynamic> notification;
@@ -54,7 +54,7 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
     }
 
     try {
-      final post = await _feedService.findPostById(postId);
+      final post = await _feedService.getPostById(postId);
       if (!mounted) return;
       setState(() {
         _post = post;

@@ -3,7 +3,7 @@ import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/core/services/home/feed_service.dart';
-import 'package:clique/ui/widgets/post/post_card.dart';
+import 'package:clique/ui/widgets/post/normal-post/post_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';

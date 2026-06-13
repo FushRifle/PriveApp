@@ -19,7 +19,7 @@ import 'package:clique/core/services/user/user_service.dart';
 
 import 'package:clique/ui/widgets/comments/comment_widgets.dart';
 import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
-import 'package:clique/ui/widgets/post/post_card.dart';
+import 'package:clique/ui/widgets/post/normal-post/post_card.dart';
 
 class PostDetailPage extends StatefulWidget {
   final int postId;

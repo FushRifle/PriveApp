@@ -25,6 +25,7 @@ import 'package:clique/ui/pages/auth/success_page.dart';
 import 'package:clique/ui/pages/main/home/create_post_page.dart';
 import 'package:clique/ui/pages/main/home/edit_post_page.dart';
 import 'package:clique/ui/pages/main/home/post_detail_page.dart';
+import 'package:clique/ui/pages/main/home/topics_page.dart';
 import 'package:clique/ui/pages/main/chat/chat_page.dart';
 import 'package:clique/ui/pages/main/community/create_community_page.dart';
 import 'package:clique/ui/pages/main/community/community_group_chat_page.dart';
@@ -172,6 +173,14 @@ class AppRouter {
           BlocProvider(
             create: (_) => FeedBloc(),
             child: const CreatePostPage(),
+          ),
+        );
+
+      case NamedRoutes.topicsScreen:
+        return _page(
+          BlocProvider(
+            create: (_) => FeedBloc(),
+            child: const TopicsPage(),
           ),
         );
 

@@ -85,8 +85,7 @@ dependencies:
   vibration: ^3.1.8
   audioplayers: ^6.7.1
 
-  # Voice & Video Calls (NEW)
-  livekit_client: ^2.6.5
+  # Voice & Video Calls
   device_info_plus: ^12.3.0 
   stream_video_flutter: ^1.4.0
   stream_video: ^1.4.0

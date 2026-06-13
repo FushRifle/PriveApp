@@ -1,4 +1,6 @@
 import 'package:dio/dio.dart';
+import 'package:clique/core/local_cache/hive_cache_keys.dart';
+import 'package:clique/core/local_cache/local_cache_service.dart';
 import '../../clients/api_service.dart';
 
 class NotificationService {
@@ -9,16 +11,34 @@ class NotificationService {
     int page = 1,
     int pageSize = 20,
     bool unreadOnly = false,
+    bool forceRefresh = false,
   }) async {
     try {
       final response = await _api.get('/api/notifications', queryParameters: {
         'page': page,
         'pageSize': pageSize,
         'unread': unreadOnly,
-      });
-      return _normalizeNotificationsResponse(response.data, pageSize);
+      }, forceRefresh: forceRefresh);
+      final normalized = _normalizeNotificationsResponse(response.data, pageSize);
+      if (page == 1 && !unreadOnly) {
+        await _saveCachedNotifications(normalized);
+      }
+      return normalized;
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to get notifications');
+    }
+  }
+
+  Map<String, dynamic>? getCachedNotifications() {
+    final box = LocalCacheService.box(HiveCacheKeys.notificationBox);
+    final raw = box?.get(HiveCacheKeys.latestNotifications);
+
+    if (raw is! Map) return null;
+
+    try {
+      return _normalizeNotificationsResponse(raw, 20);
+    } catch (_) {
+      return null;
     }
   }
 
@@ -28,6 +48,7 @@ class NotificationService {
       final response =
           await _api.put('/api/notifications/$notificationId/read');
       _api.removeCacheByPath('/api/notifications');
+      await _clearCachedNotifications();
       return _asMap(response.data);
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to mark as read');
@@ -39,6 +60,7 @@ class NotificationService {
     try {
       final response = await _api.put('/api/notifications/read-all');
       _api.removeCacheByPath('/api/notifications');
+      await _clearCachedNotifications();
       return _asMap(response.data);
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to mark all as read');
@@ -50,6 +72,7 @@ class NotificationService {
     try {
       final response = await _api.delete('/api/notifications/$notificationId');
       _api.removeCacheByPath('/api/notifications');
+      await _clearCachedNotifications();
       return _asMap(response.data);
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to delete notification');
@@ -61,6 +84,7 @@ class NotificationService {
     try {
       final response = await _api.delete('/api/notifications');
       _api.removeCacheByPath('/api/notifications');
+      await _clearCachedNotifications();
       return _asMap(response.data);
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to delete all notifications');
@@ -155,6 +179,20 @@ class NotificationService {
         'totalPages': totalPages < 1 ? 1 : totalPages,
       },
     };
+  }
+
+  Future<void> _saveCachedNotifications(Map<String, dynamic> response) async {
+    final box = LocalCacheService.box(HiveCacheKeys.notificationBox);
+    if (box == null) return;
+
+    await box.put(HiveCacheKeys.latestNotifications, response);
+  }
+
+  Future<void> _clearCachedNotifications() async {
+    final box = LocalCacheService.box(HiveCacheKeys.notificationBox);
+    if (box == null) return;
+
+    await box.delete(HiveCacheKeys.latestNotifications);
   }
 
   Map<String, dynamic> _normalizeNotificationItem(dynamic item) {

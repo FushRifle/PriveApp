@@ -1,7 +1,7 @@
 import 'package:clique/core/models/feeds_models.dart';
-import 'package:clique/ui/widgets/post/post_document.dart';
-import 'package:clique/ui/widgets/post/post_image.dart';
-import 'package:clique/ui/widgets/post/post_video.dart';
+import 'package:clique/ui/widgets/post/normal-post/post_document.dart';
+import 'package:clique/ui/widgets/post/normal-post/post_image.dart';
+import 'package:clique/ui/widgets/post/normal-post/post_video.dart';
 import 'package:flutter/material.dart';
 
 class PostMedia extends StatelessWidget {

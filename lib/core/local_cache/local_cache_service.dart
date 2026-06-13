@@ -19,6 +19,7 @@ class LocalCacheService {
         Hive.openBox<dynamic>(HiveCacheKeys.feedBox),
         Hive.openBox<dynamic>(HiveCacheKeys.metaBox),
         Hive.openBox<dynamic>(HiveCacheKeys.chatBox),
+        Hive.openBox<dynamic>(HiveCacheKeys.notificationBox),
       ]);
       _initialized = true;
     } catch (e, stackTrace) {
@@ -41,6 +42,7 @@ class LocalCacheService {
       box(HiveCacheKeys.feedBox)?.clear() ?? Future.value(0),
       box(HiveCacheKeys.metaBox)?.clear() ?? Future.value(0),
       box(HiveCacheKeys.chatBox)?.clear() ?? Future.value(0),
+      box(HiveCacheKeys.notificationBox)?.clear() ?? Future.value(0),
     ]);
   }
 }

@@ -17,10 +17,8 @@ import file_selector_macos
 import firebase_core
 import firebase_messaging
 import flutter_secure_storage_darwin
-import flutter_webrtc
 import gal
 import just_audio
-import livekit_client
 import local_auth_darwin
 import media_kit_video
 import open_file_mac
@@ -50,10 +48,8 @@ func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   FLTFirebaseCorePlugin.register(with: registry.registrar(forPlugin: "FLTFirebaseCorePlugin"))
   FLTFirebaseMessagingPlugin.register(with: registry.registrar(forPlugin: "FLTFirebaseMessagingPlugin"))
   FlutterSecureStorageDarwinPlugin.register(with: registry.registrar(forPlugin: "FlutterSecureStorageDarwinPlugin"))
-  FlutterWebRTCPlugin.register(with: registry.registrar(forPlugin: "FlutterWebRTCPlugin"))
   GalPlugin.register(with: registry.registrar(forPlugin: "GalPlugin"))
   JustAudioPlugin.register(with: registry.registrar(forPlugin: "JustAudioPlugin"))
-  LiveKitPlugin.register(with: registry.registrar(forPlugin: "LiveKitPlugin"))
   LocalAuthPlugin.register(with: registry.registrar(forPlugin: "LocalAuthPlugin"))
   MediaKitVideoPlugin.register(with: registry.registrar(forPlugin: "MediaKitVideoPlugin"))
   OpenFilePlugin.register(with: registry.registrar(forPlugin: "OpenFilePlugin"))

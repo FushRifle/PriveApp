@@ -20,7 +20,7 @@ import 'package:clique/core/services/friends/friends_service.dart';
 import 'package:clique/ui/pages/main/profile/edit_profile_page.dart';
 import 'package:clique/ui/pages/social/friends_list_page.dart';
 import 'package:clique/ui/pages/social/insights_page.dart';
-import 'package:clique/ui/widgets/post/post_card.dart';
+import 'package:clique/ui/widgets/post/normal-post/post_card.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({

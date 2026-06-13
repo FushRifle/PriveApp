@@ -19,7 +19,7 @@ import 'package:clique/ui/pages/main/home/create_post_page.dart';
 import 'package:clique/ui/pages/main/status/status_page.dart';
 import 'package:clique/ui/pages/main/status/status_view_page.dart';
 
-import 'package:clique/ui/widgets/post/post_card.dart';
+import 'package:clique/ui/widgets/post/normal-post/post_card.dart';
 import 'package:clique/ui/widgets/status/status_widget.dart';
 
 class HomePage extends StatefulWidget {
@@ -260,13 +260,19 @@ class _HomePageState extends State<HomePage>
                     return SliverMainAxisGroup(
                       slivers: [
                         SliverToBoxAdapter(
-                          child: _FeedHeader(
-                            palette: palette,
-                            isRefreshing:
-                                state.postsStatus == FeedStatus.loading,
-                            onOpenCreate: () => _openCreatePost(context),
-                          ),
+                        child: _FeedHeader(
+                          palette: palette,
+                          isRefreshing:
+                              state.postsStatus == FeedStatus.loading,
+                          onOpenTopics: () {
+                            Navigator.pushNamed(
+                              context,
+                              NamedRoutes.topicsScreen,
+                            );
+                          },
+                          onOpenCreate: () => _openCreatePost(context),
                         ),
+                      ),
                         SliverPadding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           sliver: SliverList.separated(
@@ -766,11 +772,13 @@ class _Avatar extends StatelessWidget {
 class _FeedHeader extends StatelessWidget {
   final _HomePalette palette;
   final bool isRefreshing;
+  final VoidCallback onOpenTopics;
   final VoidCallback onOpenCreate;
 
   const _FeedHeader({
     required this.palette,
     required this.isRefreshing,
+    required this.onOpenTopics,
     required this.onOpenCreate,
   });
 
@@ -816,6 +824,44 @@ class _FeedHeader extends StatelessWidget {
             ),
             const SizedBox(width: 12),
           ],
+          InkWell(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              onOpenTopics();
+            },
+            borderRadius: BorderRadius.circular(18),
+            child: Container(
+              height: 38,
+              padding: const EdgeInsets.symmetric(horizontal: 13),
+              decoration: BoxDecoration(
+                color: palette.secondary.withOpacity(
+                  palette.isDark ? 0.18 : 0.08,
+                ),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: palette.secondary.withOpacity(0.18)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.local_fire_department_rounded,
+                    color: palette.secondary,
+                    size: 19,
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    'Topics',
+                    style: AppTheme.greyTextStyle.copyWith(
+                      color: palette.secondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
           InkWell(
             onTap: () {
               HapticFeedback.lightImpact();

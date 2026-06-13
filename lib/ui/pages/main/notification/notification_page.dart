@@ -4,9 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/router/named_routes.dart';
-import 'package:clique/core/services/home/feed_service.dart';
 import 'package:clique/core/services/notification/notification_service.dart';
-import 'package:clique/ui/pages/main/home/post_detail_page.dart';
 import 'package:clique/ui/pages/main/notification/notification_details_page.dart';
 import 'package:clique/ui/widgets/common/app_page_header.dart';
 import 'package:clique/ui/widgets/common/effect_text.dart';
@@ -19,7 +17,6 @@ class NotificationPage extends StatefulWidget {
 }
 
 class _NotificationPageState extends State<NotificationPage> {
-  final FeedService _feedService = FeedService();
   final NotificationService _notificationService = NotificationService();
   final ScrollController _scrollController = ScrollController();
 
@@ -34,7 +31,8 @@ class _NotificationPageState extends State<NotificationPage> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    _loadNotifications();
+    _loadCachedNotifications();
+    _refreshNotifications(silent: true);
   }
 
   @override
@@ -54,25 +52,55 @@ class _NotificationPageState extends State<NotificationPage> {
     }
   }
 
-  Future<void> _loadNotifications({bool refresh = false}) async {
+  void _loadCachedNotifications() {
+    final cached = _notificationService.getCachedNotifications();
+    if (cached == null) return;
+
+    final notifications =
+        (cached['notifications'] as List? ?? []).cast<Map<String, dynamic>>();
+    final pagination = cached['pagination'] ?? {};
+    final totalPages = pagination['totalPages'] ?? 1;
+    final page = cached['page'] ?? 1;
+
+    if (!mounted) return;
+
+    setState(() {
+      _notifications = notifications;
+      _hasMore = page < totalPages;
+      _currentPage = _hasMore ? page + 1 : page;
+      _isLoading = false;
+      _error = null;
+    });
+  }
+
+  Future<void> _loadNotifications({
+    bool refresh = false,
+    bool silent = false,
+  }) async {
     if (refresh) {
       _currentPage = 1;
       _hasMore = true;
-      setState(() {
-        _isLoading = true;
+      if (!silent || _notifications.isEmpty) {
+        setState(() {
+          _isLoading = true;
+          _error = null;
+        });
+      } else {
         _error = null;
-      });
+      }
     }
 
     try {
       final response = await _notificationService.getNotifications(
         page: _currentPage,
         pageSize: 20,
+        forceRefresh: silent || refresh,
       );
 
       final newNotifications = response['notifications'] as List? ?? [];
       final pagination = response['pagination'] ?? {};
       final totalPages = pagination['totalPages'] ?? 1;
+      final page = response['page'] ?? _currentPage;
 
       if (!mounted) return;
 
@@ -82,25 +110,25 @@ class _NotificationPageState extends State<NotificationPage> {
         } else {
           _notifications.addAll(newNotifications.cast<Map<String, dynamic>>());
         }
-        _hasMore = _currentPage < totalPages;
+        _hasMore = page < totalPages;
+        _currentPage = _hasMore ? page + 1 : page;
         _isLoading = false;
+        _error = null;
       });
-
-      if (newNotifications.isNotEmpty) {
-        _currentPage++;
-      }
     } catch (e) {
       if (!mounted) return;
 
       setState(() {
-        _error = e.toString();
+        if (_notifications.isEmpty) {
+          _error = e.toString();
+        }
         _isLoading = false;
       });
     }
   }
 
-  Future<void> _refreshNotifications() async {
-    await _loadNotifications(refresh: true);
+  Future<void> _refreshNotifications({bool silent = false}) async {
+    await _loadNotifications(refresh: true, silent: silent);
   }
 
   Future<void> _loadMoreNotifications() async {
@@ -326,38 +354,6 @@ class _NotificationPageState extends State<NotificationPage> {
           data['userId'] ??
           data['user_id'],
     );
-    final postId = _readInt(
-      notification['postId'] ??
-          notification['post_id'] ??
-          notification['feedPostId'] ??
-          notification['feed_post_id'] ??
-          notification['entityId'] ??
-          notification['entity_id'] ??
-          data['postId'] ??
-          data['post_id'] ??
-          data['feedPostId'] ??
-          data['feed_post_id'] ??
-          data['targetPostId'] ??
-          data['target_post_id'] ??
-          data['entityId'] ??
-          data['entity_id'],
-    );
-    final reelId = _readInt(
-      notification['reelId'] ??
-          notification['reel_id'] ??
-          data['reelId'] ??
-          data['reel_id'] ??
-          data['targetReelId'] ??
-          data['target_reel_id'],
-    );
-    final storyId = _readInt(
-      notification['storyId'] ??
-          notification['story_id'] ??
-          data['storyId'] ??
-          data['story_id'] ??
-          data['targetStoryId'] ??
-          data['target_story_id'],
-    );
     final conversationId = _readInt(
       data['conversationId'] ??
           data['conversation_id'] ??
@@ -371,31 +367,6 @@ class _NotificationPageState extends State<NotificationPage> {
       case 'comment':
       case 'post_comment':
       case 'mention':
-        final id = postId > 0 ? postId : targetId;
-        if (id > 0) {
-          final post = await _feedService.findPostById(id);
-          if (!mounted) return;
-
-          if (post != null) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => PostDetailPage(
-                  postId: post.id,
-                  initialPost: post,
-                ),
-              ),
-            );
-            return;
-          }
-        } else if (reelId > 0) {
-          Navigator.pushNamed(context, NamedRoutes.reelsScreen);
-        } else if (storyId > 0) {
-          Navigator.pushNamed(context, NamedRoutes.statusScreen);
-        } else if (actorId > 0) {
-          Navigator.pushNamed(context, NamedRoutes.otherProfileScreen,
-              arguments: actorId);
-        }
         Navigator.push(
           context,
           MaterialPageRoute(

@@ -19,6 +19,7 @@ class NamedRoutes {
   static const statusScreen = '/status-screen';
   static const createPostScreen = '/create-post-screen';
   static const editPostScreen = '/edit-post-screen';
+  static const topicsScreen = '/topics-screen';
   static const createStatusScreen = '/create-status-screen';
   static const editStatusScreen = '/edit-status-screen';
   static const createReelScreen = '/create-reel-screen';

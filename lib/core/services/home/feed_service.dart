@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../../clients/api_service.dart';
 import '../../models/feeds_models.dart';
+import '../../models/poll_model.dart';
 import '../cache/feed_cache_service.dart';
 
 class FeedService {
@@ -100,6 +101,57 @@ class FeedService {
     return null;
   }
 
+  Future<FeedPost?> getPostById(int postId) async {
+    if (postId <= 0) {
+      return null;
+    }
+
+    try {
+      final response = await _api.get('/api/feed/posts/$postId');
+
+      if (response.data is Map) {
+        return FeedPost.fromJson(_readMap(response.data));
+      }
+
+      return null;
+    } on DioException catch (e) {
+      debugPrint('Get post by id error: ${e.response?.data}');
+      final cached = getCachedPosts();
+      final cachedMatch = cached?.posts
+          .where((post) => post.id == postId)
+          .toList();
+      if (cachedMatch != null && cachedMatch.isNotEmpty) {
+        return cachedMatch.first;
+      }
+      return null;
+    }
+  }
+
+  Future<FeedPoll?> getPostPoll(
+    int postId, {
+    bool forceRefresh = false,
+  }) async {
+    if (postId <= 0) {
+      return null;
+    }
+
+    try {
+      final response = await _api.get(
+        '/api/feed/posts/$postId/poll',
+        forceRefresh: forceRefresh,
+      );
+
+      if (response.data is Map) {
+        return FeedPoll.fromJson(_readMap(response.data));
+      }
+
+      return null;
+    } on DioException catch (e) {
+      debugPrint('Get post poll error: ${e.response?.data}');
+      return null;
+    }
+  }
+
   UserMediaResponse? getCachedUserMedia(int userId, String? type) {
     return _feedCacheService.readUserMedia(userId, type);
   }
@@ -145,6 +197,26 @@ class FeedService {
     } on DioException catch (e) {
       debugPrint('Create post error: ${e.response?.data}');
       throw e.response?.data['message'] ?? 'Failed to create post';
+    }
+  }
+
+  Future<void> votePoll({
+    required int postId,
+    required int pollId,
+    required List<int> optionIds,
+  }) async {
+    try {
+      await _api.post(
+        '/api/feed/polls/$pollId/vote',
+        data: {'optionIds': optionIds},
+      );
+      _invalidatePostCaches(postId);
+      _api.removeCacheByPath('/api/feed/posts/$postId/poll');
+    } on DioException catch (e) {
+      debugPrint('Vote poll error: ${e.response?.data}');
+      throw e.response?.data['message'] ??
+          e.response?.data['error'] ??
+          'Failed to vote on poll';
     }
   }
 
