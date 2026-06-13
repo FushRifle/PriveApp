@@ -280,16 +280,17 @@ class _SecurityGateState extends State<_SecurityGate>
   Future<void> _bootstrap({bool forcePrompt = false}) async {
     if (_isPrompting) return;
 
-    setState(() => _isLoading = true);
-
     try {
       final settings = await widget.appLockService.loadCached();
       if (!mounted) return;
 
+      if (_isLoading) {
+        setState(() => _isLoading = false);
+      }
+
       if (!settings.enabled) {
         setState(() {
           _isUnlocked = true;
-          _isLoading = false;
         });
 
         unawaited(
@@ -299,7 +300,9 @@ class _SecurityGateState extends State<_SecurityGate>
       }
 
       if (_isUnlocked && !forcePrompt) {
-        setState(() => _isLoading = false);
+        unawaited(
+          widget.appLockService.load().then((_) {}).catchError((_) {}),
+        );
         return;
       }
 
@@ -311,7 +314,6 @@ class _SecurityGateState extends State<_SecurityGate>
 
       setState(() {
         _isUnlocked = unlocked == true;
-        _isLoading = false;
       });
 
       unawaited(

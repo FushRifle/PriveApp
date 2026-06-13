@@ -36,6 +36,9 @@ class GalleryProfileCubit extends Cubit<GalleryProfileState> {
       final cached = _cache[key] ?? _cachedPage(userId, type, page);
       if (cached != null) {
         emit(cached);
+        if (!forceRefresh && page == 1) {
+          return;
+        }
       } else {
         emit(GalleryProfileLoading());
       }

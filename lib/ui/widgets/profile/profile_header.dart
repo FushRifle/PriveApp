@@ -142,6 +142,24 @@ class ProfileCoverPlaceholder extends StatelessWidget {
           ],
         ),
       ),
+      child: Center(
+        child: Container(
+          width: 76,
+          height: 76,
+          decoration: BoxDecoration(
+            color: AppColors.white.withOpacity(0.12),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: AppColors.white.withOpacity(0.18),
+            ),
+          ),
+          child: const Icon(
+            Icons.image_outlined,
+            color: AppColors.white,
+            size: 34,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -238,6 +256,7 @@ class ProfileAvatarBubble extends StatelessWidget {
     final avatar = profile.avatar ?? '';
     final name = profile.displayName ?? 'U';
     final firstLetter = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+    final isOfficial = profile.isOfficialAccount;
 
     return Container(
       decoration: BoxDecoration(
@@ -256,9 +275,26 @@ class ProfileAvatarBubble extends StatelessWidget {
         child: CircleAvatar(
           radius: 52,
           backgroundColor: AppColors.primary.withOpacity(0.1),
-          backgroundImage:
-              avatar.isNotEmpty ? CachedNetworkImageProvider(avatar) : null,
-          child: avatar.isEmpty
+          backgroundImage: isOfficial || avatar.isEmpty
+              ? null
+              : CachedNetworkImageProvider(avatar),
+          child: isOfficial
+                ? Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Image.asset(
+                    'assets/icons/clique.png',
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => Text(
+                      firstLetter,
+                      style: const TextStyle(
+                        fontSize: 44,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                )
+              : avatar.isEmpty
               ? Text(
                   firstLetter,
                   style: const TextStyle(

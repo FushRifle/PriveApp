@@ -187,6 +187,7 @@ class FeedPost {
         handle == 'official' ||
         handle == 'cliqueofficial';
   }
+  bool get isOfficialAccount => isAIPost;
   bool get isStandardPost =>
       !isPoll && !isQuestion && !isDailyPrompt && !isAnonymousPost;
 

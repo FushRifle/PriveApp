@@ -52,6 +52,7 @@ class PostHeader extends StatelessWidget {
                   _PostAvatar(
                     avatar: avatar,
                     name: name,
+                    isOfficial: post.isAIPost,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -86,10 +87,12 @@ class PostHeader extends StatelessWidget {
 class _PostAvatar extends StatelessWidget {
   final String avatar;
   final String name;
+  final bool isOfficial;
 
   const _PostAvatar({
     required this.avatar,
     required this.name,
+    required this.isOfficial,
   });
 
   @override
@@ -117,7 +120,13 @@ class _PostAvatar extends StatelessWidget {
       ),
       padding: const EdgeInsets.all(2),
       child: ClipOval(
-        child: avatar.isNotEmpty && avatar.startsWith('http')
+        child: isOfficial
+            ? Image.asset(
+                'assets/icons/clique.png',
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _AvatarFallback(text: fallback),
+              )
+            : avatar.isNotEmpty && avatar.startsWith('http')
             ? CachedNetworkImage(
                 imageUrl: avatar,
                 fit: BoxFit.cover,

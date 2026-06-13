@@ -110,6 +110,16 @@ class ProfileView {
 
   String get ageText => age > 0 ? '$age years old' : 'Age not specified';
 
+  bool get isOfficialAccount {
+    final name = (displayName ?? '').trim().toLowerCase();
+    final handle = (username ?? '').trim().toLowerCase();
+
+    return name == 'clique official' ||
+        handle == 'clique_official' ||
+        handle == 'official' ||
+        handle == 'cliqueofficial';
+  }
+
   static String? _readString(dynamic value) {
     final text = value?.toString().trim();
     if (text == null || text.isEmpty || text == 'null') return null;

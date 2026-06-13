@@ -312,12 +312,24 @@ class _HomePageState extends State<HomePage>
   List<FeedPost> _buildBalancedFeed(List<FeedPost> posts) {
     if (posts.isEmpty) return posts;
 
+    final orderedPosts = [...posts]
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
     final realPosts = <FeedPost>[];
     final aiPosts = <FeedPost>[];
+    DateTime? lastOfficialPostAt;
+    const officialSpacing = Duration(hours: 3);
 
-    for (final post in posts) {
+    for (final post in orderedPosts) {
       if (post.isAIPost) {
+        if (lastOfficialPostAt != null &&
+            lastOfficialPostAt.difference(post.createdAt) <
+                officialSpacing) {
+          continue;
+        }
+
         aiPosts.add(post);
+        lastOfficialPostAt = post.createdAt;
       } else {
         realPosts.add(post);
       }
