@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
+import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/core/router/named_routes.dart';
 
 import 'package:clique/bloc/home/feed_bloc.dart';
@@ -236,7 +237,7 @@ class _HomePageState extends State<HomePage>
                         previous.hasMorePosts != current.hasMorePosts;
                   },
                   builder: (context, state) {
-                    final posts = state.posts;
+                    final posts = _buildBalancedFeed(state.posts);
 
                     if (state.postsStatus == FeedStatus.loading &&
                         posts.isEmpty) {
@@ -306,6 +307,47 @@ class _HomePageState extends State<HomePage>
         ),
       ),
     );
+  }
+
+  List<FeedPost> _buildBalancedFeed(List<FeedPost> posts) {
+    if (posts.isEmpty) return posts;
+
+    final realPosts = <FeedPost>[];
+    final aiPosts = <FeedPost>[];
+
+    for (final post in posts) {
+      if (post.isAIPost) {
+        aiPosts.add(post);
+      } else {
+        realPosts.add(post);
+      }
+    }
+
+    if (realPosts.isEmpty || aiPosts.isEmpty) {
+      return posts;
+    }
+
+    final mixed = <FeedPost>[];
+    var realIndex = 0;
+    var aiIndex = 0;
+    var realBucket = 0;
+
+    while (realIndex < realPosts.length || aiIndex < aiPosts.length) {
+      while (realIndex < realPosts.length && realBucket < 5) {
+        mixed.add(realPosts[realIndex++]);
+        realBucket++;
+      }
+
+      if (aiIndex < aiPosts.length) {
+        mixed.add(aiPosts[aiIndex++]);
+        realBucket = 0;
+      } else if (realIndex < realPosts.length) {
+        mixed.addAll(realPosts.sublist(realIndex));
+        break;
+      }
+    }
+
+    return mixed;
   }
 
   Future<void> _openCreatePost(BuildContext context) async {

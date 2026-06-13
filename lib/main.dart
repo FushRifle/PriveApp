@@ -186,6 +186,9 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
             listener: (context, state) {
               if (state.status == AuthStatus.authenticated) {
                 PushNotificationService.instance.syncDeviceToken();
+                final token = state.token ?? '';
+                StreamCallService.instance.setAuthToken(token);
+                StreamChatService.instance.setAuthToken(token);
                 unawaited(StreamCallService.instance.connect());
                 unawaited(StreamChatService.instance.connect().catchError((_) {}));
                 final userID = state.user?['id']?.toString() ?? '';
@@ -197,6 +200,8 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
                 PushNotificationService.instance.deleteDeviceToken();
                 unawaited(StreamCallService.instance.disconnect());
                 unawaited(StreamChatService.instance.disconnect());
+                StreamCallService.instance.clearAuthToken();
+                StreamChatService.instance.clearAuthToken();
                 LocalCacheService.clearAll();
                 context.read<UserBloc>()
                   ..clearAuthToken()
@@ -278,7 +283,7 @@ class _SecurityGateState extends State<_SecurityGate>
     setState(() => _isLoading = true);
 
     try {
-      final settings = await widget.appLockService.load();
+      final settings = await widget.appLockService.loadCached();
       if (!mounted) return;
 
       if (!settings.enabled) {
@@ -286,6 +291,10 @@ class _SecurityGateState extends State<_SecurityGate>
           _isUnlocked = true;
           _isLoading = false;
         });
+
+        unawaited(
+          widget.appLockService.load().then((_) {}).catchError((_) {}),
+        );
         return;
       }
 
@@ -304,6 +313,10 @@ class _SecurityGateState extends State<_SecurityGate>
         _isUnlocked = unlocked == true;
         _isLoading = false;
       });
+
+      unawaited(
+        widget.appLockService.load().then((_) {}).catchError((_) {}),
+      );
     } finally {
       _isPrompting = false;
     }

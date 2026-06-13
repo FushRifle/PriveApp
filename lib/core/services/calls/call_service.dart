@@ -6,6 +6,14 @@ import 'package:dio/dio.dart';
 class CallService {
   final ApiService _api = ApiService();
 
+  void setAuthToken(String token) {
+    _api.setAuthToken(token);
+  }
+
+  void clearAuthToken() {
+    _api.clearAuthToken();
+  }
+
   Future<CallResponse> startCall({
     required int receiverId,
     required String callType,

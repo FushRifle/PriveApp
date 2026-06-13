@@ -16,6 +16,14 @@ class StreamCallService {
 
   bool get isConnected => _client != null;
 
+  void setAuthToken(String token) {
+    _callService.setAuthToken(token);
+  }
+
+  void clearAuthToken() {
+    _callService.clearAuthToken();
+  }
+
   stream.StreamVideo get client {
     final client = _client;
     if (client == null) {

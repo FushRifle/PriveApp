@@ -15,8 +15,23 @@ class StreamChatService {
   stream.StreamChatClient? _client;
   String? _connectedUserId;
   Future<void>? _connectFuture;
+  String? _authToken;
 
   bool get isConnected => _client != null && _connectedUserId != null;
+
+  void setAuthToken(String token) {
+    final trimmed = token.trim();
+    _authToken = trimmed.isEmpty ? null : trimmed;
+
+    if (_authToken != null) {
+      _api.setAuthToken(_authToken!);
+    }
+  }
+
+  void clearAuthToken() {
+    _authToken = null;
+    _api.clearAuthToken();
+  }
 
   stream.StreamChatClient get client {
     final client = _client;
@@ -79,6 +94,11 @@ class StreamChatService {
 
   Future<_StreamAuthResponse> _getStreamAuth() async {
     try {
+      final token = _authToken;
+      if (token != null && token.isNotEmpty) {
+        _api.setAuthToken(token);
+      }
+
       final response = await _api.get(
         '${ApiConfig.apiPrefix}${ApiConfig.chatEndpoint}/stream-auth',
         forceRefresh: true,

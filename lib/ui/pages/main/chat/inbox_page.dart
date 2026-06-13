@@ -9,6 +9,7 @@ import 'package:clique/ui/pages/main/chat/chat_page.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/core/services/chat/chat_service.dart';
 import 'package:clique/ui/widgets/common/app_page_header.dart';
+import 'package:clique/ui/widgets/chat/inbox_loading_shimmer.dart';
 
 class InboxPage extends StatefulWidget {
   const InboxPage({super.key});
@@ -71,16 +72,32 @@ class _InboxPageState extends State<InboxPage> {
 
                   if (state.conversationsStatus == ChatStatus.loading &&
                       !hasCachedOrLiveConversations) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.secondary,
-                      ),
-                    );
+                    return const InboxLoadingShimmer();
                   }
 
                   if (state.conversationsStatus == ChatStatus.error &&
                       !hasCachedOrLiveConversations) {
                     return _buildErrorWidget(state.error);
+                  }
+
+                  if (conversations.isEmpty) {
+                    return ListView(
+                      physics: const AlwaysScrollableScrollPhysics(
+                        parent: BouncingScrollPhysics(),
+                      ),
+                      children: [
+                        const SizedBox(height: 120),
+                        Center(
+                          child: Text(
+                            'No conversations yet',
+                            style: AppTheme.greyTextStyle.copyWith(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
                   }
 
                   return Padding(

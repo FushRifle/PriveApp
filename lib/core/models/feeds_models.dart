@@ -178,6 +178,15 @@ class FeedPost {
   bool get isQuestion => postType == 'question';
   bool get isDailyPrompt => postType == 'daily_prompt' || postType == 'prompt';
   bool get isAnonymousPost => isAnonymous || postType == 'anonymous';
+  bool get isAIPost {
+    final name = user.name.trim().toLowerCase();
+    final handle = user.handle.trim().toLowerCase();
+
+    return name == 'clique official' ||
+        handle == 'clique_official' ||
+        handle == 'official' ||
+        handle == 'cliqueofficial';
+  }
   bool get isStandardPost =>
       !isPoll && !isQuestion && !isDailyPrompt && !isAnonymousPost;
 
