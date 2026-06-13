@@ -861,43 +861,6 @@ class _FeedHeader extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 10),
-          InkWell(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              onOpenCreate();
-            },
-            borderRadius: BorderRadius.circular(18),
-            child: Container(
-              height: 38,
-              padding: const EdgeInsets.symmetric(horizontal: 13),
-              decoration: BoxDecoration(
-                color:
-                    palette.primary.withOpacity(palette.isDark ? 0.18 : 0.08),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: palette.primary.withOpacity(0.18)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.add_rounded,
-                    color: palette.primary,
-                    size: 19,
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    'Post',
-                    style: AppTheme.greyTextStyle.copyWith(
-                      color: palette.primary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );
