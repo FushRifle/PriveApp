@@ -10,7 +10,8 @@ import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/services/chat/chat_service.dart';
 import 'package:clique/core/services/friends/friends_service.dart';
-import 'package:clique/ui/pages/main/profile/profile_page.dart';
+import 'package:clique/core/models/profile_view.dart';
+import 'package:clique/ui/widgets/profile/profile_widgets.dart';
 
 class OtherProfilePage extends StatefulWidget {
   final int userId;

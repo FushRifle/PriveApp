@@ -117,7 +117,6 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
               onPressed: () => Navigator.pop(context),
               icon: const Icon(Icons.arrow_back_ios_new_rounded),
             ),
-            title: const Text('Notification details'),
           ),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),

@@ -214,13 +214,6 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
       child: Column(
         children: [
           _buildAvatar(firstLetter),
-          const SizedBox(height: 16),
-          Text(
-            '@${widget.userName.toLowerCase().replaceAll(' ', '_')}',
-            style: AppTheme.blackTextStyle
-                .copyWith(fontWeight: FontWeight.bold, fontSize: 22),
-          ),
-          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
