@@ -217,7 +217,7 @@ class ProfileHeaderCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 15),
               ProfileIdentityRow(
                 profile: profile,
                 isOwnProfile: isOwnProfile,

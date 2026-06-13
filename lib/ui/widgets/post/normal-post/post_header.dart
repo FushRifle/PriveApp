@@ -272,16 +272,6 @@ class _OfficialBadge extends StatelessWidget {
             size: 12,
             color: AppColors.white,
           ),
-          SizedBox(width: 3),
-          Text(
-            'Official',
-            style: TextStyle(
-              color: AppColors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              height: 1,
-            ),
-          ),
         ],
       ),
     );

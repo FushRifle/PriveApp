@@ -313,45 +313,16 @@ class _HomePageState extends State<HomePage>
   List<FeedPost> _buildBalancedFeed(List<FeedPost> posts) {
     if (posts.isEmpty) return posts;
 
+    // Keep a single chronological stream. Source-based regrouping was
+    // crowding the feed and hiding regular user posts behind AI content.
     final orderedPosts = [...posts]
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      ..sort((a, b) {
+        final dateCompare = b.createdAt.compareTo(a.createdAt);
+        if (dateCompare != 0) return dateCompare;
+        return b.id.compareTo(a.id);
+      });
 
-    final realPosts = <FeedPost>[];
-    final aiPosts = <FeedPost>[];
-
-    for (final post in orderedPosts) {
-      if (post.isAIPost) {
-        aiPosts.add(post);
-      } else {
-        realPosts.add(post);
-      }
-    }
-
-    if (realPosts.isEmpty || aiPosts.isEmpty) {
-      return posts;
-    }
-
-    final mixed = <FeedPost>[];
-    var realIndex = 0;
-    var aiIndex = 0;
-    var realBucket = 0;
-
-    while (realIndex < realPosts.length || aiIndex < aiPosts.length) {
-      while (realIndex < realPosts.length && realBucket < 5) {
-        mixed.add(realPosts[realIndex++]);
-        realBucket++;
-      }
-
-      if (aiIndex < aiPosts.length) {
-        mixed.add(aiPosts[aiIndex++]);
-        realBucket = 0;
-      } else if (realIndex < realPosts.length) {
-        mixed.addAll(realPosts.sublist(realIndex));
-        break;
-      }
-    }
-
-    return mixed;
+    return orderedPosts;
   }
 
   Future<void> _openCreatePost(BuildContext context) async {
