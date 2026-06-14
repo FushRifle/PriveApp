@@ -337,8 +337,9 @@ class AppRouter {
         );
 
       case NamedRoutes.lockScreenScreen:
+        final userId = _readInt(settings.arguments);
         return _page(
-          const LockScreenPage(),
+          LockScreenPage(userId: userId > 0 ? userId : null),
         );
 
       case NamedRoutes.postDetailScreen:

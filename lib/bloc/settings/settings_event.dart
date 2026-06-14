@@ -8,7 +8,14 @@ abstract class SettingsEvent extends Equatable {
 }
 
 // Load settings
-class LoadSettings extends SettingsEvent {}
+class LoadSettings extends SettingsEvent {
+  final int? userId;
+
+  const LoadSettings({this.userId});
+
+  @override
+  List<Object?> get props => [userId];
+}
 
 // Update settings
 class UpdateSettings extends SettingsEvent {

@@ -1,5 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:clique/core/services/security/app_lock_service.dart';
 import 'package:clique/core/services/settings/settings_service.dart';
 
 part 'settings_event.dart';
@@ -7,6 +8,7 @@ part 'settings_state.dart';
 
 class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   final SettingsService _settingsService = SettingsService();
+  final AppLockService _appLockService = AppLockService.instance;
 
   SettingsBloc() : super(const SettingsState()) {
     on<LoadSettings>(_onLoadSettings);
@@ -34,11 +36,27 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     LoadSettings event,
     Emitter<SettingsState> emit,
   ) async {
-    emit(state.copyWith(
-      status: SettingsStatus.loading,
-      isLoading: true,
-      clearError: true,
-    ));
+    final cachedLock = event.userId != null
+        ? await _appLockService.loadCached(userId: event.userId)
+        : null;
+
+    if (cachedLock != null) {
+      emit(state.copyWith(
+        appLockEnabled: cachedLock.enabled,
+        appLockBiometricEnabled: cachedLock.biometricEnabled,
+        appLockPinEnabled: cachedLock.pinEnabled,
+        appLockTimeoutSeconds: cachedLock.timeoutSeconds,
+        status: SettingsStatus.loading,
+        isLoading: true,
+        clearError: true,
+      ));
+    } else {
+      emit(state.copyWith(
+        status: SettingsStatus.loading,
+        isLoading: true,
+        clearError: true,
+      ));
+    }
 
     try {
       final settings = await _settingsService.getSettings();
@@ -47,10 +65,16 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         notificationsEnabled: settings['notificationsEnabled'] ?? true,
         privateAccount: settings['privateAccount'] ?? false,
         twoFactorAuth: settings['twoFactorAuth'] ?? false,
-        appLockEnabled: settings['appLockEnabled'] ?? false,
-        appLockBiometricEnabled: settings['appLockBiometricEnabled'] ?? false,
-        appLockPinEnabled: settings['appLockPinEnabled'] ?? false,
-        appLockTimeoutSeconds: settings['appLockTimeoutSeconds'] ?? 0,
+        appLockEnabled:
+            cachedLock?.enabled ?? settings['appLockEnabled'] ?? false,
+        appLockBiometricEnabled: cachedLock?.biometricEnabled ??
+            settings['appLockBiometricEnabled'] ??
+            false,
+        appLockPinEnabled:
+            cachedLock?.pinEnabled ?? settings['appLockPinEnabled'] ?? false,
+        appLockTimeoutSeconds: cachedLock?.timeoutSeconds ??
+            settings['appLockTimeoutSeconds'] ??
+            0,
         language: settings['language']?.toString() ?? 'en',
         videoQuality: settings['videoQuality']?.toString() ?? 'auto',
         theme: settings['theme']?.toString() ?? 'system',
@@ -135,7 +159,12 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       ));
     } catch (e) {
       // Reload settings to revert optimistic update
-      add(LoadSettings());
+      if (event.appLockEnabled != null ||
+          event.appLockBiometricEnabled != null ||
+          event.appLockPinEnabled != null ||
+          event.appLockTimeoutSeconds != null) {
+        add(const LoadSettings());
+      }
       emit(previousState.copyWith(
         status: SettingsStatus.error,
         isSaving: false,

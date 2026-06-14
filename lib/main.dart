@@ -190,7 +190,8 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
                 StreamCallService.instance.setAuthToken(token);
                 StreamChatService.instance.setAuthToken(token);
                 unawaited(StreamCallService.instance.connect());
-                unawaited(StreamChatService.instance.connect().catchError((_) {}));
+                unawaited(
+                    StreamChatService.instance.connect().catchError((_) {}));
                 final userID = state.user?['id']?.toString() ?? '';
                 context.read<FeatureAccessCubit>()
                   ..load()
@@ -281,7 +282,8 @@ class _SecurityGateState extends State<_SecurityGate>
     if (_isPrompting) return;
 
     try {
-      final settings = await widget.appLockService.loadCached();
+      final userId = _currentUserId();
+      final settings = await widget.appLockService.loadCached(userId: userId);
       if (!mounted) return;
 
       if (_isLoading) {
@@ -294,14 +296,20 @@ class _SecurityGateState extends State<_SecurityGate>
         });
 
         unawaited(
-          widget.appLockService.load().then((_) {}).catchError((_) {}),
+          widget.appLockService
+              .load(userId: userId)
+              .then((_) {})
+              .catchError((_) {}),
         );
         return;
       }
 
       if (_isUnlocked && !forcePrompt) {
         unawaited(
-          widget.appLockService.load().then((_) {}).catchError((_) {}),
+          widget.appLockService
+              .load(userId: userId)
+              .then((_) {})
+              .catchError((_) {}),
         );
         return;
       }
@@ -309,6 +317,7 @@ class _SecurityGateState extends State<_SecurityGate>
       _isPrompting = true;
       final unlocked = await Navigator.of(context).pushNamed<bool>(
         NamedRoutes.lockScreenScreen,
+        arguments: userId,
       );
       if (!mounted) return;
 
@@ -317,7 +326,10 @@ class _SecurityGateState extends State<_SecurityGate>
       });
 
       unawaited(
-        widget.appLockService.load().then((_) {}).catchError((_) {}),
+        widget.appLockService
+            .load(userId: userId)
+            .then((_) {})
+            .catchError((_) {}),
       );
     } finally {
       _isPrompting = false;
@@ -336,6 +348,14 @@ class _SecurityGateState extends State<_SecurityGate>
     }
 
     return widget.child;
+  }
+
+  int? _currentUserId() {
+    final currentUser = context.read<AuthBloc>().state.user;
+    final raw = currentUser?['id'];
+    if (raw is int) return raw;
+    if (raw is num) return raw.toInt();
+    return int.tryParse(raw?.toString() ?? '');
   }
 }
 

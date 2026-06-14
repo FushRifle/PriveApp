@@ -1,10 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:clique/app/configs/colors.dart';
+import 'package:clique/bloc/auth/auth_bloc.dart';
+import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/core/services/security/app_lock_service.dart';
 
 class LockScreenPage extends StatefulWidget {
-  const LockScreenPage({super.key});
+  final int? userId;
+
+  const LockScreenPage({
+    super.key,
+    this.userId,
+  });
 
   @override
   State<LockScreenPage> createState() => _LockScreenPageState();
@@ -22,10 +32,16 @@ class _LockScreenPageState extends State<LockScreenPage> {
   bool _isLoading = true;
   String? _error;
   bool _didAutoPrompt = false;
+  bool _didInit = false;
+  int? _resolvedUserId;
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didInit) return;
+    _didInit = true;
+
+    _resolvedUserId = widget.userId ?? _currentUserId();
     _checkBiometricSupport();
     _loadSettings();
   }
@@ -49,8 +65,10 @@ class _LockScreenPageState extends State<LockScreenPage> {
 
   Future<void> _loadSettings() async {
     try {
-      final settings = await _appLockService.load();
-      final savedPin = await _appLockService.getPin() ?? '';
+      final settings =
+          await _appLockService.loadCached(userId: _resolvedUserId);
+      final savedPin =
+          await _appLockService.getPin(userId: _resolvedUserId) ?? '';
 
       if (!mounted) return;
 
@@ -59,12 +77,15 @@ class _LockScreenPageState extends State<LockScreenPage> {
         _isPinEnabled = settings.pinEnabled;
         _savedPin = savedPin;
         _isLoading = false;
+        _error = null;
       });
 
       if (!_didAutoPrompt) {
         _didAutoPrompt = true;
         await _maybeAutoUnlock();
       }
+
+      unawaited(_refreshRemoteSettings());
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -78,6 +99,24 @@ class _LockScreenPageState extends State<LockScreenPage> {
     if (!_isBiometricEnabled || !_isBiometricAvailable) return;
     if (_isVerifying) return;
     await _enableBiometric();
+  }
+
+  Future<void> _refreshRemoteSettings() async {
+    try {
+      final settings = await _appLockService.load(userId: _resolvedUserId);
+      final savedPin =
+          await _appLockService.getPin(userId: _resolvedUserId) ?? '';
+
+      if (!mounted) return;
+
+      setState(() {
+        _isBiometricEnabled = settings.biometricEnabled;
+        _isPinEnabled = settings.pinEnabled;
+        _savedPin = savedPin;
+      });
+    } catch (e) {
+      debugPrint('App lock remote refresh skipped: $e');
+    }
   }
 
   Future<void> _enableBiometric() async {
@@ -98,6 +137,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
           pinEnabled: _isPinEnabled,
           timeoutSeconds: 0,
           pin: _isPinEnabled ? _savedPin : null,
+          userId: _resolvedUserId,
         );
         if (mounted) {
           setState(() {
@@ -165,7 +205,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
   }
 
   Future<void> _disablePin() async {
-    await _appLockService.clearPin();
+    await _appLockService.clearPin(userId: _resolvedUserId);
     await _persistLockState(
       biometricEnabled: _isBiometricEnabled,
       pinEnabled: false,
@@ -198,6 +238,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
       pinEnabled: pinEnabled,
       timeoutSeconds: 0,
       pin: pin,
+      userId: _resolvedUserId,
     );
     if (!mounted) return;
     setState(() {
@@ -240,9 +281,32 @@ class _LockScreenPageState extends State<LockScreenPage> {
     );
   }
 
+  int? _currentUserId() {
+    final authUser = context.read<AuthBloc>().state.user;
+    final authUserId = _readCurrentUserIdFromMap(authUser);
+    if (authUserId != null) return authUserId;
+
+    final currentUser = context.read<UserBloc>().state.currentUser;
+    return _readCurrentUserIdFromMap(currentUser);
+  }
+
+  int? _readCurrentUserIdFromMap(Map<String, dynamic>? user) {
+    if (user == null) return null;
+    final raw = user['id'];
+    if (raw is int) return raw;
+    if (raw is num) return raw.toInt();
+    return int.tryParse(raw?.toString() ?? '');
+  }
+
+  String _userBadgeLabel(int? userId) {
+    final value = (userId ?? 0).toString().padLeft(4, '0');
+    return value.length <= 4 ? value : value.substring(value.length - 4);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final badge = _userBadgeLabel(_resolvedUserId);
 
     return Scaffold(
       backgroundColor:
@@ -283,24 +347,64 @@ class _LockScreenPageState extends State<LockScreenPage> {
               margin: const EdgeInsets.only(bottom: 32),
               child: Column(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.primary.withOpacity(0.2),
-                          AppColors.primary.withOpacity(0.05),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              AppColors.primary.withOpacity(0.2),
+                              AppColors.primary.withOpacity(0.05),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.security_rounded,
+                          color: AppColors.primary,
+                          size: 55,
+                        ),
                       ),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.security_rounded,
-                      color: AppColors.primary,
-                      size: 55,
-                    ),
+                      Positioned(
+                        right: -4,
+                        bottom: -4,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isDarkMode
+                                ? AppColors.darkBackground
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: AppColors.primary.withOpacity(0.35),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            badge,
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -313,7 +417,9 @@ class _LockScreenPageState extends State<LockScreenPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Choose your preferred lock method',
+                    _resolvedUserId == null
+                        ? 'Choose your preferred lock method'
+                        : 'Lock profile #$badge with your preferred method',
                     style: TextStyle(
                       fontSize: 14,
                       color: isDarkMode

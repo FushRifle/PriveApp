@@ -61,7 +61,8 @@ class _StatusViewPageState extends State<StatusViewPage>
   }
 
   void _nextStatus() {
-    if (currentIndex < widget.stories.length - 1) {
+    final stories = _resolvedStories();
+    if (currentIndex < stories.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -138,87 +139,112 @@ class _StatusViewPageState extends State<StatusViewPage>
       ),
     );
 
-    return Scaffold(
-      backgroundColor: AppColors.black,
-      body: GestureDetector(
-        onTapDown: (details) {
-          final size = MediaQuery.of(context).size;
-          if (details.globalPosition.dy > size.height - 120) return;
+    return BlocBuilder<StoriesBloc, StoriesState>(
+      builder: (context, state) {
+        final stories =
+            state.stories.isNotEmpty ? state.stories : widget.stories;
+        final safeIndex = _safeStoryIndex(stories);
 
-          final screenWidth = size.width;
-          if (details.globalPosition.dx < screenWidth / 2) {
-            _previousStatus();
-          } else {
-            _nextStatus();
-          }
-        },
-        onLongPress: _togglePause,
-        onLongPressUp: _togglePause,
-        child: Stack(
-          children: [
-            // Status Content
-            PageView.builder(
-              controller: _pageController,
-              itemCount: widget.stories.length,
-              physics: const NeverScrollableScrollPhysics(),
-              onPageChanged: (index) {
-                setState(() {
-                  currentIndex = index;
-                });
-                _progressController.reset();
-                if (!_isPaused) {
-                  _progressController.forward();
-                }
-                // Mark story as seen when viewed
-                _markStoryAsSeen(widget.stories[index].id);
-              },
-              itemBuilder: (context, index) {
-                return _buildStatusContent(widget.stories[index]);
-              },
-            ),
+        if (stories.isNotEmpty && safeIndex != currentIndex) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                currentIndex = safeIndex;
+              });
+            }
+          });
+        }
 
-            // Header
-            _buildHeader(),
+        if (stories.isEmpty) {
+          return const Scaffold(
+            backgroundColor: AppColors.black,
+            body: SizedBox.shrink(),
+          );
+        }
 
-            // Progress Bars
-            _buildProgressBars(),
+        return Scaffold(
+          backgroundColor: AppColors.black,
+          body: GestureDetector(
+            onTapDown: (details) {
+              final size = MediaQuery.of(context).size;
+              if (details.globalPosition.dy > size.height - 120) return;
 
-            // Bottom Actions
-            _buildBottomActions(),
+              final screenWidth = size.width;
+              if (details.globalPosition.dx < screenWidth / 2) {
+                _previousStatus();
+              } else {
+                _nextStatus();
+              }
+            },
+            onLongPress: _togglePause,
+            onLongPressUp: _togglePause,
+            child: Stack(
+              children: [
+                // Status Content
+                PageView.builder(
+                  controller: _pageController,
+                  itemCount: stories.length,
+                  physics: const NeverScrollableScrollPhysics(),
+                  onPageChanged: (index) {
+                    setState(() {
+                      currentIndex = index;
+                    });
+                    _progressController.reset();
+                    if (!_isPaused) {
+                      _progressController.forward();
+                    }
+                    // Mark story as seen when viewed
+                    _markStoryAsSeen(stories[index].id);
+                  },
+                  itemBuilder: (context, index) {
+                    return _buildStatusContent(stories[index]);
+                  },
+                ),
 
-            if (_isPaused && !_replyFocusNode.hasFocus)
-              Positioned(
-                top: MediaQuery.of(context).padding.top + 90,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.black.withOpacity(0.28),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(
-                        color: AppColors.white.withOpacity(0.2),
-                      ),
-                    ),
-                    child: Text(
-                      'Paused',
-                      style: TextStyle(
-                        color: AppColors.white.withOpacity(0.9),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
+                // Header
+                _buildHeader(stories),
+
+                // Progress Bars
+                _buildProgressBars(stories),
+
+                // Bottom Actions
+                _buildBottomActions(stories),
+
+                if (_isPaused && !_replyFocusNode.hasFocus)
+                  Positioned(
+                    top: MediaQuery.of(context).padding.top + 90,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.black.withOpacity(0.28),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: AppColors.white.withOpacity(0.2),
+                          ),
+                        ),
+                        child: Text(
+                          'Paused',
+                          style: TextStyle(
+                            color: AppColors.white.withOpacity(0.9),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
-          ],
-        ),
-      ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -342,8 +368,8 @@ class _StatusViewPageState extends State<StatusViewPage>
     return AppColors.storyTextBackground;
   }
 
-  Widget _buildHeader() {
-    final story = widget.stories[currentIndex];
+  Widget _buildHeader(List<Story> stories) {
+    final story = stories[_safeStoryIndex(stories)];
     return Positioned(
       top: MediaQuery.of(context).padding.top + 30,
       left: 16,
@@ -439,14 +465,14 @@ class _StatusViewPageState extends State<StatusViewPage>
     );
   }
 
-  Widget _buildProgressBars() {
+  Widget _buildProgressBars(List<Story> stories) {
     return Positioned(
       top: MediaQuery.of(context).padding.top + 10,
       left: 8,
       right: 8,
       child: Row(
         children: List.generate(
-          widget.stories.length,
+          stories.length,
           (index) => Expanded(
             child: Container(
               height: 3,
@@ -484,8 +510,8 @@ class _StatusViewPageState extends State<StatusViewPage>
     );
   }
 
-  Widget _buildBottomActions() {
-    final story = widget.stories[currentIndex];
+  Widget _buildBottomActions(List<Story> stories) {
+    final story = stories[_safeStoryIndex(stories)];
 
     return Positioned(
       bottom: 30,
@@ -530,24 +556,7 @@ class _StatusViewPageState extends State<StatusViewPage>
             ),
           ),
           const SizedBox(width: 12),
-          IconButton(
-            onPressed: () => _likeStory(story),
-            icon: const Icon(
-              Icons.favorite_border,
-              color: AppColors.white,
-              size: 22,
-            ),
-            style: IconButton.styleFrom(
-              backgroundColor: AppColors.transparent,
-              foregroundColor: AppColors.white,
-              shape: const CircleBorder(),
-              side: BorderSide(
-                color: AppColors.white.withOpacity(0.3),
-                width: 1,
-              ),
-              padding: const EdgeInsets.all(10),
-            ),
-          ),
+          _buildLikeButton(story),
           const SizedBox(width: 8),
           IconButton(
             onPressed: () => _showRepostSheet(story),
@@ -597,35 +606,86 @@ class _StatusViewPageState extends State<StatusViewPage>
     );
   }
 
-  void _sendReply(String message, Story story) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Reply sent to ${story.user.name}'),
-        duration: const Duration(seconds: 1),
-        backgroundColor: AppColors.primary,
+  Widget _buildLikeButton(Story story) {
+    final liked = story.isLiked;
+
+    return AnimatedScale(
+      scale: liked ? 1.1 : 1.0,
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutBack,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+        decoration: BoxDecoration(
+          color: liked
+              ? AppColors.redColor.withOpacity(0.14)
+              : AppColors.transparent,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: liked
+                ? AppColors.redColor.withOpacity(0.55)
+                : AppColors.white.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: IconButton(
+          onPressed: () => _likeStory(story),
+          icon: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            transitionBuilder: (child, animation) {
+              return ScaleTransition(
+                scale: Tween<double>(begin: 0.65, end: 1).animate(animation),
+                child: FadeTransition(opacity: animation, child: child),
+              );
+            },
+            child: Icon(
+              liked ? Icons.favorite : Icons.favorite_border,
+              key: ValueKey<bool>(liked),
+              color: liked ? AppColors.redColor : AppColors.white,
+              size: 22,
+            ),
+          ),
+          style: IconButton.styleFrom(
+            backgroundColor: AppColors.transparent,
+            foregroundColor: liked ? AppColors.redColor : AppColors.white,
+            shape: const CircleBorder(),
+            padding: const EdgeInsets.all(10),
+          ),
+        ),
       ),
     );
   }
 
+  int _safeStoryIndex(List<Story> stories) {
+    if (stories.isEmpty) return 0;
+    return currentIndex.clamp(0, stories.length - 1).toInt();
+  }
+
+  List<Story> _resolvedStories() {
+    final stories = context.read<StoriesBloc>().state.stories;
+    return stories.isNotEmpty ? stories : widget.stories;
+  }
+
   void _likeStory(Story story) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Liked ${story.user.name}\'s story'),
-        duration: const Duration(seconds: 1),
-        backgroundColor: AppColors.primary,
-      ),
-    );
+    HapticFeedback.lightImpact();
+    context.read<StoriesBloc>().add(
+          story.isLiked
+              ? UnlikeStoryEvent(storyId: story.id)
+              : LikeStoryEvent(storyId: story.id),
+        );
+  }
+
+  void _sendReply(String message, Story story) {
+    context.read<StoriesBloc>().add(
+          ReplyToStoryEvent(
+            storyId: story.id,
+            content: message.trim(),
+          ),
+        );
   }
 
   void _showRepostSheet(Story story) {
     if (story.isReshared) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Already reposted'),
-          duration: Duration(seconds: 1),
-          backgroundColor: AppColors.primary,
-        ),
-      );
       return;
     }
 
@@ -709,15 +769,6 @@ class _StatusViewPageState extends State<StatusViewPage>
 
   void _repostStory(Story story, {String caption = ''}) {
     context.read<StoriesBloc>().add(ReshareStoryEvent(storyId: story.id));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          caption.isEmpty ? 'Status reposted' : 'Status reposted with caption',
-        ),
-        duration: const Duration(seconds: 1),
-        backgroundColor: AppColors.primary,
-      ),
-    );
   }
 
   void _showStoryOptions(Story story) {
@@ -760,12 +811,6 @@ class _StatusViewPageState extends State<StatusViewPage>
                     context
                         .read<StoriesBloc>()
                         .add(DeleteStoryEvent(storyId: story.id));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Status deleted'),
-                        duration: Duration(seconds: 1),
-                      ),
-                    );
                     Navigator.pop(context);
                   },
                 ),

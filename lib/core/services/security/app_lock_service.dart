@@ -1,4 +1,8 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:clique/core/services/settings/settings_service.dart';
 
@@ -37,45 +41,50 @@ class AppLockService {
 
   final SettingsService _settingsService = SettingsService();
 
-  Future<AppLockSettings> load() async {
-    final remote = await _settingsService.getSettings();
-    final enabled = _readBool(remote['appLockEnabled']) ??
-        await _readBoolKey(_enabledKey) ??
-        false;
-    final biometricEnabled = _readBool(remote['appLockBiometricEnabled']) ??
-        await _readBoolKey(_biometricKey) ??
-        false;
-    final pinEnabled = _readBool(remote['appLockPinEnabled']) ??
-        await _readBoolKey(_pinEnabledKey) ??
-        false;
-    final timeoutSeconds = _readInt(remote['appLockTimeoutSeconds']) ??
-        await _readIntKey(_timeoutKey) ??
-        0;
-    final pin = await _storage.read(key: _pinKey);
+  Future<AppLockSettings> load({int? userId}) async {
+    final cached = await loadCached(userId: userId);
 
-    await _cacheLocal(
-      enabled: enabled,
-      biometricEnabled: biometricEnabled,
-      pinEnabled: pinEnabled,
-      timeoutSeconds: timeoutSeconds,
-      pin: pin,
-    );
+    try {
+      final remote = await _settingsService.getSettings();
+      final enabled = _readBool(remote['appLockEnabled']) ?? cached.enabled;
+      final biometricEnabled = _readBool(remote['appLockBiometricEnabled']) ??
+          cached.biometricEnabled;
+      final pinEnabled =
+          _readBool(remote['appLockPinEnabled']) ?? cached.pinEnabled;
+      final timeoutSeconds =
+          _readInt(remote['appLockTimeoutSeconds']) ?? cached.timeoutSeconds;
+      final pin = pinEnabled ? cached.pin : null;
 
-    return AppLockSettings(
-      enabled: enabled,
-      biometricEnabled: biometricEnabled,
-      pinEnabled: pinEnabled,
-      timeoutSeconds: timeoutSeconds,
-      pin: pin,
-    );
+      await _cacheLocal(
+        userId: userId,
+        enabled: enabled,
+        biometricEnabled: biometricEnabled,
+        pinEnabled: pinEnabled,
+        timeoutSeconds: timeoutSeconds,
+        pin: pin,
+      );
+
+      return AppLockSettings(
+        enabled: enabled,
+        biometricEnabled: biometricEnabled,
+        pinEnabled: pinEnabled,
+        timeoutSeconds: timeoutSeconds,
+        pin: pin,
+      );
+    } catch (_) {
+      return cached;
+    }
   }
 
-  Future<AppLockSettings> loadCached() async {
-    final enabled = await _readBoolKey(_enabledKey) ?? false;
-    final biometricEnabled = await _readBoolKey(_biometricKey) ?? false;
-    final pinEnabled = await _readBoolKey(_pinEnabledKey) ?? false;
-    final timeoutSeconds = await _readIntKey(_timeoutKey) ?? 0;
-    final pin = await _storage.read(key: _pinKey);
+  Future<AppLockSettings> loadCached({int? userId}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final enabled = prefs.getBool(_scopedKey(_enabledKey, userId)) ?? false;
+    final biometricEnabled =
+        prefs.getBool(_scopedKey(_biometricKey, userId)) ?? false;
+    final pinEnabled =
+        prefs.getBool(_scopedKey(_pinEnabledKey, userId)) ?? false;
+    final timeoutSeconds = prefs.getInt(_scopedKey(_timeoutKey, userId)) ?? 0;
+    final pin = await _storage.read(key: _scopedKey(_pinKey, userId));
 
     return AppLockSettings(
       enabled: enabled,
@@ -91,22 +100,38 @@ class AppLockService {
     required bool pinEnabled,
     required int timeoutSeconds,
     String? pin,
+    int? userId,
   }) async {
     final enabled = biometricEnabled || pinEnabled;
 
-    await _settingsService.updateSettings(
-      appLockEnabled: enabled,
-      appLockBiometricEnabled: biometricEnabled,
-      appLockPinEnabled: pinEnabled,
-      appLockTimeoutSeconds: timeoutSeconds,
-    );
-
     await _cacheLocal(
+      userId: userId,
       enabled: enabled,
       biometricEnabled: biometricEnabled,
       pinEnabled: pinEnabled,
       timeoutSeconds: timeoutSeconds,
       pin: pin,
+    );
+
+    unawaited(
+      _settingsService
+          .updateSettings(
+            appLockEnabled: enabled,
+            appLockBiometricEnabled: biometricEnabled,
+            appLockPinEnabled: pinEnabled,
+            appLockTimeoutSeconds: timeoutSeconds,
+          )
+          .then((_) => _cacheLocal(
+                userId: userId,
+                enabled: enabled,
+                biometricEnabled: biometricEnabled,
+                pinEnabled: pinEnabled,
+                timeoutSeconds: timeoutSeconds,
+                pin: pin,
+              ))
+          .catchError((error) {
+        debugPrint('App lock sync failed: $error');
+      }),
     );
 
     return AppLockSettings(
@@ -118,50 +143,64 @@ class AppLockService {
     );
   }
 
-  Future<void> clearPin() async {
-    await _storage.delete(key: _pinKey);
-    await _storage.write(key: _pinEnabledKey, value: 'false');
+  Future<void> cacheLocal({
+    required bool biometricEnabled,
+    required bool pinEnabled,
+    required int timeoutSeconds,
+    String? pin,
+    int? userId,
+  }) {
+    return _cacheLocal(
+      userId: userId,
+      enabled: biometricEnabled || pinEnabled,
+      biometricEnabled: biometricEnabled,
+      pinEnabled: pinEnabled,
+      timeoutSeconds: timeoutSeconds,
+      pin: pin,
+    );
   }
 
-  Future<bool> isEnabled() async {
-    return (await load()).enabled;
+  Future<void> clearPin({int? userId}) async {
+    await _storage.delete(key: _scopedKey(_pinKey, userId));
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_scopedKey(_pinEnabledKey, userId), false);
   }
 
-  Future<String?> getPin() async {
-    return _storage.read(key: _pinKey);
+  Future<bool> isEnabled({int? userId}) async {
+    return (await loadCached(userId: userId)).enabled;
+  }
+
+  Future<String?> getPin({int? userId}) async {
+    return _storage.read(key: _scopedKey(_pinKey, userId));
   }
 
   Future<void> _cacheLocal({
+    required int? userId,
     required bool enabled,
     required bool biometricEnabled,
     required bool pinEnabled,
     required int timeoutSeconds,
     String? pin,
   }) async {
+    final prefs = await SharedPreferences.getInstance();
     await Future.wait([
-      _storage.write(key: _enabledKey, value: enabled.toString()),
-      _storage.write(key: _biometricKey, value: biometricEnabled.toString()),
-      _storage.write(key: _pinEnabledKey, value: pinEnabled.toString()),
-      _storage.write(key: _timeoutKey, value: timeoutSeconds.toString()),
+      prefs.setBool(_scopedKey(_enabledKey, userId), enabled),
+      prefs.setBool(_scopedKey(_biometricKey, userId), biometricEnabled),
+      prefs.setBool(_scopedKey(_pinEnabledKey, userId), pinEnabled),
+      prefs.setInt(_scopedKey(_timeoutKey, userId), timeoutSeconds),
     ]);
 
     if (pin != null) {
-      await _storage.write(key: _pinKey, value: pin);
+      await _storage.write(key: _scopedKey(_pinKey, userId), value: pin);
     } else if (!pinEnabled) {
-      await _storage.delete(key: _pinKey);
+      await _storage.delete(key: _scopedKey(_pinKey, userId));
     }
   }
 
-  Future<bool?> _readBoolKey(String key) async {
-    final value = await _storage.read(key: key);
-    if (value == null) return null;
-    return value.toLowerCase() == 'true';
-  }
-
-  Future<int?> _readIntKey(String key) async {
-    final value = await _storage.read(key: key);
-    if (value == null) return null;
-    return int.tryParse(value);
+  String _scopedKey(String base, int? userId) {
+    final suffix =
+        (userId != null && userId > 0) ? userId.toString() : 'global';
+    return '${base}_$suffix';
   }
 
   bool? _readBool(dynamic value) {
