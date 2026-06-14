@@ -789,7 +789,7 @@ class _ReelItemState extends State<ReelItem>
             customBorder: const CircleBorder(),
             child: SizedBox(
               width: 42,
-              height: 42,
+              height: 62,
               child: Icon(
                 _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
                 color: AppColors.white,

@@ -225,7 +225,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                   color: isOnline ? AppColors.greenColor : _mutedText,
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 6, height: 6,),
               Text(
                 isOnline ? 'Active now' : 'Offline',
                 style: AppTheme.greyTextStyle.copyWith(
@@ -292,7 +292,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                       Icons.history_rounded,
                       color: AppColors.primary,
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 12, height: 3,),
                     Expanded(
                       child: Text(
                         'Call History',

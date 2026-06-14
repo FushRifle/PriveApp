@@ -1191,39 +1191,16 @@ class _CommentTile extends StatelessWidget {
                             ),
                           ),
                         const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            CommentActionChip(
-                              icon: comment.isLiked
-                                  ? Icons.thumb_up
-                                  : Icons.thumb_up_outlined,
-                              label: comment.likes > 0
-                                  ? comment.likes.toString()
-                                  : 'Like',
-                              selected: comment.isLiked,
-                              onTap: () => onLike(comment),
-                            ),
-                            const SizedBox(width: 8),
-                            CommentActionChip(
-                              icon: comment.isDisliked
-                                  ? Icons.thumb_down
-                                  : Icons.thumb_down_outlined,
-                              label: comment.dislikes > 0
-                                  ? comment.dislikes.toString()
-                                  : 'Dislike',
-                              selected: comment.isDisliked,
-                              onTap: () => onDislike(comment),
-                            ),
-                            const SizedBox(width: 8),
-                            CommentActionChip(
-                              icon: Icons.reply_rounded,
-                              label: comment.replyCount > 0
-                                  ? '${comment.replyCount} replies'
-                                  : 'Reply',
-                              selected: false,
-                              onTap: () => onReply(comment),
-                            ),
-                          ],
+                        CommentActionBar(
+                          likes: comment.likes,
+                          dislikes: comment.dislikes,
+                          replyCount: comment.replyCount,
+                          isLiked: comment.isLiked,
+                          isDisliked: comment.isDisliked,
+                          timeLabel: comment.formattedTimeAgo,
+                          onLike: () => onLike(comment),
+                          onDislike: () => onDislike(comment),
+                          onReply: () => onReply(comment),
                         ),
                       ],
                     ),

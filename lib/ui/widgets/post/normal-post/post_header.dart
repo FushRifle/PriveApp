@@ -206,11 +206,11 @@ class _PostUserInfo extends StatelessWidget {
               ),
             ),
             if (isVerified) ...[
-              const SizedBox(width: 4),
+              const SizedBox(width: 5),
               const Icon(
                 Icons.verified_rounded,
                 size: 16,
-                color: AppColors.primary,
+                color: AppColors.githubOrange,
               ),
             ],
             if (isOfficial) ...[

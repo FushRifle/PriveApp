@@ -257,19 +257,19 @@ class _HomePageState extends State<HomePage>
                     return SliverMainAxisGroup(
                       slivers: [
                         SliverToBoxAdapter(
-                        child: _FeedHeader(
-                          palette: palette,
-                          isRefreshing:
-                              state.postsStatus == FeedStatus.loading,
-                          onOpenTopics: () {
-                            Navigator.pushNamed(
-                              context,
-                              NamedRoutes.topicsScreen,
-                            );
-                          },
-                          onOpenCreate: () => _openCreatePost(context),
+                          child: _FeedHeader(
+                            palette: palette,
+                            isRefreshing:
+                                state.postsStatus == FeedStatus.loading,
+                            onOpenTopics: () {
+                              Navigator.pushNamed(
+                                context,
+                                NamedRoutes.topicsScreen,
+                              );
+                            },
+                            onOpenCreate: () => _openCreatePost(context),
+                          ),
                         ),
-                      ),
                         SliverPadding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           sliver: SliverList.separated(
@@ -313,16 +313,10 @@ class _HomePageState extends State<HomePage>
   List<FeedPost> _buildBalancedFeed(List<FeedPost> posts) {
     if (posts.isEmpty) return posts;
 
-    // Keep a single chronological stream. Source-based regrouping was
-    // crowding the feed and hiding regular user posts behind AI content.
-    final orderedPosts = [...posts]
-      ..sort((a, b) {
-        final dateCompare = b.createdAt.compareTo(a.createdAt);
-        if (dateCompare != 0) return dateCompare;
-        return b.id.compareTo(a.id);
-      });
-
-    return orderedPosts;
+    // The backend already returns a balanced, chronological feed with Clique
+    // Official posts woven in. Keep the order intact here so we do not undo
+    // that balancing on rebuilds.
+    return List<FeedPost>.from(posts);
   }
 
   Future<void> _openCreatePost(BuildContext context) async {

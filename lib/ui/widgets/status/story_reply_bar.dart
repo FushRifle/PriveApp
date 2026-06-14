@@ -86,7 +86,7 @@ class _StoryReplyBarState extends State<StoryReplyBar> {
                   AppColors.white.withOpacity(widget.isReplying ? 0.20 : 0.14),
               borderRadius: BorderRadius.circular(30),
               border: Border.all(
-                color: AppColors.white
+                color: AppColors.border
                     .withOpacity(widget.isReplying ? 0.42 : 0.28),
               ),
             ),

@@ -183,7 +183,7 @@ class _TopicsPageState extends State<TopicsPage> {
       backgroundColor: background,
       body: SafeArea(
         child: RefreshIndicator(
-          color: AppColors.primary,
+          color: AppColors.secondary,
           backgroundColor: isDark ? AppColors.cardColor : AppColors.white,
           onRefresh: _refresh,
           child: CustomScrollView(
@@ -287,7 +287,7 @@ class _TopicsHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 10, 18, 14),
+      padding: const EdgeInsets.fromLTRB(18, 10, 18, 20),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(18),
@@ -296,8 +296,8 @@ class _TopicsHero extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppColors.primary.withOpacity(0.95),
-              AppColors.secondary.withOpacity(0.88),
+              AppColors.background.withOpacity(0.95),
+              AppColors.card.withOpacity(0.88),
             ],
           ),
           borderRadius: BorderRadius.circular(28),
@@ -325,7 +325,7 @@ class _TopicsHero extends StatelessWidget {
                     ),
                     child: const Icon(
                       Icons.arrow_back_rounded,
-                      color: AppColors.white,
+                      color: AppColors.primary,
                       size: 20,
                     ),
                   ),
@@ -398,7 +398,7 @@ class _TopicStrip extends StatelessWidget {
     return SizedBox(
       height: 56,
       child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 18),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
         scrollDirection: Axis.horizontal,
         itemBuilder: (context, index) {
           final topic = topics[index];

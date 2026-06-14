@@ -170,8 +170,10 @@ class CommentReactionButton extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        alignment: WrapAlignment.center,
                         children: [
                           CommentReactionTile(
                             icon: Icons.thumb_up,
@@ -210,6 +212,67 @@ class CommentReactionButton extends StatelessWidget {
           },
         );
       },
+    );
+  }
+}
+
+class CommentActionBar extends StatelessWidget {
+  final int likes;
+  final int dislikes;
+  final int replyCount;
+  final bool isLiked;
+  final bool isDisliked;
+  final String timeLabel;
+  final VoidCallback onLike;
+  final VoidCallback onDislike;
+  final VoidCallback onReply;
+
+  const CommentActionBar({
+    super.key,
+    required this.likes,
+    required this.dislikes,
+    required this.replyCount,
+    required this.isLiked,
+    required this.isDisliked,
+    required this.timeLabel,
+    required this.onLike,
+    required this.onDislike,
+    required this.onReply,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        CommentReactionButton(
+          likes: likes,
+          dislikes: dislikes,
+          isLiked: isLiked,
+          isDisliked: isDisliked,
+          onLike: onLike,
+          onDislike: onDislike,
+        ),
+        CommentActionChip(
+          icon: Icons.reply_rounded,
+          label: replyCount > 0 ? '$replyCount replies' : 'Reply',
+          selected: false,
+          onTap: onReply,
+        ),
+        Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: Text(
+            timeLabel,
+            style: AppTheme.greyTextStyle.copyWith(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textHint,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

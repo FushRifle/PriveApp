@@ -58,7 +58,6 @@ class ProfileBody extends StatelessWidget {
         return [
           ProfileCoverHeader(
             profile: currentProfile,
-            isOwnProfile: isOwnProfile,
           ),
           const SliverToBoxAdapter(
             child: SizedBox(height: 22),

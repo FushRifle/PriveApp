@@ -807,85 +807,29 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
                               ),
                       ),
                     const SizedBox(height: 6),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          CommentReactionButton(
-                            likes: likes,
-                            dislikes: dislikes,
-                            isLiked: isLiked,
-                            isDisliked: isDisliked,
-                            onLike: () => context.read<FeedBloc>().add(
-                                  LikePostComment(
-                                    postId: widget.postId,
-                                    commentId: commentId,
-                                  ),
-                                ),
-                            onDislike: () => context.read<FeedBloc>().add(
-                                  DislikePostComment(
-                                    postId: widget.postId,
-                                    commentId: commentId,
-                                  ),
-                                ),
+                    CommentActionBar(
+                      likes: likes,
+                      dislikes: dislikes,
+                      replyCount: replyCount,
+                      isLiked: isLiked,
+                      isDisliked: isDisliked,
+                      timeLabel: time,
+                      onLike: () => context.read<FeedBloc>().add(
+                            LikePostComment(
+                              postId: widget.postId,
+                              commentId: commentId,
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          CommentActionChip(
-                            icon: Icons.reply_rounded,
-                            selected: false,
-                            label: replyCount > 0
-                                ? '$replyCount replies'
-                                : 'Reply',
-                            onTap: () {
-                              _commentController.text = '@$name ';
-                              _focusNode.requestFocus();
-                            },
+                      onDislike: () => context.read<FeedBloc>().add(
+                            DislikePostComment(
+                              postId: widget.postId,
+                              commentId: commentId,
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          CommentActionChip(
-                            icon: Icons.thumb_up_outlined,
-                            selected: isLiked,
-                            label: likes > 0 ? '$likes' : 'Like',
-                            onTap: () => context.read<FeedBloc>().add(
-                                  LikePostComment(
-                                    postId: widget.postId,
-                                    commentId: commentId,
-                                  ),
-                                ),
-                          ),
-                          const SizedBox(width: 8),
-                          CommentActionChip(
-                            icon: Icons.thumb_down_outlined,
-                            selected: isDisliked,
-                            label: dislikes > 0 ? '$dislikes' : 'Dislike',
-                            onTap: () => context.read<FeedBloc>().add(
-                                  DislikePostComment(
-                                    postId: widget.postId,
-                                    commentId: commentId,
-                                  ),
-                                ),
-                          ),
-                          const SizedBox(width: 8),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                time,
-                                style: AppTheme.greyTextStyle.copyWith(
-                                  fontSize: 12,
-                                  fontWeight: AppTheme.medium,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Image.asset(
-                                "assets/images/ic_calendar.png",
-                                width: 14,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                      onReply: () {
+                        _commentController.text = '@$name ';
+                        _focusNode.requestFocus();
+                      },
                     ),
                   ],
                 ),

@@ -13,12 +13,10 @@ import 'package:clique/ui/pages/main/profile/edit_profile_page.dart';
 
 class ProfileCoverHeader extends StatelessWidget {
   final ProfileView profile;
-  final bool isOwnProfile;
 
   const ProfileCoverHeader({
     super.key,
     required this.profile,
-    required this.isOwnProfile,
   });
 
   @override
@@ -39,20 +37,6 @@ class ProfileCoverHeader extends StatelessWidget {
           size: 24,
         ),
       ),
-      actions: [
-        if (isOwnProfile)
-          IconButton(
-            onPressed: () {
-              HapticFeedback.lightImpact();
-              Navigator.pushNamed(context, NamedRoutes.settingsScreen);
-            },
-            icon: const Icon(
-              Icons.manage_accounts_outlined,
-              color: AppColors.white,
-              size: 24,
-            ),
-          ),
-      ],
       flexibleSpace: FlexibleSpaceBar(
         collapseMode: CollapseMode.parallax,
         background: Stack(
@@ -210,14 +194,14 @@ class ProfileHeaderCard extends StatelessWidget {
                 clipBehavior: Clip.none,
                 alignment: Alignment.topCenter,
                 children: [
-                  const SizedBox(height: 52),
+                  const SizedBox(height: 68),
                   Positioned(
-                    top: -24,
+                    top: -30,
                     child: ProfileAvatarBubble(profile: profile),
                   ),
                 ],
               ),
-              const SizedBox(height: 15),
+              const SizedBox(height: 24),
               ProfileIdentityRow(
                 profile: profile,
                 isOwnProfile: isOwnProfile,
@@ -270,16 +254,16 @@ class ProfileAvatarBubble extends StatelessWidget {
         ],
       ),
       child: CircleAvatar(
-        radius: 56,
+        radius: 58,
         backgroundColor: AppColors.card,
         child: CircleAvatar(
-          radius: 52,
+          radius: 54,
           backgroundColor: AppColors.primary.withOpacity(0.1),
           backgroundImage: isOfficial || avatar.isEmpty
               ? null
               : CachedNetworkImageProvider(avatar),
           child: isOfficial
-                ? Padding(
+              ? Padding(
                   padding: const EdgeInsets.all(10),
                   child: Image.asset(
                     'assets/icons/clique.png',
@@ -295,15 +279,15 @@ class ProfileAvatarBubble extends StatelessWidget {
                   ),
                 )
               : avatar.isEmpty
-              ? Text(
-                  firstLetter,
-                  style: const TextStyle(
-                    fontSize: 44,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.primary,
-                  ),
-                )
-              : null,
+                  ? Text(
+                      firstLetter,
+                      style: const TextStyle(
+                        fontSize: 44,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.primary,
+                      ),
+                    )
+                  : null,
         ),
       ),
     );
@@ -339,7 +323,7 @@ class ProfileIdentityRow extends StatelessWidget {
             letterSpacing: -0.3,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         GestureDetector(
           onTap: isOwnProfile && onOpenAccountSwitcher != null
               ? () {
@@ -619,7 +603,8 @@ class ProfileActionRow extends StatelessWidget {
           ProfileIconActionButton(
             icon: Icons.settings_outlined,
             color: AppColors.text,
-            onTap: () => Navigator.pushNamed(context, NamedRoutes.settingsScreen),
+            onTap: () =>
+                Navigator.pushNamed(context, NamedRoutes.settingsScreen),
           ),
         ],
       );
@@ -798,7 +783,8 @@ class ProfileSliverHeaderDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => extent;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
     return SizedBox.expand(
       child: ColoredBox(
         color: AppColors.backgroundColor,
