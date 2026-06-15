@@ -310,7 +310,7 @@ class _HomePageState extends State<HomePage>
   Future<void> _openCreatePost(BuildContext context) async {
     HapticFeedback.lightImpact();
 
-    await Navigator.push<bool>(
+    final created = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => BlocProvider.value(
@@ -319,6 +319,10 @@ class _HomePageState extends State<HomePage>
         ),
       ),
     );
+
+    if (created == true && context.mounted) {
+      context.read<FeedBloc>().add(RefreshFeed());
+    }
   }
 
   Future<void> _openCreateStatus(BuildContext context) async {

@@ -554,7 +554,7 @@ class _StoryImage extends StatelessWidget {
 
     return Image.asset(
       url,
-      fit: BoxFit.fitWidth,
+      fit: BoxFit.contain,
       errorBuilder: (_, __, ___) {
         return const ColoredBox(
           color: AppColors.black,
@@ -706,7 +706,7 @@ class _StoryVideoState extends State<_StoryVideo> {
     }
 
     return FittedBox(
-      fit: BoxFit.cover,
+      fit: BoxFit.contain,
       child: SizedBox(
         width: size.width,
         height: size.height,

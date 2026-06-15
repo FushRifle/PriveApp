@@ -254,7 +254,7 @@ class _SplashScreen extends StatelessWidget {
               width: 116,
               height: 116,
               child: Lottie.asset(
-                'assets/json/auth_guard_loader.json',
+                'assets/animations/auth_guard_loader.json',
                 repeat: true,
               ),
             ),

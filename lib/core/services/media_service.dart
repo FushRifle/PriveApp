@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:clique/app/configs/colors.dart';
 
 class MediaService {
   final ImagePicker _picker = ImagePicker();
@@ -36,14 +37,25 @@ class MediaService {
         aspectRatio: aspectRatio,
         uiSettings: [
           AndroidUiSettings(
-            toolbarTitle: 'Crop image',
+            toolbarTitle: 'Crop photo',
             toolbarColor: Colors.black,
             toolbarWidgetColor: Colors.white,
+            statusBarColor: Colors.black,
+            backgroundColor: Colors.black,
+            activeControlsWidgetColor: AppColors.primary,
+            cropFrameColor: Colors.white,
+            cropGridColor: Colors.white24,
+            showCropGrid: true,
+            hideBottomControls: false,
+            initAspectRatio: CropAspectRatioPreset.original,
             lockAspectRatio: aspectRatio != null,
           ),
           IOSUiSettings(
-            title: 'Crop image',
+            title: 'Crop photo',
+            doneButtonTitle: 'Done',
+            cancelButtonTitle: 'Cancel',
             aspectRatioLockEnabled: aspectRatio != null,
+            resetAspectRatioEnabled: true,
           ),
         ],
       );

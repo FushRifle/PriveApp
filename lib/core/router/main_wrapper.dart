@@ -349,23 +349,31 @@ class _CreateButton extends StatelessWidget {
         angle: 11,
         child: RepaintBoundary(
           child: InkWell(
-            onTap: () {
+            onTap: () async {
               HapticFeedback.lightImpact();
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => BlocProvider.value(
-                          value: context.read<FeedBloc>(),
-                          child: const CreatePostPage())));
+
+              final created = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BlocProvider.value(
+                    value: context.read<FeedBloc>(),
+                    child: const CreatePostPage(),
+                  ),
+                ),
+              );
+
+              if (created == true && context.mounted) {
+                context.read<FeedBloc>().add(RefreshFeed());
+              }
             },
             child: ClipPath(
               clipper: ClipStatusBar(),
               child: Container(
-                  height: 110,
-                  width: 40,
-                  color: AppColors.primary,
-                  child:
-                      const Icon(Icons.add, size: 24, color: AppColors.white)),
+                height: 110,
+                width: 40,
+                color: AppColors.primary,
+                child: const Icon(Icons.add, size: 24, color: AppColors.white),
+              ),
             ),
           ),
         ),

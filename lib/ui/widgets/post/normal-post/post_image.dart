@@ -53,12 +53,12 @@ class PostImage extends StatelessWidget {
         children: [
           CachedNetworkImage(
             imageUrl: imageUrl,
-            fit: BoxFit.fitWidth,
+            fit: BoxFit.contain,
             memCacheWidth: 1080,
             placeholder: (_, __) {
               return ColoredBox(
-                color: AppColors.backgroundColor,
-                child: const Center(
+                color: AppColors.background,
+                child: Center(
                   child: CircularProgressIndicator(
                     color: AppColors.primary,
                     strokeWidth: 2,

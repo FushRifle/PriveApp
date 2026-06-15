@@ -244,7 +244,10 @@ class FeedService {
         data['pollExpirationHours'] = pollExpirationHours;
       }
 
-      final response = await _postCreateWithFallback(data);
+      final response = await _postCreateWithFallback(
+        data,
+        postType: postType,
+      );
       _invalidateFeedCaches();
       return FeedPost.fromJson(_readPostMap(response.data));
     } on DioException catch (e) {
@@ -253,14 +256,39 @@ class FeedService {
     }
   }
 
-  Future<Response> _postCreateWithFallback(Map<String, dynamic> data) async {
-    try {
-      return await _api.post('/api/feed/posts', data: data);
-    } on DioException catch (e) {
-      if (e.response?.statusCode != 404) rethrow;
+  Future<Response> _postCreateWithFallback(
+    Map<String, dynamic> data, {
+    required String postType,
+  }) async {
+    final normalizedPostType = postType.trim().toLowerCase();
+    final isAiGeneratedPost =
+        normalizedPostType == 'daily_prompt' || normalizedPostType == 'prompt';
 
-      return await _api.post('/api/posts', data: data);
+    final preferredEndpoints = isAiGeneratedPost
+        ? const ['/api/feed/posts', '/api/posts']
+        : const ['/api/posts', '/api/feed/posts'];
+
+    DioException? lastError;
+
+    for (final endpoint in preferredEndpoints) {
+      try {
+        return await _api.post(endpoint, data: data);
+      } on DioException catch (e) {
+        lastError = e;
+        if (e.response?.statusCode != 404) {
+          if (endpoint == preferredEndpoints.last) {
+            rethrow;
+          }
+          continue;
+        }
+      }
     }
+
+    if (lastError != null) {
+      throw lastError;
+    }
+
+    throw StateError('Unable to create post');
   }
 
   Future<void> votePoll({

@@ -260,16 +260,9 @@ class _StatusViewPageState extends State<StatusViewPage>
     return Container(
       width: double.infinity,
       height: double.infinity,
-      decoration: mediaUrl != null
-          ? BoxDecoration(
-              image: DecorationImage(
-                image: _getImageProvider(mediaUrl),
-                fit: BoxFit.cover,
-              ),
-            )
-          : BoxDecoration(
-              color: _getBackgroundColor(story.backgroundColor),
-            ),
+      color: mediaUrl != null
+          ? AppColors.black
+          : _getBackgroundColor(story.backgroundColor),
       child: Container(
         decoration: mediaUrl != null
             ? BoxDecoration(
@@ -284,21 +277,31 @@ class _StatusViewPageState extends State<StatusViewPage>
                 ),
               )
             : null,
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: hasText
-                ? SingleChildScrollView(
-                    child: _StoryHashtagText(
-                      text: story.content!,
-                      textAlign: _getTextAlign(story.textAlign),
-                      style: _getTextStyle(story, hasMedia: mediaUrl != null),
-                    ),
-                  )
-                : mediaUrl != null && hasImage
-                    ? const SizedBox.shrink()
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (mediaUrl != null)
+              Positioned.fill(
+                child: Image(
+                  image: _getImageProvider(mediaUrl),
+                  fit: BoxFit.contain,
+                ),
+              ),
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: hasText
+                    ? SingleChildScrollView(
+                        child: _StoryHashtagText(
+                          text: story.content!,
+                          textAlign: _getTextAlign(story.textAlign),
+                          style: _getTextStyle(story, hasMedia: mediaUrl != null),
+                        ),
+                      )
                     : const SizedBox.shrink(),
-          ),
+              ),
+            ),
+          ],
         ),
       ),
     );
