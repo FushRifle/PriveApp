@@ -585,22 +585,28 @@ class ProfileActionRow extends StatelessWidget {
       return Row(
         children: [
           Expanded(
-            child: ProfileActionButton(
-              text: 'EDIT',
-              backgroundColor: AppColors.backgroundColor,
-              textColor: AppColors.text,
-              hasBorder: true,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const EditProfilePage(),
-                  ),
-                );
-              },
+            child: Align(
+              alignment: Alignment.center,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 100),
+                child: ProfileActionButton(
+                  text: 'EDIT',
+                  backgroundColor: AppColors.backgroundColor,
+                  textColor: AppColors.primary,
+                  hasBorder: true,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const EditProfilePage(),
+                      ),
+                    );
+                  },
+                ),
+              ),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 2),
           ProfileIconActionButton(
             icon: Icons.settings_outlined,
             color: AppColors.text,
@@ -658,35 +664,33 @@ class ProfileActionButton extends StatelessWidget {
         onTap();
       },
       child: Container(
-        height: 45,
+        height: 42,
+        constraints: const BoxConstraints(minWidth: 0),
         decoration: BoxDecoration(
           color: hasBorder ? backgroundColor : null,
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: hasBorder ? AppColors.border : Colors.transparent,
           ),
-          gradient: !hasBorder && backgroundColor == AppColors.primary
-              ? const LinearGradient(
-                  colors: [AppColors.primary, AppColors.secondary],
-                )
-              : null,
-          boxShadow: !hasBorder && backgroundColor == AppColors.primary
-              ? [
+          gradient: null,
+          boxShadow: hasBorder
+              ? null
+              : [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.22),
-                    blurRadius: 14,
-                    offset: const Offset(0, 6),
+                    color: AppColors.black.withOpacity(0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
-                ]
-              : null,
+                ],
         ),
         child: Center(
           child: Text(
             text,
             style: TextStyle(
               color: textColor,
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: FontWeight.w800,
+              letterSpacing: 0.6,
             ),
           ),
         ),

@@ -20,6 +20,7 @@ class SettingsPage extends ConsumerStatefulWidget {
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   Map<String, dynamic>? _user;
+  int? _loadedSettingsUserId;
 
   bool notificationsEnabled = true;
   bool privateAccount = false;
@@ -33,10 +34,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     super.initState();
     context.read<UserBloc>().add(LoadCurrentUser());
 
-    final settingsBloc = context.read<SettingsBloc>();
-    if (settingsBloc.state.status == SettingsStatus.initial) {
-      settingsBloc.add(LoadSettings(userId: _currentUserId()));
-    }
+    _loadSettingsIfReady();
   }
 
   @override
@@ -66,6 +64,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             setState(() {
               _user = state.currentUser;
             });
+            _loadSettingsIfReady(forceReload: true);
           }
         },
         builder: (context, state) {
@@ -206,7 +205,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             icon: Icons.fingerprint_rounded,
                             title: 'App Lock',
                             subtitle: settingsState.getAppLockEnabled
-                                ? 'Enabled with biometric/PIN'
+                                ? settingsState.getAppLockTimeoutSeconds > 0
+                                    ? 'Enabled • ${_formatLockTimeout(settingsState.getAppLockTimeoutSeconds)} timeout'
+                                    : 'Enabled with biometric/PIN'
                                 : 'Disabled',
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -423,6 +424,28 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         },
       ),
     );
+  }
+
+  void _loadSettingsIfReady({bool forceReload = false}) {
+    final userId = _currentUserId();
+    if (userId == null) return;
+    if (!forceReload && _loadedSettingsUserId == userId) return;
+
+    _loadedSettingsUserId = userId;
+    context.read<SettingsBloc>().add(LoadSettings(userId: userId));
+  }
+
+  String _formatLockTimeout(int seconds) {
+    if (seconds < 60) {
+      return '$seconds sec';
+    }
+    if (seconds % 60 == 0) {
+      final minutes = seconds ~/ 60;
+      return minutes == 1 ? '1 min' : '$minutes min';
+    }
+
+    final minutes = seconds / 60;
+    return '${minutes.toStringAsFixed(1)} min';
   }
 
   Widget _buildProfileCard(Map<String, dynamic>? user, bool isDark) {

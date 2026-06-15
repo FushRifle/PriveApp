@@ -36,27 +36,17 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     LoadSettings event,
     Emitter<SettingsState> emit,
   ) async {
-    final cachedLock = event.userId != null
-        ? await _appLockService.loadCached(userId: event.userId)
-        : null;
+    final cachedLock = await _appLockService.loadCached(userId: event.userId);
 
-    if (cachedLock != null) {
-      emit(state.copyWith(
-        appLockEnabled: cachedLock.enabled,
-        appLockBiometricEnabled: cachedLock.biometricEnabled,
-        appLockPinEnabled: cachedLock.pinEnabled,
-        appLockTimeoutSeconds: cachedLock.timeoutSeconds,
-        status: SettingsStatus.loading,
-        isLoading: true,
-        clearError: true,
-      ));
-    } else {
-      emit(state.copyWith(
-        status: SettingsStatus.loading,
-        isLoading: true,
-        clearError: true,
-      ));
-    }
+    emit(state.copyWith(
+      appLockEnabled: cachedLock.enabled,
+      appLockBiometricEnabled: cachedLock.biometricEnabled,
+      appLockPinEnabled: cachedLock.pinEnabled,
+      appLockTimeoutSeconds: cachedLock.timeoutSeconds,
+      status: SettingsStatus.loading,
+      isLoading: true,
+      clearError: true,
+    ));
 
     try {
       final settings = await _settingsService.getSettings();
@@ -65,16 +55,13 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         notificationsEnabled: settings['notificationsEnabled'] ?? true,
         privateAccount: settings['privateAccount'] ?? false,
         twoFactorAuth: settings['twoFactorAuth'] ?? false,
-        appLockEnabled:
-            cachedLock?.enabled ?? settings['appLockEnabled'] ?? false,
-        appLockBiometricEnabled: cachedLock?.biometricEnabled ??
-            settings['appLockBiometricEnabled'] ??
-            false,
+        appLockEnabled: settings['appLockEnabled'] ?? cachedLock.enabled,
+        appLockBiometricEnabled:
+            settings['appLockBiometricEnabled'] ?? cachedLock.biometricEnabled,
         appLockPinEnabled:
-            cachedLock?.pinEnabled ?? settings['appLockPinEnabled'] ?? false,
-        appLockTimeoutSeconds: cachedLock?.timeoutSeconds ??
-            settings['appLockTimeoutSeconds'] ??
-            0,
+            settings['appLockPinEnabled'] ?? cachedLock.pinEnabled,
+        appLockTimeoutSeconds:
+            settings['appLockTimeoutSeconds'] ?? cachedLock.timeoutSeconds,
         language: settings['language']?.toString() ?? 'en',
         videoQuality: settings['videoQuality']?.toString() ?? 'auto',
         theme: settings['theme']?.toString() ?? 'system',

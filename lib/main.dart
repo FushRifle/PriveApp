@@ -252,6 +252,8 @@ class _SecurityGateState extends State<_SecurityGate>
   bool _isLoading = true;
   bool _isUnlocked = false;
   bool _isPrompting = false;
+  bool _hasUnlockedThisSession = false;
+  DateTime? _lastUnlockAt;
 
   @override
   void initState() {
@@ -304,6 +306,25 @@ class _SecurityGateState extends State<_SecurityGate>
         return;
       }
 
+      if (forcePrompt &&
+          _hasUnlockedThisSession &&
+          _lastUnlockAt != null &&
+          settings.timeoutSeconds > 0 &&
+          DateTime.now().difference(_lastUnlockAt!) <
+              Duration(seconds: settings.timeoutSeconds)) {
+        setState(() {
+          _isUnlocked = true;
+        });
+
+        unawaited(
+          widget.appLockService
+              .load(userId: userId)
+              .then((_) {})
+              .catchError((_) {}),
+        );
+        return;
+      }
+
       if (_isUnlocked && !forcePrompt) {
         unawaited(
           widget.appLockService
@@ -323,6 +344,10 @@ class _SecurityGateState extends State<_SecurityGate>
 
       setState(() {
         _isUnlocked = unlocked == true;
+        if (_isUnlocked) {
+          _hasUnlockedThisSession = true;
+          _lastUnlockAt = DateTime.now();
+        }
       });
 
       unawaited(

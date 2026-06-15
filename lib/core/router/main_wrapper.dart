@@ -270,13 +270,13 @@ class _BottomNavBar extends StatelessWidget {
               _NavItem(
                   index: 2,
                   currentIndex: currentIndex,
-                  icon: Icons.event_rounded,
+                  icon: Icons.event_available_rounded,
                   unselectedColor: unselectedColor,
                   onTap: onChanged),
               _NavItem(
                   index: 3,
                   currentIndex: currentIndex,
-                  icon: Icons.message,
+                  icon: Icons.chat_rounded,
                   unselectedColor: unselectedColor,
                   onTap: onChanged),
             ]),

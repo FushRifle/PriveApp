@@ -296,7 +296,7 @@ class AppRouter {
       case NamedRoutes.settingsScreen:
         return _page(
           BlocProvider(
-            create: (_) => SettingsBloc()..add(LoadSettings()),
+            create: (_) => SettingsBloc(),
             child: const SettingsPage(),
           ),
         );
