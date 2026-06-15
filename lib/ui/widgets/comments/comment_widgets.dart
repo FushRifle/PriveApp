@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/ui/widgets/chat/audio_message_bubble.dart';
+import 'package:clique/ui/widgets/post/normal-post/post_reaction_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -111,7 +112,7 @@ class CommentActionChip extends StatelessWidget {
   }
 }
 
-class CommentReactionButton extends StatelessWidget {
+class CommentReactionButton extends StatefulWidget {
   final int likes;
   final int dislikes;
   final bool isLiked;
@@ -130,87 +131,78 @@ class CommentReactionButton extends StatelessWidget {
   });
 
   @override
+  State<CommentReactionButton> createState() => _CommentReactionButtonState();
+}
+
+class _CommentReactionButtonState extends State<CommentReactionButton> {
+  final GlobalKey _reactionButtonKey = GlobalKey();
+
+  void _openReactionPicker() {
+    final buttonBox =
+        _reactionButtonKey.currentContext?.findRenderObject() as RenderBox?;
+    if (buttonBox == null || !buttonBox.hasSize) {
+      showPostReactionPicker(
+        context,
+        onSelected: _applyReaction,
+      );
+      return;
+    }
+
+    final overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox?;
+    if (overlay == null) {
+      showPostReactionPicker(
+        context,
+        onSelected: _applyReaction,
+      );
+      return;
+    }
+
+    final topLeft = buttonBox.localToGlobal(Offset.zero, ancestor: overlay);
+    final bottomRight = buttonBox.localToGlobal(
+      buttonBox.size.bottomRight(Offset.zero),
+      ancestor: overlay,
+    );
+    final anchor = Rect.fromLTRB(
+      topLeft.dx,
+      topLeft.dy,
+      bottomRight.dx,
+      bottomRight.dy,
+    );
+
+    showPostReactionPicker(
+      context,
+      anchorRect: anchor,
+      onSelected: _applyReaction,
+    );
+  }
+
+  void _applyReaction(PostReaction reaction) {
+    if (reaction.label == 'Angry') {
+      widget.onDislike();
+      return;
+    }
+
+    widget.onLike();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final label = isLiked
-        ? (likes > 0 ? '$likes Reacted' : 'Reacted')
-        : isDisliked
-            ? (dislikes > 0 ? '$dislikes Reacted' : 'Reacted')
+    final label = widget.isLiked
+        ? (widget.likes > 0 ? '${widget.likes} Reacted' : 'Reacted')
+        : widget.isDisliked
+            ? (widget.dislikes > 0 ? '${widget.dislikes} Reacted' : 'Reacted')
             : 'React';
 
     return CommentActionChip(
-      icon: isDisliked ? Icons.thumb_down : Icons.emoji_emotions_outlined,
+      key: _reactionButtonKey,
+      icon:
+          widget.isDisliked ? Icons.thumb_down : Icons.emoji_emotions_outlined,
       label: label,
-      selected: isLiked || isDisliked,
+      selected: widget.isLiked || widget.isDisliked,
       onTap: () {
         HapticFeedback.mediumImpact();
-        showModalBottomSheet(
-          context: context,
-          backgroundColor: AppColors.transparent,
-          builder: (sheetContext) {
-            return Container(
-              decoration: BoxDecoration(
-                color: AppColors.cardColor,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(24)),
-                border: Border.all(color: AppColors.cardBorderColor),
-              ),
-              child: SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: AppColors.greyColor.withOpacity(0.25),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        alignment: WrapAlignment.center,
-                        children: [
-                          CommentReactionTile(
-                            icon: Icons.thumb_up,
-                            label: 'Like',
-                            color: AppColors.primary,
-                            onTap: () {
-                              Navigator.pop(sheetContext);
-                              onLike();
-                            },
-                          ),
-                          CommentReactionTile(
-                            icon: Icons.thumb_down,
-                            label: 'Dislike',
-                            color: AppColors.redAccent,
-                            onTap: () {
-                              Navigator.pop(sheetContext);
-                              onDislike();
-                            },
-                          ),
-                          CommentReactionTile(
-                            icon: Icons.emoji_emotions_outlined,
-                            label: 'React',
-                            color: AppColors.secondary,
-                            onTap: () {
-                              Navigator.pop(sheetContext);
-                              onLike();
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
+        _openReactionPicker();
       },
     );
   }
