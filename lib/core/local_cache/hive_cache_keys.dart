@@ -8,6 +8,7 @@ class HiveCacheKeys {
 
   static const latestFeed = 'latest_feed';
   static const latestFeedMeta = 'latest_feed_meta';
+  static const feedPagePrefix = 'feed_page';
   static const latestNotifications = 'latest_notifications';
   static const cliqueBotMessagesPrefix = 'clique_bot_messages';
   static const chatConversationsPrefix = 'chat_conversations';

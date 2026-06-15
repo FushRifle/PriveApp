@@ -247,30 +247,14 @@ class _OfficialBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            Color(0xFFFFD86B),
-            Color(0xFFF4B73F),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(999),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFF4B73F).withOpacity(0.25),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 4),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: const [
           Icon(
             Icons.verified_rounded,
-            size: 12,
-            color: AppColors.white,
+            size: 15,
+            color: AppColors.secondary,
           ),
         ],
       ),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:clique/core/services/home/feed_service.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
@@ -11,6 +13,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
 
   bool _isFetchingPosts = false;
   bool _isFetchingMorePosts = false;
+  final Set<int> _prefetchingPages = {};
   final Set<int> _fetchingComments = {};
   final Set<int> _creatingComments = {};
   final Set<String> _updatingCommentReactions = {};
@@ -62,23 +65,22 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     _isFetchingPosts = true;
 
     try {
-      if (!event.silent && (event.refresh || state.posts.isEmpty)) {
-        final cachedResponse = event.page == 1 && state.posts.isEmpty
-            ? _feedService.getCachedPosts()
-            : null;
+      final cachedResponse =
+          event.page == 1 && state.posts.isEmpty && !event.refresh
+              ? _feedService.getCachedPosts()
+              : null;
 
-        if (cachedResponse != null && cachedResponse.posts.isNotEmpty) {
-          emit(
-            state.copyWith(
-              postsStatus: FeedStatus.loaded,
-              posts: cachedResponse.posts,
-              hasMorePosts: cachedResponse.hasMore,
-              currentPage: cachedResponse.page,
-              clearPostsError: true,
-            ),
-          );
-        }
-
+      if (cachedResponse != null && cachedResponse.posts.isNotEmpty) {
+        emit(
+          state.copyWith(
+            postsStatus: FeedStatus.loaded,
+            posts: cachedResponse.posts,
+            hasMorePosts: cachedResponse.hasMore,
+            currentPage: cachedResponse.page,
+            clearPostsError: true,
+          ),
+        );
+      } else if (!event.silent && state.posts.isEmpty) {
         emit(
           state.copyWith(
             postsStatus: FeedStatus.loading,
@@ -96,7 +98,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
           ? response.posts
           : [
               ...state.posts,
-              ...response.posts,
+              ..._dedupePosts(response.posts, state.posts),
             ];
 
       emit(
@@ -108,6 +110,10 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
           clearPostsError: true,
         ),
       );
+
+      if (response.hasMore) {
+        _prefetchFeedPage(response.page + 1);
+      }
     } catch (e) {
       if (event.silent && state.posts.isNotEmpty) {
         return;
@@ -128,6 +134,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     RefreshFeed event,
     Emitter<FeedState> emit,
   ) async {
+    _prefetchingPages.clear();
     await _onGetFeedPosts(
       const GetFeedPosts(
         page: 1,
@@ -141,6 +148,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     SilentRefreshFeed event,
     Emitter<FeedState> emit,
   ) async {
+    _prefetchingPages.clear();
     await _onGetFeedPosts(
       const GetFeedPosts(
         page: 1,
@@ -161,19 +169,9 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
 
     if (!state.hasMorePosts) return;
 
-    if (state.postsStatus == FeedStatus.loadingMore) {
-      return;
-    }
-
     _isFetchingMorePosts = true;
 
     try {
-      emit(
-        state.copyWith(
-          postsStatus: FeedStatus.loadingMore,
-        ),
-      );
-
       final nextPage = state.currentPage + 1;
 
       final response = await _feedService.getPosts(
@@ -185,13 +183,17 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
           postsStatus: FeedStatus.loaded,
           posts: [
             ...state.posts,
-            ...response.posts,
+            ..._dedupePosts(response.posts, state.posts),
           ],
           currentPage: nextPage,
           hasMorePosts: response.hasMore,
           clearPostsError: true,
         ),
       );
+
+      if (response.hasMore) {
+        _prefetchFeedPage(response.page + 1);
+      }
     } catch (e) {
       emit(
         state.copyWith(
@@ -568,6 +570,34 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     );
   }
 
+  void _prefetchFeedPage(int page) {
+    if (_disposed || page <= 1 || _prefetchingPages.contains(page)) return;
+
+    _prefetchingPages.add(page);
+
+    unawaited(
+      () async {
+        try {
+          await _feedService.getPosts(page: page);
+        } catch (_) {
+          // Background prefetch should never surface errors to the UI.
+        } finally {
+          _prefetchingPages.remove(page);
+        }
+      }(),
+    );
+  }
+
+  List<FeedPost> _dedupePosts(
+    List<FeedPost> incoming,
+    List<FeedPost> existing,
+  ) {
+    if (incoming.isEmpty) return const [];
+
+    final existingIds = existing.map((post) => post.id).toSet();
+    return incoming.where((post) => existingIds.add(post.id)).toList();
+  }
+
   Future<void> _onCreatePostComment(
     CreatePostComment event,
     Emitter<FeedState> emit,
@@ -916,6 +946,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     ResetFeedState event,
     Emitter<FeedState> emit,
   ) {
+    _prefetchingPages.clear();
     emit(
       const FeedState(),
     );

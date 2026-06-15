@@ -257,14 +257,15 @@ class _HomePageState extends State<HomePage>
                     return SliverMainAxisGroup(
                       slivers: [
                         SliverToBoxAdapter(
-                          child: _FeedHeader(
-                            palette: palette,
-                            isRefreshing:
-                                state.postsStatus == FeedStatus.loading,
-                            onOpenTopics: () {
-                              Navigator.pushNamed(
-                                context,
-                                NamedRoutes.topicsScreen,
+                        child: _FeedHeader(
+                          palette: palette,
+                          isRefreshing:
+                              state.postsStatus == FeedStatus.loading &&
+                              posts.isEmpty,
+                          onOpenTopics: () {
+                            Navigator.pushNamed(
+                              context,
+                              NamedRoutes.topicsScreen,
                               );
                             },
                             onOpenCreate: () => _openCreatePost(context),
@@ -273,19 +274,10 @@ class _HomePageState extends State<HomePage>
                         SliverPadding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           sliver: SliverList.separated(
-                            itemCount:
-                                posts.length + (state.hasMorePosts ? 1 : 0),
+                            itemCount: posts.length,
                             separatorBuilder: (_, __) =>
                                 const SizedBox(height: 16),
                             itemBuilder: (context, index) {
-                              if (index >= posts.length) {
-                                return _LoadMoreIndicator(
-                                  palette: palette,
-                                  isLoading: state.postsStatus ==
-                                      FeedStatus.loadingMore,
-                                );
-                              }
-
                               final post = posts[index];
 
                               return CardPost(
@@ -312,17 +304,13 @@ class _HomePageState extends State<HomePage>
 
   List<FeedPost> _buildBalancedFeed(List<FeedPost> posts) {
     if (posts.isEmpty) return posts;
-
-    // The backend already returns a balanced, chronological feed with Clique
-    // Official posts woven in. Keep the order intact here so we do not undo
-    // that balancing on rebuilds.
     return List<FeedPost>.from(posts);
   }
 
   Future<void> _openCreatePost(BuildContext context) async {
     HapticFeedback.lightImpact();
 
-    final created = await Navigator.push<bool>(
+    await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => BlocProvider.value(
@@ -331,10 +319,6 @@ class _HomePageState extends State<HomePage>
         ),
       ),
     );
-
-    if (created == true && context.mounted) {
-      context.read<FeedBloc>().add(RefreshFeed());
-    }
   }
 
   Future<void> _openCreateStatus(BuildContext context) async {
@@ -596,7 +580,7 @@ class _StoriesSection extends StatelessWidget {
     final isLoading = state.status == StoriesStatus.loading;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 20),
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
         color: palette.card,
@@ -807,7 +791,7 @@ class _FeedHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 5, 18, 14),
+      padding: const EdgeInsets.fromLTRB(18, 10, 18, 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -884,35 +868,6 @@ class _FeedHeader extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _LoadMoreIndicator extends StatelessWidget {
-  final _HomePalette palette;
-  final bool isLoading;
-
-  const _LoadMoreIndicator({
-    required this.palette,
-    required this.isLoading,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (!isLoading) return const SizedBox(height: 24);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 32),
-      child: Center(
-        child: SizedBox(
-          width: 24,
-          height: 24,
-          child: CircularProgressIndicator(
-            color: palette.primary,
-            strokeWidth: 2.5,
-          ),
-        ),
       ),
     );
   }

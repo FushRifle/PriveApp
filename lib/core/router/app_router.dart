@@ -11,6 +11,7 @@ import 'package:clique/bloc/match/match_bloc.dart';
 import 'package:clique/bloc/reels/reel_bloc.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
 import 'package:clique/bloc/community/community_bloc.dart';
+import 'package:clique/bloc/event/event_bloc.dart';
 import 'package:clique/bloc/settings/settings_bloc.dart';
 
 import 'package:clique/ui/pages/auth/demographic_page.dart';
@@ -31,6 +32,7 @@ import 'package:clique/ui/pages/main/community/create_community_page.dart';
 import 'package:clique/ui/pages/main/community/community_group_chat_page.dart';
 import 'package:clique/ui/pages/main/community/community_group_info_page.dart';
 import 'package:clique/core/models/community_model.dart';
+import 'package:clique/ui/pages/main/event/create_event_page.dart';
 import 'package:clique/ui/pages/main/reels/create_reel_page.dart';
 
 import 'package:clique/ui/pages/main/match/matches_page.dart';
@@ -66,6 +68,7 @@ class AppRouter {
       case NamedRoutes.homeScreen:
       case NamedRoutes.discoverScreen:
       case NamedRoutes.communityScreen:
+      case NamedRoutes.eventsScreen:
       case NamedRoutes.inboxScreen:
       case NamedRoutes.reelsScreen:
         return _page(
@@ -240,6 +243,14 @@ class AppRouter {
           BlocProvider(
             create: (_) => CommunityBloc(),
             child: const CreateCommunityPage(),
+          ),
+        );
+
+      case NamedRoutes.createEventScreen:
+        return _page(
+          BlocProvider(
+            create: (_) => EventBloc(),
+            child: const CreateEventPage(),
           ),
         );
 

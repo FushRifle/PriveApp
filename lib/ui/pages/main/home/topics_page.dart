@@ -170,17 +170,17 @@ class _TopicsPageState extends State<TopicsPage> {
       _posts.clear();
       _page = 1;
       _hasMore = false;
+      _error = null;
     });
     _loadPosts(refresh: true);
   }
 
   @override
   Widget build(BuildContext context) {
-    final background = Theme.of(context).scaffoldBackgroundColor;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: background,
+      backgroundColor: AppColors.backgroundColor,
       body: SafeArea(
         child: RefreshIndicator(
           color: AppColors.secondary,
@@ -194,11 +194,23 @@ class _TopicsPageState extends State<TopicsPage> {
             slivers: [
               SliverToBoxAdapter(
                 child: _TopicsHero(
+                  topicCount: _topics.length,
+                  postCount: _posts.length,
+                  hasMore: _hasMore,
                   onBack: () => Navigator.pop(context),
                 ),
               ),
               SliverToBoxAdapter(
-                child: _TopicStrip(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 10, 18, 15),
+                  child: _SectionLabel(
+                    title: 'Trending topics',
+                    subtitle: 'Tap a card to jump into the latest conversation.',
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: _TopicRail(
                   topics: _topics,
                   selectedTopic: _selectedTopic,
                   loading: _loadingTopics,
@@ -207,11 +219,12 @@ class _TopicsPageState extends State<TopicsPage> {
               ),
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 10),
-                  child: _TopicMeta(
+                  padding: const EdgeInsets.fromLTRB(18, 14, 18, 8),
+                  child: _TopicSummary(
                     topic: _selectedTopic,
                     count: _posts.length,
                     loading: _loadingPosts,
+                    hasMore: _hasMore,
                   ),
                 ),
               ),
@@ -249,7 +262,7 @@ class _TopicsPageState extends State<TopicsPage> {
                         child: CardPost(post: post),
                       );
                     },
-                    separatorBuilder: (_, __) => const SizedBox(height: 2),
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
                     itemCount: _posts.length,
                   ),
                 ),
@@ -269,6 +282,7 @@ class _TopicsPageState extends State<TopicsPage> {
                     ),
                   ),
                 ),
+              const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
             ],
           ),
         ),
@@ -278,111 +292,144 @@ class _TopicsPageState extends State<TopicsPage> {
 }
 
 class _TopicsHero extends StatelessWidget {
+  final int topicCount;
+  final int postCount;
+  final bool hasMore;
   final VoidCallback onBack;
 
   const _TopicsHero({
+    required this.topicCount,
+    required this.postCount,
+    required this.hasMore,
     required this.onBack,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 10, 18, 20),
+      padding: const EdgeInsets.fromLTRB(18, 15, 18, 16),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.background.withOpacity(0.95),
-              AppColors.card.withOpacity(0.88),
+        decoration:
+            _panelDecoration(radius: 28, fill: AppColors.cardColor, shadow: 0.2),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  GestureDetector(
+                    onTap: onBack,
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.backgroundColor,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.cardBorderColor),
+                      ),
+                      child: Icon(
+                        Icons.arrow_back_rounded,
+                        color: AppColors.text,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.backgroundColor,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: AppColors.cardBorderColor),
+                    ),
+                    child: Text(
+                      'Topics',
+                      style: AppTheme.blackTextStyle.copyWith(
+                        color: AppColors.text,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Explore what the network is talking about right now.',
+                style: AppTheme.blackTextStyle.copyWith(
+                  color: AppColors.text,
+                  fontSize: 20,
+                  height: 1.12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Switch topics fast, see the latest posts, and keep the feed moving without leaving the page.',
+                style: AppTheme.greyTextStyle.copyWith(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                  height: 1.45,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ],
           ),
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withOpacity(0.18),
-              blurRadius: 24,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                GestureDetector(
-                  onTap: onBack,
-                  child: Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: AppColors.white.withOpacity(0.16),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Icon(
-                      Icons.arrow_back_rounded,
-                      color: AppColors.primary,
-                      size: 20,
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: AppColors.white.withOpacity(0.16),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    'Topics',
-                    style: AppTheme.blackTextStyle.copyWith(
-                      color: AppColors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Explore what the network is talking about right now.',
-              style: AppTheme.blackTextStyle.copyWith(
-                color: AppColors.white,
-                fontSize: 24,
-                height: 1.15,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Tap a topic to see the latest posts, reactions, and conversations.',
-              style: AppTheme.greyTextStyle.copyWith(
-                color: AppColors.white.withOpacity(0.88),
-                fontSize: 13,
-                height: 1.45,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
         ),
       ),
     );
   }
 }
 
-class _TopicStrip extends StatelessWidget {
+class _SectionLabel extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const _SectionLabel({
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: AppTheme.blackTextStyle.copyWith(
+            color: AppColors.text,
+            fontSize: 17,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          style: AppTheme.greyTextStyle.copyWith(
+            color: AppColors.textSecondary,
+            fontSize: 12,
+            height: 1.45,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TopicRail extends StatelessWidget {
   final List<String> topics;
   final String? selectedTopic;
   final bool loading;
   final ValueChanged<String> onSelectTopic;
 
-  const _TopicStrip({
+  const _TopicRail({
     required this.topics,
     required this.selectedTopic,
     required this.loading,
@@ -396,45 +443,102 @@ class _TopicStrip extends StatelessWidget {
     }
 
     return SizedBox(
-      height: 56,
+      height: 156,
       child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 18),
         scrollDirection: Axis.horizontal,
+        itemCount: topics.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
           final topic = topics[index];
           final selected = topic == selectedTopic;
+          final accent = _topicAccent(index);
 
           return GestureDetector(
             onTap: () => onSelectTopic(topic),
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOut,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
+              width: 190,
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: selected
-                    ? AppColors.primary
-                    : AppColors.cardColor.withOpacity(0.96),
-                borderRadius: BorderRadius.circular(999),
+                color: selected ? accent.withOpacity(0.08) : AppColors.cardColor,
+                borderRadius: BorderRadius.circular(24),
                 border: Border.all(
-                  color: selected
-                      ? AppColors.primary
-                      : AppColors.cardBorderColor,
+                  color: selected ? accent.withOpacity(0.45) : AppColors.cardBorderColor,
+                  width: selected ? 1.2 : 1,
                 ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.local_fire_department_rounded,
-                    size: 16,
-                    color: selected ? AppColors.white : AppColors.primary,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.shadow.withOpacity(selected ? 0.12 : 0.10),
+                    blurRadius: 14,
+                    offset: const Offset(0, 8),
                   ),
-                  const SizedBox(width: 6),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: accent.withOpacity(0.10),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Icon(
+                          Icons.local_fire_department_rounded,
+                          size: 19,
+                          color: accent,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (selected)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            'Active',
+                            style: AppTheme.blackTextStyle.copyWith(
+                              color: AppColors.text,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const Spacer(),
                   Text(
                     '#$topic',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: AppTheme.blackTextStyle.copyWith(
-                      color: selected ? AppColors.white : AppColors.text,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
+                      color: AppColors.text,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    selected
+                        ? 'Latest posts are loaded below.'
+                        : 'Tap to explore the conversation.',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTheme.greyTextStyle.copyWith(
+                      color: AppColors.textSecondary,
+                      fontSize: 11,
+                      height: 1.35,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
@@ -442,58 +546,108 @@ class _TopicStrip extends StatelessWidget {
             ),
           );
         },
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
-        itemCount: topics.length,
       ),
     );
   }
 }
 
-class _TopicMeta extends StatelessWidget {
+class _TopicSummary extends StatelessWidget {
   final String? topic;
   final int count;
   final bool loading;
+  final bool hasMore;
 
-  const _TopicMeta({
+  const _TopicSummary({
     required this.topic,
     required this.count,
     required this.loading,
+    required this.hasMore,
   });
 
   @override
   Widget build(BuildContext context) {
     final label = topic == null ? 'Topics' : '#$topic';
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            label,
-            style: AppTheme.blackTextStyle.copyWith(
-              color: AppColors.text,
-              fontSize: 17,
-              fontWeight: FontWeight.w900,
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: _panelDecoration(radius: 22, fill: AppColors.cardColor, shadow: 0.12),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(16),
             ),
-          ),
-        ),
-        if (loading)
-          const SizedBox(
-            width: 14,
-            height: 14,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
+            child: const Icon(
+              Icons.auto_awesome_rounded,
               color: AppColors.primary,
-            ),
-          )
-        else
-          Text(
-            '$count posts',
-            style: AppTheme.greyTextStyle.copyWith(
-              color: AppColors.textSecondary,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+              size: 22,
             ),
           ),
-      ],
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: AppTheme.blackTextStyle.copyWith(
+                    color: AppColors.text,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  hasMore
+                      ? 'More posts are available as you scroll.'
+                      : 'You are caught up on this topic.',
+                  style: AppTheme.greyTextStyle.copyWith(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    height: 1.35,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          if (loading)
+            const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.2,
+                color: AppColors.primary,
+              ),
+            )
+          else
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '$count',
+                  style: AppTheme.blackTextStyle.copyWith(
+                    color: AppColors.text,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                Text(
+                  'posts',
+                  style: AppTheme.greyTextStyle.copyWith(
+                    color: AppColors.textSecondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
     );
   }
 }
@@ -515,6 +669,20 @@ class _TopicsError extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.10),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.wifi_off_rounded,
+                color: AppColors.primary,
+                size: 34,
+              ),
+            ),
+            const SizedBox(height: 16),
             Text(
               'Could not load topics',
               style: AppTheme.blackTextStyle.copyWith(
@@ -538,6 +706,8 @@ class _TopicsError extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: AppColors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -563,10 +733,10 @@ class _TopicsEmpty extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 72,
-              height: 72,
+              width: 76,
+              height: 76,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withOpacity(0.10),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -586,7 +756,7 @@ class _TopicsEmpty extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Try another topic or come back later for fresh posts.',
+              'Try another topic or pull to refresh for new conversations.',
               textAlign: TextAlign.center,
               style: AppTheme.greyTextStyle.copyWith(
                 color: AppColors.textSecondary,
@@ -599,4 +769,38 @@ class _TopicsEmpty extends StatelessWidget {
       ),
     );
   }
+}
+
+BoxDecoration _panelDecoration({
+  required double radius,
+  required Color fill,
+  required double shadow,
+}) {
+  return BoxDecoration(
+    color: fill,
+    borderRadius: BorderRadius.circular(radius),
+    border: Border.all(color: AppColors.cardBorderColor),
+    boxShadow: [
+      BoxShadow(
+        color: AppColors.shadow.withOpacity(shadow),
+        blurRadius: 14,
+        offset: const Offset(0, 8),
+      ),
+    ],
+  );
+}
+
+Color _topicAccent(int index) {
+  const colors = [
+    AppColors.primary,
+    AppColors.secondary,
+    AppColors.githubPurple,
+    AppColors.githubOrange,
+    AppColors.githubGreen,
+    AppColors.indigo,
+    AppColors.cyan,
+    AppColors.pink,
+  ];
+
+  return colors[index % colors.length];
 }

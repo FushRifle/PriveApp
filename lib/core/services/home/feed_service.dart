@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../../clients/api_service.dart';
@@ -21,6 +23,20 @@ class FeedService {
     int page = 1,
     bool forceRefresh = false,
   }) async {
+    if (!forceRefresh) {
+      final cachedPage = _feedCacheService.readFeedPage(page);
+      if (cachedPage != null && cachedPage.posts.isNotEmpty) {
+        return cachedPage;
+      }
+
+      if (page == 1) {
+        final cachedLatest = _feedCacheService.readLatestFeed();
+        if (cachedLatest != null && cachedLatest.posts.isNotEmpty) {
+          return cachedLatest;
+        }
+      }
+    }
+
     try {
       final response = await _getPostsWithFallback(
         page: page,
@@ -30,16 +46,22 @@ class FeedService {
       debugPrint('Posts response status: ${response.statusCode}');
 
       final postsResponse = _parsePostsResponse(response.data, page);
-      if (page == 1) {
-        await _feedCacheService.saveLatestFeed(postsResponse);
+      if (forceRefresh && page == 1) {
+        await _feedCacheService.clearFeedPages();
       }
+      await _feedCacheService.saveFeedPage(postsResponse);
       return postsResponse;
     } on DioException catch (e) {
       debugPrint('Get posts error: ${e.response?.data}');
+      final cachedPage = _feedCacheService.readFeedPage(page);
+      if (cachedPage != null && cachedPage.posts.isNotEmpty) {
+        return cachedPage;
+      }
+
       if (page == 1) {
-        final cached = _feedCacheService.readLatestFeed();
-        if (cached != null && cached.posts.isNotEmpty) {
-          return cached;
+        final cachedLatest = _feedCacheService.readLatestFeed();
+        if (cachedLatest != null && cachedLatest.posts.isNotEmpty) {
+          return cachedLatest;
         }
       }
       throw _readError(e.response?.data, 'Failed to get posts');
@@ -222,12 +244,22 @@ class FeedService {
         data['pollExpirationHours'] = pollExpirationHours;
       }
 
-      final response = await _api.post('/api/feed/posts', data: data);
+      final response = await _postCreateWithFallback(data);
       _invalidateFeedCaches();
-      return FeedPost.fromJson(_readMap(response.data));
+      return FeedPost.fromJson(_readPostMap(response.data));
     } on DioException catch (e) {
       debugPrint('Create post error: ${e.response?.data}');
       throw e.response?.data['message'] ?? 'Failed to create post';
+    }
+  }
+
+  Future<Response> _postCreateWithFallback(Map<String, dynamic> data) async {
+    try {
+      return await _api.post('/api/feed/posts', data: data);
+    } on DioException catch (e) {
+      if (e.response?.statusCode != 404) rethrow;
+
+      return await _api.post('/api/posts', data: data);
     }
   }
 
@@ -324,7 +356,7 @@ class FeedService {
         data: {'content': content},
       );
       _invalidateFeedCaches();
-      return FeedPost.fromJson(_readMap(response.data));
+      return FeedPost.fromJson(_readPostMap(response.data));
     } on DioException catch (e) {
       debugPrint('Repost error: ${e.response?.data}');
       throw e.response?.data['message'] ??
@@ -503,12 +535,12 @@ class FeedService {
 
       if (response.data is Map<String, dynamic>) {
         _invalidatePostCaches(postId);
-        return FeedPost.fromJson(response.data);
+        return FeedPost.fromJson(_readPostMap(response.data));
       }
 
       if (response.data is Map) {
         _invalidatePostCaches(postId);
-        return FeedPost.fromJson(Map<String, dynamic>.from(response.data));
+        return FeedPost.fromJson(_readPostMap(response.data));
       }
 
       throw 'Invalid update response';
@@ -634,6 +666,17 @@ class FeedService {
     return {};
   }
 
+  Map<String, dynamic> _readPostMap(dynamic data) {
+    final map = _readMap(data);
+
+    final post = map['post'] ?? map['data'] ?? map['item'];
+    if (post is Map) {
+      return Map<String, dynamic>.from(post);
+    }
+
+    return map;
+  }
+
   Map<String, dynamic> _readCommentMap(dynamic data) {
     final map = _readMap(data);
     final comment = map['comment'] ?? map['data'] ?? map['item'];
@@ -661,11 +704,13 @@ class FeedService {
     _api.removeCacheByPath('/api/feed/posts/$postId');
     _api.removeCacheByPath('/api/feed/posts/$postId/comments');
     _api.removeCacheByPath('/api/feed/users');
+    unawaited(_feedCacheService.clearFeedPages());
   }
 
   void _invalidateFeedCaches() {
     _api.removeCacheByPath('/api/feed/posts');
     _api.removeCacheByPath('/api/feed/users');
+    unawaited(_feedCacheService.clearFeedPages());
   }
 
   List<String> _extractMentions(String text) {

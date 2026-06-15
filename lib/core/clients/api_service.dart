@@ -35,7 +35,7 @@ class ApiService {
   ApiService._internal() {
     dio = Dio(
       BaseOptions(
-        baseUrl: ApiConfig.resolvedBaseUrl,
+        baseUrl: ApiConfig.normalizedResolvedBaseUrl,
         connectTimeout: const Duration(seconds: 60),
         receiveTimeout: const Duration(seconds: 60),
         sendTimeout: const Duration(seconds: 60),

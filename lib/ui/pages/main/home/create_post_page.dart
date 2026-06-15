@@ -698,7 +698,10 @@ class _CreatePostPageState extends State<CreatePostPage> {
     });
 
     try {
-      context.read<FeedBloc>().add(
+      final feedBloc = context.read<FeedBloc>();
+      final initialPostIds = feedBloc.state.posts.map((post) => post.id).toSet();
+
+      feedBloc.add(
             CreateFeedPost(
               content: content,
               attachments: null,
@@ -714,6 +717,19 @@ class _CreatePostPageState extends State<CreatePostPage> {
                   : null,
             ),
           );
+
+      final created = await _waitForPostCreation(
+        feedBloc,
+        initialPostIds,
+      );
+
+      if (!created) {
+        if (!mounted) return;
+        setState(() {
+          _isSubmitting = false;
+        });
+        return;
+      }
 
       _showSnackBar('Post created successfully');
 
@@ -769,8 +785,10 @@ class _CreatePostPageState extends State<CreatePostPage> {
       if (!mounted) return;
 
       final content = _contentWithHashtags();
+      final feedBloc = context.read<FeedBloc>();
+      final initialPostIds = feedBloc.state.posts.map((post) => post.id).toSet();
 
-      context.read<FeedBloc>().add(
+      feedBloc.add(
             CreateFeedPost(
               content: content,
               attachments: attachments.isNotEmpty
@@ -788,6 +806,20 @@ class _CreatePostPageState extends State<CreatePostPage> {
                   : null,
             ),
           );
+
+      final created = await _waitForPostCreation(
+        feedBloc,
+        initialPostIds,
+      );
+
+      if (!created) {
+        if (!mounted) return;
+        setState(() {
+          _isSubmitting = false;
+          _uploadProgress = 0.0;
+        });
+        return;
+      }
 
       _showSnackBar('Post created successfully');
 
@@ -846,6 +878,39 @@ class _CreatePostPageState extends State<CreatePostPage> {
     setState(() {
       _uploadProgress = progress.clamp(0.0, 1.0);
     });
+  }
+
+  Future<bool> _waitForPostCreation(
+    FeedBloc feedBloc,
+    Set<int> initialPostIds,
+  ) async {
+    final completedState = await feedBloc.stream.firstWhere(
+      (state) => !state.isCreatingPost,
+    );
+
+    if (!mounted) return false;
+
+    if (completedState.generalError != null) {
+      _showSnackBar(
+        completedState.generalError!,
+        isError: true,
+      );
+      return false;
+    }
+
+    final hasNewPost = completedState.posts.any(
+      (post) => !initialPostIds.contains(post.id),
+    );
+
+    if (!hasNewPost) {
+      _showSnackBar(
+        'Post created, but the feed did not update.',
+        isError: true,
+      );
+      return false;
+    }
+
+    return true;
   }
 
   void _showSnackBar(

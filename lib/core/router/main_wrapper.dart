@@ -4,13 +4,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
-import 'package:clique/bloc/community/community_bloc.dart';
+import 'package:clique/bloc/event/event_bloc.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
 import 'package:clique/ui/pages/main/home/create_post_page.dart';
 import 'package:clique/ui/pages/main/chat/inbox_page.dart';
-import 'package:clique/ui/pages/main/community/community_page.dart';
 import 'package:clique/ui/pages/main/home/home_page.dart';
+import 'package:clique/ui/pages/main/event/events_page.dart';
 import 'package:clique/ui/pages/main/reels/reels_page.dart';
 import 'package:clique/ui/widgets/home/clip_status_bar.dart';
 
@@ -103,9 +103,9 @@ class _MainWrapperState extends State<MainWrapper>
                             isVisible: _currentIndex == 1)),
                     _DeferredTab(
                         enabled: _visitedTabs.contains(2),
-                        child: const _CommunityTabScope(
-                            key: PageStorageKey('community_page'),
-                            child: CommunityPage())),
+                        child: const _EventTabScope(
+                            key: PageStorageKey('events_page'),
+                            child: EventsPage())),
                     _DeferredTab(
                         enabled: _visitedTabs.contains(3),
                         child: const _ChatTabScope(
@@ -214,12 +214,12 @@ class _ChatTabBootstrapState extends State<_ChatTabBootstrap> {
   Widget build(BuildContext context) => widget.child;
 }
 
-class _CommunityTabScope extends StatelessWidget {
+class _EventTabScope extends StatelessWidget {
   final Widget child;
-  const _CommunityTabScope({super.key, required this.child});
+  const _EventTabScope({super.key, required this.child});
   @override
   Widget build(BuildContext context) =>
-      BlocProvider(create: (_) => CommunityBloc(), child: child);
+      BlocProvider(create: (_) => EventBloc(), child: child);
 }
 
 class _BottomNavBar extends StatelessWidget {
@@ -270,7 +270,7 @@ class _BottomNavBar extends StatelessWidget {
               _NavItem(
                   index: 2,
                   currentIndex: currentIndex,
-                  icon: Icons.diversity_3,
+                  icon: Icons.event_rounded,
                   unselectedColor: unselectedColor,
                   onTap: onChanged),
               _NavItem(

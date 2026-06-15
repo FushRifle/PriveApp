@@ -4,25 +4,38 @@ import 'package:clique/core/models/feeds_models.dart';
 
 class FeedCacheService {
   Future<void> saveLatestFeed(PostsResponse response) async {
+    await saveFeedPage(response);
+  }
+
+  Future<void> saveFeedPage(PostsResponse response) async {
     final feedBox = LocalCacheService.box(HiveCacheKeys.feedBox);
     final metaBox = LocalCacheService.box(HiveCacheKeys.metaBox);
 
-    if (feedBox == null || metaBox == null) return;
+    if (feedBox == null) return;
 
-    await feedBox.put(HiveCacheKeys.latestFeed, {
+    final pageKey = _feedPageKey(response.page);
+    final payload = {
       'posts': response.posts.map((post) => post.toJson()).toList(),
       'hasMore': response.hasMore,
       'page': response.page,
-    });
+    };
 
-    await metaBox.put(HiveCacheKeys.latestFeedMeta, {
-      'cachedAt': DateTime.now().toIso8601String(),
-    });
+    await feedBox.put(pageKey, payload);
+
+    if (response.page == 1) {
+      await feedBox.put(HiveCacheKeys.latestFeed, payload);
+    }
+
+    if (response.page == 1 && metaBox != null) {
+      await metaBox.put(HiveCacheKeys.latestFeedMeta, {
+        'cachedAt': DateTime.now().toIso8601String(),
+      });
+    }
   }
 
-  PostsResponse? readLatestFeed() {
+  PostsResponse? readFeedPage(int page) {
     final feedBox = LocalCacheService.box(HiveCacheKeys.feedBox);
-    final raw = feedBox?.get(HiveCacheKeys.latestFeed);
+    final raw = feedBox?.get(_feedPageKey(page));
 
     if (raw is! Map) return null;
 
@@ -31,6 +44,34 @@ class FeedCacheService {
       return PostsResponse.fromJson(data);
     } catch (_) {
       return null;
+    }
+  }
+
+  PostsResponse? readLatestFeed() {
+    return readFeedPage(1);
+  }
+
+  Future<void> clearFeedPages() async {
+    final feedBox = LocalCacheService.box(HiveCacheKeys.feedBox);
+    final metaBox = LocalCacheService.box(HiveCacheKeys.metaBox);
+
+    if (feedBox == null) return;
+
+    final keysToRemove = feedBox.keys
+        .whereType<String>()
+        .where(
+          (key) =>
+              key == HiveCacheKeys.latestFeed ||
+              key.startsWith('${HiveCacheKeys.feedPagePrefix}_'),
+        )
+        .toList();
+
+    for (final key in keysToRemove) {
+      await feedBox.delete(key);
+    }
+
+    if (metaBox != null) {
+      await metaBox.delete(HiveCacheKeys.latestFeedMeta);
     }
   }
 
@@ -91,6 +132,10 @@ class FeedCacheService {
 
   String _postCommentsKey(int postId) {
     return '${HiveCacheKeys.postCommentsPrefix}_$postId';
+  }
+
+  String _feedPageKey(int page) {
+    return '${HiveCacheKeys.feedPagePrefix}_$page';
   }
 
   String _userMediaKey(int userId, String? type) {

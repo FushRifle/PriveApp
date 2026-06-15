@@ -3,6 +3,7 @@ class NamedRoutes {
   static const homeScreen = '/home-screen';
   static const discoverScreen = '/discover-screen';
   static const communityScreen = '/community-screen';
+  static const eventsScreen = '/events-screen';
   static const inboxScreen = '/inbox-screen';
 
   //Profile
@@ -24,6 +25,7 @@ class NamedRoutes {
   static const editStatusScreen = '/edit-status-screen';
   static const createReelScreen = '/create-reel-screen';
   static const createCommunityScreen = '/create-community-screen';
+  static const createEventScreen = '/create-event-screen';
   static const communityGroupChatScreen = '/community-group-chat-screen';
   static const communityGroupInfoScreen = '/community-group-info-screen';
   static const postDetailScreen = '/post-detail-screen';

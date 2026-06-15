@@ -210,8 +210,6 @@ class ProfileHeaderCard extends StatelessWidget {
               const SizedBox(height: 8),
               ProfileBioRow(profile: profile),
               const SizedBox(height: 14),
-              ProfileStatsRow(profile: profile, isOwnProfile: isOwnProfile),
-              const SizedBox(height: 14),
               ProfileActionRow(
                 profile: profile,
                 isOwnProfile: isOwnProfile,
@@ -219,6 +217,8 @@ class ProfileHeaderCard extends StatelessWidget {
                 onToggleFollow: onToggleFollow,
                 onMessage: onMessage,
               ),
+              const SizedBox(height: 14),
+              ProfileStatsRow(profile: profile, isOwnProfile: isOwnProfile),
             ],
           ),
         ),
@@ -314,6 +314,7 @@ class ProfileIdentityRow extends StatelessWidget {
 
     return Column(
       children: [
+        const SizedBox(height: 10),
         Text(
           profile.displayName ?? 'User',
           textAlign: TextAlign.center,
@@ -657,7 +658,7 @@ class ProfileActionButton extends StatelessWidget {
         onTap();
       },
       child: Container(
-        height: 38,
+        height: 45,
         decoration: BoxDecoration(
           color: hasBorder ? backgroundColor : null,
           borderRadius: BorderRadius.circular(999),
