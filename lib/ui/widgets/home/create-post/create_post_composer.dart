@@ -42,7 +42,7 @@ class _TextPostComposer extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     final isCompactWidth = size.width < 390;
-    final textBoxHeight = (size.height * 0.34).clamp(220.0, 340.0);
+    final textBoxHeight = (size.height * 0.33).clamp(210.0, 330.0);
     final horizontalPadding = isCompactWidth ? 16.0 : 20.0;
     final titleFontSize = isCompactWidth ? 18.0 : 20.0;
 
@@ -64,41 +64,40 @@ class _TextPostComposer extends StatelessWidget {
             onAnonymousCategoryChanged: onAnonymousCategoryChanged,
           ),
           const SizedBox(height: 14),
-          Container(
-            width: double.infinity,
-            constraints: BoxConstraints(
-              minHeight: textBoxHeight,
-              maxHeight: textBoxHeight,
-            ),
-            padding: EdgeInsets.fromLTRB(
-              isCompactWidth ? 16 : 18,
-              8,
-              isCompactWidth ? 16 : 18,
-              8,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.cardColor,
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: AppColors.cardBorderColor),
-            ),
-            child: TokenSuggestionField(
-              controller: textController,
-              enabled: enabled,
-              suggestionsBuilder: suggestionsBuilder,
-              maxLines: null,
-              style: AppTheme.blackTextStyle.copyWith(
-                fontSize: titleFontSize,
-                height: 1.38,
-                fontWeight: FontWeight.w500,
-              ),
-              decoration: InputDecoration(
-                hintText: "What's on your mind?",
-                hintStyle: AppTheme.greyTextStyle.copyWith(
-                  fontSize: titleFontSize,
-                  fontWeight: FontWeight.w500,
+          SizedBox(
+            height: textBoxHeight,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _ComposerSurfaceHeader(
+                  title: _composerTitle(postType),
+                  subtitle: _composerSubtitle(postType),
+                  accent: _composerAccent(postType),
                 ),
-                border: InputBorder.none,
-              ),
+                const SizedBox(height: 14),
+                Expanded(
+                  child: TokenSuggestionField(
+                    controller: textController,
+                    enabled: enabled,
+                    suggestionsBuilder: suggestionsBuilder,
+                    maxLines: null,
+                    style: AppTheme.blackTextStyle.copyWith(
+                      fontSize: titleFontSize,
+                      height: 1.42,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: _composerHint(postType),
+                      hintStyle: AppTheme.greyTextStyle.copyWith(
+                        fontSize: titleFontSize,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary.withOpacity(0.55),
+                      ),
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           if (postType == PostComposerType.poll) ...[
@@ -231,6 +230,63 @@ class _MediaPostComposer extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ComposerSurfaceHeader extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final Color accent;
+
+  const _ComposerSurfaceHeader({
+    required this.title,
+    required this.subtitle,
+    required this.accent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            color: accent.withOpacity(0.14),
+          ),
+          child: Icon(
+            Icons.edit_note_rounded,
+            color: accent,
+            size: 22,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: AppTheme.blackTextStyle.copyWith(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                subtitle,
+                style: AppTheme.greyTextStyle.copyWith(
+                  fontSize: 12,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -437,31 +493,68 @@ class _CaptionInput extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.cardColor,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: AppColors.cardBorderColor,
-        ),
-      ),
-      child: TokenSuggestionField(
-        controller: controller,
-        enabled: enabled,
-        suggestionsBuilder: suggestionsBuilder,
-        maxLines: 4,
-        minLines: 2,
-        style: AppTheme.blackTextStyle.copyWith(
-          fontSize: 15,
-          height: 1.35,
-        ),
-        decoration: InputDecoration(
-          hintText: 'Write a caption...',
-          hintStyle: AppTheme.greyTextStyle.copyWith(
-            fontSize: 15,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.cardBorderColor),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withOpacity(0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.all(16),
-        ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: const Icon(
+                  Icons.short_text_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Caption',
+                style: AppTheme.blackTextStyle.copyWith(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TokenSuggestionField(
+            controller: controller,
+            enabled: enabled,
+            suggestionsBuilder: suggestionsBuilder,
+            maxLines: 4,
+            minLines: 2,
+            style: AppTheme.blackTextStyle.copyWith(
+              fontSize: 15,
+              height: 1.45,
+            ),
+            decoration: InputDecoration(
+              hintText: 'Write a caption...',
+              hintStyle: AppTheme.greyTextStyle.copyWith(
+                fontSize: 15,
+              ),
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -488,17 +581,44 @@ class _HashtagInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.cardColor,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: AppColors.cardBorderColor,
-            ),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardColor,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.cardBorderColor),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: const Icon(
+                  Icons.tag_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Hashtags',
+                  style: AppTheme.blackTextStyle.copyWith(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
           ),
-          child: TokenSuggestionField(
+          const SizedBox(height: 12),
+          TokenSuggestionField(
             controller: controller,
             enabled: enabled,
             suggestionsBuilder: suggestionsBuilder,
@@ -522,26 +642,36 @@ class _HashtagInput extends StatelessWidget {
                 horizontal: 16,
                 vertical: 14,
               ),
+              filled: true,
+              fillColor: AppColors.backgroundColor,
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: AppColors.cardBorderColor),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: AppColors.primary),
+              ),
             ),
           ),
-        ),
-        if (hashtags.isNotEmpty) ...[
-          const SizedBox(height: 14),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: hashtags.map((tag) {
-                return _HashtagChip(
-                  tag: tag,
-                  onRemove: () => onRemoveHashtag(tag),
-                );
-              }).toList(),
+          if (hashtags.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: hashtags.map((tag) {
+                  return _HashtagChip(
+                    tag: tag,
+                    onRemove: () => onRemoveHashtag(tag),
+                  );
+                }).toList(),
+              ),
             ),
-          ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -612,12 +742,23 @@ class _ComposerTypeSelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Content Type',
-          style: AppTheme.blackTextStyle.copyWith(
-            fontSize: 13,
-            fontWeight: FontWeight.w800,
-          ),
+        Row(
+          children: [
+            Text(
+              'Content Type',
+              style: AppTheme.blackTextStyle.copyWith(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              'Tap to switch modes',
+              style: AppTheme.greyTextStyle.copyWith(
+                fontSize: 11,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 10),
         Wrap(
@@ -643,6 +784,7 @@ class _ComposerTypeSelector extends StatelessWidget {
               side: BorderSide(
                 color: AppColors.cardBorderColor,
               ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(999),
               ),
@@ -734,15 +876,38 @@ class _QuestionPromptPanel extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.primary.withOpacity(0.14)),
+        color: AppColors.cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.cardBorderColor),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.cardColor,
+            AppColors.secondary.withOpacity(0.08),
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.question_mark_rounded,
-            color: AppColors.primary,
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: AppColors.secondary.withOpacity(0.14),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.question_mark_rounded,
+              color: AppColors.secondary,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -789,8 +954,15 @@ class _PollComposerPanel extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.cardColor,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(color: AppColors.cardBorderColor),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withOpacity(0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -820,6 +992,32 @@ class _PollComposerPanel extends StatelessWidget {
             style: AppTheme.greyTextStyle.copyWith(
               fontSize: 12,
               height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.schedule_rounded,
+                  size: 15,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Expires in $expirationHours hours',
+                  style: AppTheme.blackTextStyle.copyWith(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 12),
@@ -919,8 +1117,15 @@ class _PollOptionField extends StatelessWidget {
           child: TextField(
             controller: controller,
             enabled: enabled,
+            style: AppTheme.blackTextStyle.copyWith(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
             decoration: InputDecoration(
               hintText: 'Option $index',
+              hintStyle: AppTheme.greyTextStyle.copyWith(
+                fontSize: 14,
+              ),
               filled: true,
               fillColor: AppColors.backgroundColor,
               border: OutlineInputBorder(
@@ -930,6 +1135,10 @@ class _PollOptionField extends StatelessWidget {
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide(color: AppColors.cardBorderColor),
+              ),
+              focusedBorder: const OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(14)),
+                borderSide: BorderSide(color: AppColors.primary),
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 14,
@@ -948,4 +1157,44 @@ class _PollOptionField extends StatelessWidget {
       ],
     );
   }
+}
+
+String _composerTitle(PostComposerType type) {
+  return switch (type) {
+    PostComposerType.post => 'Write your post',
+    PostComposerType.poll => 'Build your poll',
+    PostComposerType.question => 'Ask the feed',
+    PostComposerType.anonymous => 'Anonymous draft',
+  };
+}
+
+String _composerSubtitle(PostComposerType type) {
+  return switch (type) {
+    PostComposerType.post =>
+      'Short, direct, and easy to scan. Keep the first line strong.',
+    PostComposerType.poll =>
+      'Ask something people can answer without overthinking.',
+    PostComposerType.question =>
+      'A sharp prompt gets better replies than a vague one.',
+    PostComposerType.anonymous =>
+      'Your identity stays hidden while the content stays clear.',
+  };
+}
+
+String _composerHint(PostComposerType type) {
+  return switch (type) {
+    PostComposerType.post => 'What are you thinking about?',
+    PostComposerType.poll => 'Write the question people should vote on...',
+    PostComposerType.question => 'Ask something worth answering...',
+    PostComposerType.anonymous => 'Say what you need to say...',
+  };
+}
+
+Color _composerAccent(PostComposerType type) {
+  return switch (type) {
+    PostComposerType.post => AppColors.primary,
+    PostComposerType.poll => AppColors.orange,
+    PostComposerType.question => AppColors.secondary,
+    PostComposerType.anonymous => AppColors.teal,
+  };
 }

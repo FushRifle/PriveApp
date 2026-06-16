@@ -119,7 +119,7 @@ class CreatePostOptionsView extends StatelessWidget {
                 crossAxisCount: 2,
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
-                childAspectRatio: 1.12,
+                childAspectRatio: 1.05,
               ),
               itemBuilder: (context, index) {
                 final action = contentOptions[index];
@@ -129,10 +129,10 @@ class CreatePostOptionsView extends StatelessWidget {
                 );
               },
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 20),
             _SectionLabel(
-              title: 'Media',
-              subtitle: 'Attach visual content if you want more reach.',
+              title: 'Media tools',
+              subtitle: 'Attach photos, clips, or audio to make the post stand out.',
             ),
             const SizedBox(height: 12),
             GridView.builder(
@@ -143,7 +143,7 @@ class CreatePostOptionsView extends StatelessWidget {
                 crossAxisCount: 2,
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
-                childAspectRatio: 1.35,
+                childAspectRatio: 1.28,
               ),
               itemBuilder: (context, index) {
                 return _MediaActionCard(action: mediaActions[index]);
@@ -154,10 +154,47 @@ class CreatePostOptionsView extends StatelessWidget {
         if (isPicking)
           Positioned.fill(
             child: Container(
-              color: AppColors.black.withOpacity(0.42),
-              child: const Center(
-                child: CircularProgressIndicator(
-                  color: AppColors.primary,
+              color: AppColors.black.withOpacity(0.46),
+              child: Center(
+                child: Container(
+                  width: 170,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardColor.withOpacity(0.98),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.black.withOpacity(0.2),
+                        blurRadius: 24,
+                        offset: const Offset(0, 12),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(
+                        width: 30,
+                        height: 30,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.6,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Loading media tools',
+                        textAlign: TextAlign.center,
+                        style: AppTheme.blackTextStyle.copyWith(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -194,31 +231,40 @@ class _HeroPanel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(28),
         gradient: LinearGradient(
-          colors: [
-            AppColors.cardColor,
-          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
+          colors: [
+            AppColors.cardColor,
+            AppColors.primary.withOpacity(0.06),
+            AppColors.secondary.withOpacity(0.04),
+          ],
         ),
         border: Border.all(color: AppColors.cardBorderColor),
         boxShadow: [
           BoxShadow(
-            color: AppColors.shadowElevated,
-            blurRadius: 18,
-            offset: const Offset(0, 8),
+            color: AppColors.black.withOpacity(0.07),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
       child: Row(
         children: [
           Container(
-            width: 54,
-            height: 54,
+            width: 58,
+            height: 58,
             decoration: BoxDecoration(
-              color: AppColors.white.withOpacity(0.65),
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(19),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.primary.withOpacity(0.16),
+                  AppColors.secondary.withOpacity(0.12),
+                ],
+              ),
             ),
             child: const Icon(
               Icons.auto_awesome_rounded,
@@ -234,8 +280,9 @@ class _HeroPanel extends StatelessWidget {
                 Text(
                   title,
                   style: AppTheme.blackTextStyle.copyWith(
-                    fontSize: 18,
+                    fontSize: 19,
                     fontWeight: FontWeight.w900,
+                    letterSpacing: -0.2,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -243,7 +290,7 @@ class _HeroPanel extends StatelessWidget {
                   subtitle,
                   style: AppTheme.greyTextStyle.copyWith(
                     fontSize: 13,
-                    height: 1.35,
+                    height: 1.4,
                   ),
                 ),
               ],
@@ -304,19 +351,41 @@ class _ComposerTypeCard extends StatelessWidget {
         selected ? action.color.withOpacity(0.38) : AppColors.cardBorderColor;
 
     return Material(
-      color: selected ? action.color.withOpacity(0.10) : AppColors.cardColor,
-      borderRadius: BorderRadius.circular(22),
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(24),
       child: InkWell(
         onTap: () {
           HapticFeedback.lightImpact();
           action.onTap();
         },
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(24),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: borderColor, width: selected ? 1.4 : 1),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: borderColor, width: selected ? 1.5 : 1),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: selected
+                  ? [
+                      action.color.withOpacity(0.16),
+                      AppColors.cardColor,
+                    ]
+                  : [
+                      AppColors.cardColor,
+                      AppColors.cardColor.withOpacity(0.96),
+                    ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: selected
+                    ? action.color.withOpacity(0.10)
+                    : AppColors.black.withOpacity(0.04),
+                blurRadius: selected ? 18 : 12,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -324,11 +393,11 @@ class _ComposerTypeCard extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    width: 46,
-                    height: 46,
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
                       color: action.color.withOpacity(0.14),
-                      borderRadius: BorderRadius.circular(15),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                     child: Icon(
                       action.icon,
@@ -340,7 +409,7 @@ class _ComposerTypeCard extends StatelessWidget {
                   if (selected)
                     Icon(
                       Icons.check_circle_rounded,
-                      color: AppColors.primary,
+                      color: action.color,
                     ),
                 ],
               ),
@@ -357,7 +426,7 @@ class _ComposerTypeCard extends StatelessWidget {
                 action.subtitle,
                 style: AppTheme.greyTextStyle.copyWith(
                   fontSize: 12,
-                  height: 1.25,
+                  height: 1.35,
                 ),
               ),
             ],
@@ -378,28 +447,43 @@ class _MediaActionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.cardColor,
-      borderRadius: BorderRadius.circular(18),
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: () {
           HapticFeedback.lightImpact();
           action.onTap();
         },
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(color: AppColors.cardBorderColor),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.cardColor,
+                action.color.withOpacity(0.06),
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.black.withOpacity(0.04),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
           child: Row(
             children: [
               Container(
-                width: 42,
-                height: 42,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   color: action.color.withOpacity(0.14),
-                  borderRadius: BorderRadius.circular(13),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(action.icon, color: action.color, size: 22),
               ),

@@ -1,5 +1,4 @@
 import 'dart:ui';
-import 'dart:async';
 import 'dart:io';
 import 'package:clique/core/clients/cloudinary_service.dart';
 import 'package:clique/app/configs/theme.dart';
@@ -11,6 +10,7 @@ import 'package:video_player/video_player.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
 import 'package:clique/core/models/status_model.dart';
+import 'package:clique/core/services/status/status_services.dart';
 import 'package:clique/ui/widgets/common/effect_text.dart';
 
 class CreateStatusPage extends StatefulWidget {
@@ -24,8 +24,8 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   final TextEditingController _textController = TextEditingController();
   final TextEditingController _hashtagController = TextEditingController();
   final CloudinaryService _cloudinaryService = CloudinaryService();
+  final StatusService _statusService = StatusService();
   final ImagePicker _imagePicker = ImagePicker();
-  StreamSubscription<StoriesState>? _createStorySubscription;
 
   File? _selectedMediaFile;
   String? _selectedMediaType;
@@ -61,7 +61,6 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
 
   @override
   void dispose() {
-    _createStorySubscription?.cancel();
     _videoController?.dispose();
     _textController.removeListener(_onComposerChanged);
     _hashtagController.removeListener(_onComposerChanged);
@@ -168,7 +167,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                             const SizedBox(height: 14),
                           ],
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                             child: _hasText || !_hasMedia
                                 ? _StoryHashtagText(
                                     text: _hasText
@@ -176,15 +175,15 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                                         : "What's happening?",
                                     textAlign: _textAlign,
                                     style: TextStyle(
-                                      color: AppColors.blackTextColor,
+                                      color: AppColors.text,
                                       fontSize: _hasText ? _fontSize : 20,
-                                      fontWeight: FontWeight.w800,
+                                      fontWeight: FontWeight.normal,
                                       height: 1.4,
-                                      shadows: const [
+                                      shadows: [
                                         Shadow(
                                           blurRadius: 10,
-                                          color: AppColors.black45,
-                                          offset: Offset(2, 2),
+                                          color: AppColors.cardBorder,
+                                          offset: const Offset(2, 2),
                                         ),
                                       ],
                                     ),
@@ -286,7 +285,9 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                       controller: _textController,
                       autofocus: true,
                       showCursor: true,
-                      cursorColor: AppColors.primary,
+                      cursorColor: AppColors.white,
+                      cursorWidth: 2,
+                      cursorHeight: _fontSize + 4,
                       selectionHeightStyle: BoxHeightStyle.tight,
                       selectionWidthStyle: BoxWidthStyle.tight,
                       textAlignVertical: TextAlignVertical.top,
@@ -461,7 +462,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
             Text(
               _uploadProgress > 0
                   ? 'Uploading story... ${(_uploadProgress * 100).toStringAsFixed(0)}%'
-                  : 'Creating your story...',
+                  : 'Publishing story...',
               style: const TextStyle(color: AppColors.white, fontSize: 16),
             ),
           ],
@@ -913,30 +914,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
         ];
       }
 
-      await _createStorySubscription?.cancel();
-
-      _createStorySubscription = storiesBloc.stream.listen((state) {
-        if (state.status == StoriesStatus.loaded && !state.isCreating) {
-          if (!mounted) return;
-
-          Navigator.pop(context, true);
-        } else if (state.status == StoriesStatus.error && mounted) {
-          _showSnackBar(state.error ?? 'Failed to share story', isError: true);
-          setState(() {
-            _isSubmitting = false;
-            _uploadProgress = 0.0;
-          });
-        }
-
-        if (state.status == StoriesStatus.loaded ||
-            state.status == StoriesStatus.error) {
-          _createStorySubscription?.cancel();
-          _createStorySubscription = null;
-        }
-      });
-
-      // Create story using StoriesBloc
-      storiesBloc.add(CreateStoryEvent(
+      final createdStory = await _statusService.createStory(
         content: _storyContentWithHashtags(),
         attachments: attachments.isNotEmpty ? attachments : null,
         backgroundColor: _hasMedia
@@ -944,7 +922,17 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
             : '#${_selectedColor.value.toRadixString(16).substring(2)}',
         textAlign: _textAlign == TextAlign.center ? 'center' : 'left',
         fontSize: _fontSize,
-      ));
+      );
+
+      if (createdStory == null) {
+        throw Exception('Failed to share story');
+      }
+
+      storiesBloc.add(const GetStories(refresh: true, silent: true));
+
+      if (!mounted) return;
+
+      Navigator.pop(context, true);
     } catch (e) {
       debugPrint('Error sharing story: $e');
       if (mounted) {
