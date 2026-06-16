@@ -24,6 +24,8 @@ class ChatPage extends StatefulWidget {
   final String userName;
   final String userAvatar;
   final int userId;
+  final int maxOutgoingMessages;
+  final String? messageLimitHint;
 
   const ChatPage({
     super.key,
@@ -31,6 +33,8 @@ class ChatPage extends StatefulWidget {
     required this.userName,
     required this.userAvatar,
     required this.userId,
+    this.maxOutgoingMessages = 0,
+    this.messageLimitHint,
   });
 
   @override
@@ -59,6 +63,7 @@ class _ChatPageState extends State<ChatPage>
   bool _isTyping = false;
   String _lastSavedDraft = '';
   bool _showDraftSaved = false;
+  late final VoidCallback _scrollListener;
 
   @override
   bool get wantKeepAlive => true;
@@ -74,14 +79,50 @@ class _ChatPageState extends State<ChatPage>
     return null;
   }
 
+  bool get _hasMessageLimit => widget.maxOutgoingMessages > 0;
+
+  int _outgoingMessageCount(List<MessageModel> messages) {
+    return messages.where((message) => message.isOwn).length;
+  }
+
+  bool _hasReachedMessageLimit(List<MessageModel> messages) {
+    if (!_hasMessageLimit) return false;
+    return _outgoingMessageCount(messages) >= widget.maxOutgoingMessages;
+  }
+
+  void _showMessageLimitSnack() {
+    _showSnackBar(
+      widget.messageLimitHint ??
+          'You have reached the message limit for this conversation.',
+      isError: true,
+    );
+  }
+
+  void _showSnackBar(
+    String message, {
+    bool isError = false,
+  }) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? AppColors.red : AppColors.green,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _setupAuth();
     _messageController.addListener(_scheduleDraftSave);
+    _scrollListener = _handleScroll;
+    _scrollController.addListener(_scrollListener);
     _loadInitialData();
-    _setupScrollListener();
     _startMessageSync();
     _restoreDraft();
   }
@@ -103,6 +144,7 @@ class _ChatPageState extends State<ChatPage>
     _draftHintTimer?.cancel();
     unawaited(_persistDraft(draft: draft, ownerId: ownerId));
     _messageController.dispose();
+    _scrollController.removeListener(_scrollListener);
     _typingTimer?.cancel();
     _messageSyncTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
@@ -126,17 +168,17 @@ class _ChatPageState extends State<ChatPage>
         ));
   }
 
-  void _setupScrollListener() {
-    _scrollController.addListener(() {
-      final position = _scrollController.position;
-      final isNearTop = position.maxScrollExtent - position.pixels <= 200;
-      if (isNearTop &&
-          !_isLoadingMore &&
-          !_isCliqueBot &&
-          context.read<ChatBloc>().state.hasMoreMessages) {
-        _loadMoreMessages();
-      }
-    });
+  void _handleScroll() {
+    if (!_scrollController.hasClients) return;
+
+    final position = _scrollController.position;
+    final isNearTop = position.maxScrollExtent - position.pixels <= 200;
+    if (isNearTop &&
+        !_isLoadingMore &&
+        !_isCliqueBot &&
+        context.read<ChatBloc>().state.hasMoreMessages) {
+      _loadMoreMessages();
+    }
   }
 
   void _sendTyping(bool typing) {
@@ -274,6 +316,11 @@ class _ChatPageState extends State<ChatPage>
   void _sendMessage(String text) {
     if (text.trim().isEmpty || _isSending) return;
 
+    if (_hasReachedMessageLimit(context.read<ChatBloc>().state.messages)) {
+      _showMessageLimitSnack();
+      return;
+    }
+
     _sendTyping(false);
     _isSending = true;
 
@@ -323,6 +370,11 @@ class _ChatPageState extends State<ChatPage>
   }
 
   void _sendMedia(File file, UploadType type) {
+    if (_hasReachedMessageLimit(context.read<ChatBloc>().state.messages)) {
+      _showMessageLimitSnack();
+      return;
+    }
+
     context.read<CloudinaryCubit>().uploadFile(type: type, file: file);
   }
 
@@ -352,6 +404,12 @@ class _ChatPageState extends State<ChatPage>
                 current.status == UploadStatus.success &&
                 current.uploadedUrl != null,
             listener: (context, state) {
+              final currentMessages = context.read<ChatBloc>().state.messages;
+              if (_hasReachedMessageLimit(currentMessages)) {
+                _showMessageLimitSnack();
+                return;
+              }
+
               String messageText = '';
               switch (state.uploadType) {
                 case UploadType.image:
@@ -471,6 +529,8 @@ class _ChatPageState extends State<ChatPage>
                   if (isUploading) _buildUploadProgress(),
                   if (_buildTypingIndicator(state))
                     _buildTypingIndicatorWidget(),
+                  if (_hasMessageLimit)
+                    _buildMessageLimitBanner(messages),
                   if (_showDraftSaved &&
                       _messageController.text.trim().isNotEmpty)
                     _buildDraftSavedIndicator(),
@@ -484,9 +544,9 @@ class _ChatPageState extends State<ChatPage>
                     onPickImage: () => _pickImage(ImageSource.gallery),
                     onPickCamera: () => _pickImage(ImageSource.camera),
                     onPickVideo: _pickVideo,
-                    onPickDocument: _pickDocument,
-                    onSendVoice: (file) => _sendMedia(file, UploadType.audio),
-                  ),
+                  onPickDocument: _pickDocument,
+                  onSendVoice: (file) => _sendMedia(file, UploadType.audio),
+                ),
                 ],
               ),
             );
@@ -798,6 +858,42 @@ class _ChatPageState extends State<ChatPage>
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMessageLimitBanner(List<MessageModel> messages) {
+    final remaining =
+        (widget.maxOutgoingMessages - _outgoingMessageCount(messages))
+            .clamp(0, widget.maxOutgoingMessages);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: (isDark ? AppColors.darkCard : AppColors.white),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.primary.withOpacity(0.12)),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.info_outline_rounded,
+              size: 16,
+              color: AppColors.primary,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                widget.messageLimitHint ??
+                    'You can send $remaining more message${remaining == 1 ? '' : 's'} here.',
+                style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
+              ),
+            ),
+          ],
         ),
       ),
     );

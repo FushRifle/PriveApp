@@ -67,6 +67,38 @@ class EventService {
     }
   }
 
+  Future<EventModel> updateEvent({
+    required int eventId,
+    required String title,
+    required String description,
+    required String category,
+    required String location,
+    required DateTime startsAt,
+    DateTime? endsAt,
+    String imageUrl = '',
+    bool isPrivate = false,
+  }) async {
+    try {
+      final response = await _api.put(
+        '/api/events/$eventId',
+        data: {
+          'title': title,
+          'description': description,
+          'category': category,
+          'location': location,
+          'imageUrl': imageUrl,
+          'startsAt': startsAt.toUtc().toIso8601String(),
+          if (endsAt != null) 'endsAt': endsAt.toUtc().toIso8601String(),
+          'isPrivate': isPrivate,
+        },
+      );
+      _clearEventCaches();
+      return EventModel.fromJson(_asMap(response.data));
+    } on DioException catch (e) {
+      throw _handleError(e, 'Failed to update event');
+    }
+  }
+
   Future<EventModel> respondToEvent(int eventId, String status) async {
     try {
       final response = await _api.post(

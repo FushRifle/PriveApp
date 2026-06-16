@@ -26,6 +26,7 @@ class NamedRoutes {
   static const createReelScreen = '/create-reel-screen';
   static const createCommunityScreen = '/create-community-screen';
   static const createEventScreen = '/create-event-screen';
+  static const eventDetailsScreen = '/event-details-screen';
   static const communityGroupChatScreen = '/community-group-chat-screen';
   static const communityGroupInfoScreen = '/community-group-info-screen';
   static const postDetailScreen = '/post-detail-screen';

@@ -401,7 +401,7 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
         padding:
             EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
         child: SizedBox(
-          height: MediaQuery.of(context).size.height * 0.6,
+          height: MediaQuery.of(context).size.height * 0.88,
           width: double.infinity,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -464,6 +464,8 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
   }
 
   Widget _buildCommentsList() {
+    final threads = groupCommentsIntoThreads(_comments);
+
     if (_isLoading && _comments.isEmpty) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primary),
@@ -532,9 +534,9 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
       },
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 26),
-        itemCount: _comments.length + (_isLoadingMore ? 1 : 0),
+        itemCount: threads.length + (_isLoadingMore ? 1 : 0),
         itemBuilder: (context, index) {
-          if (index == _comments.length) {
+          if (index == threads.length) {
             return const Padding(
               padding: EdgeInsets.symmetric(vertical: 16),
               child: Center(
@@ -542,29 +544,26 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
               ),
             );
           }
-          final comment = _comments[index];
-          return Column(
-            children: [
-              _buildCommentCard(
-                comment.id,
-                comment.userAvatar,
-                comment.userName,
-                comment.content,
-                comment.audioUrl,
-                comment.duration,
-                comment.isVoiceNote,
-                comment.formattedTimeAgo,
-                comment.likes,
-                comment.dislikes,
-                comment.replyCount,
-                comment.isLiked,
-                comment.isDisliked,
-                false,
-                index == 0,
-                index == _comments.length - 1,
-              ),
-              const SizedBox(height: 6),
-            ],
+          return CommentThreadCard(
+            thread: threads[index],
+            isFirst: index == 0,
+            isLast: index == threads.length - 1,
+            onLike: (comment) => context.read<FeedBloc>().add(
+                  LikePostComment(
+                    postId: widget.postId,
+                    commentId: comment.id,
+                  ),
+                ),
+            onDislike: (comment) => context.read<FeedBloc>().add(
+                  DislikePostComment(
+                    postId: widget.postId,
+                    commentId: comment.id,
+                  ),
+                ),
+            onReply: (comment) {
+              _commentController.text = '@${comment.userName} ';
+              _focusNode.requestFocus();
+            },
           );
         },
       ),
@@ -701,139 +700,6 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
                         ),
                 ),
               ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCommentCard(
-    int commentId,
-    String imageUrl,
-    String name,
-    String comment,
-    String audioUrl,
-    int duration,
-    bool isVoiceNote,
-    String time,
-    int likes,
-    int dislikes,
-    int replyCount,
-    bool isLiked,
-    bool isDisliked,
-    bool isTemp,
-    bool isFirst,
-    bool isLast,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Stack(
-        children: [
-          Positioned(
-            left: 22,
-            top: isFirst ? 22 : 0,
-            bottom: isLast ? 22 : 0,
-            child: Container(
-              width: 1.5,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CommentAvatar(
-                imageUrl: imageUrl,
-                fallback: name,
-                size: 49,
-              ),
-              const SizedBox(width: 12),
-              Flexible(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTheme.blackTextStyle.copyWith(
-                              fontSize: 14,
-                              fontWeight: AppTheme.bold,
-                            ),
-                          ),
-                        ),
-                        if (isTemp) ...[
-                          const SizedBox(width: 8),
-                          SizedBox(
-                            width: 12,
-                            height: 12,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    if (isVoiceNote || audioUrl.isNotEmpty)
-                      CommentVoiceNoteCard(
-                        avatar: imageUrl,
-                        name: name,
-                        audioUrl: audioUrl,
-                        duration: duration,
-                        timeLabel: time,
-                        isTemp: isTemp,
-                        isCompact: true,
-                      )
-                    else if (comment.isNotEmpty)
-                      Text(
-                        comment,
-                        style: isTemp
-                            ? AppTheme.greyTextStyle.copyWith(
-                                fontSize: 12,
-                                fontWeight: AppTheme.medium,
-                                fontStyle: FontStyle.italic,
-                              )
-                            : AppTheme.greyTextStyle.copyWith(
-                                fontSize: 12,
-                                fontWeight: AppTheme.medium,
-                              ),
-                      ),
-                    const SizedBox(height: 6),
-                    CommentActionBar(
-                      likes: likes,
-                      dislikes: dislikes,
-                      replyCount: replyCount,
-                      isLiked: isLiked,
-                      isDisliked: isDisliked,
-                      timeLabel: time,
-                      onLike: () => context.read<FeedBloc>().add(
-                            LikePostComment(
-                              postId: widget.postId,
-                              commentId: commentId,
-                            ),
-                          ),
-                      onDislike: () => context.read<FeedBloc>().add(
-                            DislikePostComment(
-                              postId: widget.postId,
-                              commentId: commentId,
-                            ),
-                          ),
-                      onReply: () {
-                        _commentController.text = '@$name ';
-                        _focusNode.requestFocus();
-                      },
-                    ),
-                  ],
-                ),
-              )
             ],
           ),
         ],

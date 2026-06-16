@@ -118,7 +118,7 @@ class _StatusViewPageState extends State<StatusViewPage>
   }
 
   void _markStoryAsSeen(String storyId) {
-    context.read<StoriesBloc>().add(MarkStorySeen(storyId: storyId));
+    _storiesBlocOrNull()?.add(MarkStorySeen(storyId: storyId));
   }
 
   @override
@@ -139,112 +139,113 @@ class _StatusViewPageState extends State<StatusViewPage>
       ),
     );
 
+    final bloc = _storiesBlocOrNull();
+
+    if (bloc == null) {
+      return _buildViewer(widget.stories);
+    }
+
     return BlocBuilder<StoriesBloc, StoriesState>(
       builder: (context, state) {
         final stories =
             state.stories.isNotEmpty ? state.stories : widget.stories;
-        final safeIndex = _safeStoryIndex(stories);
+        return _buildViewer(stories);
+      },
+    );
+  }
 
-        if (stories.isNotEmpty && safeIndex != currentIndex) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              setState(() {
-                currentIndex = safeIndex;
-              });
-            }
+  Widget _buildViewer(List<Story> stories) {
+    final safeIndex = _safeStoryIndex(stories);
+
+    if (stories.isNotEmpty && safeIndex != currentIndex) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            currentIndex = safeIndex;
           });
         }
+      });
+    }
 
-        if (stories.isEmpty) {
-          return const Scaffold(
-            backgroundColor: AppColors.black,
-            body: SizedBox.shrink(),
-          );
-        }
+    if (stories.isEmpty) {
+      return const Scaffold(
+        backgroundColor: AppColors.black,
+        body: SizedBox.shrink(),
+      );
+    }
 
-        return Scaffold(
-          backgroundColor: AppColors.black,
-          body: GestureDetector(
-            onTapDown: (details) {
-              final size = MediaQuery.of(context).size;
-              if (details.globalPosition.dy > size.height - 120) return;
+    return Scaffold(
+      backgroundColor: AppColors.black,
+      body: GestureDetector(
+        onTapDown: (details) {
+          final size = MediaQuery.of(context).size;
+          if (details.globalPosition.dy > size.height - 120) return;
 
-              final screenWidth = size.width;
-              if (details.globalPosition.dx < screenWidth / 2) {
-                _previousStatus();
-              } else {
-                _nextStatus();
-              }
-            },
-            onLongPress: _togglePause,
-            onLongPressUp: _togglePause,
-            child: Stack(
-              children: [
-                // Status Content
-                PageView.builder(
-                  controller: _pageController,
-                  itemCount: stories.length,
-                  physics: const NeverScrollableScrollPhysics(),
-                  onPageChanged: (index) {
-                    setState(() {
-                      currentIndex = index;
-                    });
-                    _progressController.reset();
-                    if (!_isPaused) {
-                      _progressController.forward();
-                    }
-                    // Mark story as seen when viewed
-                    _markStoryAsSeen(stories[index].id);
-                  },
-                  itemBuilder: (context, index) {
-                    return _buildStatusContent(stories[index]);
-                  },
-                ),
-
-                // Header
-                _buildHeader(stories),
-
-                // Progress Bars
-                _buildProgressBars(stories),
-
-                // Bottom Actions
-                _buildBottomActions(stories),
-
-                if (_isPaused && !_replyFocusNode.hasFocus)
-                  Positioned(
-                    top: MediaQuery.of(context).padding.top + 90,
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.black.withOpacity(0.28),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                            color: AppColors.white.withOpacity(0.2),
-                          ),
-                        ),
-                        child: Text(
-                          'Paused',
-                          style: TextStyle(
-                            color: AppColors.white.withOpacity(0.9),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
+          final screenWidth = size.width;
+          if (details.globalPosition.dx < screenWidth / 2) {
+            _previousStatus();
+          } else {
+            _nextStatus();
+          }
+        },
+        onLongPress: _togglePause,
+        onLongPressUp: _togglePause,
+        child: Stack(
+          children: [
+            PageView.builder(
+              controller: _pageController,
+              itemCount: stories.length,
+              physics: const NeverScrollableScrollPhysics(),
+              onPageChanged: (index) {
+                setState(() {
+                  currentIndex = index;
+                });
+                _progressController.reset();
+                if (!_isPaused) {
+                  _progressController.forward();
+                }
+                _markStoryAsSeen(stories[index].id);
+              },
+              itemBuilder: (context, index) {
+                return _buildStatusContent(stories[index]);
+              },
+            ),
+            _buildHeader(stories),
+            _buildProgressBars(stories),
+            _buildBottomActions(stories),
+            if (_isPaused && !_replyFocusNode.hasFocus)
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 90,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.black.withOpacity(0.28),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: AppColors.white.withOpacity(0.2),
+                      ),
+                    ),
+                    child: Text(
+                      'Paused',
+                      style: TextStyle(
+                        color: AppColors.white.withOpacity(0.9),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
                       ),
                     ),
                   ),
-              ],
-            ),
-          ),
-        );
-      },
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -295,7 +296,8 @@ class _StatusViewPageState extends State<StatusViewPage>
                         child: _StoryHashtagText(
                           text: story.content!,
                           textAlign: _getTextAlign(story.textAlign),
-                          style: _getTextStyle(story, hasMedia: mediaUrl != null),
+                          style:
+                              _getTextStyle(story, hasMedia: mediaUrl != null),
                         ),
                       )
                     : const SizedBox.shrink(),
@@ -665,26 +667,30 @@ class _StatusViewPageState extends State<StatusViewPage>
   }
 
   List<Story> _resolvedStories() {
-    final stories = context.read<StoriesBloc>().state.stories;
+    final stories = _storiesBlocOrNull()?.state.stories ?? const <Story>[];
     return stories.isNotEmpty ? stories : widget.stories;
   }
 
   void _likeStory(Story story) {
     HapticFeedback.lightImpact();
-    context.read<StoriesBloc>().add(
-          story.isLiked
-              ? UnlikeStoryEvent(storyId: story.id)
-              : LikeStoryEvent(storyId: story.id),
-        );
+    final bloc = _storiesBlocOrNull();
+    if (bloc == null) return;
+    bloc.add(
+      story.isLiked
+          ? UnlikeStoryEvent(storyId: story.id)
+          : LikeStoryEvent(storyId: story.id),
+    );
   }
 
   void _sendReply(String message, Story story) {
-    context.read<StoriesBloc>().add(
-          ReplyToStoryEvent(
-            storyId: story.id,
-            content: message.trim(),
-          ),
-        );
+    final bloc = _storiesBlocOrNull();
+    if (bloc == null) return;
+    bloc.add(
+      ReplyToStoryEvent(
+        storyId: story.id,
+        content: message.trim(),
+      ),
+    );
   }
 
   void _showRepostSheet(Story story) {
@@ -771,7 +777,7 @@ class _StatusViewPageState extends State<StatusViewPage>
   }
 
   void _repostStory(Story story, {String caption = ''}) {
-    context.read<StoriesBloc>().add(ReshareStoryEvent(storyId: story.id));
+    _storiesBlocOrNull()?.add(ReshareStoryEvent(storyId: story.id));
   }
 
   void _showStoryOptions(Story story) {
@@ -793,11 +799,13 @@ class _StatusViewPageState extends State<StatusViewPage>
                   title: const Text('Edit Status'),
                   onTap: () {
                     Navigator.pop(sheetContext);
+                    final bloc = _storiesBlocOrNull();
+                    if (bloc == null) return;
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => BlocProvider.value(
-                          value: context.read<StoriesBloc>(),
+                          value: bloc,
                           child: EditStatusPage(story: story),
                         ),
                       ),
@@ -811,9 +819,8 @@ class _StatusViewPageState extends State<StatusViewPage>
                   iconColor: AppColors.redColor,
                   onTap: () {
                     Navigator.pop(sheetContext);
-                    context
-                        .read<StoriesBloc>()
-                        .add(DeleteStoryEvent(storyId: story.id));
+                    _storiesBlocOrNull()
+                        ?.add(DeleteStoryEvent(storyId: story.id));
                     Navigator.pop(context);
                   },
                 ),
@@ -823,6 +830,14 @@ class _StatusViewPageState extends State<StatusViewPage>
         );
       },
     );
+  }
+
+  StoriesBloc? _storiesBlocOrNull() {
+    try {
+      return context.read<StoriesBloc>();
+    } catch (_) {
+      return null;
+    }
   }
 }
 

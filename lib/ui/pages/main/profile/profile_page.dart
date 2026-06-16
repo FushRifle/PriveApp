@@ -111,6 +111,39 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
+  void _prefetchVisibleMedia(ProfileView? profile) {
+    if (profile == null) return;
+
+    final userId = _profileUserId(profile);
+    if (userId == null) return;
+
+    final type = _tabTypeForIndex(_tabController.index);
+    if (type == null) return;
+
+    final mediaType = _mediaType(type);
+    final key = '$userId:${mediaType ?? 'all'}';
+    if (_loadedMediaKey == key) return;
+
+    _loadedMediaKey = key;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final currentProfile = _currentProfile(
+        context.read<UserBloc>().state,
+        context.read<ProfileBloc>().state,
+      );
+      if (currentProfile == null) return;
+
+      final currentUserId = _profileUserId(currentProfile);
+      if (currentUserId != userId) return;
+
+      _galleryCubit.getUserMedia(
+        userId: userId,
+        type: mediaType,
+        page: 1,
+      );
+    });
+  }
+
   void _loadMoreMedia(int userId, ProfileGalleryTabType type) {
     _galleryCubit.loadMoreMedia(
       userId: userId,
@@ -191,6 +224,7 @@ class _ProfilePageState extends State<ProfilePage>
               },
               builder: (context, profileState) {
                 final profile = _currentProfile(userState, profileState);
+                _prefetchVisibleMedia(profile);
 
                 return ProfileBody(
                   isLoading: userState.isLoading ||

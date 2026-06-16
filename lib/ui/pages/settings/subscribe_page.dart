@@ -275,13 +275,7 @@ class _SubscribePageState extends State<SubscribePage> {
                   description: 'Upload high-quality videos and photos',
                   color: AppColors.primary,
                 ),
-                const SizedBox(height: 20),
-                _buildFeatureItem(
-                  icon: Icons.auto_awesome,
-                  title: 'Exclusive Filters',
-                  description: 'Access premium filters and effects',
-                  color: AppColors.secondary,
-                ),
+               
                 const SizedBox(height: 20),
                 _buildFeatureItem(
                   icon: Icons.headphones,
@@ -289,13 +283,7 @@ class _SubscribePageState extends State<SubscribePage> {
                   description: '24/7 dedicated customer support',
                   color: AppColors.teal,
                 ),
-                const SizedBox(height: 20),
-                _buildFeatureItem(
-                  icon: Icons.edit_note,
-                  title: 'Edit Posts',
-                  description: 'Update published posts without reposting',
-                  color: AppColors.indigo,
-                ),
+                
                 const SizedBox(height: 20),
                 _buildFeatureItem(
                   icon: Icons.schedule_send,
@@ -303,13 +291,7 @@ class _SubscribePageState extends State<SubscribePage> {
                   description: 'Plan posts ahead and publish at the right time',
                   color: AppColors.cyan,
                 ),
-                const SizedBox(height: 20),
-                _buildFeatureItem(
-                  icon: Icons.groups,
-                  title: 'Communities and Groups',
-                  description: 'Create private spaces for your audience',
-                  color: AppColors.attachmentGreen,
-                ),
+               
                 const SizedBox(height: 20),
                 _buildFeatureItem(
                   icon: Icons.video_collection,
@@ -330,34 +312,6 @@ class _SubscribePageState extends State<SubscribePage> {
                   title: 'Story Insights',
                   description: 'See deeper performance stats for your stories',
                   color: AppColors.storyTeal,
-                ),
-                const SizedBox(height: 20),
-                _buildFeatureItem(
-                  icon: Icons.travel_explore,
-                  title: 'Advanced Matching',
-                  description: 'Use richer matching tools while discovering',
-                  color: AppColors.redAccent,
-                ),
-                const SizedBox(height: 20),
-                _buildFeatureItem(
-                  icon: Icons.manage_accounts,
-                  title: 'Profile Customization',
-                  description: 'Unlock more ways to shape your profile',
-                  color: AppColors.blueGrey,
-                ),
-                const SizedBox(height: 20),
-                _buildFeatureItem(
-                  icon: Icons.mic,
-                  title: 'Voice Notes',
-                  description: 'Send voice messages in chats',
-                  color: AppColors.attachmentPurple,
-                ),
-                const SizedBox(height: 20),
-                _buildFeatureItem(
-                  icon: Icons.done_all,
-                  title: 'Read Receipts',
-                  description: 'Know when your messages have been seen',
-                  color: AppColors.githubGreen,
                 ),
                 const SizedBox(height: 20),
                 _buildFeatureItem(

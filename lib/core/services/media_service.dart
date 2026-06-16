@@ -31,13 +31,22 @@ class MediaService {
     CropAspectRatio? aspectRatio,
   }) async {
     try {
+      final window = WidgetsBinding.instance.platformDispatcher.views.isNotEmpty
+          ? WidgetsBinding.instance.platformDispatcher.views.first
+          : null;
+      final logicalSize = window == null
+          ? const Size(0, 0)
+          : window.physicalSize / window.devicePixelRatio;
+      final isCompactCropper =
+          logicalSize.width < 390 || logicalSize.height < 720;
+
       final cropped = await ImageCropper().cropImage(
         sourcePath: file.path,
         compressQuality: 92,
         aspectRatio: aspectRatio,
         uiSettings: [
           AndroidUiSettings(
-            toolbarTitle: 'Crop photo',
+            toolbarTitle: isCompactCropper ? 'Crop' : 'Crop photo',
             toolbarColor: Colors.black,
             toolbarWidgetColor: Colors.white,
             statusBarColor: Colors.black,
@@ -46,12 +55,12 @@ class MediaService {
             cropFrameColor: Colors.white,
             cropGridColor: Colors.white24,
             showCropGrid: true,
-            hideBottomControls: false,
+            hideBottomControls: isCompactCropper,
             initAspectRatio: CropAspectRatioPreset.original,
             lockAspectRatio: aspectRatio != null,
           ),
           IOSUiSettings(
-            title: 'Crop photo',
+            title: isCompactCropper ? 'Crop' : 'Crop photo',
             doneButtonTitle: 'Done',
             cancelButtonTitle: 'Cancel',
             aspectRatioLockEnabled: aspectRatio != null,

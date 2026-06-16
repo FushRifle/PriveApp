@@ -7,8 +7,9 @@ import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/event/event_bloc.dart';
 import 'package:clique/core/models/event_model.dart';
-import 'package:clique/ui/pages/main/event/create_event_page.dart';
 import 'package:clique/ui/widgets/common/app_page_header.dart';
+import 'package:clique/ui/pages/main/event/create_event_page.dart';
+import 'package:clique/ui/pages/main/event/event_details_page.dart';
 
 const _eventCategories = [
   '',
@@ -67,14 +68,33 @@ class _EventsPageState extends State<EventsPage>
           previous.actionStatus != current.actionStatus,
       listener: _handleStateChange,
       builder: (context, state) {
-        final featured = state.events.isNotEmpty ? state.events.first : null;
-        final remaining = state.events.length > 1
-            ? state.events.sublist(1)
-            : const <EventModel>[];
         final todayCount = state.events
             .where((event) => _isSameDay(event.startsAt, DateTime.now()))
             .length;
         final goingCount = state.events.where((event) => event.isGoing).length;
+
+        if (state.status == EventStatus.loading && state.events.isEmpty) {
+          return Scaffold(
+            backgroundColor: AppColors.background,
+            body: const Center(
+              child: CircularProgressIndicator(
+                color: AppColors.primary,
+              ),
+            ),
+          );
+        }
+
+        if (state.events.isEmpty) {
+          return Scaffold(
+            backgroundColor: AppColors.background,
+            body: _EventsEmpty(onCreate: _openCreateEvent),
+          );
+        }
+
+        final featuredEvent = state.events.first;
+        final remaining = state.events.length > 1
+            ? state.events.sublist(1)
+            : const <EventModel>[];
 
         return Scaffold(
           backgroundColor: AppColors.background,
@@ -83,118 +103,127 @@ class _EventsPageState extends State<EventsPage>
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               SliverToBoxAdapter(
-                child: Column(
-                  children: [
-                    AppPageHeader(
-                      title: 'Events',
-                      subtitle: state.events.isEmpty
-                          ? 'Discover live conversations, meetups, and moments.'
-                          : '${state.events.length} event${state.events.length == 1 ? '' : 's'} visible',
-                      leadingIcon: Icons.event_rounded,
-                      actionIcon: Icons.add_rounded,
-                      onActionTap: _openCreateEvent,
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      child: _HeroSummary(
-                        totalCount: state.events.length,
-                        todayCount: todayCount,
-                        goingCount: goingCount,
-                        onCreate: _openCreateEvent,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      child: _SearchAndFilters(
-                        searchController: _searchController,
-                        category: _category,
-                        onCategoryChanged: _changeCategory,
-                        onSearch: _search,
-                      ),
-                    ),
-                  ],
+                child: AppPageHeader(
+                  title: 'Events',
+                  subtitle:
+                      'Discover live conversations, meetups, and moments worth showing up for.',
+                  leadingIcon: Icons.event_rounded,
+                  actionIcon: Icons.add_rounded,
+                  onActionTap: _openCreateEvent,
                 ),
               ),
-              if (state.status == EventStatus.loading && state.events.isEmpty)
-                const SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.primary,
-                    ),
-                  ),
-                )
-              else if (state.events.isEmpty)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: _EventsEmpty(onCreate: _openCreateEvent),
-                )
-              else ...[
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-                    child: _SectionLabel(
-                      title: 'Featured',
-                      subtitle: 'The next thing people can act on now',
-                    ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      _HeroStatChip(
+                        icon: Icons.event_available_outlined,
+                        label: '${state.events.length} total',
+                      ),
+                      _HeroStatChip(
+                        icon: Icons.today_outlined,
+                        label: '$todayCount today',
+                      ),
+                      _HeroStatChip(
+                        icon: Icons.how_to_reg_outlined,
+                        label: '$goingCount going',
+                      ),
+                    ],
                   ),
                 ),
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  sliver: SliverToBoxAdapter(
-                    child: _EventCard(
-                      event: featured!,
-                      compact: false,
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: _SearchAndFilters(
+                    searchController: _searchController,
+                    category: _category,
+                    onCategoryChanged: _changeCategory,
+                    onSearch: _search,
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+                  child: _SectionLabel(
+                    title: 'Featured',
+                    subtitle: 'The next thing people can act on now',
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverToBoxAdapter(
+                  child: _EventCard(
+                    event: featuredEvent,
+                    compact: false,
+                    onTap: () => _openEventDetails(featuredEvent),
+                    onGoing: () => context.read<EventBloc>().add(
+                          RsvpEvent(
+                            eventId: featuredEvent.id,
+                            status: 'going',
+                          ),
+                        ),
+                    onInterested: () => context.read<EventBloc>().add(
+                          RsvpEvent(
+                            eventId: featuredEvent.id,
+                            status: 'interested',
+                          ),
+                        ),
+                    onLeave: () => context.read<EventBloc>().add(
+                          RsvpEvent(
+                            eventId: featuredEvent.id,
+                            status: 'not_going',
+                          ),
+                        ),
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 18, 16, 10),
+                  child: _SectionLabel(
+                    title: 'More events',
+                    subtitle: remaining.isEmpty
+                        ? 'No additional events loaded'
+                        : '${remaining.length} more events',
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 110),
+                sliver: SliverList.separated(
+                  itemBuilder: (context, index) {
+                    final event = remaining[index];
+                    return _EventCard(
+                      event: event,
+                      compact: true,
+                      onTap: () => _openEventDetails(event),
                       onGoing: () => context.read<EventBloc>().add(
-                            RsvpEvent(eventId: featured.id, status: 'going'),
+                            RsvpEvent(eventId: event.id, status: 'going'),
                           ),
                       onInterested: () => context.read<EventBloc>().add(
                             RsvpEvent(
-                                eventId: featured.id, status: 'interested'),
+                              eventId: event.id,
+                              status: 'interested',
+                            ),
                           ),
                       onLeave: () => context.read<EventBloc>().add(
                             RsvpEvent(
-                                eventId: featured.id, status: 'not_going'),
+                              eventId: event.id,
+                              status: 'not_going',
+                            ),
                           ),
-                    ),
-                  ),
+                    );
+                  },
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemCount: remaining.length,
                 ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 18, 16, 10),
-                    child: _SectionLabel(
-                      title: 'More events',
-                      subtitle: remaining.isEmpty
-                          ? 'No additional events loaded'
-                          : '${remaining.length} more events',
-                    ),
-                  ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 110),
-                  sliver: SliverList.separated(
-                    itemBuilder: (context, index) {
-                      final event = remaining[index];
-                      return _EventCard(
-                        event: event,
-                        compact: true,
-                        onGoing: () => context.read<EventBloc>().add(
-                              RsvpEvent(eventId: event.id, status: 'going'),
-                            ),
-                        onInterested: () => context.read<EventBloc>().add(
-                              RsvpEvent(
-                                  eventId: event.id, status: 'interested'),
-                            ),
-                        onLeave: () => context.read<EventBloc>().add(
-                              RsvpEvent(eventId: event.id, status: 'not_going'),
-                            ),
-                      );
-                    },
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemCount: remaining.length,
-                  ),
-                ),
-              ],
+              ),
               if (state.hasMore && state.events.isNotEmpty)
                 const SliverToBoxAdapter(
                   child: Padding(
@@ -279,72 +308,49 @@ class _EventsPageState extends State<EventsPage>
       ),
     );
   }
+
+  void _openEventDetails(EventModel event) {
+    HapticFeedback.lightImpact();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: context.read<EventBloc>(),
+          child: EventDetailsPage(event: event),
+        ),
+      ),
+    );
+  }
 }
 
-class _HeroSummary extends StatelessWidget {
-  final int totalCount;
-  final int todayCount;
-  final int goingCount;
-  final VoidCallback onCreate;
+class _HeroStatChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
 
-  const _HeroSummary({
-    required this.totalCount,
-    required this.todayCount,
-    required this.goingCount,
-    required this.onCreate,
+  const _HeroStatChip({
+    required this.icon,
+    required this.label,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(18),
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withOpacity(0.03),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-        ],
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(
-              Icons.event_rounded,
-              color: AppColors.primary,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Plan what comes next',
-                  style: AppTheme.blackTextStyle.copyWith(
-                    fontSize: 16,
-                    fontWeight: AppTheme.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Browse events, RSVP, and create new ones without leaving the tab.',
-                  style: AppTheme.greyTextStyle.copyWith(
-                    fontSize: 12,
-                    height: 1.35,
-                  ),
-                ),
-              ],
+          Icon(icon, size: 15, color: AppColors.primary),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: AppTheme.greyTextStyle.copyWith(
+              fontSize: 12,
+              fontWeight: AppTheme.bold,
             ),
           ),
         ],
@@ -372,12 +378,34 @@ class _SearchAndFilters extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withOpacity(0.03),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              'Search and filter',
+              style: AppTheme.greyTextStyle.copyWith(
+                fontSize: 11,
+                fontWeight: AppTheme.bold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           TextField(
             controller: searchController,
             textInputAction: TextInputAction.search,
@@ -390,7 +418,7 @@ class _SearchAndFilters extends StatelessWidget {
               ),
               prefixIcon: const Icon(Icons.search, size: 22),
               suffixIcon: IconButton(
-                icon: const Icon(Icons.tune, size: 20),
+                icon: const Icon(Icons.tune_rounded, size: 20),
                 onPressed: onSearch,
               ),
               border: InputBorder.none,
@@ -403,35 +431,36 @@ class _SearchAndFilters extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          SizedBox(
-            height: 38,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemBuilder: (context, index) {
-                final item = _eventCategories[index];
-                final selected = item == category;
-                return ChoiceChip(
-                  selected: selected,
-                  label: Text(item.isEmpty ? 'All' : item),
-                  onSelected: (_) => onCategoryChanged(item),
-                  selectedColor: AppColors.primary.withOpacity(0.10),
-                  backgroundColor: AppColors.background,
-                  showCheckmark: false,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(
-                      color: selected ? AppColors.primary : AppColors.border,
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final item in _eventCategories) ...[
+                  ChoiceChip(
+                    selected: item == category,
+                    label: Text(item.isEmpty ? 'All' : item),
+                    onSelected: (_) => onCategoryChanged(item),
+                    selectedColor: AppColors.primary.withOpacity(0.12),
+                    backgroundColor: AppColors.background,
+                    showCheckmark: false,
+                    shape: StadiumBorder(
+                      side: BorderSide(
+                        color: item == category
+                            ? AppColors.primary
+                            : AppColors.border,
+                      ),
+                    ),
+                    labelStyle: TextStyle(
+                      color:
+                          item == category ? AppColors.primary : AppColors.text,
+                      fontWeight:
+                          item == category ? AppTheme.bold : AppTheme.medium,
+                      fontSize: 13,
                     ),
                   ),
-                  labelStyle: TextStyle(
-                    color: selected ? AppColors.primary : AppColors.text,
-                    fontWeight: selected ? AppTheme.bold : AppTheme.medium,
-                    fontSize: 13,
-                  ),
-                );
-              },
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemCount: _eventCategories.length,
+                  const SizedBox(width: 8),
+                ],
+              ],
             ),
           ),
         ],
@@ -492,31 +521,38 @@ class _EventsEmpty extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: AppColors.card,
-            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.card,
+                AppColors.primary.withOpacity(0.05),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(28),
             border: Border.all(color: AppColors.border),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 78,
-                height: 78,
+                width: 84,
+                height: 84,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(22),
+                  color: AppColors.primary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(24),
                 ),
                 child: const Icon(
-                  Icons.event_outlined,
+                  Icons.event_available_outlined,
                   color: AppColors.primary,
-                  size: 34,
+                  size: 36,
                 ),
               ),
               const SizedBox(height: 18),
               Text(
                 'No events yet',
                 style: AppTheme.blackTextStyle.copyWith(
-                  fontSize: 18,
+                  fontSize: 19,
                   fontWeight: AppTheme.bold,
                 ),
               ),
@@ -525,13 +561,19 @@ class _EventsEmpty extends StatelessWidget {
                 'Create the first event and let people RSVP.',
                 textAlign: TextAlign.center,
                 style:
-                    AppTheme.greyTextStyle.copyWith(fontSize: 13, height: 1.4),
+                    AppTheme.greyTextStyle.copyWith(fontSize: 13, height: 1.45),
               ),
               const SizedBox(height: 18),
               FilledButton.icon(
                 onPressed: onCreate,
-                icon: const Icon(Icons.add),
+                icon: const Icon(Icons.add_rounded),
                 label: const Text('Create event'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
               ),
             ],
           ),
@@ -544,6 +586,7 @@ class _EventsEmpty extends StatelessWidget {
 class _EventCard extends StatelessWidget {
   final EventModel event;
   final bool compact;
+  final VoidCallback onTap;
   final VoidCallback onGoing;
   final VoidCallback onInterested;
   final VoidCallback onLeave;
@@ -551,6 +594,7 @@ class _EventCard extends StatelessWidget {
   const _EventCard({
     required this.event,
     required this.compact,
+    required this.onTap,
     required this.onGoing,
     required this.onInterested,
     required this.onLeave,
@@ -558,164 +602,177 @@ class _EventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withOpacity(0.03),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _EventImage(imageUrl: event.imageUrl, compact: compact),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _DateRail(date: event.startsAt),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompactWidth = constraints.maxWidth < 400;
+        final isCompactImage = compact || isCompactWidth;
+
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(24),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.card,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppColors.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.black.withOpacity(0.03),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Stack(
                     children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              event.title,
-                              maxLines: compact ? 2 : 3,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTheme.blackTextStyle.copyWith(
-                                fontSize: compact ? 16 : 18,
-                                fontWeight: AppTheme.bold,
+                      _EventImage(
+                          imageUrl: event.imageUrl, compact: isCompactImage),
+                      Positioned(
+                        top: 14,
+                        left: 14,
+                        right: 14,
+                        child: Row(
+                          children: [
+                            if (event.category.isNotEmpty)
+                              _FloatingTag(
+                                icon: Icons.sell_outlined,
+                                label: event.category,
                               ),
-                            ),
-                          ),
-                          if (event.isPrivate) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.all(7),
-                              decoration: BoxDecoration(
-                                color: AppColors.background,
-                                borderRadius: BorderRadius.circular(10),
+                            const Spacer(),
+                            if (event.isPrivate)
+                              _FloatingTag(
+                                icon: Icons.lock_outline,
+                                label: 'Private',
                               ),
-                              child: Icon(
-                                Icons.lock_outline,
-                                size: 15,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
                           ],
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          if (event.category.isNotEmpty)
-                            _MetaChip(
-                              icon: Icons.sell_outlined,
-                              label: event.category,
-                            ),
-                          if (event.location.isNotEmpty)
-                            _MetaChip(
-                              icon: Icons.place_outlined,
-                              label: event.location,
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        event.description.isEmpty
-                            ? 'No description provided.'
-                            : event.description,
-                        maxLines: compact ? 2 : 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTheme.greyTextStyle.copyWith(
-                          height: 1.45,
-                          fontSize: 13,
                         ),
-                      ),
-                      const SizedBox(height: 14),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 8,
-                        children: [
-                          _StatPill(
-                            icon: Icons.check_circle_outline,
-                            label: '${event.goingCount} going',
-                          ),
-                          _StatPill(
-                            icon: Icons.favorite_border,
-                            label: '${event.interestedCount} interested',
-                          ),
-                          if (event.host?.name.isNotEmpty == true)
-                            _StatPill(
-                              icon: Icons.person_outline,
-                              label: event.host!.name,
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: [
-                          FilledButton(
-                            onPressed: event.isGoing ? onLeave : onGoing,
-                            style: FilledButton.styleFrom(
-                              backgroundColor: event.isGoing
-                                  ? AppColors.success.withOpacity(0.12)
-                                  : AppColors.primary,
-                              foregroundColor: event.isGoing
-                                  ? AppColors.success
-                                  : AppColors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                            child: Text(event.isGoing ? 'Going' : 'Going'),
-                          ),
-                          OutlinedButton(
-                            onPressed:
-                                event.isInterested ? onLeave : onInterested,
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                            child: Text(
-                                event.isInterested ? 'Saved' : 'Interested'),
-                          ),
-                        ],
                       ),
                     ],
                   ),
-                ),
-              ],
+                  Padding(
+                    padding: EdgeInsets.all(isCompactImage ? 14 : 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _DateRail(date: event.startsAt),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    event.title,
+                                    maxLines: isCompactImage ? 2 : 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTheme.blackTextStyle.copyWith(
+                                      fontSize: isCompactImage ? 16 : 18,
+                                      fontWeight: AppTheme.bold,
+                                      height: 1.15,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    event.description.isEmpty
+                                        ? 'No description provided.'
+                                        : event.description,
+                                    maxLines: isCompactImage ? 2 : 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTheme.greyTextStyle.copyWith(
+                                      height: 1.45,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            if (event.location.isNotEmpty)
+                              _MetaChip(
+                                icon: Icons.place_outlined,
+                                label: event.location,
+                              ),
+                            _MetaChip(
+                              icon: Icons.check_circle_outline,
+                              label: '${event.goingCount} going',
+                            ),
+                            _MetaChip(
+                              icon: Icons.favorite_border,
+                              label: '${event.interestedCount} interested',
+                            ),
+                            if (event.host?.name.isNotEmpty == true)
+                              _MetaChip(
+                                icon: Icons.person_outline,
+                                label: event.host!.name,
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            FilledButton(
+                              onPressed: event.isGoing ? onLeave : onGoing,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: event.isGoing
+                                    ? AppColors.success.withOpacity(0.12)
+                                    : AppColors.primary,
+                                foregroundColor: event.isGoing
+                                    ? AppColors.success
+                                    : AppColors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              child:
+                                  Text(event.isGoing ? 'Going' : 'RSVP going'),
+                            ),
+                            OutlinedButton(
+                              onPressed:
+                                  event.isInterested ? onLeave : onInterested,
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              child: Text(
+                                event.isInterested ? 'Saved' : 'Interested',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -870,30 +927,38 @@ class _MetaChip extends StatelessWidget {
   }
 }
 
-class _StatPill extends StatelessWidget {
+class _FloatingTag extends StatelessWidget {
   final IconData icon;
   final String label;
 
-  const _StatPill({
+  const _FloatingTag({
     required this.icon,
     required this.label,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 15, color: AppColors.textSecondary),
-        const SizedBox(width: 5),
-        Text(
-          label,
-          style: AppTheme.greyTextStyle.copyWith(
-            fontSize: 12,
-            fontWeight: AppTheme.medium,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppColors.black.withOpacity(0.45),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.white24),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: AppColors.white),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: AppTheme.whiteTextStyle.copyWith(
+              fontSize: 11,
+              fontWeight: AppTheme.bold,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

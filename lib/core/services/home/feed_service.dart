@@ -46,9 +46,22 @@ class FeedService {
       debugPrint('Posts response status: ${response.statusCode}');
 
       final postsResponse = _parsePostsResponse(response.data, page);
-      if (forceRefresh && page == 1) {
-        await _feedCacheService.clearFeedPages();
+      if (page == 1) {
+        final cachedLatest = _feedCacheService.readLatestFeed();
+        final mergedResponse = postsResponse.copyWith(
+          posts: _mergePosts(
+            postsResponse.posts,
+            cachedLatest?.posts ?? const [],
+          ),
+          hasMore: postsResponse.hasMore || (cachedLatest?.hasMore ?? false),
+        );
+        debugPrint(
+          'Feed cache merge: remote=${postsResponse.posts.length}, cached=${cachedLatest?.posts.length ?? 0}, merged=${mergedResponse.posts.length}',
+        );
+        await _feedCacheService.saveFeedPage(mergedResponse);
+        return mergedResponse;
       }
+
       await _feedCacheService.saveFeedPage(postsResponse);
       return postsResponse;
     } on DioException catch (e) {
@@ -165,14 +178,14 @@ class FeedService {
             return FeedPost.fromJson(_readMap(fallback.data));
           }
         } on DioException catch (fallbackError) {
-          debugPrint('Get post by id fallback error: ${fallbackError.response?.data}');
+          debugPrint(
+              'Get post by id fallback error: ${fallbackError.response?.data}');
         }
       }
 
       final cached = getCachedPosts();
-      final cachedMatch = cached?.posts
-          .where((post) => post.id == postId)
-          .toList();
+      final cachedMatch =
+          cached?.posts.where((post) => post.id == postId).toList();
       if (cachedMatch != null && cachedMatch.isNotEmpty) {
         return cachedMatch.first;
       }
@@ -248,8 +261,11 @@ class FeedService {
         data,
         postType: postType,
       );
+      final createdPost = FeedPost.fromJson(_readPostMap(response.data));
+      await _feedCacheService.prependLatestPost(createdPost);
+      debugPrint('Feed create: cached post ${createdPost.id}');
       _invalidateFeedCaches();
-      return FeedPost.fromJson(_readPostMap(response.data));
+      return createdPost;
     } on DioException catch (e) {
       debugPrint('Create post error: ${e.response?.data}');
       throw e.response?.data['message'] ?? 'Failed to create post';
@@ -383,8 +399,11 @@ class FeedService {
         '/api/feed/posts/$postId/repost',
         data: {'content': content},
       );
+      final repostedPost = FeedPost.fromJson(_readPostMap(response.data));
+      await _feedCacheService.prependLatestPost(repostedPost);
+      debugPrint('Feed repost: cached post ${repostedPost.id}');
       _invalidateFeedCaches();
-      return FeedPost.fromJson(_readPostMap(response.data));
+      return repostedPost;
     } on DioException catch (e) {
       debugPrint('Repost error: ${e.response?.data}');
       throw e.response?.data['message'] ??
@@ -544,6 +563,8 @@ class FeedService {
   Future<void> deletePost(int postId) async {
     try {
       await _api.delete('/api/feed/posts/$postId');
+      await _feedCacheService.removePost(postId);
+      debugPrint('Feed delete: removed post $postId from cache');
       _invalidateFeedCaches();
     } on DioException catch (e) {
       debugPrint('Delete post error: ${e.response?.data}');
@@ -562,13 +583,19 @@ class FeedService {
       );
 
       if (response.data is Map<String, dynamic>) {
+        final updatedPost = FeedPost.fromJson(_readPostMap(response.data));
+        await _feedCacheService.replacePost(updatedPost);
+        debugPrint('Feed update: replaced post ${updatedPost.id} in cache');
         _invalidatePostCaches(postId);
-        return FeedPost.fromJson(_readPostMap(response.data));
+        return updatedPost;
       }
 
       if (response.data is Map) {
+        final updatedPost = FeedPost.fromJson(_readPostMap(response.data));
+        await _feedCacheService.replacePost(updatedPost);
+        debugPrint('Feed update: replaced post ${updatedPost.id} in cache');
         _invalidatePostCaches(postId);
-        return FeedPost.fromJson(_readPostMap(response.data));
+        return updatedPost;
       }
 
       throw 'Invalid update response';
@@ -732,13 +759,33 @@ class FeedService {
     _api.removeCacheByPath('/api/feed/posts/$postId');
     _api.removeCacheByPath('/api/feed/posts/$postId/comments');
     _api.removeCacheByPath('/api/feed/users');
-    unawaited(_feedCacheService.clearFeedPages());
   }
 
   void _invalidateFeedCaches() {
     _api.removeCacheByPath('/api/feed/posts');
     _api.removeCacheByPath('/api/feed/users');
-    unawaited(_feedCacheService.clearFeedPages());
+  }
+
+  List<FeedPost> _mergePosts(
+    List<FeedPost> primary,
+    List<FeedPost> secondary,
+  ) {
+    final combined = <FeedPost>[
+      ...primary,
+      ...secondary.where(
+        (post) => !primary.any((candidate) => candidate.id == post.id),
+      ),
+    ];
+
+    combined.sort(
+      (a, b) {
+        final byDate = b.createdAt.compareTo(a.createdAt);
+        if (byDate != 0) return byDate;
+        return b.id.compareTo(a.id);
+      },
+    );
+
+    return combined;
   }
 
   List<String> _extractMentions(String text) {

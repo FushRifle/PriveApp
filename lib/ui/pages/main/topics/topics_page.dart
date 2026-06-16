@@ -3,6 +3,7 @@ import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/core/services/home/feed_service.dart';
+import 'package:clique/ui/pages/main/topics/topic_details.dart';
 import 'package:clique/ui/widgets/post/normal-post/post_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -175,6 +176,16 @@ class _TopicsPageState extends State<TopicsPage> {
     _loadPosts(refresh: true);
   }
 
+  void _openTopicDetails(String topic) {
+    HapticFeedback.lightImpact();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TopicDetailsPage(topic: topic),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -205,16 +216,17 @@ class _TopicsPageState extends State<TopicsPage> {
                   padding: const EdgeInsets.fromLTRB(18, 10, 18, 15),
                   child: _SectionLabel(
                     title: 'Trending topics',
-                    subtitle: 'Tap a card to jump into the latest conversation.',
+                    subtitle: 'Tap a trend to jump into the live conversation.',
                   ),
                 ),
               ),
               SliverToBoxAdapter(
-                child: _TopicRail(
+                child: _TopicTrendList(
                   topics: _topics,
                   selectedTopic: _selectedTopic,
                   loading: _loadingTopics,
                   onSelectTopic: _selectTopic,
+                  onOpenTopic: _openTopicDetails,
                 ),
               ),
               SliverToBoxAdapter(
@@ -310,8 +322,8 @@ class _TopicsHero extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(18, 15, 18, 16),
       child: Container(
         width: double.infinity,
-        decoration:
-            _panelDecoration(radius: 28, fill: AppColors.cardColor, shadow: 0.2),
+        decoration: _panelDecoration(
+            radius: 28, fill: AppColors.cardColor, shadow: 0.2),
         child: Padding(
           padding: const EdgeInsets.all(18),
           child: Column(
@@ -423,17 +435,19 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-class _TopicRail extends StatelessWidget {
+class _TopicTrendList extends StatelessWidget {
   final List<String> topics;
   final String? selectedTopic;
   final bool loading;
   final ValueChanged<String> onSelectTopic;
+  final ValueChanged<String> onOpenTopic;
 
-  const _TopicRail({
+  const _TopicTrendList({
     required this.topics,
     required this.selectedTopic,
     required this.loading,
     required this.onSelectTopic,
+    required this.onOpenTopic,
   });
 
   @override
@@ -442,73 +456,125 @@ class _TopicRail extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    return SizedBox(
-      height: 156,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 18),
-        scrollDirection: Axis.horizontal,
-        itemCount: topics.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          final topic = topics[index];
-          final selected = topic == selectedTopic;
-          final accent = _topicAccent(index);
-
-          return GestureDetector(
-            onTap: () => onSelectTopic(topic),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOutCubic,
-              width: 190,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: selected ? accent.withOpacity(0.08) : AppColors.cardColor,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: selected ? accent.withOpacity(0.45) : AppColors.cardBorderColor,
-                  width: selected ? 1.2 : 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.shadow.withOpacity(selected ? 0.12 : 0.10),
-                    blurRadius: 14,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+      child: Container(
+        decoration: _panelDecoration(
+          radius: 28,
+          fill: AppColors.cardColor,
+          shadow: 0.12,
+        ),
+        child: Column(
+          children: [
+            for (var index = 0; index < topics.length; index++) ...[
+              _TrendTile(
+                topic: topics[index],
+                index: index,
+                selected: topics[index] == selectedTopic,
+                accent: _topicAccent(index),
+                onTap: () {
+                  onSelectTopic(topics[index]);
+                  onOpenTopic(topics[index]);
+                },
+                isLast: index == topics.length - 1,
               ),
+              if (index != topics.length - 1)
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: AppColors.cardBorderColor.withOpacity(0.7),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TrendTile extends StatelessWidget {
+  final String topic;
+  final int index;
+  final bool selected;
+  final Color accent;
+  final VoidCallback onTap;
+  final bool isLast;
+
+  const _TrendTile({
+    required this.topic,
+    required this.index,
+    required this.selected,
+    required this.accent,
+    required this.onTap,
+    required this.isLast,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        decoration: BoxDecoration(
+          color: selected ? accent.withOpacity(0.08) : AppColors.cardColor,
+          borderRadius: isLast
+              ? const BorderRadius.vertical(bottom: Radius.circular(28))
+              : BorderRadius.zero,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: accent.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                '${index + 1}',
+                style: AppTheme.blackTextStyle.copyWith(
+                  color: accent,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: accent.withOpacity(0.10),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Icon(
-                          Icons.local_fire_department_rounded,
-                          size: 19,
-                          color: accent,
+                      Expanded(
+                        child: Text(
+                          '#$topic',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTheme.blackTextStyle.copyWith(
+                            color: AppColors.text,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
                       ),
-                      const Spacer(),
                       if (selected)
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
-                            vertical: 5,
+                            vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.08),
+                            color: AppColors.primary.withOpacity(0.09),
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
                             'Active',
                             style: AppTheme.blackTextStyle.copyWith(
-                              color: AppColors.text,
+                              color: AppColors.primary,
                               fontSize: 10,
                               fontWeight: FontWeight.w800,
                             ),
@@ -516,27 +582,14 @@ class _TopicRail extends StatelessWidget {
                         ),
                     ],
                   ),
-                  const Spacer(),
-                  Text(
-                    '#$topic',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTheme.blackTextStyle.copyWith(
-                      color: AppColors.text,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   Text(
                     selected
                         ? 'Latest posts are loaded below.'
-                        : 'Tap to explore the conversation.',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                        : 'Tap to open the conversation.',
                     style: AppTheme.greyTextStyle.copyWith(
                       color: AppColors.textSecondary,
-                      fontSize: 11,
+                      fontSize: 12,
                       height: 1.35,
                       fontWeight: FontWeight.w500,
                     ),
@@ -544,8 +597,14 @@ class _TopicRail extends StatelessWidget {
                 ],
               ),
             ),
-          );
-        },
+            const SizedBox(width: 10),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: selected ? accent : AppColors.textHint,
+              size: 14,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -570,7 +629,8 @@ class _TopicSummary extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: _panelDecoration(radius: 22, fill: AppColors.cardColor, shadow: 0.12),
+      decoration:
+          _panelDecoration(radius: 22, fill: AppColors.cardColor, shadow: 0.12),
       child: Row(
         children: [
           Container(

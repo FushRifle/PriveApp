@@ -36,6 +36,7 @@ class _OtherProfilePageState extends State<OtherProfilePage>
   bool _isFollowing = false;
   bool _isFollowBusy = false;
   bool _profileRequested = false;
+  Relationship? _relationship;
   String? _loadedMediaKey;
 
   @override
@@ -160,6 +161,7 @@ class _OtherProfilePageState extends State<OtherProfilePage>
 
       setState(() {
         _isFollowing = relationship.isFollowing;
+        _relationship = relationship;
       });
     } catch (e) {
       debugPrint('Failed to load relationship: $e');
@@ -218,6 +220,7 @@ class _OtherProfilePageState extends State<OtherProfilePage>
     if (userId == null || userId <= 0) return;
 
     HapticFeedback.lightImpact();
+    final isFollowedBack = _relationship?.isFollowedBy ?? false;
 
     try {
       final conversation = await _chatService.startConversation(
@@ -236,6 +239,10 @@ class _OtherProfilePageState extends State<OtherProfilePage>
           'userId': userId,
           'userName': profile.displayName ?? 'User',
           'userAvatar': profile.avatar ?? '',
+          'messageLimit': isFollowedBack ? 0 : 1,
+          'messageLimitHint': isFollowedBack
+              ? null
+              : 'You can send one message until they follow you back.',
         },
       );
     } catch (e) {

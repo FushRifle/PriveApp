@@ -187,6 +187,7 @@ class FeedPost {
         handle == 'official' ||
         handle == 'cliqueofficial';
   }
+
   bool get isOfficialAccount => isAIPost;
   bool get isStandardPost =>
       !isPoll && !isQuestion && !isDailyPrompt && !isAnonymousPost;
@@ -678,6 +679,12 @@ class PostsResponse {
       page: page ?? this.page,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'posts': posts.map((post) => post.toJson()).toList(),
+        'hasMore': hasMore,
+        'page': page,
+      };
 }
 
 class CommentsResponse {

@@ -26,13 +26,15 @@ import 'package:clique/ui/pages/auth/success_page.dart';
 import 'package:clique/ui/pages/main/home/create_post_page.dart';
 import 'package:clique/ui/pages/main/home/edit_post_page.dart';
 import 'package:clique/ui/pages/main/home/post_detail_page.dart';
-import 'package:clique/ui/pages/main/home/topics_page.dart';
+import 'package:clique/ui/pages/main/topics/topics_page.dart';
 import 'package:clique/ui/pages/main/chat/chat_page.dart';
 import 'package:clique/ui/pages/main/community/create_community_page.dart';
 import 'package:clique/ui/pages/main/community/community_group_chat_page.dart';
 import 'package:clique/ui/pages/main/community/community_group_info_page.dart';
 import 'package:clique/core/models/community_model.dart';
+import 'package:clique/core/models/event_model.dart';
 import 'package:clique/ui/pages/main/event/create_event_page.dart';
+import 'package:clique/ui/pages/main/event/event_details_page.dart';
 import 'package:clique/ui/pages/main/reels/create_reel_page.dart';
 
 import 'package:clique/ui/pages/main/match/matches_page.dart';
@@ -167,6 +169,8 @@ class AppRouter {
               userName: args['userName'] as String,
               userAvatar: args['userAvatar'] as String,
               userId: args['userId'] as int,
+              maxOutgoingMessages: args['messageLimit'] as int? ?? 0,
+              messageLimitHint: args['messageLimitHint'] as String?,
             ),
           ),
         );
@@ -194,9 +198,20 @@ class AppRouter {
         }
 
         final postId = _readInt(postArgs['postId'] ?? postArgs['id']);
+        final ownerId = _readInt(postArgs['ownerId'] ?? postArgs['userId']);
         final initialContent = (postArgs['content'] ?? '').toString();
+        final createdAtRaw = postArgs['createdAt'] ?? postArgs['created_at'];
+        final createdAt = createdAtRaw is DateTime
+            ? createdAtRaw
+            : DateTime.tryParse(createdAtRaw?.toString() ?? '');
         if (postId <= 0) {
           return _errorRoute('Invalid post ID');
+        }
+        if (ownerId <= 0) {
+          return _errorRoute('Invalid post owner');
+        }
+        if (createdAt == null) {
+          return _errorRoute('Invalid post timestamp');
         }
 
         return _page(
@@ -204,7 +219,9 @@ class AppRouter {
             create: (_) => FeedBloc(),
             child: EditPostPage(
               postId: postId,
+              ownerId: ownerId,
               initialContent: initialContent,
+              createdAt: createdAt,
             ),
           ),
         );
@@ -251,6 +268,19 @@ class AppRouter {
           BlocProvider(
             create: (_) => EventBloc(),
             child: const CreateEventPage(),
+          ),
+        );
+
+      case NamedRoutes.eventDetailsScreen:
+        final event = settings.arguments;
+        if (event is! EventModel) {
+          return _errorRoute('Invalid event');
+        }
+
+        return _page(
+          BlocProvider(
+            create: (_) => EventBloc(),
+            child: EventDetailsPage(event: event),
           ),
         );
 
@@ -415,13 +445,15 @@ class AppRouter {
     return null;
   }
 
-  static Map<String, Object> _readChatArgs(Object? arguments) {
+  static Map<String, Object?> _readChatArgs(Object? arguments) {
     if (arguments is! Map) {
       return {
         'conversationId': 0,
         'userName': '',
         'userAvatar': '',
         'userId': 0,
+        'messageLimit': 0,
+        'messageLimitHint': null,
       };
     }
 
@@ -433,6 +465,8 @@ class AppRouter {
       'userAvatar':
           (arguments['userAvatar'] ?? arguments['avatar'] ?? '').toString(),
       'userId': _readInt(arguments['userId'] ?? arguments['user_id']),
+      'messageLimit': _readInt(arguments['messageLimit'] ?? arguments['message_limit']),
+      'messageLimitHint': arguments['messageLimitHint'] ?? arguments['message_limit_hint'],
     };
   }
 

@@ -9,7 +9,7 @@ part 'feed_event.dart';
 part 'feed_state.dart';
 
 class FeedBloc extends Bloc<FeedEvent, FeedState> {
-  final FeedService _feedService = FeedService();
+  final FeedService _feedService;
 
   bool _isFetchingPosts = false;
   bool _isFetchingMorePosts = false;
@@ -21,7 +21,9 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
 
   bool _disposed = false;
 
-  FeedBloc() : super(const FeedState()) {
+  FeedBloc({FeedService? feedService})
+      : _feedService = feedService ?? FeedService(),
+        super(const FeedState()) {
     on<GetFeedPosts>(_onGetFeedPosts);
     on<RefreshFeed>(_onRefreshFeed);
     on<SilentRefreshFeed>(_onSilentRefreshFeed);
@@ -95,7 +97,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
       );
 
       final updatedPosts = event.page == 1 || event.refresh
-          ? response.posts
+          ? _mergePosts(response.posts, state.posts)
           : [
               ...state.posts,
               ..._dedupePosts(response.posts, state.posts),
@@ -237,7 +239,8 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
             createdPost,
             ...state.posts.where((post) => post.id != createdPost.id),
           ],
-          postsStatus: state.posts.isEmpty ? FeedStatus.loaded : state.postsStatus,
+          postsStatus:
+              state.posts.isEmpty ? FeedStatus.loaded : state.postsStatus,
         ),
       );
     } catch (e) {
@@ -432,9 +435,8 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
         postType: sourcePost.isPoll ? 'poll' : 'standard',
         isAnonymous: false,
         anonymousCategory: null,
-        pollOptions: sourcePost.pollOptions.isNotEmpty
-            ? sourcePost.pollOptions
-            : null,
+        pollOptions:
+            sourcePost.pollOptions.isNotEmpty ? sourcePost.pollOptions : null,
         pollExpirationHours: sourcePost.pollExpirationHours,
       );
 
@@ -596,6 +598,28 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
 
     final existingIds = existing.map((post) => post.id).toSet();
     return incoming.where((post) => existingIds.add(post.id)).toList();
+  }
+
+  List<FeedPost> _mergePosts(
+    List<FeedPost> primary,
+    List<FeedPost> secondary,
+  ) {
+    final combined = <FeedPost>[
+      ...primary,
+      ...secondary.where(
+        (post) => !primary.any((candidate) => candidate.id == post.id),
+      ),
+    ];
+
+    combined.sort(
+      (a, b) {
+        final byDate = b.createdAt.compareTo(a.createdAt);
+        if (byDate != 0) return byDate;
+        return b.id.compareTo(a.id);
+      },
+    );
+
+    return combined;
   }
 
   Future<void> _onCreatePostComment(
@@ -988,19 +1012,43 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     Emitter<FeedState> emit,
   ) async {
     final originalPosts = state.posts;
+    final editWindow = DateTime.now().difference(event.createdAt);
+    if (editWindow > const Duration(hours: 2)) {
+      emit(
+        state.copyWith(
+          generalError: 'You can only edit a post within 2 hours of posting.',
+          isUpdatingPost: false,
+        ),
+      );
+      return;
+    }
 
-    final updatedPosts = state.posts.map((post) {
-      if (post.id != event.postId) return post;
+    final hasSourcePost = state.posts.any((post) => post.id == event.postId);
+    if (hasSourcePost) {
+      final sourcePost = state.posts.firstWhere((post) => post.id == event.postId);
+      if (sourcePost.user.id != event.ownerId) {
+        emit(
+          state.copyWith(
+            generalError: 'You can only edit your own posts.',
+            isUpdatingPost: false,
+          ),
+        );
+        return;
+      }
+    }
 
-      return post.copyWith(content: event.content);
-    }).toList();
+    final updatedPosts = hasSourcePost
+        ? state.posts.map((post) {
+            if (post.id != event.postId) return post;
+            return post.copyWith(content: event.content);
+          }).toList()
+        : state.posts;
 
-    emit(
-      state.copyWith(
-        posts: updatedPosts,
-        clearGeneralError: true,
-      ),
-    );
+    emit(state.copyWith(
+      posts: updatedPosts,
+      clearGeneralError: true,
+      isUpdatingPost: true,
+    ));
 
     try {
       final updatedPost = await _feedService.updatePost(
@@ -1008,12 +1056,17 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
         content: event.content,
       );
 
+      final nextPosts = hasSourcePost
+          ? state.posts.map((post) {
+              return post.id == event.postId ? updatedPost : post;
+            }).toList()
+          : state.posts;
+
       emit(
         state.copyWith(
-          posts: state.posts.map((post) {
-            return post.id == event.postId ? updatedPost : post;
-          }).toList(),
+          posts: nextPosts,
           clearGeneralError: true,
+          isUpdatingPost: false,
         ),
       );
     } catch (e) {
@@ -1021,6 +1074,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
         state.copyWith(
           posts: originalPosts,
           generalError: e.toString(),
+          isUpdatingPost: false,
         ),
       );
     }

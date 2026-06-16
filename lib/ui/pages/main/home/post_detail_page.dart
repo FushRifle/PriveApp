@@ -970,7 +970,7 @@ class _CommentsHeader extends StatelessWidget {
                 border: Border.all(color: AppColors.primary.withOpacity(0.12)),
               ),
               child: Text(
-                'Recent',
+                'Oldest first',
                 style: AppTheme.greyTextStyle.copyWith(
                   color: AppColors.primary,
                   fontWeight: FontWeight.w800,
@@ -1010,6 +1010,8 @@ class _CommentsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final threads = groupCommentsIntoThreads(comments);
+
     if (isLoading && comments.isEmpty) {
       return const SliverToBoxAdapter(
         child: Padding(
@@ -1044,7 +1046,7 @@ class _CommentsSection extends StatelessWidget {
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
           (context, index) {
-            if (index == comments.length) {
+            if (index == threads.length) {
               if (hasMore) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   onLoadMore();
@@ -1065,152 +1067,19 @@ class _CommentsSection extends StatelessWidget {
             }
 
             return RepaintBoundary(
-              child: _CommentTile(
-                comment: comments[index],
+              child: CommentThreadCard(
+                thread: threads[index],
                 isFirst: index == 0,
-                isLast: index == comments.length - 1,
+                isLast: index == threads.length - 1,
                 onLike: onLike,
                 onDislike: onDislike,
                 onReply: onReply,
               ),
             );
           },
-          childCount: comments.length + 1,
+          childCount: threads.length + 1,
         ),
       ),
-    );
-  }
-}
-
-class _CommentTile extends StatelessWidget {
-  final Comment comment;
-  final bool isFirst;
-  final bool isLast;
-  final ValueChanged<Comment> onLike;
-  final ValueChanged<Comment> onDislike;
-  final ValueChanged<Comment> onReply;
-
-  const _CommentTile({
-    required this.comment,
-    required this.isFirst,
-    required this.isLast,
-    required this.onLike,
-    required this.onDislike,
-    required this.onReply,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(15),
-          decoration: BoxDecoration(
-            color: AppColors.card.withOpacity(0.92),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: AppColors.cardBorderColor,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.shadow.withOpacity(0.04),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                left: 21,
-                top: isFirst ? 22 : -15,
-                bottom: isLast ? 22 : -15,
-                child: Container(
-                  width: 1.5,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.18),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CommentAvatar(
-                    imageUrl: comment.userAvatar,
-                    fallback: comment.userName,
-                    size: 40,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                comment.userName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTheme.greyTextStyle.copyWith(
-                                  color: AppColors.text,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              comment.formattedTimeAgo,
-                              style: AppTheme.greyTextStyle.copyWith(
-                                fontSize: 11,
-                                color: AppColors.textHint,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 7),
-                        if (comment.hasVoiceNote)
-                          CommentVoiceNoteCard(
-                            avatar: comment.userAvatar,
-                            name: comment.userName,
-                            audioUrl: comment.audioUrl,
-                            duration: comment.duration,
-                            timeLabel: comment.formattedTimeAgo,
-                            isTemp: false,
-                          )
-                        else
-                          Text(
-                            comment.content,
-                            style: AppTheme.greyTextStyle.copyWith(
-                              fontSize: 14,
-                              height: 1.4,
-                              color: AppColors.text,
-                            ),
-                          ),
-                        const SizedBox(height: 10),
-                        CommentActionBar(
-                          likes: comment.likes,
-                          dislikes: comment.dislikes,
-                          replyCount: comment.replyCount,
-                          isLiked: comment.isLiked,
-                          isDisliked: comment.isDisliked,
-                          timeLabel: comment.formattedTimeAgo,
-                          onLike: () => onLike(comment),
-                          onDislike: () => onDislike(comment),
-                          onReply: () => onReply(comment),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

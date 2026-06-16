@@ -7,6 +7,88 @@ class FeedCacheService {
     await saveFeedPage(response);
   }
 
+  Future<void> prependLatestPost(FeedPost post) async {
+    final feedBox = LocalCacheService.box(HiveCacheKeys.feedBox);
+    if (feedBox == null) return;
+
+    final existing = readLatestFeed();
+    final merged = _mergePosts(
+      [post],
+      existing?.posts ?? const [],
+    );
+
+    await saveFeedPage(
+      PostsResponse(
+        posts: merged,
+        hasMore: existing?.hasMore ?? true,
+        page: 1,
+      ),
+    );
+  }
+
+  Future<void> replacePost(FeedPost post) async {
+    final feedBox = LocalCacheService.box(HiveCacheKeys.feedBox);
+    if (feedBox == null) return;
+
+    final keysToUpdate = feedBox.keys
+        .whereType<String>()
+        .where(
+          (key) =>
+              key == HiveCacheKeys.latestFeed ||
+              key.startsWith('${HiveCacheKeys.feedPagePrefix}_'),
+        )
+        .toList();
+
+    for (final key in keysToUpdate) {
+      final raw = feedBox.get(key);
+      if (raw is! Map) continue;
+
+      try {
+        final response = PostsResponse.fromJson(Map<String, dynamic>.from(raw));
+        final updated = response.posts
+            .map((item) => item.id == post.id ? post : item)
+            .toList();
+        await feedBox.put(
+          key,
+          response.copyWith(posts: updated).toJson(),
+        );
+      } catch (_) {
+        continue;
+      }
+    }
+  }
+
+  Future<void> removePost(int postId) async {
+    final feedBox = LocalCacheService.box(HiveCacheKeys.feedBox);
+    if (feedBox == null) return;
+
+    final keysToUpdate = feedBox.keys
+        .whereType<String>()
+        .where(
+          (key) =>
+              key == HiveCacheKeys.latestFeed ||
+              key.startsWith('${HiveCacheKeys.feedPagePrefix}_'),
+        )
+        .toList();
+
+    for (final key in keysToUpdate) {
+      final raw = feedBox.get(key);
+      if (raw is! Map) continue;
+
+      try {
+        final response = PostsResponse.fromJson(Map<String, dynamic>.from(raw));
+        final updated =
+            response.posts.where((item) => item.id != postId).toList();
+        await feedBox.put(
+          key,
+          response.copyWith(posts: updated).toJson(),
+        );
+      } catch (_) {
+        continue;
+      }
+    }
+  }
+
   Future<void> saveFeedPage(PostsResponse response) async {
     final feedBox = LocalCacheService.box(HiveCacheKeys.feedBox);
     final metaBox = LocalCacheService.box(HiveCacheKeys.metaBox);
@@ -144,5 +226,27 @@ class FeedCacheService {
       userId,
       type?.trim().isNotEmpty == true ? type!.trim() : 'all',
     ].join('_');
+  }
+
+  List<FeedPost> _mergePosts(
+    List<FeedPost> primary,
+    List<FeedPost> secondary,
+  ) {
+    final combined = <FeedPost>[
+      ...primary,
+      ...secondary.where(
+        (post) => !primary.any((candidate) => candidate.id == post.id),
+      ),
+    ];
+
+    combined.sort(
+      (a, b) {
+        final byDate = b.createdAt.compareTo(a.createdAt);
+        if (byDate != 0) return byDate;
+        return b.id.compareTo(a.id);
+      },
+    );
+
+    return combined;
   }
 }

@@ -19,6 +19,7 @@ class EventBloc extends Bloc<EventEvent, EventState> {
     on<SearchEvents>(_onSearchEvents);
     on<LoadMoreEvents>(_onLoadMoreEvents);
     on<CreateEvent>(_onCreateEvent);
+    on<UpdateEvent>(_onUpdateEvent);
     on<RsvpEvent>(_onRsvpEvent);
     on<ClearEventError>(_onClearError);
   }
@@ -125,6 +126,41 @@ class EventBloc extends Bloc<EventEvent, EventState> {
       emit(state.copyWith(
         actionStatus: EventActionStatus.success,
         events: [created, ...state.events],
+        clearError: true,
+      ));
+      add(const LoadEvents(refresh: true));
+    } catch (e) {
+      emit(state.copyWith(
+        actionStatus: EventActionStatus.error,
+        error: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onUpdateEvent(
+    UpdateEvent event,
+    Emitter<EventState> emit,
+  ) async {
+    emit(state.copyWith(actionStatus: EventActionStatus.loading));
+    try {
+      final updated = await _service.updateEvent(
+        eventId: event.eventId,
+        title: event.title,
+        description: event.description,
+        category: event.category,
+        location: event.location,
+        startsAt: event.startsAt,
+        endsAt: event.endsAt,
+        imageUrl: event.imageUrl,
+        isPrivate: event.isPrivate,
+      );
+
+      emit(state.copyWith(
+        actionStatus: EventActionStatus.success,
+        events: state.events.map((item) {
+          if (item.id != event.eventId) return item;
+          return updated;
+        }).toList(),
         clearError: true,
       ));
       add(const LoadEvents(refresh: true));

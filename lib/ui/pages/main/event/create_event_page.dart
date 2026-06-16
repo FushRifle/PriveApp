@@ -5,9 +5,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/event/event_bloc.dart';
+import 'package:clique/core/models/event_model.dart';
 
 class CreateEventPage extends StatefulWidget {
-  const CreateEventPage({super.key});
+  final EventModel? event;
+
+  const CreateEventPage({
+    super.key,
+    this.event,
+  });
 
   @override
   State<CreateEventPage> createState() => _CreateEventPageState();
@@ -35,6 +41,26 @@ class _CreateEventPageState extends State<CreateEventPage> {
   DateTime? _startsAt;
   DateTime? _endsAt;
 
+  bool get _isEditing => widget.event != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final event = widget.event;
+    if (event == null) return;
+
+    _titleController.text = event.title;
+    _descriptionController.text = event.description;
+    _locationController.text = event.location;
+    _imageController.text = event.imageUrl;
+    _startsAt = event.startsAt;
+    _endsAt = event.endsAt;
+    _isPrivate = event.isPrivate;
+    if (_categories.contains(event.category)) {
+      _category = event.category;
+    }
+  }
+
   @override
   void dispose() {
     _titleController.dispose();
@@ -59,7 +85,9 @@ class _CreateEventPageState extends State<CreateEventPage> {
           backgroundColor: AppColors.background,
           appBar: AppBar(
             backgroundColor: AppColors.background,
-            title: const Text('Create event'),
+            surfaceTintColor: Colors.transparent,
+            elevation: 0,
+            title: Text(_isEditing ? 'Edit event' : 'Create event'),
             actions: [
               TextButton(
                 onPressed: isSaving ? null : _submit,
@@ -69,163 +97,210 @@ class _CreateEventPageState extends State<CreateEventPage> {
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Create'),
+                    : Text(_isEditing ? 'Save' : 'Create'),
               ),
             ],
           ),
-          body: SafeArea(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-              children: [
-                _IntroCard(isPrivate: _isPrivate),
-                const SizedBox(height: 18),
-                Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      TextFormField(
-                        controller: _titleController,
-                        textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          labelText: 'Title',
-                          hintText: 'Sunday meetup, Launch party...',
-                        ),
-                        validator: (value) {
-                          final text = value?.trim() ?? '';
-                          if (text.length < 3) {
-                            return 'Use at least 3 characters';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 14),
-                      TextFormField(
-                        controller: _descriptionController,
-                        minLines: 4,
-                        maxLines: 6,
-                        decoration: const InputDecoration(
-                          labelText: 'Description',
-                          hintText: 'Tell people what this event is about.',
-                        ),
-                        validator: (value) {
-                          final text = value?.trim() ?? '';
-                          if (text.length < 12) {
-                            return 'Add a clearer description';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 14),
-                      TextFormField(
-                        controller: _locationController,
-                        textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          labelText: 'Location',
-                          hintText: 'Lagos, Nigeria / Zoom / Rooftop Lounge',
-                        ),
-                        validator: (value) {
-                          final text = value?.trim() ?? '';
-                          if (text.length < 3) {
-                            return 'Add a location';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 14),
-                      TextFormField(
-                        controller: _imageController,
-                        keyboardType: TextInputType.url,
-                        decoration: const InputDecoration(
-                          labelText: 'Cover image URL',
-                          hintText: 'https://...',
-                        ),
-                      ),
-                    ],
-                  ),
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.background,
+                  AppColors.primary.withOpacity(0.04),
+                  AppColors.secondary.withOpacity(0.04),
+                ],
+              ),
+            ),
+            child: SafeArea(
+              child: ListView(
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  14,
+                  16,
+                  24 + MediaQuery.viewInsetsOf(context).bottom,
                 ),
-                const SizedBox(height: 18),
-                Text(
-                  'Category',
-                  style: AppTheme.blackTextStyle.copyWith(
-                    fontWeight: AppTheme.bold,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final category in _categories)
-                      ChoiceChip(
-                        selected: _category == category,
-                        label: Text(category),
-                        onSelected: (_) => setState(() {
-                          _category = category;
-                        }),
-                        selectedColor: AppColors.primary.withOpacity(0.12),
-                        backgroundColor: AppColors.card,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          side: BorderSide(
-                            color: _category == category
-                                ? AppColors.primary
-                                : AppColors.border,
+                children: [
+                  _CreateEventHero(isPrivate: _isPrivate),
+                  const SizedBox(height: 16),
+                  _SectionCard(
+                    title: 'Basics',
+                    subtitle: 'Name, description, location, and cover',
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          TextFormField(
+                            controller: _titleController,
+                            textInputAction: TextInputAction.next,
+                            decoration: const InputDecoration(
+                              labelText: 'Title',
+                              hintText: 'Sunday meetup, Launch party...',
+                            ),
+                            validator: (value) {
+                              final text = value?.trim() ?? '';
+                              if (text.length < 3) {
+                                return 'Use at least 3 characters';
+                              }
+                              return null;
+                            },
                           ),
-                        ),
+                          const SizedBox(height: 14),
+                          TextFormField(
+                            controller: _descriptionController,
+                            minLines: 4,
+                            maxLines: 6,
+                            decoration: const InputDecoration(
+                              labelText: 'Description',
+                              hintText: 'Tell people what this event is about.',
+                            ),
+                            validator: (value) {
+                              final text = value?.trim() ?? '';
+                              if (text.length < 12) {
+                                return 'Add a clearer description';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 14),
+                          TextFormField(
+                            controller: _locationController,
+                            textInputAction: TextInputAction.next,
+                            decoration: const InputDecoration(
+                              labelText: 'Location',
+                              hintText:
+                                  'Lagos, Nigeria / Zoom / Rooftop Lounge',
+                            ),
+                            validator: (value) {
+                              final text = value?.trim() ?? '';
+                              if (text.length < 3) {
+                                return 'Add a location';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 14),
+                          TextFormField(
+                            controller: _imageController,
+                            keyboardType: TextInputType.url,
+                            decoration: const InputDecoration(
+                              labelText: 'Cover image URL',
+                              hintText: 'https://...',
+                            ),
+                          ),
+                        ],
                       ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                _DateTimePickerCard(
-                  label: 'Starts at',
-                  value: _startsAt,
-                  onTap: _pickStartsAt,
-                ),
-                const SizedBox(height: 12),
-                _DateTimePickerCard(
-                  label: 'Ends at',
-                  value: _endsAt,
-                  onTap: _pickEndsAt,
-                ),
-                const SizedBox(height: 18),
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  value: _isPrivate,
-                  onChanged: (value) => setState(() => _isPrivate = value),
-                  title: Text(
-                    'Private event',
-                    style: AppTheme.blackTextStyle.copyWith(
-                      fontWeight: AppTheme.medium,
                     ),
                   ),
-                  subtitle: Text(
-                    'Only invited people can see this event.',
-                    style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                FilledButton.icon(
-                  onPressed: isSaving ? null : _submit,
-                  icon: isSaving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.white,
-                          ),
-                        )
-                      : const Icon(Icons.event_available_outlined),
-                  label: Text(isSaving ? 'Creating...' : 'Create event'),
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 54),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                  const SizedBox(height: 14),
+                  _SectionCard(
+                    title: 'Timing',
+                    subtitle: 'When the event starts and ends',
+                    child: Column(
+                      children: [
+                        _DateTimePickerCard(
+                          label: 'Starts at',
+                          value: _startsAt,
+                          onTap: _pickStartsAt,
+                        ),
+                        const SizedBox(height: 12),
+                        _DateTimePickerCard(
+                          label: 'Ends at',
+                          value: _endsAt,
+                          onTap: _pickEndsAt,
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 14),
+                  _SectionCard(
+                    title: 'Audience',
+                    subtitle: 'Who can see and find this event',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Category',
+                          style: AppTheme.blackTextStyle.copyWith(
+                            fontWeight: AppTheme.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            for (final category in _categories)
+                              ChoiceChip(
+                                selected: _category == category,
+                                label: Text(category),
+                                onSelected: (_) => setState(() {
+                                  _category = category;
+                                }),
+                                selectedColor:
+                                    AppColors.primary.withOpacity(0.12),
+                                backgroundColor: AppColors.background,
+                                shape: StadiumBorder(
+                                  side: BorderSide(
+                                    color: _category == category
+                                        ? AppColors.primary
+                                        : AppColors.border,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        SwitchListTile.adaptive(
+                          contentPadding: EdgeInsets.zero,
+                          value: _isPrivate,
+                          onChanged: (value) =>
+                              setState(() => _isPrivate = value),
+                          title: Text(
+                            'Private event',
+                            style: AppTheme.blackTextStyle.copyWith(
+                              fontWeight: AppTheme.medium,
+                            ),
+                          ),
+                          subtitle: Text(
+                            'Only invited people can see this event.',
+                            style:
+                                AppTheme.greyTextStyle.copyWith(fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  FilledButton.icon(
+                    onPressed: isSaving ? null : _submit,
+                    icon: isSaving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.white,
+                            ),
+                          )
+                        : const Icon(Icons.event_available_outlined),
+                    label: Text(
+                      isSaving
+                          ? (_isEditing ? 'Saving...' : 'Creating...')
+                          : (_isEditing ? 'Save changes' : 'Create event'),
+                    ),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 54),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -259,13 +334,35 @@ class _CreateEventPageState extends State<CreateEventPage> {
     HapticFeedback.lightImpact();
     _submitted = true;
 
+    final title = _titleController.text.trim();
+    final description = _descriptionController.text.trim();
+    final location = _locationController.text.trim();
+    final imageUrl = _imageController.text.trim();
+
+    if (_isEditing) {
+      context.read<EventBloc>().add(
+            UpdateEvent(
+              eventId: widget.event!.id,
+              title: title,
+              description: description,
+              category: _category,
+              location: location,
+              imageUrl: imageUrl,
+              startsAt: _startsAt!,
+              endsAt: _endsAt,
+              isPrivate: _isPrivate,
+            ),
+          );
+      return;
+    }
+
     context.read<EventBloc>().add(
           CreateEvent(
-            title: _titleController.text.trim(),
-            description: _descriptionController.text.trim(),
+            title: title,
+            description: description,
             category: _category,
-            location: _locationController.text.trim(),
-            imageUrl: _imageController.text.trim(),
+            location: location,
+            imageUrl: imageUrl,
             startsAt: _startsAt!,
             endsAt: _endsAt,
             isPrivate: _isPrivate,
@@ -321,32 +418,50 @@ class _CreateEventPageState extends State<CreateEventPage> {
   }
 }
 
-class _IntroCard extends StatelessWidget {
+class _CreateEventHero extends StatelessWidget {
   final bool isPrivate;
 
-  const _IntroCard({required this.isPrivate});
+  const _CreateEventHero({
+    required this.isPrivate,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(8),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.card,
+            AppColors.primary.withOpacity(0.08),
+            AppColors.secondary.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(28),
         border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withOpacity(0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 52,
-            height: 52,
+            width: 60,
+            height: 60,
             decoration: BoxDecoration(
               color: (isPrivate ? AppColors.primary : AppColors.secondary)
                   .withOpacity(0.14),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(18),
             ),
             child: Icon(
-              isPrivate ? Icons.lock_outline : Icons.event_outlined,
+              isPrivate ? Icons.lock_outline : Icons.event_available_outlined,
               color: isPrivate ? AppColors.primary : AppColors.secondary,
             ),
           ),
@@ -356,22 +471,128 @@ class _IntroCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isPrivate ? 'Private event' : 'Public event',
+                  'Design an event people want to show up for.',
                   style: AppTheme.blackTextStyle.copyWith(
+                    fontSize: 18,
                     fontWeight: AppTheme.bold,
-                    fontSize: 16,
+                    height: 1.15,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 6),
                 Text(
-                  isPrivate
-                      ? 'Only invited people can see it and RSVP.'
-                      : 'Anyone on the app can discover and join.',
-                  style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
+                  'Keep the essentials in one place, then publish when the details feel right.',
+                  style: AppTheme.greyTextStyle.copyWith(
+                    fontSize: 12,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _HeroBadge(
+                      icon: Icons.verified_outlined,
+                      label: isPrivate ? 'Private' : 'Public',
+                    ),
+                    _HeroBadge(
+                      icon: Icons.schedule_rounded,
+                      label: 'Fast setup',
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroBadge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _HeroBadge({
+    required this.icon,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppColors.primary),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: AppTheme.greyTextStyle.copyWith(
+              fontSize: 11,
+              fontWeight: AppTheme.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final Widget child;
+
+  const _SectionCard({
+    required this.title,
+    required this.subtitle,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withOpacity(0.03),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: AppTheme.blackTextStyle.copyWith(
+              fontSize: 16,
+              fontWeight: AppTheme.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: AppTheme.greyTextStyle.copyWith(
+              fontSize: 12,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 16),
+          child,
         ],
       ),
     );

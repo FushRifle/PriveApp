@@ -32,7 +32,7 @@ class PostMedia extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(28),
         child: AspectRatio(
           aspectRatio: aspectRatio,
           child: imageAttachments.length > 1

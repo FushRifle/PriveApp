@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+
 part '../../../widgets/home/create-post/create_post_page_header.dart';
 part '../../../widgets/home/create-post/create_post_composer.dart';
 part '../../../widgets/home/create-post/create_post_upload_overlay.dart';
@@ -144,7 +145,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
               end: Alignment.bottomRight,
               colors: [
                 AppColors.backgroundColor,
-                AppColors.primary.withOpacity(0.04),
                 AppColors.secondary.withOpacity(0.05),
               ],
             ),

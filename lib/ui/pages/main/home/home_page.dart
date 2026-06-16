@@ -257,15 +257,15 @@ class _HomePageState extends State<HomePage>
                     return SliverMainAxisGroup(
                       slivers: [
                         SliverToBoxAdapter(
-                        child: _FeedHeader(
-                          palette: palette,
-                          isRefreshing:
-                              state.postsStatus == FeedStatus.loading &&
-                              posts.isEmpty,
-                          onOpenTopics: () {
-                            Navigator.pushNamed(
-                              context,
-                              NamedRoutes.topicsScreen,
+                          child: _FeedHeader(
+                            palette: palette,
+                            isRefreshing:
+                                state.postsStatus == FeedStatus.loading &&
+                                    posts.isEmpty,
+                            onOpenTopics: () {
+                              Navigator.pushNamed(
+                                context,
+                                NamedRoutes.topicsScreen,
                               );
                             },
                             onOpenCreate: () => _openCreatePost(context),
@@ -430,129 +430,149 @@ class _HomeAppBarState extends State<_HomeAppBar> {
             'User';
         final fallback =
             name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'U';
+        final topInset = MediaQuery.paddingOf(context).top;
 
-        return Container(
-          padding: EdgeInsets.fromLTRB(
-            16,
-            MediaQuery.paddingOf(context).top + 16,
-            16,
-            12,
-          ),
-          color: widget.palette.background,
-          child: Row(
-            children: [
-              GestureDetector(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  Navigator.pushNamed(context, NamedRoutes.settingsScreen);
-                },
-                child: _Avatar(
-                  palette: widget.palette,
-                  avatar: avatar,
-                  fallback: fallback,
-                  size: 44,
-                ),
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isCompact = constraints.maxWidth < 390;
+            final avatarSize = isCompact ? 40.0 : 44.0;
+            final titleFontSize = isCompact ? 21.0 : 24.0;
+
+            return Container(
+              padding: EdgeInsets.fromLTRB(
+                isCompact ? 14 : 16,
+                topInset + (isCompact ? 12 : 16),
+                isCompact ? 14 : 16,
+                12,
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Clique',
-                      style: AppTheme.blackTextStyle.copyWith(
-                        color: widget.palette.text,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.5,
-                      ),
+              color: widget.palette.background,
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.pushNamed(context, NamedRoutes.settingsScreen);
+                    },
+                    child: _Avatar(
+                      palette: widget.palette,
+                      avatar: avatar,
+                      fallback: fallback,
+                      size: avatarSize,
                     ),
-                    Text(
-                      'Your Vibe, Your Clique.',
-                      style: AppTheme.greyTextStyle.copyWith(
-                        color: widget.palette.mutedText,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              GestureDetector(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  Navigator.pushNamed(context, NamedRoutes.notificationScreen);
-                },
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: widget.palette.border),
-                    boxShadow: [
-                      BoxShadow(
-                        color: widget.palette.shadow,
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
                   ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      const Icon(
-                        Icons.notifications_outlined,
-                        color: AppColors.white,
-                        size: 22,
+                  SizedBox(width: isCompact ? 10 : 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Clique',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTheme.blackTextStyle.copyWith(
+                            color: widget.palette.text,
+                            fontSize: titleFontSize,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        if (!isCompact)
+                          Text(
+                            'Your Vibe, Your Clique.',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTheme.greyTextStyle.copyWith(
+                              color: widget.palette.mutedText,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.pushNamed(
+                        context,
+                        NamedRoutes.notificationScreen,
+                      );
+                    },
+                    child: Container(
+                      width: isCompact ? 40 : 44,
+                      height: isCompact ? 40 : 44,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: widget.palette.border),
+                        boxShadow: [
+                          BoxShadow(
+                            color: widget.palette.shadow,
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                      FutureBuilder<Map<String, dynamic>>(
-                        future: _notificationsFuture,
-                        builder: (context, snapshot) {
-                          final count = _readInt(
-                            snapshot.data?['unreadCount'],
-                          );
-                          if (count <= 0) return const SizedBox.shrink();
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Icon(
+                            Icons.notifications_outlined,
+                            color: AppColors.white,
+                            size: isCompact ? 20 : 22,
+                          ),
+                          FutureBuilder<Map<String, dynamic>>(
+                            future: _notificationsFuture,
+                            builder: (context, snapshot) {
+                              final count = _readInt(
+                                snapshot.data?['unreadCount'],
+                              );
+                              if (count <= 0) {
+                                return const SizedBox.shrink();
+                              }
 
-                          return Positioned(
-                            top: 2,
-                            right: 2,
-                            child: Container(
-                              constraints: const BoxConstraints(
-                                minWidth: 20,
-                                minHeight: 20,
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.white,
-                                borderRadius: BorderRadius.circular(9),
-                                border: Border.all(
-                                  color: widget.palette.elevatedCard,
-                                  width: 1.5,
-                                ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  count > 99 ? '99+' : '$count',
-                                  style: const TextStyle(
-                                    color: AppColors.black,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
+                              return Positioned(
+                                top: 2,
+                                right: 2,
+                                child: Container(
+                                  constraints: const BoxConstraints(
+                                    minWidth: 20,
+                                    minHeight: 20,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.white,
+                                    borderRadius: BorderRadius.circular(9),
+                                    border: Border.all(
+                                      color: widget.palette.elevatedCard,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      count > 99 ? '99+' : '$count',
+                                      style: const TextStyle(
+                                        color: AppColors.black,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ),
-                          );
-                        },
+                              );
+                            },
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );

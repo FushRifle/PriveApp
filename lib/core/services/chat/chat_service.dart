@@ -929,6 +929,8 @@ class ChatService {
         '/api/chat/conversations',
         data: {
           'receiverId': receiverId,
+          'forceNew': true,
+          'conversationMode': 'direct',
         },
       );
 

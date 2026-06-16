@@ -40,12 +40,18 @@ class _TextPostComposer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final isCompactWidth = size.width < 390;
+    final textBoxHeight = (size.height * 0.34).clamp(220.0, 340.0);
+    final horizontalPadding = isCompactWidth ? 16.0 : 20.0;
+    final titleFontSize = isCompactWidth ? 18.0 : 20.0;
+
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: EdgeInsets.fromLTRB(
-        20,
+        horizontalPadding,
         8,
-        20,
+        horizontalPadding,
         24 + MediaQuery.viewInsetsOf(context).bottom,
       ),
       child: Column(
@@ -60,8 +66,16 @@ class _TextPostComposer extends StatelessWidget {
           const SizedBox(height: 14),
           Container(
             width: double.infinity,
-            height: 280,
-            padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
+            constraints: BoxConstraints(
+              minHeight: textBoxHeight,
+              maxHeight: textBoxHeight,
+            ),
+            padding: EdgeInsets.fromLTRB(
+              isCompactWidth ? 16 : 18,
+              8,
+              isCompactWidth ? 16 : 18,
+              8,
+            ),
             decoration: BoxDecoration(
               color: AppColors.cardColor,
               borderRadius: BorderRadius.circular(22),
@@ -73,14 +87,14 @@ class _TextPostComposer extends StatelessWidget {
               suggestionsBuilder: suggestionsBuilder,
               maxLines: null,
               style: AppTheme.blackTextStyle.copyWith(
-                fontSize: 20,
+                fontSize: titleFontSize,
                 height: 1.38,
                 fontWeight: FontWeight.w500,
               ),
               decoration: InputDecoration(
                 hintText: "What's on your mind?",
                 hintStyle: AppTheme.greyTextStyle.copyWith(
-                  fontSize: 20,
+                  fontSize: titleFontSize,
                   fontWeight: FontWeight.w500,
                 ),
                 border: InputBorder.none,

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/services/user/user_service.dart';
-import 'package:clique/ui/pages/main/home/hashtag_feed_page.dart';
+import 'package:clique/ui/pages/main/topics/topic_details.dart';
 
 class EffectText extends StatelessWidget {
   final String text;
@@ -97,7 +97,7 @@ class EffectText extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => HashtagFeedPage(tag: token),
+                    builder: (_) => TopicDetailsPage(topic: token),
                   ),
                 );
               },

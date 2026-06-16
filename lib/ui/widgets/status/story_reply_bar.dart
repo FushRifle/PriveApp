@@ -37,10 +37,7 @@ class _StoryReplyBarState extends State<StoryReplyBar> {
   void initState() {
     super.initState();
 
-    _focusNode = FocusNode()
-      ..addListener(() {
-        widget.onFocusChanged(_focusNode.hasFocus);
-      });
+    _focusNode = FocusNode()..addListener(_handleFocusChanged);
 
     widget.controller.addListener(_onTextChanged);
   }
@@ -48,9 +45,14 @@ class _StoryReplyBarState extends State<StoryReplyBar> {
   @override
   void dispose() {
     widget.controller.removeListener(_onTextChanged);
+    _focusNode.removeListener(_handleFocusChanged);
     _focusNode.dispose();
 
     super.dispose();
+  }
+
+  void _handleFocusChanged() {
+    widget.onFocusChanged(_focusNode.hasFocus);
   }
 
   void _onTextChanged() {
@@ -83,7 +85,7 @@ class _StoryReplyBarState extends State<StoryReplyBar> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
               color:
-                  AppColors.white.withOpacity(widget.isReplying ? 0.20 : 0.14),
+                  AppColors.card.withOpacity(widget.isReplying ? 0.20 : 0.14),
               borderRadius: BorderRadius.circular(30),
               border: Border.all(
                 color: AppColors.border
@@ -93,8 +95,8 @@ class _StoryReplyBarState extends State<StoryReplyBar> {
             child: TextField(
               controller: widget.controller,
               focusNode: _focusNode,
-              style: const TextStyle(
-                color: AppColors.white,
+              style: TextStyle(
+                color: AppColors.card,
                 fontSize: 15,
               ),
               minLines: 1,
@@ -103,7 +105,7 @@ class _StoryReplyBarState extends State<StoryReplyBar> {
               decoration: InputDecoration(
                 hintText: 'Send message',
                 hintStyle: TextStyle(
-                  color: AppColors.white.withOpacity(0.65),
+                  color: AppColors.text.withOpacity(0.65),
                 ),
                 border: InputBorder.none,
                 isDense: true,

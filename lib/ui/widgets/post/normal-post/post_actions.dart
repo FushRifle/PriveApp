@@ -187,7 +187,7 @@ class _ResponsiveAction extends StatelessWidget {
     final radius = compact ? 12.0 : 14.0;
 
     return Material(
-      color: AppColors.backgroundColor.withOpacity(0.95),
+      color: AppColors.backgroundColor.withOpacity(0.96),
       borderRadius: BorderRadius.circular(radius),
       child: InkWell(
         onTap: () {
@@ -213,8 +213,20 @@ class _ResponsiveAction extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(radius),
             border: Border.all(
-              color: AppColors.cardBorderColor,
+              color: color == AppColors.primary || color == AppColors.redAccent
+                  ? color.withOpacity(0.16)
+                  : AppColors.cardBorderColor,
             ),
+            gradient: color == AppColors.primary || color == AppColors.redAccent
+                ? LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      color.withOpacity(0.10),
+                      AppColors.backgroundColor.withOpacity(0.94),
+                    ],
+                  )
+                : null,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,

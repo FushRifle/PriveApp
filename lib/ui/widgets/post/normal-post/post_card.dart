@@ -49,6 +49,10 @@ class _CardPostState extends State<CardPost> {
   bool _isOwnPost = false;
 
   bool get _hasMedia => widget.post.attachments.isNotEmpty;
+  bool get _canEditPost =>
+      _isOwnPost &&
+      DateTime.now().difference(widget.post.createdAt) <=
+          const Duration(hours: 2);
 
   @override
   void initState() {
@@ -235,13 +239,17 @@ class _CardPostState extends State<CardPost> {
 
   void _showPostOptions() {
     HapticFeedback.lightImpact();
+    final editWindowRemaining = widget.post.createdAt
+        .add(const Duration(hours: 2))
+        .difference(DateTime.now());
 
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.transparent,
       builder: (_) {
         return _PostOptionsSheet(
-          canEdit: _isOwnPost,
+          canEdit: _canEditPost,
+          editWindowRemaining: editWindowRemaining,
           onEdit: () {
             Navigator.pop(context);
             Navigator.push(
@@ -251,7 +259,9 @@ class _CardPostState extends State<CardPost> {
                   value: context.read<FeedBloc>(),
                   child: EditPostPage(
                     postId: widget.post.id,
+                    ownerId: widget.post.user.id,
                     initialContent: widget.post.content,
+                    createdAt: widget.post.createdAt,
                   ),
                 ),
               ),
@@ -511,16 +521,23 @@ class _CardPostState extends State<CardPost> {
             bottom: widget.isDetailView ? 0 : 18,
           ),
           decoration: BoxDecoration(
-            color: AppColors.cardColor,
-            borderRadius: BorderRadius.circular(28),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.cardColor.withOpacity(0.98),
+                AppColors.cardColor,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(30),
             border: Border.all(
-              color: AppColors.cardBorderColor,
+              color: AppColors.cardBorderColor.withOpacity(0.88),
             ),
             boxShadow: [
               BoxShadow(
-                color: AppColors.shadowElevated,
-                blurRadius: 22,
-                offset: const Offset(0, 8),
+                color: AppColors.shadowElevated.withOpacity(0.78),
+                blurRadius: 1,
+                offset: const Offset(0, 1),
               ),
             ],
           ),
@@ -589,6 +606,7 @@ class _CardPostState extends State<CardPost> {
 
 class _PostOptionsSheet extends StatelessWidget {
   final bool canEdit;
+  final Duration editWindowRemaining;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final VoidCallback onRepost;
@@ -597,6 +615,7 @@ class _PostOptionsSheet extends StatelessWidget {
 
   const _PostOptionsSheet({
     required this.canEdit,
+    required this.editWindowRemaining,
     required this.onEdit,
     required this.onDelete,
     required this.onRepost,
@@ -608,9 +627,16 @@ class _PostOptionsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.cardColor,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.cardColor,
+            AppColors.backgroundColor.withOpacity(0.96),
+          ],
+        ),
         borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(28),
+          top: Radius.circular(32),
         ),
       ),
       child: SafeArea(
@@ -619,19 +645,45 @@ class _PostOptionsSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 12),
-              width: 42,
+              margin: const EdgeInsets.only(top: 12, bottom: 14),
+              width: 46,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.greyColor.withOpacity(0.3),
+                color: AppColors.greyColor.withOpacity(0.24),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             if (canEdit)
-              _PostOptionTile(
-                icon: Icons.edit_outlined,
-                title: 'Edit Post',
-                onTap: onEdit,
+              Column(
+                children: [
+                  _PostOptionTile(
+                    icon: Icons.edit_outlined,
+                    title: 'Edit Post',
+                    onTap: onEdit,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 10),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.timer_outlined,
+                          size: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Edit expires in ${_formatEditWindow(editWindowRemaining)}',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             _PostOptionTile(
               icon: Icons.delete_outline,
@@ -663,6 +715,23 @@ class _PostOptionsSheet extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatEditWindow(Duration duration) {
+  if (duration <= Duration.zero) return '0m';
+
+  final hours = duration.inHours;
+  final minutes = duration.inMinutes.remainder(60);
+
+  if (hours > 0 && minutes > 0) {
+    return '$hours h $minutes m';
+  }
+
+  if (hours > 0) {
+    return '$hours h';
+  }
+
+  return '$minutes m';
 }
 
 class _PostOptionTile extends StatelessWidget {

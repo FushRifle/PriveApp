@@ -600,14 +600,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
                   child: Column(
                     children: [
-                      _CoverImageSection(
-                        profile: profile,
-                        selectedCoverFile: _selectedCoverFile,
-                        isUploading: _isUploadingCover,
-                        isDisabled: _isBusy,
-                        onTap: () => _showImagePickerOptions(false),
-                      ),
-                      const SizedBox(height: 16),
                       _ProfilePictureSection(
                         profile: profile,
                         selectedAvatarFile: _selectedAvatarFile,
@@ -631,6 +623,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         educationController: _educationController,
                         languagesController: _languagesController,
                         enabled: !_isBusy,
+                      ),
+                      const SizedBox(height: 24),
+                      _CoverImageSection(
+                        profile: profile,
+                        selectedCoverFile: _selectedCoverFile,
+                        isUploading: _isUploadingCover,
+                        isDisabled: _isBusy,
+                        onTap: () => _showImagePickerOptions(false),
                       ),
                     ],
                   ),

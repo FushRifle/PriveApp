@@ -197,8 +197,6 @@ class _HeroPanel extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         gradient: LinearGradient(
           colors: [
-            AppColors.primary.withOpacity(0.12),
-            AppColors.secondary.withOpacity(0.10),
             AppColors.cardColor,
           ],
           begin: Alignment.topLeft,
@@ -224,7 +222,7 @@ class _HeroPanel extends StatelessWidget {
             ),
             child: const Icon(
               Icons.auto_awesome_rounded,
-              color: AppColors.primary,
+              color: AppColors.secondary,
               size: 28,
             ),
           ),

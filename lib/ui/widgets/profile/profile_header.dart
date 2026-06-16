@@ -168,61 +168,72 @@ class ProfileHeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Transform.translate(
-      offset: const Offset(0, 0),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
-          decoration: BoxDecoration(
-            color: AppColors.card,
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: AppColors.border.withOpacity(0.45)),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.shadow.withOpacity(0.12),
-                blurRadius: 22,
-                offset: const Offset(0, 10),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 360;
+
+        return Transform.translate(
+          offset: const Offset(0, 0),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: isCompact ? 12 : 14),
+            child: Container(
+              width: double.infinity,
+              padding: EdgeInsets.fromLTRB(
+                isCompact ? 14 : 16,
+                0,
+                isCompact ? 14 : 16,
+                isCompact ? 16 : 18,
               ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.topCenter,
-                children: [
-                  const SizedBox(height: 68),
-                  Positioned(
-                    top: -30,
-                    child: ProfileAvatarBubble(profile: profile),
+              decoration: BoxDecoration(
+                color: AppColors.card,
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: AppColors.border.withOpacity(0.45)),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.shadow.withOpacity(0.12),
+                    blurRadius: 22,
+                    offset: const Offset(0, 10),
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
-              ProfileIdentityRow(
-                profile: profile,
-                isOwnProfile: isOwnProfile,
-                onOpenAccountSwitcher: onOpenAccountSwitcher,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.topCenter,
+                    children: [
+                      const SizedBox(height: 68),
+                      Positioned(
+                        top: -30,
+                        child: ProfileAvatarBubble(profile: profile),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  ProfileIdentityRow(
+                    profile: profile,
+                    isOwnProfile: isOwnProfile,
+                    onOpenAccountSwitcher: onOpenAccountSwitcher,
+                  ),
+                  const SizedBox(height: 8),
+                  ProfileBioRow(profile: profile),
+                  const SizedBox(height: 14),
+                  ProfileActionRow(
+                    profile: profile,
+                    isOwnProfile: isOwnProfile,
+                    isFollowing: isFollowing,
+                    onToggleFollow: onToggleFollow,
+                    onMessage: onMessage,
+                  ),
+                  const SizedBox(height: 14),
+                  ProfileStatsRow(profile: profile, isOwnProfile: isOwnProfile),
+                ],
               ),
-              const SizedBox(height: 8),
-              ProfileBioRow(profile: profile),
-              const SizedBox(height: 14),
-              ProfileActionRow(
-                profile: profile,
-                isOwnProfile: isOwnProfile,
-                isFollowing: isFollowing,
-                onToggleFollow: onToggleFollow,
-                onMessage: onMessage,
-              ),
-              const SizedBox(height: 14),
-              ProfileStatsRow(profile: profile, isOwnProfile: isOwnProfile),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -483,37 +494,84 @@ class ProfileStatsRow extends StatelessWidget {
                   )
                 : 0;
 
-            return Container(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              decoration: BoxDecoration(
-                color: AppColors.backgroundColor.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: AppColors.border.withOpacity(0.35)),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: ProfileStatBlock(
-                      value: _formatCount(stats?.followingCount ?? 0),
-                      label: 'Following',
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final isCompact = constraints.maxWidth < 360;
+
+                if (isCompact) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.backgroundColor.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: AppColors.border.withOpacity(0.35),
+                      ),
                     ),
-                  ),
-                  Container(width: 1, height: 28, color: AppColors.border),
-                  Expanded(
-                    child: ProfileStatBlock(
-                      value: _formatCount(stats?.followersCount ?? 0),
-                      label: 'Followers',
+                    child: Wrap(
+                      alignment: WrapAlignment.spaceEvenly,
+                      runSpacing: 12,
+                      children: [
+                        SizedBox(
+                          width: constraints.maxWidth / 3 - 12,
+                          child: ProfileStatBlock(
+                            value: _formatCount(stats?.followingCount ?? 0),
+                            label: 'Following',
+                          ),
+                        ),
+                        SizedBox(
+                          width: constraints.maxWidth / 3 - 12,
+                          child: ProfileStatBlock(
+                            value: _formatCount(stats?.followersCount ?? 0),
+                            label: 'Followers',
+                          ),
+                        ),
+                        SizedBox(
+                          width: constraints.maxWidth / 3 - 12,
+                          child: ProfileStatBlock(
+                            value: _formatCount(totalLikes),
+                            label: 'Likes',
+                          ),
+                        ),
+                      ],
                     ),
+                  );
+                }
+
+                return Container(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.backgroundColor.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(22),
+                    border:
+                        Border.all(color: AppColors.border.withOpacity(0.35)),
                   ),
-                  Container(width: 1, height: 28, color: AppColors.border),
-                  Expanded(
-                    child: ProfileStatBlock(
-                      value: _formatCount(totalLikes),
-                      label: 'Likes',
-                    ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: ProfileStatBlock(
+                          value: _formatCount(stats?.followingCount ?? 0),
+                          label: 'Following',
+                        ),
+                      ),
+                      Container(width: 1, height: 28, color: AppColors.border),
+                      Expanded(
+                        child: ProfileStatBlock(
+                          value: _formatCount(stats?.followersCount ?? 0),
+                          label: 'Followers',
+                        ),
+                      ),
+                      Container(width: 1, height: 28, color: AppColors.border),
+                      Expanded(
+                        child: ProfileStatBlock(
+                          value: _formatCount(totalLikes),
+                          label: 'Likes',
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             );
           },
         );
@@ -581,14 +639,18 @@ class ProfileActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (isOwnProfile) {
-      return Row(
-        children: [
-          Expanded(
-            child: Align(
-              alignment: Alignment.center,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 100),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 360;
+
+        if (isOwnProfile) {
+          return Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              SizedBox(
+                width: isCompact ? 120 : 140,
                 child: ProfileActionButton(
                   text: 'EDIT',
                   backgroundColor: AppColors.backgroundColor,
@@ -604,38 +666,41 @@ class ProfileActionRow extends StatelessWidget {
                   },
                 ),
               ),
-            ),
-          ),
-          const SizedBox(width: 2),
-          ProfileIconActionButton(
-            icon: Icons.settings_outlined,
-            color: AppColors.text,
-            onTap: () =>
-                Navigator.pushNamed(context, NamedRoutes.settingsScreen),
-          ),
-        ],
-      );
-    }
+              ProfileIconActionButton(
+                icon: Icons.settings_outlined,
+                color: AppColors.text,
+                onTap: () =>
+                    Navigator.pushNamed(context, NamedRoutes.settingsScreen),
+              ),
+            ],
+          );
+        }
 
-    return Row(
-      children: [
-        Expanded(
-          child: ProfileActionButton(
-            text: isFollowing ? 'FOLLOWING' : 'FOLLOW',
-            backgroundColor:
-                isFollowing ? AppColors.transparent : AppColors.primary,
-            textColor: isFollowing ? AppColors.text : AppColors.white,
-            hasBorder: isFollowing,
-            onTap: onToggleFollow,
-          ),
-        ),
-        const SizedBox(width: 12),
-        ProfileIconActionButton(
-          icon: Icons.mail_outline,
-          color: AppColors.greyColor,
-          onTap: () => onMessage?.call(profile),
-        ),
-      ],
+        return Row(
+          children: [
+            Expanded(
+              child: ProfileActionButton(
+                text: isFollowing ? 'FOLLOWING' : 'FOLLOW',
+                backgroundColor:
+                    isFollowing ? AppColors.transparent : AppColors.primary,
+                textColor: isFollowing ? AppColors.text : AppColors.white,
+                hasBorder: isFollowing,
+                onTap: onToggleFollow,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ProfileActionButton(
+                text: 'MESSAGE',
+                backgroundColor: AppColors.backgroundColor,
+                textColor: AppColors.text,
+                hasBorder: true,
+                onTap: () => onMessage?.call(profile),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -742,7 +807,8 @@ class ProfileStickyTabBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const extraPadding = 6.0;
+    const topPadding = 10.0;
+    const bottomPadding = 6.0;
     final tabBar = TabBar(
       controller: tabController,
       indicatorColor: AppColors.primary,
@@ -763,13 +829,16 @@ class ProfileStickyTabBar extends StatelessWidget {
       pinned: true,
       delegate: ProfileSliverHeaderDelegate(
         SizedBox(
-          height: tabBar.preferredSize.height + extraPadding,
+          height: tabBar.preferredSize.height + topPadding + bottomPadding,
           child: Padding(
-            padding: const EdgeInsets.only(bottom: extraPadding),
+            padding: const EdgeInsets.only(
+              top: topPadding,
+              bottom: bottomPadding,
+            ),
             child: tabBar,
           ),
         ),
-        tabBar.preferredSize.height + extraPadding,
+        tabBar.preferredSize.height + topPadding + bottomPadding,
       ),
     );
   }

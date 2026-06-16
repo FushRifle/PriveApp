@@ -16,11 +16,11 @@ class HomeFeedLoadingShimmer extends StatelessWidget {
         child: Column(
           children: [
             _StoryRailSkeleton(),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             ...List.generate(
               4,
               (index) => Padding(
-                padding: EdgeInsets.only(bottom: index == 3 ? 0 : 16),
+                padding: EdgeInsets.only(bottom: index == 3 ? 0 : 18),
                 child: _FeedCardSkeleton(),
               ),
             ),
@@ -40,7 +40,7 @@ class _StoryRailSkeleton extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          width: 88,
+          width: 96,
           height: 18,
           decoration: BoxDecoration(
             color: AppColors.card,
@@ -49,7 +49,7 @@ class _StoryRailSkeleton extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         SizedBox(
-          height: 92,
+          height: 96,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             physics: const NeverScrollableScrollPhysics(),
@@ -60,7 +60,7 @@ class _StoryRailSkeleton extends StatelessWidget {
                 width: 68,
                 decoration: BoxDecoration(
                   color: AppColors.card,
-                  borderRadius: BorderRadius.circular(22),
+                  borderRadius: BorderRadius.circular(24),
                 ),
               );
             },
@@ -79,8 +79,15 @@ class _FeedCardSkeleton extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppColors.border.withOpacity(0.35)),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: AppColors.border.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow.withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,6 +102,9 @@ class _FeedCardSkeleton extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: AppColors.card,
+                    border: Border.all(
+                      color: AppColors.border.withOpacity(0.35),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -137,7 +147,17 @@ class _FeedCardSkeleton extends StatelessWidget {
           Container(
             height: 260,
             width: double.infinity,
-            color: AppColors.card,
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              border: Border(
+                top: BorderSide(
+                  color: AppColors.border.withOpacity(0.25),
+                ),
+                bottom: BorderSide(
+                  color: AppColors.border.withOpacity(0.25),
+                ),
+              ),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
@@ -200,6 +220,7 @@ class _Dot extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: AppColors.card,
+        border: Border.all(color: AppColors.border.withOpacity(0.35)),
       ),
     );
   }

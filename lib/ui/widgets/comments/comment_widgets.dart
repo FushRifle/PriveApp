@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
+import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/ui/widgets/chat/audio_message_bubble.dart';
 import 'package:clique/ui/widgets/post/normal-post/post_reaction_picker.dart';
 import 'package:flutter/material.dart';
@@ -54,6 +55,95 @@ class CommentAvatar extends StatelessWidget {
       ),
     );
   }
+}
+
+class CommentThread {
+  final Comment parent;
+  final List<Comment> replies;
+
+  CommentThread({
+    required this.parent,
+    required this.replies,
+  });
+}
+
+List<CommentThread> groupCommentsIntoThreads(List<Comment> comments) {
+  if (comments.isEmpty) return const [];
+
+  final sortedComments = [...comments]..sort((a, b) {
+      final byDate = a.createdAt.compareTo(b.createdAt);
+      if (byDate != 0) return byDate;
+      return a.id.compareTo(b.id);
+    });
+
+  final threads = <CommentThread>[];
+  final threadIndexByCommentId = <int, int>{};
+  final pendingReplies = <int, List<Comment>>{};
+
+  for (final comment in sortedComments) {
+    final parentId = comment.parentCommentId;
+    if (parentId == null || parentId <= 0) {
+      final replies = pendingReplies.remove(comment.id) ?? const <Comment>[];
+      final thread = CommentThread(
+        parent: comment,
+        replies: [...replies]..sort(
+            (a, b) {
+              final byDate = a.createdAt.compareTo(b.createdAt);
+              if (byDate != 0) return byDate;
+              return a.id.compareTo(b.id);
+            },
+          ),
+      );
+      threadIndexByCommentId[comment.id] = threads.length;
+      threads.add(thread);
+      continue;
+    }
+
+    final threadIndex = threadIndexByCommentId[parentId];
+    if (threadIndex != null) {
+      threads[threadIndex].replies.add(comment);
+      threads[threadIndex].replies.sort(
+        (a, b) {
+          final byDate = a.createdAt.compareTo(b.createdAt);
+          if (byDate != 0) return byDate;
+          return a.id.compareTo(b.id);
+        },
+      );
+    } else {
+      pendingReplies.putIfAbsent(parentId, () => []).add(comment);
+    }
+  }
+
+  if (pendingReplies.isNotEmpty) {
+    for (final entry in pendingReplies.entries) {
+      final orphanReplies = [...entry.value]..sort(
+          (a, b) {
+            final byDate = a.createdAt.compareTo(b.createdAt);
+            if (byDate != 0) return byDate;
+            return a.id.compareTo(b.id);
+          },
+        );
+
+      if (orphanReplies.isEmpty) continue;
+
+      threads.add(
+        CommentThread(
+          parent: orphanReplies.removeAt(0),
+          replies: orphanReplies,
+        ),
+      );
+    }
+  }
+
+  threads.sort(
+    (a, b) {
+      final byDate = a.parent.createdAt.compareTo(b.parent.createdAt);
+      if (byDate != 0) return byDate;
+      return a.parent.id.compareTo(b.parent.id);
+    },
+  );
+
+  return threads;
 }
 
 class CommentActionChip extends StatelessWidget {
@@ -348,11 +438,25 @@ class CommentVoiceNoteCard extends StatelessWidget {
       width: double.infinity,
       padding: padding,
       decoration: BoxDecoration(
-        color: AppColors.backgroundColor.withOpacity(0.78),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: AppColors.primary.withOpacity(0.14),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.primary.withOpacity(isCompact ? 0.06 : 0.10),
+            AppColors.backgroundColor.withOpacity(0.92),
+          ],
         ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppColors.primary.withOpacity(0.16),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow.withOpacity(0.05),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -369,14 +473,38 @@ class CommentVoiceNoteCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTheme.blackTextStyle.copyWith(
-                        fontSize: isCompact ? 13 : 14,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTheme.blackTextStyle.copyWith(
+                              fontSize: isCompact ? 13 : 14,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.10),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            duration > 0 ? '${duration}s' : 'voice',
+                            style: AppTheme.greyTextStyle.copyWith(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -407,9 +535,11 @@ class CommentVoiceNoteCard extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.cardColor,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.cardBorderColor),
+              color: AppColors.cardColor.withOpacity(0.96),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: AppColors.primary.withOpacity(0.08),
+              ),
             ),
             child: AudioMessageBubble(
               audioUrl: audioUrl,
@@ -417,17 +547,254 @@ class CommentVoiceNoteCard extends StatelessWidget {
               chatColor: AppColors.primary,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            duration > 0 ? '$duration s voice note' : 'Voice note',
-            style: AppTheme.greyTextStyle.copyWith(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
-            ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Text(
+                'Voice note',
+                style: AppTheme.greyTextStyle.copyWith(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                timeLabel,
+                style: AppTheme.greyTextStyle.copyWith(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textHint,
+                ),
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+}
+
+class CommentThreadCard extends StatelessWidget {
+  final CommentThread thread;
+  final bool isFirst;
+  final bool isLast;
+  final ValueChanged<Comment> onLike;
+  final ValueChanged<Comment> onDislike;
+  final ValueChanged<Comment> onReply;
+
+  const CommentThreadCard({
+    super.key,
+    required this.thread,
+    required this.isFirst,
+    required this.isLast,
+    required this.onLike,
+    required this.onDislike,
+    required this.onReply,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final replies = thread.replies;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: AppColors.card.withOpacity(0.94),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.cardBorderColor),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow.withOpacity(0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _ThreadCommentEntry(
+            comment: thread.parent,
+            isRoot: true,
+            isFirst: isFirst,
+            isLast: isLast && replies.isEmpty,
+            onLike: onLike,
+            onDislike: onDislike,
+            onReply: onReply,
+          ),
+          if (replies.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${replies.length} repl${replies.length == 1 ? 'y' : 'ies'}',
+                    style: AppTheme.greyTextStyle.copyWith(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            for (var index = 0; index < replies.length; index++) ...[
+              Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: _ThreadCommentEntry(
+                  comment: replies[index],
+                  isRoot: false,
+                  isFirst: index == 0,
+                  isLast: index == replies.length - 1,
+                  compact: true,
+                  onLike: onLike,
+                  onDislike: onDislike,
+                  onReply: onReply,
+                ),
+              ),
+              if (index != replies.length - 1) const SizedBox(height: 12),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ThreadCommentEntry extends StatelessWidget {
+  final Comment comment;
+  final bool isRoot;
+  final bool isFirst;
+  final bool isLast;
+  final bool compact;
+  final ValueChanged<Comment> onLike;
+  final ValueChanged<Comment> onDislike;
+  final ValueChanged<Comment> onReply;
+
+  const _ThreadCommentEntry({
+    required this.comment,
+    required this.isRoot,
+    required this.isFirst,
+    required this.isLast,
+    required this.onLike,
+    required this.onDislike,
+    required this.onReply,
+    this.compact = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final avatarSize = compact ? 34.0 : 40.0;
+    final contentFontSize = compact ? 13.0 : 14.0;
+
+    return Stack(
+      children: [
+        if (isRoot)
+          Positioned(
+            left: avatarSize / 2 - 0.75,
+            top: isFirst ? avatarSize + 2 : -12,
+            bottom: isLast ? 16 : -12,
+            child: Container(
+              width: 1.5,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.18),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+        Padding(
+          padding: EdgeInsets.only(left: isRoot ? 0 : 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CommentAvatar(
+                imageUrl: comment.userAvatar,
+                fallback: comment.userName,
+                size: avatarSize,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            comment.userName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTheme.greyTextStyle.copyWith(
+                              color: AppColors.text,
+                              fontWeight: FontWeight.w800,
+                              fontSize: compact ? 13 : 14,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          comment.formattedTimeAgo,
+                          style: AppTheme.greyTextStyle.copyWith(
+                            fontSize: 11,
+                            color: AppColors.textHint,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 7),
+                    if (comment.hasVoiceNote)
+                      CommentVoiceNoteCard(
+                        avatar: comment.userAvatar,
+                        name: comment.userName,
+                        audioUrl: comment.audioUrl,
+                        duration: comment.duration,
+                        timeLabel: comment.formattedTimeAgo,
+                        isTemp: false,
+                        isCompact: compact,
+                      )
+                    else
+                      Text(
+                        comment.content,
+                        style: AppTheme.greyTextStyle.copyWith(
+                          fontSize: contentFontSize,
+                          height: 1.45,
+                          color: AppColors.text,
+                          fontWeight:
+                              compact ? FontWeight.w500 : FontWeight.w400,
+                        ),
+                      ),
+                    const SizedBox(height: 8),
+                    CommentActionBar(
+                      likes: comment.likes,
+                      dislikes: comment.dislikes,
+                      replyCount: comment.replyCount,
+                      isLiked: comment.isLiked,
+                      isDisliked: comment.isDisliked,
+                      timeLabel: comment.formattedTimeAgo,
+                      onLike: () => onLike(comment),
+                      onDislike: () => onDislike(comment),
+                      onReply: () => onReply(comment),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

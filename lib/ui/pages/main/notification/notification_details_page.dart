@@ -111,11 +111,22 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
         slivers: [
           SliverAppBar(
             pinned: true,
+            expandedHeight: 220,
             backgroundColor: AppColors.backgroundColor,
             elevation: 0,
             leading: IconButton(
               onPressed: () => Navigator.pop(context),
               icon: const Icon(Icons.arrow_back_ios_new_rounded),
+            ),
+            flexibleSpace: FlexibleSpaceBar(
+              collapseMode: CollapseMode.parallax,
+              background: _NotificationHero(
+                actorName: actorName,
+                type: type,
+                time: time,
+                accent: accent,
+                notification: notification,
+              ),
             ),
           ),
           SliverPadding(
@@ -123,16 +134,8 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
             sliver: SliverList(
               delegate: SliverChildListDelegate(
                 [
-                  _DetailHeader(
-                    actorName: actorName,
-                    type: type,
-                    time: time,
-                    accent: accent,
-                    notification: notification,
-                  ),
-                  const SizedBox(height: 16),
                   _InfoCard(
-                    title: 'Activity',
+                    title: 'What happened',
                     child: EffectText(
                       text: content.isNotEmpty
                           ? content
@@ -198,25 +201,40 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
                     _InfoCard(
                       title: 'Preview image',
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(18),
-                        child: CachedNetworkImage(
-                          imageUrl: postImage,
-                          fit: BoxFit.cover,
-                          placeholder: (_, __) => Container(
-                            height: 220,
-                            color: AppColors.greyColor.withOpacity(0.08),
-                            alignment: Alignment.center,
-                            child: const CircularProgressIndicator(
-                              color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(20),
+                        child: Stack(
+                          children: [
+                            CachedNetworkImage(
+                              imageUrl: postImage,
+                              height: 240,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              placeholder: (_, __) => Container(
+                                height: 240,
+                                color: AppColors.greyColor.withOpacity(0.08),
+                                alignment: Alignment.center,
+                                child: const CircularProgressIndicator(
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                              errorWidget: (_, __, ___) => Container(
+                                height: 240,
+                                color: AppColors.greyColor.withOpacity(0.08),
+                                alignment: Alignment.center,
+                                child: const Icon(
+                                  Icons.image_not_supported_outlined,
+                                ),
+                              ),
                             ),
-                          ),
-                          errorWidget: (_, __, ___) => Container(
-                            height: 220,
-                            color: AppColors.greyColor.withOpacity(0.08),
-                            alignment: Alignment.center,
-                            child:
-                                const Icon(Icons.image_not_supported_outlined),
-                          ),
+                            Positioned(
+                              left: 12,
+                              bottom: 12,
+                              child: _TypeChip(
+                                label: type.replaceAll('_', ' '),
+                                color: accent,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -294,14 +312,14 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
   }
 }
 
-class _DetailHeader extends StatelessWidget {
+class _NotificationHero extends StatelessWidget {
   final String actorName;
   final String type;
   final String time;
   final Color accent;
   final Map<String, dynamic> notification;
 
-  const _DetailHeader({
+  const _NotificationHero({
     required this.actorName,
     required this.type,
     required this.time,
@@ -312,53 +330,104 @@ class _DetailHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.border),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            accent.withOpacity(0.22),
+            AppColors.primary.withOpacity(0.12),
+            AppColors.backgroundColor,
+          ],
+        ),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: accent.withOpacity(0.12),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(_iconForType(type), color: accent),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  actorName,
-                  style: AppTheme.blackTextStyle.copyWith(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 8, 18, 22),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Spacer(),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    width: 68,
+                    height: 68,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.card.withOpacity(0.94),
+                      boxShadow: [
+                        BoxShadow(
+                          color: accent.withOpacity(0.16),
+                          blurRadius: 24,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      _iconForType(type),
+                      size: 32,
+                      color: accent,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _summaryForType(type, notification),
-                  style: AppTheme.greyTextStyle.copyWith(height: 1.35),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  time,
-                  style: AppTheme.greyTextStyle.copyWith(
-                    fontSize: 12,
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _TypeChip(
+                          label: type.replaceAll('_', ' '),
+                          color: accent,
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          actorName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTheme.blackTextStyle.copyWith(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _summaryForType(type, notification),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTheme.greyTextStyle.copyWith(
+                            height: 1.35,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Icon(
+                    Icons.schedule_rounded,
+                    size: 15,
                     color: accent,
-                    fontWeight: FontWeight.w700,
                   ),
-                ),
-              ],
-            ),
+                  const SizedBox(width: 6),
+                  Text(
+                    time,
+                    style: AppTheme.greyTextStyle.copyWith(
+                      fontSize: 12,
+                      color: accent,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -406,6 +475,37 @@ class _DetailHeader extends StatelessWidget {
       default:
         return content.isNotEmpty ? content : 'Notification activity';
     }
+  }
+}
+
+class _TypeChip extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _TypeChip({
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withOpacity(0.18)),
+      ),
+      child: Text(
+        label.toUpperCase(),
+        style: AppTheme.greyTextStyle.copyWith(
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          color: color,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
   }
 }
 

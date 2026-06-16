@@ -1,18 +1,17 @@
+import 'dart:ui';
 import 'dart:async';
 import 'dart:io';
 import 'package:clique/core/clients/cloudinary_service.dart';
-import 'package:clique/core/services/media_service.dart';
-import 'package:clique/core/services/user/user_service.dart';
+import 'package:clique/app/configs/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:video_player/video_player.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
 import 'package:clique/core/models/status_model.dart';
 import 'package:clique/ui/widgets/common/effect_text.dart';
-import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
 
 class CreateStatusPage extends StatefulWidget {
   const CreateStatusPage({super.key});
@@ -26,18 +25,18 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   final TextEditingController _hashtagController = TextEditingController();
   final CloudinaryService _cloudinaryService = CloudinaryService();
   final ImagePicker _imagePicker = ImagePicker();
-  final MediaService _mediaService = MediaService();
-  final UserService _userService = UserService();
   StreamSubscription<StoriesState>? _createStorySubscription;
 
-  File? _selectedImageFile;
+  File? _selectedMediaFile;
+  String? _selectedMediaType;
+  VideoPlayerController? _videoController;
+  bool _isVideoInitialized = false;
   Color _selectedColor = AppColors.storyTextBackground;
   double _fontSize = 28;
   TextAlign _textAlign = TextAlign.center;
   bool _isEditingText = false;
   bool _isSubmitting = false;
   double _uploadProgress = 0.0;
-  bool _showFontControls = false;
   final List<String> _hashtags = [];
 
   static const List<Color> _backgroundColors = [
@@ -54,123 +53,53 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _textController.addListener(_onComposerChanged);
+    _hashtagController.addListener(_onComposerChanged);
+  }
+
+  @override
   void dispose() {
     _createStorySubscription?.cancel();
+    _videoController?.dispose();
+    _textController.removeListener(_onComposerChanged);
+    _hashtagController.removeListener(_onComposerChanged);
     _textController.dispose();
     _hashtagController.dispose();
     super.dispose();
   }
 
   bool get _hasText => _storyContentWithHashtags().isNotEmpty;
-  bool get _hasImage => _selectedImageFile != null;
-  bool get _hasContent => _hasText || _hasImage;
+  bool get _hasMedia => _selectedMediaFile != null;
+  bool get _hasVideo => _selectedMediaType == 'video' && _selectedMediaFile != null;
+  bool get _hasContent => _hasText || _hasMedia;
 
-  Future<List<ComposerTokenSuggestion>> _suggestTokens(
-    ComposerTokenType type,
-    String query,
-  ) async {
-    final normalizedQuery = query.trim().toLowerCase();
-
-    if (type == ComposerTokenType.mention) {
-      if (normalizedQuery.isEmpty) return const [];
-
-      try {
-        final users = await _userService.searchUsers(
-          normalizedQuery,
-          limit: 8,
-        );
-
-        return users
-            .map(
-              (user) => ComposerTokenSuggestion(
-                value: _readSuggestionValue(user),
-                label: _readSuggestionLabel(user),
-                subtitle: _readSuggestionSubtitle(user),
-              ),
-            )
-            .where((suggestion) => suggestion.value.isNotEmpty)
-            .toList();
-      } catch (_) {
-        return const [];
-      }
-    }
-
-    final sourceTags = <String>{
-      ..._hashtags,
-      ..._extractHashtags(_hashtagController.text),
-      'clique',
-      'dailyprompt',
-      'questionoftheday',
-      'discussionstarter',
-      'officialclique',
-    };
-
-    final results = sourceTags
-        .where((tag) => tag.toLowerCase().contains(normalizedQuery))
-        .take(8)
-        .map(
-          (tag) => ComposerTokenSuggestion(
-            value: tag,
-            label: '#$tag',
-            subtitle: 'Hashtag',
-          ),
-        )
-        .toList();
-
-    if (results.isNotEmpty) return results;
-
-    if (normalizedQuery.isEmpty) {
-      return sourceTags
-          .take(8)
-          .map(
-            (tag) => ComposerTokenSuggestion(
-              value: tag,
-              label: '#$tag',
-              subtitle: 'Topic',
-            ),
-          )
-          .toList();
-    }
-
-    return [
-      ComposerTokenSuggestion(
-        value: normalizedQuery.replaceAll(RegExp(r'[^a-z0-9_]+'), ''),
-        label: '#$normalizedQuery',
-        subtitle: 'Create new hashtag',
-      ),
-    ];
-  }
-
-  String _readSuggestionValue(Map<String, dynamic> user) {
-    final username = user['username']?.toString().trim();
-    if (username != null && username.isNotEmpty) return username;
-    final name = user['name']?.toString().trim();
-    if (name != null && name.isNotEmpty) return name.replaceAll(' ', '_');
-    return user['id']?.toString().trim() ?? '';
-  }
-
-  String _readSuggestionLabel(Map<String, dynamic> user) {
-    final name = user['name']?.toString().trim();
-    if (name != null && name.isNotEmpty) return name;
-    final username = user['username']?.toString().trim();
-    if (username != null && username.isNotEmpty) return '@$username';
-    return 'User';
-  }
-
-  String? _readSuggestionSubtitle(Map<String, dynamic> user) {
-    final username = user['username']?.toString().trim();
-    if (username != null && username.isNotEmpty) return '@$username';
-    return null;
+  void _onComposerChanged() {
+    if (!mounted) return;
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: !_isSubmitting,
+      canPop: !_isSubmitting && !_isEditingText,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+
+        if (_isSubmitting) {
+          _showSnackBar('Story is uploading. Please wait.', isError: true);
+          return;
+        }
+
+        if (_isEditingText) {
+          setState(() => _isEditingText = false);
+        }
+      },
       child: Scaffold(
         extendBodyBehindAppBar: true,
-        backgroundColor: AppColors.black,
-        appBar: _isEditingText ? null : _buildTransparentAppBar(),
+        backgroundColor: AppColors.backgroundColor,
+        appBar: _buildTransparentAppBar(),
         body: Stack(
           children: [
             _buildBackground(),
@@ -189,191 +118,279 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
     return Container(
       width: double.infinity,
       height: double.infinity,
-      color: _hasImage ? AppColors.black : _selectedColor,
-      child: _hasImage
-          ? InteractiveViewer(
-              minScale: 1,
-              maxScale: 4,
-              clipBehavior: Clip.none,
-              child: SizedBox.expand(
-                child: Image.file(
-                  _selectedImageFile!,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            )
-          : null,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.backgroundColor,
+            _hasMedia
+                ? AppColors.primary.withOpacity(0.08)
+                : _selectedColor.withOpacity(0.8),
+            AppColors.secondary.withOpacity(0.06),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildMainContent() {
-    return Center(
-      child: _isEditingText
-          ? _buildTextInput()
-          : GestureDetector(
-              onTap: () => setState(() => _isEditingText = true),
-              behavior: HitTestBehavior.translucent,
-              child: Padding(
-                padding: const EdgeInsets.all(40),
-                child: Center(
-                  child: SingleChildScrollView(
-                    child: _hasText || !_hasImage
-                        ? _StoryHashtagText(
-                            text: _hasText
-                                ? _storyContentWithHashtags()
-                                : "What's happening?",
-                            textAlign: _textAlign,
-                            style: TextStyle(
-                              color: AppColors.white,
-                              fontSize: _hasText ? _fontSize : 20,
-                              fontWeight: FontWeight.w800,
-                              height: 1.4,
-                              shadows: const [
-                                Shadow(
-                                  blurRadius: 10,
-                                  color: AppColors.black45,
-                                  offset: Offset(2, 2),
-                                ),
-                              ],
+    if (_isEditingText) {
+      return _buildTextEditorPanel();
+    }
+
+    return SafeArea(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+            child: Column(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _isEditingText = true),
+                    behavior: HitTestBehavior.translucent,
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (_hasMedia) ...[
+                            _StoryImagePreview(
+                              mediaFile: _selectedMediaFile!,
+                              mediaType: _selectedMediaType ?? 'image',
+                              videoController: _videoController,
+                              isVideoInitialized: _isVideoInitialized,
+                              onReplace: _showMediaPicker,
+                              onRemove: _clearMedia,
                             ),
-                          )
-                        : const SizedBox.shrink(),
+                            const SizedBox(height: 14),
+                          ],
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: _hasText || !_hasMedia
+                                ? _StoryHashtagText(
+                                    text: _hasText
+                                        ? _storyContentWithHashtags()
+                                        : "What's happening?",
+                                    textAlign: _textAlign,
+                                    style: TextStyle(
+                                      color: AppColors.blackTextColor,
+                                      fontSize: _hasText ? _fontSize : 20,
+                                      fontWeight: FontWeight.w800,
+                                      height: 1.4,
+                                      shadows: const [
+                                        Shadow(
+                                          blurRadius: 10,
+                                          color: AppColors.black45,
+                                          offset: Offset(2, 2),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(height: 12),
+                if (_hasMedia || _hasText) _buildMiniStatusBar(),
+              ],
             ),
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildTextInput() {
+  Widget _buildTextEditorPanel() {
+    return SafeArea(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.cardColor.withOpacity(0.96),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: AppColors.cardBorderColor),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.black.withOpacity(0.08),
+                    blurRadius: 22,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  if (_hasMedia)
+                    _StoryTextMediaPreview(
+                      mediaFile: _selectedMediaFile!,
+                      mediaType: _selectedMediaType ?? 'image',
+                      videoController: _videoController,
+                      isVideoInitialized: _isVideoInitialized,
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.10),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(
+                            Icons.edit_outlined,
+                            color: AppColors.primary,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Edit your story',
+                                style: AppTheme.blackTextStyle.copyWith(
+                                  color: AppColors.text,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                'Keep it short, bold, and easy to read.',
+                                style: AppTheme.greyTextStyle.copyWith(
+                                  fontSize: 12,
+                                  height: 1.35,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+                    child: TextField(
+                      controller: _textController,
+                      autofocus: true,
+                      showCursor: true,
+                      cursorColor: AppColors.primary,
+                      selectionHeightStyle: BoxHeightStyle.tight,
+                      selectionWidthStyle: BoxWidthStyle.tight,
+                      textAlignVertical: TextAlignVertical.top,
+                      maxLines: null,
+                      minLines: 5,
+                      textAlign: _textAlign,
+                      textInputAction: TextInputAction.newline,
+                      keyboardType: TextInputType.multiline,
+                      style: AppTheme.blackTextStyle.copyWith(
+                        color: AppColors.text,
+                        fontSize: _fontSize,
+                        fontWeight: FontWeight.w700,
+                        height: 1.4,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Write your story...',
+                        hintStyle: AppTheme.greyTextStyle.copyWith(
+                          fontSize: _fontSize,
+                          color: AppColors.textSecondary.withOpacity(0.7),
+                        ),
+                        border: InputBorder.none,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+                    child: Row(
+                      children: [
+                        TextButton.icon(
+                          onPressed: () => setState(() {
+                            _textAlign = _textAlign == TextAlign.center
+                                ? TextAlign.left
+                                : TextAlign.center;
+                          }),
+                          icon: Icon(
+                            _textAlign == TextAlign.center
+                                ? Icons.format_align_center
+                                : Icons.format_align_left,
+                          ),
+                          label: Text(
+                            _textAlign == TextAlign.center ? 'Center' : 'Left',
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        TextButton.icon(
+                          onPressed: _showHashtagSheet,
+                          icon: const Icon(Icons.tag_rounded),
+                          label: const Text('Hashtags'),
+                        ),
+                        const Spacer(),
+                        OutlinedButton(
+                          onPressed: _handleEditorBack,
+                          child: const Text('Back'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMiniStatusBar() {
     return Container(
-      color: AppColors.black.withOpacity(0.95),
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.cardColor.withOpacity(0.88),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.cardBorderColor.withOpacity(0.6)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withOpacity(0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
         children: [
           Expanded(
-            child: Center(
-              child: TokenSuggestionField(
-                controller: _textController,
-                enabled: true,
-                suggestionsBuilder: _suggestTokens,
-                textAlign: _textAlign,
-                maxLines: null,
-                style: TextStyle(
-                  fontSize: _fontSize,
-                  fontWeight: FontWeight.bold,
-                  height: 1.4,
-                  color: AppColors.blackTextColor,
-                ),
-                decoration: InputDecoration(
-                  border: InputBorder.none,
-                  hintText: 'Write your story...',
-                  hintStyle: TextStyle(color: AppColors.greyTextColor),
-                ),
+            child: Text(
+              _hasMedia
+                  ? (_hasVideo ? 'Video attached' : 'Image attached')
+                  : 'Text only status',
+              style: AppTheme.blackTextStyle.copyWith(
+                color: AppColors.text,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
-          _buildTextInputControls(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTextInputControls() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      child: Column(
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            height: _showFontControls ? 80 : 0,
-            child: _showFontControls ? _buildFontControls() : null,
+          TextButton(
+            onPressed: _showMediaPicker,
+            child: const Text('Replace'),
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildControlButton(
-                icon: Icons.format_size,
-                isActive: _showFontControls,
-                onTap: () =>
-                    setState(() => _showFontControls = !_showFontControls),
-              ),
-              _buildControlButton(
-                icon: _textAlign == TextAlign.center
-                    ? Icons.format_align_center
-                    : Icons.format_align_left,
-                onTap: () => setState(() {
-                  _textAlign = _textAlign == TextAlign.center
-                      ? TextAlign.left
-                      : TextAlign.center;
-                }),
-              ),
-              const SizedBox(width: 20),
-              _buildControlButton(
-                icon: Icons.close,
-                backgroundColor: AppColors.white.withOpacity(0.1),
-                onTap: () => setState(() => _isEditingText = false),
-              ),
-              _buildControlButton(
-                icon: Icons.check,
-                backgroundColor: AppColors.primary,
-                onTap: () => setState(() => _isEditingText = false),
-              ),
-            ],
+          TextButton(
+            onPressed: _clearMedia,
+            child: const Text('Remove'),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildFontControls() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Icon(Icons.format_size, color: AppColors.white70, size: 20),
-              Text(
-                'Font Size: ${_fontSize.round()}',
-                style: const TextStyle(color: AppColors.white70, fontSize: 14),
-              ),
-            ],
-          ),
-          Slider(
-            value: _fontSize,
-            min: 20,
-            max: 48,
-            activeColor: AppColors.primary,
-            inactiveColor: AppColors.white30,
-            onChanged: (value) => setState(() => _fontSize = value),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildControlButton({
-    required IconData icon,
-    VoidCallback? onTap,
-    Color? backgroundColor,
-    bool isActive = false,
-  }) {
-    return Container(
-      width: 44,
-      height: 44,
-      margin: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: backgroundColor ??
-            (isActive ? AppColors.primary : AppColors.white.withOpacity(0.1)),
-      ),
-      child: IconButton(
-        icon: Icon(icon, color: AppColors.white, size: 22),
-        onPressed: onTap,
-        padding: EdgeInsets.zero,
       ),
     );
   }
@@ -384,8 +401,9 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
       elevation: 0,
       systemOverlayStyle: SystemUiOverlayStyle.light,
       leading: IconButton(
-        icon: const Icon(Icons.close, color: AppColors.white, size: 28),
-        onPressed: () => Navigator.pop(context),
+        icon: const Icon(Icons.arrow_back_ios_new_rounded,
+            color: AppColors.white, size: 22),
+        onPressed: _handleEditorBack,
       ),
       actions: [
         Padding(
@@ -409,9 +427,12 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                       color: AppColors.white,
                     ),
                   )
-                : const Text(
-                    "Share",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                : Text(
+                    _isEditingText ? 'Post' : 'Share',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
           ),
         ),
@@ -553,7 +574,11 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
       onTap: () {
         setState(() {
           _selectedColor = color;
-          _selectedImageFile = null;
+          _selectedMediaFile = null;
+          _selectedMediaType = null;
+          _videoController?.dispose();
+          _videoController = null;
+          _isVideoInitialized = false;
         });
         Navigator.pop(context);
       },
@@ -595,13 +620,29 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                     const Icon(Icons.photo_library, color: AppColors.white),
                 title: const Text('Choose from Gallery',
                     style: TextStyle(color: AppColors.white)),
-                onTap: () => _pickImage(ImageSource.gallery),
+                onTap: () => _pickMedia(
+                  ImageSource.gallery,
+                  mediaType: 'image',
+                ),
               ),
               ListTile(
                 leading: const Icon(Icons.camera_alt, color: AppColors.white),
                 title: const Text('Take a Photo',
                     style: TextStyle(color: AppColors.white)),
-                onTap: () => _pickImage(ImageSource.camera),
+                onTap: () => _pickMedia(
+                  ImageSource.camera,
+                  mediaType: 'image',
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.videocam_outlined,
+                    color: AppColors.white),
+                title: const Text('Choose Video',
+                    style: TextStyle(color: AppColors.white)),
+                onTap: () => _pickMedia(
+                  ImageSource.gallery,
+                  mediaType: 'video',
+                ),
               ),
               const SizedBox(height: 20),
             ],
@@ -611,41 +652,70 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
     );
   }
 
-  Future<void> _pickImage(ImageSource source) async {
+  void _clearMedia() {
+    _videoController?.dispose();
+    _videoController = null;
+    _isVideoInitialized = false;
+    setState(() {
+      _selectedMediaFile = null;
+      _selectedMediaType = null;
+    });
+  }
+
+  Future<void> _pickMedia(
+    ImageSource source, {
+    required String mediaType,
+  }) async {
     Navigator.pop(context);
     try {
-      final XFile? pickedFile = await _imagePicker.pickImage(
-        source: source,
-        imageQuality: 85,
-      );
+      final XFile? pickedFile = mediaType == 'video'
+          ? await _imagePicker.pickVideo(
+              source: source,
+              maxDuration: const Duration(seconds: 45),
+            )
+          : await _imagePicker.pickImage(
+              source: source,
+              imageQuality: 85,
+            );
       if (pickedFile != null) {
-        final croppedFile = await _mediaService.cropImage(
-          pickedFile,
-          aspectRatio: const CropAspectRatio(ratioX: 9, ratioY: 16),
-        );
-        if (croppedFile == null) return;
+        await _videoController?.dispose();
 
         setState(() {
-          _selectedImageFile = File(croppedFile.path);
+          _selectedMediaFile = File(pickedFile.path);
+          _selectedMediaType = mediaType;
           _selectedColor = AppColors.transparent;
+          _isVideoInitialized = false;
         });
+
+        if (mediaType == 'video') {
+          await _initializeVideoController(File(pickedFile.path));
+        }
       }
     } catch (e) {
-      _showSnackBar('Failed to pick image: $e', isError: true);
+      _showSnackBar('Failed to pick media: $e', isError: true);
     }
   }
 
   Future<String?> _uploadToCloudinary() async {
-    if (_selectedImageFile == null) return null;
+    final mediaFile = _selectedMediaFile;
+    if (mediaFile == null) return null;
 
     try {
-      final response = await _cloudinaryService.uploadImage(
-        _selectedImageFile!,
-        onProgress: (progress) {
-          if (!mounted) return;
-          setState(() => _uploadProgress = progress);
-        },
-      );
+      final response = _hasVideo
+          ? await _cloudinaryService.uploadVideo(
+              mediaFile,
+              onProgress: (progress) {
+                if (!mounted) return;
+                setState(() => _uploadProgress = progress);
+              },
+            )
+          : await _cloudinaryService.uploadImage(
+              mediaFile,
+              onProgress: (progress) {
+                if (!mounted) return;
+                setState(() => _uploadProgress = progress);
+              },
+            );
       return response;
     } catch (e) {
       debugPrint('Upload error: $e');
@@ -691,6 +761,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                         autofocus: true,
                         style: const TextStyle(color: AppColors.white),
                         textInputAction: TextInputAction.done,
+                        onChanged: (_) => setSheetState(() {}),
                         decoration: InputDecoration(
                           hintText: 'Add hashtags',
                           hintStyle: TextStyle(
@@ -712,11 +783,11 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                         },
                       ),
                       const SizedBox(height: 14),
-                      if (_hashtags.isNotEmpty)
+                      if (_currentDraftHashtags.isNotEmpty)
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
-                          children: _hashtags.map((tag) {
+                          children: _currentDraftHashtags.map((tag) {
                             return _StoryHashtagChip(
                               tag: tag,
                               onRemove: () {
@@ -776,12 +847,16 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
     setState(() => _hashtags.remove(tag));
   }
 
-  String _storyContentWithHashtags() {
-    var content = _textController.text.trim();
-    final tags = _dedupeTags([
+  List<String> get _currentDraftHashtags {
+    return _dedupeTags([
       ..._hashtags,
       ..._extractHashtags(_hashtagController.text),
     ]);
+  }
+
+  String _storyContentWithHashtags() {
+    var content = _textController.text.trim();
+    final tags = _currentDraftHashtags;
 
     if (tags.isNotEmpty) {
       if (content.isNotEmpty) content += '\n\n';
@@ -810,7 +885,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
 
   Future<void> _shareStatus() async {
     if (!_hasContent) {
-      _showSnackBar('Please add text or an image to your story', isError: true);
+      _showSnackBar('Please add text or media to your story', isError: true);
       return;
     }
 
@@ -822,19 +897,18 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
     final storiesBloc = context.read<StoriesBloc>();
 
     try {
-      String? imageUrl;
-      if (_hasImage) {
-        imageUrl = await _uploadToCloudinary();
-        if (imageUrl == null) throw Exception('Failed to upload image');
+      String? mediaUrl;
+      if (_hasMedia) {
+        mediaUrl = await _uploadToCloudinary();
+        if (mediaUrl == null) throw Exception('Failed to upload media');
       }
 
-      // Prepare attachments if image exists
       List<Attachment> attachments = [];
-      if (imageUrl != null) {
+      if (mediaUrl != null) {
         attachments = [
           Attachment(
-            type: 'image',
-            url: imageUrl,
+            type: _hasVideo ? 'video' : 'image',
+            url: mediaUrl,
           ),
         ];
       }
@@ -865,7 +939,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
       storiesBloc.add(CreateStoryEvent(
         content: _storyContentWithHashtags(),
         attachments: attachments.isNotEmpty ? attachments : null,
-        backgroundColor: _hasImage
+        backgroundColor: _hasMedia
             ? null
             : '#${_selectedColor.value.toRadixString(16).substring(2)}',
         textAlign: _textAlign == TextAlign.center ? 'center' : 'left',
@@ -884,15 +958,65 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   }
 
   void _clearAll() {
+    _videoController?.dispose();
+    _videoController = null;
+    _isVideoInitialized = false;
     setState(() {
       _textController.clear();
-      _selectedImageFile = null;
+      _hashtagController.clear();
+      _hashtags.clear();
+      _selectedMediaFile = null;
+      _selectedMediaType = null;
       _selectedColor = AppColors.storyTextBackground;
       _textAlign = TextAlign.center;
       _fontSize = 28;
       _uploadProgress = 0.0;
+      _isEditingText = false;
     });
     _showSnackBar('All cleared');
+  }
+
+  void _handleEditorBack() {
+    if (_isSubmitting) {
+      _showSnackBar('Story is uploading. Please wait.', isError: true);
+      return;
+    }
+
+    if (_isEditingText) {
+      setState(() => _isEditingText = false);
+      return;
+    }
+
+    Navigator.pop(context);
+  }
+
+  Future<void> _initializeVideoController(File file) async {
+    try {
+      final controller = VideoPlayerController.file(file);
+      _videoController = controller;
+
+      await controller.initialize();
+
+      if (!mounted || _videoController != controller) {
+        await controller.dispose();
+        return;
+      }
+
+      await controller.setLooping(true);
+      await controller.play();
+
+      if (!mounted) return;
+      setState(() {
+        _isVideoInitialized = true;
+      });
+    } catch (error) {
+      debugPrint('Error initializing story video: $error');
+      if (!mounted) return;
+      setState(() {
+        _isVideoInitialized = false;
+      });
+      _showSnackBar('Failed to load video preview', isError: true);
+    }
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
@@ -976,6 +1100,163 @@ class _StoryHashtagChip extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _StoryImagePreview extends StatelessWidget {
+  final File mediaFile;
+  final String mediaType;
+  final VideoPlayerController? videoController;
+  final bool isVideoInitialized;
+  final VoidCallback onReplace;
+  final VoidCallback onRemove;
+
+  const _StoryImagePreview({
+    required this.mediaFile,
+    required this.mediaType,
+    required this.videoController,
+    required this.isVideoInitialized,
+    required this.onReplace,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cardColor,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: AppColors.cardBorderColor),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withOpacity(0.08),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _StoryMediaFrame(
+            mediaFile: mediaFile,
+            mediaType: mediaType,
+            videoController: videoController,
+            isVideoInitialized: isVideoInitialized,
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Media preview',
+                    style: AppTheme.blackTextStyle.copyWith(
+                      color: AppColors.text,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: onReplace,
+                  child: const Text('Replace'),
+                ),
+                const SizedBox(width: 6),
+                OutlinedButton(
+                  onPressed: onRemove,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.text,
+                    minimumSize: const Size(0, 36),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  ),
+                  child: const Text('Remove'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StoryTextMediaPreview extends StatelessWidget {
+  final File mediaFile;
+  final String mediaType;
+  final VideoPlayerController? videoController;
+  final bool isVideoInitialized;
+
+  const _StoryTextMediaPreview({
+    required this.mediaFile,
+    required this.mediaType,
+    required this.videoController,
+    required this.isVideoInitialized,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(22),
+      child: _StoryMediaFrame(
+        mediaFile: mediaFile,
+        mediaType: mediaType,
+        videoController: videoController,
+        isVideoInitialized: isVideoInitialized,
+      ),
+    );
+  }
+}
+
+class _StoryMediaFrame extends StatelessWidget {
+  final File mediaFile;
+  final String mediaType;
+  final VideoPlayerController? videoController;
+  final bool isVideoInitialized;
+
+  const _StoryMediaFrame({
+    required this.mediaFile,
+    required this.mediaType,
+    required this.videoController,
+    required this.isVideoInitialized,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.black,
+      child: mediaType == 'video'
+          ? AspectRatio(
+              aspectRatio:
+                  videoController?.value.isInitialized == true &&
+                          videoController!.value.aspectRatio > 0
+                      ? videoController!.value.aspectRatio
+                      : 9 / 16,
+              child: isVideoInitialized && videoController != null
+                  ? FittedBox(
+                      fit: BoxFit.contain,
+                      child: SizedBox(
+                        width: videoController!.value.size.width,
+                        height: videoController!.value.size.height,
+                        child: VideoPlayer(videoController!),
+                      ),
+                    )
+                  : const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                      ),
+                    ),
+            )
+          : AspectRatio(
+              aspectRatio: 4 / 5,
+              child: Image.file(
+                mediaFile,
+                fit: BoxFit.contain,
+              ),
+            ),
     );
   }
 }

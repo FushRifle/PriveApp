@@ -119,7 +119,7 @@ flutter_launcher_icons:
   android: true
   ios: true
   remove_alpha_ios: true
-  image_path: "assets/icons/clique-new.png"
+  image_path: "iconikai-icon/ios/AppIcon-1024.png"
   adaptive_icon_background: "#000000"
   adaptive_icon_padding: false
-  adaptive_icon_foreground: "assets/icons/clique-new.png"
+  adaptive_icon_foreground: "iconikai-icon/android/playstore-icon.png"

@@ -229,15 +229,19 @@ class DeleteFeedPost extends FeedEvent {
 
 class UpdateFeedPost extends FeedEvent {
   final int postId;
+  final int ownerId;
   final String content;
+  final DateTime createdAt;
 
   const UpdateFeedPost({
     required this.postId,
+    required this.ownerId,
     required this.content,
+    required this.createdAt,
   });
 
   @override
-  List<Object?> get props => [postId, content];
+  List<Object?> get props => [postId, ownerId, content, createdAt];
 }
 
 // Clear errors

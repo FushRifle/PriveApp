@@ -48,6 +48,7 @@ class FeedState extends Equatable {
 
   // General
   final bool isCreatingPost;
+  final bool isUpdatingPost;
   final bool isCreatingComment;
   final String? generalError;
 
@@ -68,6 +69,7 @@ class FeedState extends Equatable {
     this.mediaPage = 1,
     this.mediaError,
     this.isCreatingPost = false,
+    this.isUpdatingPost = false,
     this.isCreatingComment = false,
     this.generalError,
   });
@@ -89,6 +91,7 @@ class FeedState extends Equatable {
     int? mediaPage,
     String? mediaError,
     bool? isCreatingPost,
+    bool? isUpdatingPost,
     bool? isCreatingComment,
     String? generalError,
     bool clearPostsError = false,
@@ -114,6 +117,7 @@ class FeedState extends Equatable {
       mediaPage: mediaPage ?? this.mediaPage,
       mediaError: clearMediaError ? null : mediaError ?? this.mediaError,
       isCreatingPost: isCreatingPost ?? this.isCreatingPost,
+      isUpdatingPost: isUpdatingPost ?? this.isUpdatingPost,
       isCreatingComment: isCreatingComment ?? this.isCreatingComment,
       generalError:
           clearGeneralError ? null : generalError ?? this.generalError,
@@ -157,6 +161,7 @@ class FeedState extends Equatable {
         mediaPage,
         mediaError,
         isCreatingPost,
+        isUpdatingPost,
         isCreatingComment,
         generalError,
       ];
