@@ -7,7 +7,7 @@ import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/bloc/profile/gallery_profile_cubit.dart';
 import 'package:clique/core/models/gallery_model.dart';
-import 'package:clique/ui/widgets/post/normal-post/post_card.dart';
+import 'package:clique/ui/widgets/post/normal-post/repost_card.dart';
 
 enum ProfileGalleryTabType {
   posts,
@@ -126,7 +126,6 @@ class _ProfileSavedPostsTabState extends State<ProfileSavedPostsTab> {
     if (!mounted) return;
     if (!state.hasMorePosts || state.isLoadingMore) return;
     if (state.posts.length == _lastRequestedPostCount) return;
-    if (state.posts.any((post) => post.isSaved)) return;
 
     _lastRequestedPostCount = state.posts.length;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -190,7 +189,7 @@ class _ProfileSavedPostsTabState extends State<ProfileSavedPostsTab> {
               );
             }
 
-            return CardPost(
+            return RepostCard(
               post: savedPosts[index],
               isDetailView: false,
             );

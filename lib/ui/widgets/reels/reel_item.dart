@@ -123,6 +123,7 @@ class _ReelItemState extends State<ReelItem>
   bool _isPlaying = false;
   bool _hasVideoError = false;
   bool _isFollowing = false;
+  bool _isFollowBusy = false;
   bool _isLiked = false;
   bool _isReposted = false;
   bool _isMuted = true;
@@ -574,12 +575,49 @@ class _ReelItemState extends State<ReelItem>
     );
   }
 
-  void _toggleFollow() {
-    if (!mounted) return;
+  Future<void> _toggleFollow() async {
+    if (!mounted || _isFollowBusy) return;
+
+    final nextFollowing = !_isFollowing;
 
     setState(() {
-      _isFollowing = !_isFollowing;
+      _isFollowing = nextFollowing;
+      _isFollowBusy = true;
     });
+
+    try {
+      try {
+        final friendsBloc = context.read<FriendsBloc>();
+        if (nextFollowing) {
+          friendsBloc.add(FollowUser(userId: _userId));
+        } else {
+          friendsBloc.add(UnfollowUser(userId: _userId));
+        }
+      } catch (_) {
+        if (nextFollowing) {
+          await FriendsService().followUser(_userId);
+        } else {
+          await FriendsService().unfollowUser(_userId);
+        }
+      }
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isFollowing = !nextFollowing;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString()),
+          backgroundColor: AppColors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isFollowBusy = false;
+        });
+      }
+    }
   }
 
   bool _isCurrentUser() {
@@ -591,6 +629,14 @@ class _ReelItemState extends State<ReelItem>
     }
 
     return false;
+  }
+
+  int get _userId {
+    final userId = widget.reel['userId'] ?? _user['id'];
+
+    if (userId is int) return userId;
+    if (userId is String) return int.tryParse(userId) ?? 0;
+    return 0;
   }
 
   String? get _reelId {

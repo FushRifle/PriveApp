@@ -4,7 +4,7 @@ import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/core/services/home/feed_service.dart';
 import 'package:clique/ui/pages/main/topics/topic_details.dart';
-import 'package:clique/ui/widgets/post/normal-post/post_card.dart';
+import 'package:clique/ui/widgets/post/normal-post/repost_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -271,7 +271,7 @@ class _TopicsPageState extends State<TopicsPage> {
                       final post = _posts[index];
                       return BlocProvider.value(
                         value: context.read<FeedBloc>(),
-                        child: CardPost(post: post),
+                        child: RepostCard(post: post),
                       );
                     },
                     separatorBuilder: (_, __) => const SizedBox(height: 12),

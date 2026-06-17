@@ -1,0 +1,412 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/configs/theme.dart';
+import 'package:clique/core/models/event_model.dart';
+
+class EventCard extends StatelessWidget {
+  final EventModel event;
+  final bool compact;
+  final VoidCallback onTap;
+  final VoidCallback onGoing;
+  final VoidCallback onInterested;
+  final VoidCallback onLeave;
+
+  const EventCard({
+    super.key,
+    required this.event,
+    required this.compact,
+    required this.onTap,
+    required this.onGoing,
+    required this.onInterested,
+    required this.onLeave,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompactWidth = constraints.maxWidth < 400;
+        final isCompactImage = compact || isCompactWidth;
+
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(24),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.card,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppColors.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.black.withOpacity(0.03),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Stack(
+                    children: [
+                      _EventImage(
+                        imageUrl: event.imageUrl,
+                        compact: isCompactImage,
+                      ),
+                      Positioned(
+                        top: 14,
+                        left: 14,
+                        right: 14,
+                        child: Row(
+                          children: [
+                            if (event.category.isNotEmpty)
+                              _FloatingTag(
+                                icon: Icons.sell_outlined,
+                                label: event.category,
+                              ),
+                            const Spacer(),
+                            if (event.isPrivate)
+                              _FloatingTag(
+                                icon: Icons.lock_outline,
+                                label: 'Private',
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  Padding(
+                    padding: EdgeInsets.all(isCompactImage ? 14 : 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _DateRail(date: event.startsAt),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    event.title,
+                                    maxLines: isCompactImage ? 2 : 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTheme.blackTextStyle.copyWith(
+                                      fontSize: isCompactImage ? 16 : 18,
+                                      fontWeight: AppTheme.bold,
+                                      height: 1.15,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    event.description.isEmpty
+                                        ? 'No description provided.'
+                                        : event.description,
+                                    maxLines: isCompactImage ? 2 : 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTheme.greyTextStyle.copyWith(
+                                      height: 1.45,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            if (event.location.isNotEmpty)
+                              _MetaChip(
+                                icon: Icons.place_outlined,
+                                label: event.location,
+                              ),
+                            _MetaChip(
+                              icon: Icons.check_circle_outline,
+                              label: '${event.goingCount} going',
+                            ),
+                            _MetaChip(
+                              icon: Icons.favorite_border,
+                              label: '${event.interestedCount} interested',
+                            ),
+                            if (event.host?.name.isNotEmpty == true)
+                              _MetaChip(
+                                icon: Icons.person_outline,
+                                label: event.host!.name,
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            FilledButton(
+                              onPressed: event.isGoing ? onLeave : onGoing,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: event.isGoing
+                                    ? AppColors.success.withOpacity(0.12)
+                                    : AppColors.primary,
+                                foregroundColor: event.isGoing
+                                    ? AppColors.success
+                                    : AppColors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              child:
+                                  Text(event.isGoing ? 'Going' : 'RSVP going'),
+                            ),
+                            OutlinedButton(
+                              onPressed:
+                                  event.isInterested ? onLeave : onInterested,
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              child: Text(
+                                event.isInterested ? 'Saved' : 'Interested',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _DateRail extends StatelessWidget {
+  final DateTime date;
+
+  const _DateRail({required this.date});
+
+  @override
+  Widget build(BuildContext context) {
+    final local = date.toLocal();
+    return Container(
+      width: 58,
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          Text(
+            _monthLabel(local.month),
+            style: AppTheme.greyTextStyle.copyWith(
+              fontSize: 11,
+              fontWeight: AppTheme.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${local.day}',
+            style: AppTheme.blackTextStyle.copyWith(
+              fontSize: 20,
+              fontWeight: AppTheme.bold,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            _weekdayLabel(local.weekday),
+            style: AppTheme.greyTextStyle.copyWith(fontSize: 10),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EventImage extends StatelessWidget {
+  final String imageUrl;
+  final bool compact;
+
+  const _EventImage({
+    required this.imageUrl,
+    required this.compact,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final height = compact ? 136.0 : 178.0;
+
+    if (imageUrl.trim().startsWith('http')) {
+      return SizedBox(
+        height: height,
+        width: double.infinity,
+        child: CachedNetworkImage(
+          imageUrl: imageUrl,
+          fit: BoxFit.cover,
+          placeholder: (_, __) => _placeholder(height),
+          errorWidget: (_, __, ___) => _placeholder(height),
+        ),
+      );
+    }
+
+    return Container(
+      height: height,
+      width: double.infinity,
+      color: AppColors.background,
+      child: Center(
+        child: Container(
+          width: 72,
+          height: 72,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Icon(
+            Icons.event_outlined,
+            color: AppColors.primary,
+            size: 34,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _placeholder(double height) {
+    return Container(
+      height: height,
+      color: AppColors.background,
+      alignment: Alignment.center,
+      child: Container(
+        width: 72,
+        height: 72,
+        decoration: BoxDecoration(
+          color: AppColors.primary.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: const Icon(
+          Icons.event_outlined,
+          color: AppColors.primary,
+          size: 34,
+        ),
+      ),
+    );
+  }
+}
+
+class _MetaChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _MetaChip({
+    required this.icon,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppColors.textSecondary),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: AppTheme.greyTextStyle.copyWith(
+              fontSize: 12,
+              fontWeight: AppTheme.medium,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FloatingTag extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _FloatingTag({
+    required this.icon,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppColors.black.withOpacity(0.45),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.white24),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: AppColors.white),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: AppTheme.whiteTextStyle.copyWith(
+              fontSize: 11,
+              fontWeight: AppTheme.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _monthLabel(int month) {
+  const labels = [
+    'JAN',
+    'FEB',
+    'MAR',
+    'APR',
+    'MAY',
+    'JUN',
+    'JUL',
+    'AUG',
+    'SEP',
+    'OCT',
+    'NOV',
+    'DEC',
+  ];
+  return labels[month - 1];
+}
+
+String _weekdayLabel(int weekday) {
+  const labels = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+  return labels[weekday - 1];
+}

@@ -113,14 +113,32 @@ class ShareFeedPost extends FeedEvent {
 class RepostFeedPost extends FeedEvent {
   final int postId;
   final String content;
+  final String postType;
+  final bool isAnonymous;
+  final String? anonymousCategory;
+  final List<String>? pollOptions;
+  final int? pollExpirationHours;
 
   const RepostFeedPost({
     required this.postId,
     this.content = '',
+    this.postType = 'standard',
+    this.isAnonymous = false,
+    this.anonymousCategory,
+    this.pollOptions,
+    this.pollExpirationHours,
   });
 
   @override
-  List<Object?> get props => [postId, content];
+  List<Object?> get props => [
+        postId,
+        content,
+        postType,
+        isAnonymous,
+        anonymousCategory,
+        pollOptions,
+        pollExpirationHours,
+      ];
 }
 
 // Load comments for a post

@@ -5,6 +5,7 @@ import 'package:clique/core/services/user/user_service.dart';
 import 'package:clique/ui/widgets/post/anonymous/anonymous_post_card.dart';
 import 'package:clique/ui/pages/main/home/edit_post_page.dart';
 import 'package:clique/ui/pages/main/home/post_detail_page.dart';
+import 'package:clique/ui/pages/main/home/repost_page.dart';
 import 'package:clique/ui/widgets/post/poll/poll_post_card.dart';
 import 'package:clique/ui/widgets/post/question/question_post_card.dart';
 
@@ -249,6 +250,7 @@ class _CardPostState extends State<CardPost> {
       builder: (_) {
         return _PostOptionsSheet(
           canEdit: _canEditPost,
+          canDelete: _isOwnPost,
           editWindowRemaining: editWindowRemaining,
           onEdit: () {
             Navigator.pop(context);
@@ -269,7 +271,9 @@ class _CardPostState extends State<CardPost> {
           },
           onDelete: () {
             Navigator.pop(context);
-            _confirmDelete();
+            if (_isOwnPost) {
+              _confirmDelete();
+            }
           },
           onRepost: () {
             Navigator.pop(context);
@@ -353,7 +357,15 @@ class _CardPostState extends State<CardPost> {
                   ),
                   onTap: () {
                     Navigator.pop(context);
-                    _performRepost();
+                    _performRepost(
+                      postType: widget.post.postType,
+                      isAnonymous: widget.post.isAnonymous,
+                      anonymousCategory: widget.post.anonymousCategory,
+                      pollOptions: widget.post.pollOptions.isNotEmpty
+                          ? widget.post.pollOptions
+                          : null,
+                      pollExpirationHours: widget.post.pollExpirationHours,
+                    );
                   },
                 ),
                 ListTile(
@@ -368,7 +380,7 @@ class _CardPostState extends State<CardPost> {
                   ),
                   onTap: () {
                     Navigator.pop(context);
-                    _showRepostCaptionDialog();
+                    _openRepostPage();
                   },
                 ),
               ],
@@ -379,58 +391,26 @@ class _CardPostState extends State<CardPost> {
     );
   }
 
-  void _showRepostCaptionDialog() {
-    final controller = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (_) {
-        return AlertDialog(
-          backgroundColor: AppColors.cardColor,
-          title: Text(
-            'Repost with caption',
-            style: TextStyle(color: AppColors.text),
-          ),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            maxLines: 4,
-            textInputAction: TextInputAction.newline,
-            style: TextStyle(color: AppColors.text),
-            decoration: InputDecoration(
-              hintText: 'Add a caption',
-              hintStyle: TextStyle(color: AppColors.textSecondary),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: AppColors.textSecondary),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                final caption = controller.text.trim();
-                Navigator.pop(context);
-                _performRepost(content: caption);
-              },
-              child: Text(
-                'Repost',
-                style: TextStyle(color: AppColors.primary),
-              ),
-            ),
-          ],
-        );
-      },
-    ).whenComplete(controller.dispose);
+  void _openRepostPage() {
+    Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: context.read<FeedBloc>(),
+          child: RepostPage(post: widget.post),
+        ),
+      ),
+    );
   }
 
-  void _performRepost({String content = ''}) {
+  void _performRepost({
+    String content = '',
+    String postType = 'standard',
+    bool isAnonymous = false,
+    String? anonymousCategory,
+    List<String>? pollOptions,
+    int? pollExpirationHours,
+  }) {
     setState(() {
       _isReposted = true;
       _repostCount += 1;
@@ -440,6 +420,11 @@ class _CardPostState extends State<CardPost> {
           RepostFeedPost(
             postId: widget.post.id,
             content: content,
+            postType: postType,
+            isAnonymous: isAnonymous,
+            anonymousCategory: anonymousCategory,
+            pollOptions: pollOptions,
+            pollExpirationHours: pollExpirationHours,
           ),
         );
     _showComingSoon(
@@ -606,6 +591,7 @@ class _CardPostState extends State<CardPost> {
 
 class _PostOptionsSheet extends StatelessWidget {
   final bool canEdit;
+  final bool canDelete;
   final Duration editWindowRemaining;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -615,6 +601,7 @@ class _PostOptionsSheet extends StatelessWidget {
 
   const _PostOptionsSheet({
     required this.canEdit,
+    required this.canDelete,
     required this.editWindowRemaining,
     required this.onEdit,
     required this.onDelete,
@@ -685,13 +672,15 @@ class _PostOptionsSheet extends StatelessWidget {
                   ),
                 ],
               ),
-            _PostOptionTile(
-              icon: Icons.delete_outline,
-              title: 'Delete Post',
-              color: AppColors.redColor,
-              onTap: onDelete,
-            ),
-            Divider(height: 1, color: AppColors.divider),
+            if (canDelete) ...[
+              _PostOptionTile(
+                icon: Icons.delete_outline,
+                title: 'Delete Post',
+                color: AppColors.redColor,
+                onTap: onDelete,
+              ),
+              Divider(height: 1, color: AppColors.divider),
+            ],
             _PostOptionTile(
               icon: Icons.repeat_rounded,
               title: 'Repost',

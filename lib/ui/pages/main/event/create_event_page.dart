@@ -1,10 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/event/event_bloc.dart';
+import 'package:clique/core/clients/cloudinary_service.dart';
 import 'package:clique/core/models/event_model.dart';
 
 class CreateEventPage extends StatefulWidget {
@@ -25,6 +29,8 @@ class _CreateEventPageState extends State<CreateEventPage> {
   final _descriptionController = TextEditingController();
   final _locationController = TextEditingController();
   final _imageController = TextEditingController();
+  final _imagePicker = ImagePicker();
+  final _cloudinaryService = CloudinaryService();
 
   static const _categories = [
     'Music',
@@ -38,6 +44,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
   String _category = _categories.first;
   bool _isPrivate = false;
   bool _submitted = false;
+  bool _isUploadingCover = false;
   DateTime? _startsAt;
   DateTime? _endsAt;
 
@@ -182,13 +189,10 @@ class _CreateEventPageState extends State<CreateEventPage> {
                             },
                           ),
                           const SizedBox(height: 14),
-                          TextFormField(
-                            controller: _imageController,
-                            keyboardType: TextInputType.url,
-                            decoration: const InputDecoration(
-                              labelText: 'Cover image URL',
-                              hintText: 'https://...',
-                            ),
+                          _CoverImageCard(
+                            imageUrl: _imageController.text.trim(),
+                            isUploading: _isUploadingCover,
+                            onTap: _pickCoverImage,
                           ),
                         ],
                       ),
@@ -416,6 +420,42 @@ class _CreateEventPageState extends State<CreateEventPage> {
       time.minute,
     );
   }
+
+  Future<void> _pickCoverImage() async {
+    if (_isUploadingCover) return;
+
+    final picked = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
+    if (picked == null) return;
+
+    setState(() => _isUploadingCover = true);
+
+    try {
+      final url = await _cloudinaryService.uploadImage(
+        File(picked.path),
+        customFolder: 'prive_events',
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _imageController.text = url;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to upload cover image: $error'),
+          backgroundColor: AppColors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isUploadingCover = false);
+      }
+    }
+  }
 }
 
 class _CreateEventHero extends StatelessWidget {
@@ -435,7 +475,7 @@ class _CreateEventHero extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [
             AppColors.card,
-            AppColors.primary.withOpacity(0.08),
+            AppColors.card.withOpacity(0.08),
             AppColors.secondary.withOpacity(0.05),
           ],
         ),
@@ -502,6 +542,152 @@ class _CreateEventHero extends StatelessWidget {
                   ],
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CoverImageCard extends StatelessWidget {
+  final String imageUrl;
+  final bool isUploading;
+  final VoidCallback onTap;
+
+  const _CoverImageCard({
+    required this.imageUrl,
+    required this.isUploading,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.background,
+      borderRadius: BorderRadius.circular(22),
+      child: InkWell(
+        onTap: isUploading ? null : onTap,
+        borderRadius: BorderRadius.circular(22),
+        child: Container(
+          height: 170,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: AppColors.border),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.background,
+                AppColors.primary.withOpacity(0.05),
+              ],
+            ),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(22),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (imageUrl.isNotEmpty)
+                  Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _EmptyCoverState(
+                      isUploading: isUploading,
+                    ),
+                  )
+                else
+                  _EmptyCoverState(
+                    isUploading: isUploading,
+                  ),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        AppColors.black.withOpacity(0.55),
+                      ],
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  bottom: 16,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 46,
+                        height: 46,
+                        decoration: BoxDecoration(
+                          color: AppColors.white.withOpacity(0.16),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.white.withOpacity(0.22),
+                          ),
+                        ),
+                        child: Icon(
+                          isUploading
+                              ? Icons.hourglass_top_rounded
+                              : imageUrl.isNotEmpty
+                                  ? Icons.image_rounded
+                                  : Icons.add_photo_alternate_outlined,
+                          color: AppColors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 12, height: 20,),
+                      Expanded(
+                        child: Text(
+                          isUploading
+                              ? 'Uploading cover image...'
+                              : imageUrl.isNotEmpty
+                                  ? 'Tap to replace the cover image'
+                                  : 'Tap to add a cover image',
+                          style: AppTheme.whiteTextStyle.copyWith(
+                            fontSize: 14,
+                            fontWeight: AppTheme.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyCoverState extends StatelessWidget {
+  final bool isUploading;
+
+  const _EmptyCoverState({
+    required this.isUploading,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.card,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isUploading ? Icons.cloud_upload_outlined : Icons.add_a_photo_outlined,
+            size: 40,
+            color: AppColors.primary,
+          ),
+          const SizedBox(height: 5),
+          Text(
+            isUploading ? 'Uploading...' : 'Add image',
+            style: AppTheme.blackTextStyle.copyWith(
+              fontWeight: AppTheme.bold,
             ),
           ),
         ],

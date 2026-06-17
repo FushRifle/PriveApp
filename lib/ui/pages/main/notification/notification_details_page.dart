@@ -8,7 +8,7 @@ import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/core/services/home/feed_service.dart';
 import 'package:clique/ui/pages/main/home/post_detail_page.dart';
 import 'package:clique/ui/widgets/common/effect_text.dart';
-import 'package:clique/ui/widgets/post/normal-post/post_card.dart';
+import 'package:clique/ui/widgets/post/normal-post/repost_card.dart';
 
 class NotificationDetailsPage extends StatefulWidget {
   final Map<String, dynamic> notification;
@@ -127,6 +127,7 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
                 accent: accent,
                 notification: notification,
               ),
+              
             ),
           ),
           SliverPadding(
@@ -134,20 +135,6 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
             sliver: SliverList(
               delegate: SliverChildListDelegate(
                 [
-                  _InfoCard(
-                    title: 'What happened',
-                    child: EffectText(
-                      text: content.isNotEmpty
-                          ? content
-                          : 'This notification has no additional message.',
-                      style: AppTheme.blackTextStyle.copyWith(
-                        fontSize: 15,
-                        height: 1.45,
-                      ),
-                      hashtagColor: AppColors.primary,
-                      mentionColor: AppColors.secondary,
-                    ),
-                  ),
                   const SizedBox(height: 16),
                   _InfoCard(
                     title: 'Related post',
@@ -163,7 +150,7 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
                         : _post != null
                             ? Column(
                                 children: [
-                                  CardPost(
+                                  RepostCard(
                                     post: _post!,
                                     isDetailView: false,
                                   ),

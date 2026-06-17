@@ -19,7 +19,7 @@ import 'package:clique/core/services/user/user_service.dart';
 
 import 'package:clique/ui/widgets/comments/comment_widgets.dart';
 import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
-import 'package:clique/ui/widgets/post/normal-post/post_card.dart';
+import 'package:clique/ui/widgets/post/normal-post/repost_card.dart';
 
 class PostDetailPage extends StatefulWidget {
   final int postId;
@@ -864,7 +864,7 @@ class _PostDetailSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 16, 14, 0),
-      child: CardPost(
+      child: RepostCard(
         post: post,
         isDetailView: true,
       ),

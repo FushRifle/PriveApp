@@ -25,7 +25,8 @@ class EventDetailsPage extends StatelessWidget {
         : rawId is String
             ? int.tryParse(rawId)
         : null;
-    return currentUserId != null && currentUserId == event.hostId;
+    final hostId = event.hostId != 0 ? event.hostId : event.host?.id;
+    return currentUserId != null && hostId != null && currentUserId == hostId;
   }
 
   @override
@@ -53,46 +54,9 @@ class EventDetailsPage extends StatelessWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: _HeaderCard(event: event, isOwner: isOwner),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _SectionCard(
-                title: 'About this event',
-                child: Text(
-                  event.description.isEmpty
-                      ? 'No description provided.'
-                      : event.description,
-                  style: AppTheme.greyTextStyle.copyWith(
-                    fontSize: 14,
-                    height: 1.6,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 12)),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverToBoxAdapter(
-              child: _SectionCard(
-                title: 'When',
-                child: _InfoRow(
-                  icon: Icons.event_outlined,
-                  title: _formatDate(event.startsAt),
-                  subtitle: _formatTimeRange(event.startsAt, event.endsAt),
-                ),
-              ),
-            ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 12)),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverToBoxAdapter(
-              child: _RSVPBar(
+              child: _HeaderCard(
                 event: event,
+                isOwner: isOwner,
                 onGoing: () => context.read<EventBloc>().add(
                       RsvpEvent(eventId: event.id, status: 'going'),
                     ),
@@ -224,10 +188,16 @@ class EventDetailsPage extends StatelessWidget {
 class _HeaderCard extends StatelessWidget {
   final EventModel event;
   final bool isOwner;
+  final VoidCallback onGoing;
+  final VoidCallback onInterested;
+  final VoidCallback onLeave;
 
   const _HeaderCard({
     required this.event,
     required this.isOwner,
+    required this.onGoing,
+    required this.onInterested,
+    required this.onLeave,
   });
 
   @override
@@ -279,12 +249,27 @@ class _HeaderCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
+                _InfoRow(
+                  icon: Icons.event_outlined,
+                  title: _formatDate(event.startsAt),
+                  subtitle: _formatTimeRange(event.startsAt, event.endsAt),
+                ),
+                const SizedBox(height: 14),
                 Text(
-                  _formatDateTime(event.startsAt, event.endsAt),
+                  event.description.isEmpty
+                      ? 'No description provided.'
+                      : event.description,
                   style: AppTheme.greyTextStyle.copyWith(
-                    fontSize: 13,
-                    fontWeight: AppTheme.medium,
+                    fontSize: 14,
+                    height: 1.6,
                   ),
+                ),
+                const SizedBox(height: 16),
+                _RSVPBar(
+                  event: event,
+                  onGoing: onGoing,
+                  onInterested: onInterested,
+                  onLeave: onLeave,
                 ),
               ],
             ),
@@ -586,12 +571,6 @@ String _formatTimeRange(DateTime startsAt, DateTime? endsAt) {
   final end = endsAt == null ? null : _formatTime(endsAt.toLocal());
   if (end == null) return start;
   return '$start - $end';
-}
-
-String _formatDateTime(DateTime startsAt, DateTime? endsAt) {
-  final date = _formatDate(startsAt);
-  final time = _formatTimeRange(startsAt, endsAt);
-  return '$date at $time';
 }
 
 String _formatTime(DateTime value) {

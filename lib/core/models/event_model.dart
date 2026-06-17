@@ -46,7 +46,11 @@ class EventModel {
 
     return EventModel(
       id: _readInt(json['id']),
-      hostId: _readInt(json['hostId'] ?? json['host_id']),
+      hostId: _readInt(
+        json['hostId'] ??
+            json['host_id'] ??
+            (json['host'] is Map ? (json['host'] as Map)['id'] : null),
+      ),
       title: _readString(json['title'], fallback: 'Event'),
       slug: _readString(json['slug']),
       description: _readString(json['description']),

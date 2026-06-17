@@ -393,11 +393,34 @@ class FeedService {
   Future<FeedPost> repost({
     required int postId,
     String content = '',
+    String postType = 'standard',
+    bool isAnonymous = false,
+    String? anonymousCategory,
+    List<String>? pollOptions,
+    int? pollExpirationHours,
   }) async {
     try {
+      final data = <String, dynamic>{
+        'content': content,
+        'postType': postType,
+        'isAnonymous': isAnonymous,
+      };
+
+      if (anonymousCategory != null && anonymousCategory.trim().isNotEmpty) {
+        data['anonymousCategory'] = anonymousCategory.trim();
+      }
+
+      if (pollOptions != null && pollOptions.isNotEmpty) {
+        data['pollOptions'] = pollOptions;
+      }
+
+      if (pollExpirationHours != null && pollExpirationHours > 0) {
+        data['pollExpirationHours'] = pollExpirationHours;
+      }
+
       final response = await _api.post(
         '/api/feed/posts/$postId/repost',
-        data: {'content': content},
+        data: data,
       );
       final repostedPost = FeedPost.fromJson(_readPostMap(response.data));
       await _feedCacheService.prependLatestPost(repostedPost);
@@ -605,6 +628,14 @@ class FeedService {
     }
   }
 
+  Future<void> cachePost(FeedPost post) async {
+    await _feedCacheService.replacePost(post);
+  }
+
+  Future<void> removeCachedPost(int postId) async {
+    await _feedCacheService.removePost(postId);
+  }
+
   // Get user media (for profile gallery)
   Future<UserMediaResponse> getUserMedia({
     required int userId,
@@ -758,6 +789,10 @@ class FeedService {
     _api.removeCacheByPath('/api/feed/posts');
     _api.removeCacheByPath('/api/feed/posts/$postId');
     _api.removeCacheByPath('/api/feed/posts/$postId/comments');
+    _api.removeCacheByPath('/api/feed/posts/$postId/like');
+    _api.removeCacheByPath('/api/feed/posts/$postId/save');
+    _api.removeCacheByPath('/api/feed/posts/$postId/share');
+    _api.removeCacheByPath('/api/feed/posts/$postId/repost');
     _api.removeCacheByPath('/api/feed/users');
   }
 

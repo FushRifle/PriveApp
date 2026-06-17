@@ -6,7 +6,7 @@ import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/core/services/home/feed_service.dart';
-import 'package:clique/ui/widgets/post/normal-post/post_card.dart';
+import 'package:clique/ui/widgets/post/normal-post/repost_card.dart';
 
 class TopicDetailsPage extends StatefulWidget {
   final String topic;
@@ -180,7 +180,7 @@ class _TopicDetailsPageState extends State<TopicDetailsPage> {
                       separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         final post = _posts[index];
-                        return CardPost(post: post);
+                        return RepostCard(post: post);
                       },
                     ),
                   ),

@@ -280,6 +280,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
       await _feedService.likePost(
         event.postId,
       );
+      await _cachePosts(state.posts);
     } catch (e) {
       emit(
         state.copyWith(
@@ -317,6 +318,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
       await _feedService.unlikePost(
         event.postId,
       );
+      await _cachePosts(state.posts);
     } catch (e) {
       emit(
         state.copyWith(
@@ -344,10 +346,17 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
       return post;
     }).toList();
 
-    emit(state.copyWith(posts: updatedPosts));
+    emit(
+      state.copyWith(
+        posts: updatedPosts,
+        isReposting: true,
+        clearGeneralError: true,
+      ),
+    );
 
     try {
       await _feedService.savePost(event.postId);
+      await _cachePosts(updatedPosts);
     } catch (e) {
       emit(state.copyWith(posts: originalPosts, generalError: e.toString()));
     }
@@ -374,6 +383,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
 
     try {
       await _feedService.unsavePost(event.postId);
+      await _cachePosts(updatedPosts);
     } catch (e) {
       emit(state.copyWith(posts: originalPosts, generalError: e.toString()));
     }
@@ -396,6 +406,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
 
     try {
       await _feedService.sharePost(event.postId);
+      await _cachePosts(updatedPosts);
     } catch (e) {
       emit(state.copyWith(posts: originalPosts, generalError: e.toString()));
     }
@@ -427,34 +438,34 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     emit(state.copyWith(posts: updatedPosts));
 
     try {
-      final createdPost = await _feedService.createPost(
-        content: sourcePost.content,
-        attachments: sourcePost.attachments
-            .map((attachment) => attachment.toJson())
-            .toList(),
-        postType: sourcePost.isPoll ? 'poll' : 'standard',
-        isAnonymous: false,
-        anonymousCategory: null,
-        pollOptions:
-            sourcePost.pollOptions.isNotEmpty ? sourcePost.pollOptions : null,
-        pollExpirationHours: sourcePost.pollExpirationHours,
-      );
-
-      await _feedService.repost(
+      final repostedPost = await _feedService.repost(
         postId: event.postId,
         content: event.content,
+        postType: event.postType,
+        isAnonymous: event.isAnonymous,
+        anonymousCategory: event.anonymousCategory,
+        pollOptions: event.pollOptions,
+        pollExpirationHours: event.pollExpirationHours,
       );
 
       emit(
         state.copyWith(
           posts: [
-            createdPost,
-            ...state.posts.where((post) => post.id != createdPost.id),
+            repostedPost,
+            ...state.posts.where((post) => post.id != repostedPost.id),
           ],
+          isReposting: false,
+          clearGeneralError: true,
         ),
       );
     } catch (e) {
-      emit(state.copyWith(posts: originalPosts, generalError: e.toString()));
+      emit(
+        state.copyWith(
+          posts: originalPosts,
+          generalError: e.toString(),
+          isReposting: false,
+        ),
+      );
     }
   }
 
@@ -997,6 +1008,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
       await _feedService.deletePost(
         event.postId,
       );
+      await _feedService.removeCachedPost(event.postId);
     } catch (e) {
       emit(
         state.copyWith(
@@ -1069,6 +1081,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
           isUpdatingPost: false,
         ),
       );
+      await _feedService.cachePost(updatedPost);
     } catch (e) {
       emit(
         state.copyWith(
@@ -1077,6 +1090,14 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
           isUpdatingPost: false,
         ),
       );
+    }
+  }
+
+  Future<void> _cachePosts(List<FeedPost> posts) async {
+    final seen = <int>{};
+    for (final post in posts) {
+      if (!seen.add(post.id)) continue;
+      await _feedService.cachePost(post);
     }
   }
 

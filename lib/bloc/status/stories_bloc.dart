@@ -1,7 +1,9 @@
-import 'package:clique/core/services/status/status_services.dart';
+import 'dart:async';
+
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:clique/core/models/status_model.dart';
+import 'package:clique/core/services/status/status_services.dart';
 
 part 'stories_event.dart';
 part 'stories_state.dart';
@@ -153,16 +155,19 @@ class StoriesBloc extends Bloc<StoriesEvent, StoriesState> {
     DeleteStoryEvent event,
     Emitter<StoriesState> emit,
   ) async {
-    try {
-      await _statusService.deleteStory(event.storyId);
+    final updatedStories = List<Story>.from(state.stories)
+      ..removeWhere((story) => story.id == event.storyId);
 
-      final updatedStories = List<Story>.from(state.stories)
-        ..removeWhere((story) => story.id == event.storyId);
+    emit(state.copyWith(
+      stories: updatedStories,
+      clearError: true,
+    ));
 
-      emit(state.copyWith(stories: updatedStories));
-    } catch (e) {
-      emit(state.copyWith(error: e.toString()));
-    }
+    unawaited(() async {
+      try {
+        await _statusService.deleteStory(event.storyId);
+      } catch (_) {}
+    }());
   }
 
   Future<void> _onMarkStorySeen(

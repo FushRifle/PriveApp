@@ -1,11 +1,11 @@
 import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/models/status_model.dart';
-import 'package:clique/ui/pages/main/status/edit_status_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
+import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/ui/widgets/common/effect_text.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -168,6 +168,12 @@ class _StatusViewPageState extends State<StatusViewPage>
     }
 
     if (stories.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+      });
+
       return const Scaffold(
         backgroundColor: AppColors.black,
         body: SizedBox.shrink(),
@@ -424,7 +430,7 @@ class _StatusViewPageState extends State<StatusViewPage>
               Navigator.pushReplacementNamed(context, NamedRoutes.homeScreen);
             },
           ),
-          if (story.isMe)
+          if (_isOwnStory(story))
             IconButton(
               icon: const Icon(
                 Icons.more_horiz,
@@ -522,92 +528,112 @@ class _StatusViewPageState extends State<StatusViewPage>
       bottom: 30,
       left: 16,
       right: 16,
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.white.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(
-                  color: AppColors.white.withOpacity(0.3),
-                  width: 1,
-                ),
-              ),
-              child: TextField(
-                controller: _replyController,
-                focusNode: _replyFocusNode,
-                style: const TextStyle(color: AppColors.white),
-                decoration: InputDecoration(
-                  hintText: 'Send message',
-                  hintStyle: TextStyle(
-                    color: AppColors.white.withOpacity(0.6),
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
+      child: _isOwnStory(story)
+          ? Center(
+              child: SizedBox(
+                height: 52,
+                child: FilledButton.icon(
+                  onPressed: () => _confirmDeleteStory(story),
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Delete story'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.redColor,
+                    foregroundColor: AppColors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(999),
+                    ),
                   ),
                 ),
-                onSubmitted: (value) {
-                  if (value.isNotEmpty) {
-                    _sendReply(value, story);
-                    _replyController.clear();
-                    _replyFocusNode.unfocus();
-                  }
-                },
               ),
+            )
+          : Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(
+                        color: AppColors.white.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: TextField(
+                      controller: _replyController,
+                      focusNode: _replyFocusNode,
+                      style: const TextStyle(color: AppColors.white),
+                      decoration: InputDecoration(
+                        hintText: 'Send message',
+                        hintStyle: TextStyle(
+                          color: AppColors.white.withOpacity(0.6),
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                      ),
+                      onSubmitted: (value) {
+                        if (value.isNotEmpty) {
+                          _sendReply(value, story);
+                          _replyController.clear();
+                          _replyFocusNode.unfocus();
+                        }
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                _buildLikeButton(story),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: () => _showRepostSheet(story),
+                  icon: Icon(
+                    story.isReshared
+                        ? Icons.repeat_on_rounded
+                        : Icons.repeat_rounded,
+                    color: AppColors.white,
+                    size: 22,
+                  ),
+                  style: IconButton.styleFrom(
+                    backgroundColor: story.isReshared
+                        ? AppColors.primary.withOpacity(0.82)
+                        : AppColors.transparent,
+                    foregroundColor: AppColors.white,
+                    shape: const CircleBorder(),
+                    side: BorderSide(
+                      color: AppColors.white.withOpacity(0.3),
+                      width: 1,
+                    ),
+                    padding: const EdgeInsets.all(10),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () {
+                    if (_replyController.text.isNotEmpty) {
+                      _sendReply(_replyController.text, story);
+                      _replyController.clear();
+                      _replyFocusNode.unfocus();
+                    }
+                  },
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.primary,
+                    ),
+                    child: const Icon(
+                      Icons.send,
+                      color: AppColors.white,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(width: 12),
-          _buildLikeButton(story),
-          const SizedBox(width: 8),
-          IconButton(
-            onPressed: () => _showRepostSheet(story),
-            icon: Icon(
-              story.isReshared ? Icons.repeat_on_rounded : Icons.repeat_rounded,
-              color: AppColors.white,
-              size: 22,
-            ),
-            style: IconButton.styleFrom(
-              backgroundColor: story.isReshared
-                  ? AppColors.primary.withOpacity(0.82)
-                  : AppColors.transparent,
-              foregroundColor: AppColors.white,
-              shape: const CircleBorder(),
-              side: BorderSide(
-                color: AppColors.white.withOpacity(0.3),
-                width: 1,
-              ),
-              padding: const EdgeInsets.all(10),
-            ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () {
-              if (_replyController.text.isNotEmpty) {
-                _sendReply(_replyController.text, story);
-                _replyController.clear();
-                _replyFocusNode.unfocus();
-              }
-            },
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.primary,
-              ),
-              child: const Icon(
-                Icons.send,
-                color: AppColors.white,
-                size: 20,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -795,33 +821,13 @@ class _StatusViewPageState extends State<StatusViewPage>
               mainAxisSize: MainAxisSize.min,
               children: [
                 ListTile(
-                  leading: const Icon(Icons.edit_outlined),
-                  title: const Text('Edit Status'),
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    final bloc = _storiesBlocOrNull();
-                    if (bloc == null) return;
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => BlocProvider.value(
-                          value: bloc,
-                          child: EditStatusPage(story: story),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                ListTile(
                   leading: const Icon(Icons.delete_outline),
                   title: const Text('Delete Status'),
                   textColor: AppColors.redColor,
                   iconColor: AppColors.redColor,
                   onTap: () {
                     Navigator.pop(sheetContext);
-                    _storiesBlocOrNull()
-                        ?.add(DeleteStoryEvent(storyId: story.id));
-                    Navigator.pop(context);
+                    _confirmDeleteStory(story);
                   },
                 ),
               ],
@@ -830,6 +836,61 @@ class _StatusViewPageState extends State<StatusViewPage>
         );
       },
     );
+  }
+
+  void _deleteStory(Story story) {
+    final bloc = _storiesBlocOrNull();
+    if (bloc == null) return;
+
+    bloc.add(DeleteStoryEvent(storyId: story.id));
+  }
+
+  void _confirmDeleteStory(Story story) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: AppColors.card,
+          title: const Text('Delete story?'),
+          content: const Text(
+            'This will remove the story immediately and cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                _deleteStory(story);
+              },
+              child: Text(
+                'Delete',
+                style: TextStyle(color: AppColors.redColor),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  bool _isOwnStory(Story story) {
+    if (story.isMe) return true;
+
+    try {
+      final user = context.read<UserBloc>().state.currentUser;
+      final currentUserId = user?['id'];
+      final parsedUserId = currentUserId is int
+          ? currentUserId
+          : currentUserId is String
+              ? int.tryParse(currentUserId)
+              : null;
+      return parsedUserId != null && parsedUserId == story.userId;
+    } catch (_) {
+      return false;
+    }
   }
 
   StoriesBloc? _storiesBlocOrNull() {

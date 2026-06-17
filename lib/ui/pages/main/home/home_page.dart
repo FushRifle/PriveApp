@@ -21,7 +21,7 @@ import 'package:clique/ui/pages/main/status/status_page.dart';
 import 'package:clique/ui/pages/main/status/status_view_page.dart';
 
 import 'package:clique/ui/widgets/home/home_feed_shimmer.dart';
-import 'package:clique/ui/widgets/post/normal-post/post_card.dart';
+import 'package:clique/ui/widgets/post/normal-post/repost_card.dart';
 import 'package:clique/ui/widgets/status/status_widget.dart';
 
 class HomePage extends StatefulWidget {
@@ -115,6 +115,7 @@ class _HomePageState extends State<HomePage>
 
   bool _initialized = false;
   bool _isLoadingMore = false;
+  bool _showJumpToTop = false;
 
   List<_StoryGroup> _cachedGroups = [];
   List<Story> _lastStories = [];
@@ -158,6 +159,12 @@ class _HomePageState extends State<HomePage>
     if (!_scrollController.hasClients || _isLoadingMore) return;
 
     final position = _scrollController.position;
+    final shouldShowJump = position.pixels > 1400;
+    if (shouldShowJump != _showJumpToTop && mounted) {
+      setState(() {
+        _showJumpToTop = shouldShowJump;
+      });
+    }
 
     if (position.extentAfter <= 1800) {
       final feedBloc = context.read<FeedBloc>();
@@ -187,6 +194,16 @@ class _HomePageState extends State<HomePage>
     );
   }
 
+  Future<void> _jumpToTop() async {
+    if (!_scrollController.hasClients) return;
+
+    await _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 420),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -196,6 +213,22 @@ class _HomePageState extends State<HomePage>
       value: palette.overlayStyle,
       child: Scaffold(
         backgroundColor: palette.background,
+        floatingActionButton: AnimatedSlide(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOut,
+          offset: _showJumpToTop ? Offset.zero : const Offset(0, 0.2),
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 180),
+            opacity: _showJumpToTop ? 1 : 0,
+            child: FloatingActionButton.extended(
+              onPressed: _jumpToTop,
+              backgroundColor: palette.primary,
+              foregroundColor: AppColors.white,
+              icon: const Icon(Icons.vertical_align_top_rounded),
+              label: const Text('Top'),
+            ),
+          ),
+        ),
         body: SafeArea(
           top: false,
           child: RefreshIndicator(
@@ -280,7 +313,7 @@ class _HomePageState extends State<HomePage>
                             itemBuilder: (context, index) {
                               final post = posts[index];
 
-                              return CardPost(
+                              return RepostCard(
                                 key: ValueKey('post_${post.id}'),
                                 post: post,
                               );

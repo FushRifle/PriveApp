@@ -69,7 +69,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         },
         builder: (context, state) {
           final user = state.currentUser ?? _user;
-          final userBadge = _userBadgeLabel(user);
 
           return BlocBuilder<SettingsBloc, SettingsState>(
             builder: (context, settingsState) {
@@ -231,31 +230,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                       color: settingsState.getAppLockEnabled
                                           ? AppColors.primary
                                           : AppColors.greyColor,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Container(
-                                  width: 28,
-                                  height: 28,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primary.withOpacity(0.12),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color:
-                                          AppColors.primary.withOpacity(0.25),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    userBadge,
-                                    style: const TextStyle(
-                                      color: AppColors.primary,
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 0.8,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ),
@@ -979,13 +955,5 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final currentUser = context.read<UserBloc>().state.currentUser;
     final currentUserId = _readInt(currentUser?['id']);
     return currentUserId > 0 ? currentUserId : null;
-  }
-
-  String _userBadgeLabel(Map<String, dynamic>? user) {
-    final userId = _readInt(user?['id']);
-    final value = userId > 0 ? userId.toString() : '0000';
-    return value.length <= 4
-        ? value.padLeft(4, '0')
-        : value.substring(value.length - 4);
   }
 }
