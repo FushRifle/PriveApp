@@ -81,8 +81,8 @@ class EffectText extends StatelessWidget {
       final tokenStyle = style.copyWith(
         color: isHashtag
             ? hashtagColor ?? AppColors.primary
-            : mentionColor ?? AppColors.secondary,
-        fontWeight: FontWeight.w800,
+            : mentionColor ?? AppColors.primary,
+        fontWeight: FontWeight.bold,
         shadows: effectShadows,
       );
 

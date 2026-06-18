@@ -39,7 +39,7 @@ class EventBloc extends Bloc<EventEvent, EventState> {
       status: nextPage == 1 ? EventStatus.loading : state.status,
       clearError: true,
       page: nextPage,
-      events: nextPage == 1 ? const [] : state.events,
+      events: state.events,
     ));
 
     try {

@@ -30,13 +30,17 @@ class _StatusViewPageState extends State<StatusViewPage>
   late PageController _pageController;
   late final TextEditingController _replyController;
   late final FocusNode _replyFocusNode;
+  late List<Story> _stories;
   bool _isPaused = false;
   bool _pausedForReply = false;
+  bool _pausedForInteraction = false;
+  bool _shouldResumeAfterInteraction = false;
 
   @override
   void initState() {
     super.initState();
     currentIndex = widget.initialIndex;
+    _stories = List<Story>.from(widget.stories);
     _pageController = PageController(initialPage: currentIndex);
     _replyController = TextEditingController();
     _replyFocusNode = FocusNode()..addListener(_handleReplyFocusChanged);
@@ -52,6 +56,18 @@ class _StatusViewPageState extends State<StatusViewPage>
     _setupAutoAdvance();
   }
 
+  @override
+  void didUpdateWidget(covariant StatusViewPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.stories != widget.stories) {
+      _stories = List<Story>.from(widget.stories);
+      if (_stories.isNotEmpty && currentIndex >= _stories.length) {
+        currentIndex = _stories.length - 1;
+      }
+    }
+  }
+
   void _setupAutoAdvance() {
     _progressController.addStatusListener((status) {
       if (status == AnimationStatus.completed && mounted) {
@@ -61,8 +77,7 @@ class _StatusViewPageState extends State<StatusViewPage>
   }
 
   void _nextStatus() {
-    final stories = _resolvedStories();
-    if (currentIndex < stories.length - 1) {
+    if (currentIndex < _stories.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -100,9 +115,31 @@ class _StatusViewPageState extends State<StatusViewPage>
     if (forReply) _pausedForReply = true;
   }
 
+  void _pausePlaybackForInteraction() {
+    _pausedForInteraction = true;
+    _shouldResumeAfterInteraction = !_isPaused;
+    if (_shouldResumeAfterInteraction) {
+      _pausePlayback();
+    }
+  }
+
   void _resumePlayback({bool fromReply = false}) {
     if (fromReply && !_pausedForReply) return;
     _pausedForReply = false;
+    if (_pausedForInteraction && fromReply) return;
+    if (_isPaused) {
+      _progressController.forward();
+      setState(() => _isPaused = false);
+    }
+  }
+
+  void _resumePlaybackAfterInteraction() {
+    if (!_pausedForInteraction) return;
+    final shouldResume = _shouldResumeAfterInteraction;
+    _pausedForInteraction = false;
+    _shouldResumeAfterInteraction = false;
+    if (!shouldResume) return;
+    if (_replyFocusNode.hasFocus) return;
     if (_isPaused) {
       _progressController.forward();
       setState(() => _isPaused = false);
@@ -139,19 +176,7 @@ class _StatusViewPageState extends State<StatusViewPage>
       ),
     );
 
-    final bloc = _storiesBlocOrNull();
-
-    if (bloc == null) {
-      return _buildViewer(widget.stories);
-    }
-
-    return BlocBuilder<StoriesBloc, StoriesState>(
-      builder: (context, state) {
-        final stories =
-            state.stories.isNotEmpty ? state.stories : widget.stories;
-        return _buildViewer(stories);
-      },
-    );
+    return _buildViewer(_stories);
   }
 
   Widget _buildViewer(List<Story> stories) {
@@ -528,112 +553,105 @@ class _StatusViewPageState extends State<StatusViewPage>
       bottom: 30,
       left: 16,
       right: 16,
-      child: _isOwnStory(story)
-          ? Center(
-              child: SizedBox(
-                height: 52,
-                child: FilledButton.icon(
-                  onPressed: () => _confirmDeleteStory(story),
-                  icon: const Icon(Icons.delete_outline),
-                  label: const Text('Delete story'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.redColor,
-                    foregroundColor: AppColors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
+      child: 
+      Row(
+        children: [
+          Expanded(
+            child: Container(
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.card.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(
+                  color: AppColors.border.withOpacity(0.3),
+                  width: 1,
                 ),
               ),
-            )
-          : Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: AppColors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(30),
-                      border: Border.all(
-                        color: AppColors.white.withOpacity(0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: TextField(
-                      controller: _replyController,
-                      focusNode: _replyFocusNode,
-                      style: const TextStyle(color: AppColors.white),
-                      decoration: InputDecoration(
-                        hintText: 'Send message',
-                        hintStyle: TextStyle(
-                          color: AppColors.white.withOpacity(0.6),
-                        ),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                      ),
-                      onSubmitted: (value) {
-                        if (value.isNotEmpty) {
-                          _sendReply(value, story);
-                          _replyController.clear();
-                          _replyFocusNode.unfocus();
-                        }
-                      },
-                    ),
+              child: TextField(
+                controller: _replyController,
+                focusNode: _replyFocusNode,
+                style: const TextStyle(color: AppColors.white),
+                decoration: InputDecoration(
+                  hintText: 'Send message',
+                  hintStyle: TextStyle(
+                    color: AppColors.white.withOpacity(0.6),
+                  ),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
                   ),
                 ),
-                const SizedBox(width: 12),
-                _buildLikeButton(story),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: () => _showRepostSheet(story),
-                  icon: Icon(
-                    story.isReshared
-                        ? Icons.repeat_on_rounded
-                        : Icons.repeat_rounded,
-                    color: AppColors.white,
-                    size: 22,
-                  ),
-                  style: IconButton.styleFrom(
-                    backgroundColor: story.isReshared
-                        ? AppColors.primary.withOpacity(0.82)
-                        : AppColors.transparent,
-                    foregroundColor: AppColors.white,
-                    shape: const CircleBorder(),
-                    side: BorderSide(
-                      color: AppColors.white.withOpacity(0.3),
-                      width: 1,
-                    ),
-                    padding: const EdgeInsets.all(10),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: () {
-                    if (_replyController.text.isNotEmpty) {
-                      _sendReply(_replyController.text, story);
-                      _replyController.clear();
-                      _replyFocusNode.unfocus();
-                    }
-                  },
-                  child: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.primary,
-                    ),
-                    child: const Icon(
-                      Icons.send,
-                      color: AppColors.white,
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ],
+                onSubmitted: (value) {
+                  if (value.isNotEmpty) {
+                    _sendReply(value, story);
+                    _replyController.clear();
+                    _replyFocusNode.unfocus();
+                  }
+                },
+              ),
             ),
+          ),
+          const SizedBox(width: 12),
+          _buildLikeButton(story),
+          const SizedBox(width: 8),
+          IconButton(
+            onPressed: () => _showRepostSheet(story),
+            icon: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              transitionBuilder: (child, animation) {
+                return ScaleTransition(
+                  scale: Tween<double>(begin: 0.7, end: 1).animate(animation),
+                  child: FadeTransition(opacity: animation, child: child),
+                );
+              },
+              child: Icon(
+                story.isReshared
+                    ? Icons.repeat_on_rounded
+                    : Icons.repeat_rounded,
+                key: ValueKey<bool>(story.isReshared),
+                color: AppColors.white,
+                size: 22,
+              ),
+            ),
+            style: IconButton.styleFrom(
+              backgroundColor: story.isReshared
+                  ? AppColors.primary.withOpacity(0.82)
+                  : AppColors.card.withOpacity(0.7),
+              foregroundColor: AppColors.white,
+              shape: const CircleBorder(),
+              side: BorderSide(
+                color: AppColors.white.withOpacity(0.3),
+                width: 1,
+              ),
+              padding: const EdgeInsets.all(10),
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () {
+              if (_replyController.text.isNotEmpty) {
+                _sendReply(_replyController.text, story);
+                _replyController.clear();
+                _replyFocusNode.unfocus();
+              }
+            },
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primary,
+              ),
+              child: const Icon(
+                Icons.send,
+                color: AppColors.white,
+                size: 20,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -650,7 +668,7 @@ class _StatusViewPageState extends State<StatusViewPage>
         decoration: BoxDecoration(
           color: liked
               ? AppColors.redColor.withOpacity(0.14)
-              : AppColors.transparent,
+              : AppColors.card.withOpacity(0.7),
           shape: BoxShape.circle,
           border: Border.all(
             color: liked
@@ -692,20 +710,32 @@ class _StatusViewPageState extends State<StatusViewPage>
     return currentIndex.clamp(0, stories.length - 1).toInt();
   }
 
-  List<Story> _resolvedStories() {
-    final stories = _storiesBlocOrNull()?.state.stories ?? const <Story>[];
-    return stories.isNotEmpty ? stories : widget.stories;
-  }
-
   void _likeStory(Story story) {
     HapticFeedback.lightImpact();
-    final bloc = _storiesBlocOrNull();
-    if (bloc == null) return;
-    bloc.add(
-      story.isLiked
-          ? UnlikeStoryEvent(storyId: story.id)
-          : LikeStoryEvent(storyId: story.id),
+    _pausePlaybackForInteraction();
+
+    final nextLiked = !story.isLiked;
+    _replaceCurrentStory(
+      story.copyWith(
+        isLiked: nextLiked,
+        likeCount: nextLiked
+            ? story.likeCount + 1
+            : (story.likeCount - 1).clamp(0, 2147483647).toInt(),
+      ),
     );
+
+    final bloc = _storiesBlocOrNull();
+    if (bloc != null) {
+      bloc.add(
+        nextLiked
+            ? LikeStoryEvent(storyId: story.id)
+            : UnlikeStoryEvent(storyId: story.id),
+      );
+    }
+
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) _resumePlaybackAfterInteraction();
+    });
   }
 
   void _sendReply(String message, Story story) {
@@ -803,7 +833,30 @@ class _StatusViewPageState extends State<StatusViewPage>
   }
 
   void _repostStory(Story story, {String caption = ''}) {
+    if (story.isReshared) return;
+
+    _pausePlaybackForInteraction();
+
+    _replaceCurrentStory(
+      story.copyWith(
+        isReshared: true,
+        reshareCount: story.reshareCount + 1,
+      ),
+    );
+
     _storiesBlocOrNull()?.add(ReshareStoryEvent(storyId: story.id));
+
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (mounted) _resumePlaybackAfterInteraction();
+    });
+  }
+
+  void _replaceCurrentStory(Story story) {
+    if (!mounted || _stories.isEmpty) return;
+
+    setState(() {
+      _stories = List<Story>.from(_stories)..[currentIndex] = story;
+    });
   }
 
   void _showStoryOptions(Story story) {

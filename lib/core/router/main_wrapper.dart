@@ -7,6 +7,7 @@ import 'package:clique/bloc/chat/chat_bloc.dart';
 import 'package:clique/bloc/event/event_bloc.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
+
 import 'package:clique/ui/pages/main/home/create_post_page.dart';
 import 'package:clique/ui/pages/main/chat/inbox_page.dart';
 import 'package:clique/ui/pages/main/home/home_page.dart';
@@ -60,7 +61,7 @@ class _MainWrapperState extends State<MainWrapper>
     super.build(context);
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final backgroundColor =
-        isDarkMode ? AppColors.darkBackground : Colors.white;
+        isDarkMode ? AppColors.darkBackground : AppColors.cardColor;
 
     return MultiBlocProvider(
       providers: [

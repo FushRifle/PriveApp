@@ -1,13 +1,10 @@
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
-import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/core/services/home/feed_service.dart';
 import 'package:clique/ui/pages/main/topics/topic_details.dart';
-import 'package:clique/ui/widgets/post/normal-post/repost_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 class TopicsPage extends StatefulWidget {
   const TopicsPage({super.key});
@@ -40,7 +37,6 @@ class _TopicsPageState extends State<TopicsPage> {
   bool _hasMore = false;
   int _page = 1;
   String? _selectedTopic;
-  String? _error;
 
   @override
   void initState() {
@@ -59,7 +55,6 @@ class _TopicsPageState extends State<TopicsPage> {
   Future<void> _loadTopics() async {
     setState(() {
       _loadingTopics = true;
-      _error = null;
     });
 
     try {
@@ -84,7 +79,6 @@ class _TopicsPageState extends State<TopicsPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
       });
     } finally {
       if (mounted) {
@@ -104,7 +98,6 @@ class _TopicsPageState extends State<TopicsPage> {
     if (refresh) {
       setState(() {
         _loadingPosts = true;
-        _error = null;
         _page = 1;
       });
     } else {
@@ -139,7 +132,6 @@ class _TopicsPageState extends State<TopicsPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
       });
     } finally {
       if (mounted) {
@@ -171,7 +163,6 @@ class _TopicsPageState extends State<TopicsPage> {
       _posts.clear();
       _page = 1;
       _hasMore = false;
-      _error = null;
     });
     _loadPosts(refresh: true);
   }
@@ -229,55 +220,6 @@ class _TopicsPageState extends State<TopicsPage> {
                   onOpenTopic: _openTopicDetails,
                 ),
               ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 14, 18, 8),
-                  child: _TopicSummary(
-                    topic: _selectedTopic,
-                    count: _posts.length,
-                    loading: _loadingPosts,
-                    hasMore: _hasMore,
-                  ),
-                ),
-              ),
-              if (_loadingTopics && _posts.isEmpty)
-                const SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.8,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                )
-              else if (_error != null && _posts.isEmpty)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: _TopicsError(
-                    error: _error!,
-                    onRetry: _loadTopics,
-                  ),
-                )
-              else if (_posts.isEmpty)
-                const SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: _TopicsEmpty(),
-                )
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  sliver: SliverList.separated(
-                    itemBuilder: (context, index) {
-                      final post = _posts[index];
-                      return BlocProvider.value(
-                        value: context.read<FeedBloc>(),
-                        child: RepostCard(post: post),
-                      );
-                    },
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemCount: _posts.length,
-                  ),
-                ),
               if (_loadingMore)
                 const SliverPadding(
                   padding: EdgeInsets.only(bottom: 20),
@@ -602,227 +544,6 @@ class _TrendTile extends StatelessWidget {
               Icons.arrow_forward_ios_rounded,
               color: selected ? accent : AppColors.textHint,
               size: 14,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TopicSummary extends StatelessWidget {
-  final String? topic;
-  final int count;
-  final bool loading;
-  final bool hasMore;
-
-  const _TopicSummary({
-    required this.topic,
-    required this.count,
-    required this.loading,
-    required this.hasMore,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final label = topic == null ? 'Topics' : '#$topic';
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration:
-          _panelDecoration(radius: 22, fill: AppColors.cardColor, shadow: 0.12),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(
-              Icons.auto_awesome_rounded,
-              color: AppColors.primary,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: AppTheme.blackTextStyle.copyWith(
-                    color: AppColors.text,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  hasMore
-                      ? 'More posts are available as you scroll.'
-                      : 'You are caught up on this topic.',
-                  style: AppTheme.greyTextStyle.copyWith(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                    height: 1.35,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          if (loading)
-            const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.2,
-                color: AppColors.primary,
-              ),
-            )
-          else
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '$count',
-                  style: AppTheme.blackTextStyle.copyWith(
-                    color: AppColors.text,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                Text(
-                  'posts',
-                  style: AppTheme.greyTextStyle.copyWith(
-                    color: AppColors.textSecondary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TopicsError extends StatelessWidget {
-  final String error;
-  final VoidCallback onRetry;
-
-  const _TopicsError({
-    required this.error,
-    required this.onRetry,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.10),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.wifi_off_rounded,
-                color: AppColors.primary,
-                size: 34,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Could not load topics',
-              style: AppTheme.blackTextStyle.copyWith(
-                color: AppColors.text,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              error,
-              textAlign: TextAlign.center,
-              style: AppTheme.greyTextStyle.copyWith(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: onRetry,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TopicsEmpty extends StatelessWidget {
-  const _TopicsEmpty();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 76,
-              height: 76,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.10),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.tag_rounded,
-                color: AppColors.primary,
-                size: 34,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No posts for this topic yet',
-              style: AppTheme.blackTextStyle.copyWith(
-                color: AppColors.text,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Try another topic or pull to refresh for new conversations.',
-              textAlign: TextAlign.center,
-              style: AppTheme.greyTextStyle.copyWith(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-                height: 1.4,
-              ),
             ),
           ],
         ),

@@ -66,17 +66,9 @@ class _EventsPageState extends State<EventsPage>
             .where((event) => _isSameDay(event.startsAt, DateTime.now()))
             .length;
         final goingCount = state.events.where((event) => event.isGoing).length;
-
-        if (state.events.isEmpty) {
-          return Scaffold(
-            backgroundColor: AppColors.background,
-            body: state.status == EventStatus.loading
-                ? const EventsLoadingShimmer()
-                : EventsEmptyState(onCreate: _openCreateEvent),
-          );
-        }
-
-        final featuredEvent = state.events.first;
+        final isInitialLoading =
+            state.status == EventStatus.loading && state.events.isEmpty;
+        final isEmpty = state.events.isEmpty && !isInitialLoading;
         final remaining = state.events.length > 1
             ? state.events.sublist(1)
             : const <EventModel>[];
@@ -136,80 +128,111 @@ class _EventsPageState extends State<EventsPage>
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
                   child: EventsSectionLabel(
                     title: 'Featured',
-                    subtitle: 'The next thing people can act on now',
+                    subtitle: isInitialLoading
+                        ? 'Loading the next thing people can act on now'
+                        : 'The next thing people can act on now',
                   ),
                 ),
               ),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                sliver: SliverToBoxAdapter(
-                  child: EventCard(
-                    event: featuredEvent,
-                    compact: false,
-                    onTap: () => _openEventDetails(featuredEvent),
-                    onGoing: () => context.read<EventBloc>().add(
-                          RsvpEvent(
-                            eventId: featuredEvent.id,
-                            status: 'going',
-                          ),
-                        ),
-                    onInterested: () => context.read<EventBloc>().add(
-                          RsvpEvent(
-                            eventId: featuredEvent.id,
-                            status: 'interested',
-                          ),
-                        ),
-                    onLeave: () => context.read<EventBloc>().add(
-                          RsvpEvent(
-                            eventId: featuredEvent.id,
-                            status: 'not_going',
-                          ),
-                        ),
+              if (isInitialLoading)
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(16, 0, 16, 110),
+                    child: EventsLoadingShimmer(),
+                  ),
+                )
+              else if (isEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: EventsEmptyState(onCreate: _openCreateEvent),
+                  ),
+                )
+              else ...[
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Builder(
+                      builder: (context) {
+                        final currentFeatured = state.events.first;
+                        return EventCard(
+                          event: currentFeatured,
+                          compact: false,
+                          onTap: () => _openEventDetails(currentFeatured),
+                          onGoing: () => context.read<EventBloc>().add(
+                                RsvpEvent(
+                                  eventId: currentFeatured.id,
+                                  status: 'going',
+                                ),
+                              ),
+                          onInterested: () => context.read<EventBloc>().add(
+                                RsvpEvent(
+                                  eventId: currentFeatured.id,
+                                  status: 'interested',
+                                ),
+                              ),
+                          onLeave: () => context.read<EventBloc>().add(
+                                RsvpEvent(
+                                  eventId: currentFeatured.id,
+                                  status: 'not_going',
+                                ),
+                              ),
+                        );
+                      },
+                    ),
                   ),
                 ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 18, 16, 10),
-                  child: EventsSectionLabel(
-                    title: 'More events',
-                    subtitle: remaining.isEmpty
-                        ? 'No additional events loaded'
-                        : '${remaining.length} more events',
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: EventsSectionLabel(
+                      title: 'More events',
+                      subtitle: remaining.isEmpty
+                          ? 'No additional events loaded'
+                          : '${remaining.length} more events',
+                    ),
                   ),
                 ),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 110),
-                sliver: SliverList.separated(
-                  itemBuilder: (context, index) {
-                    final event = remaining[index];
-                    return EventCard(
-                      event: event,
-                      compact: true,
-                      onTap: () => _openEventDetails(event),
-                      onGoing: () => context.read<EventBloc>().add(
-                            RsvpEvent(eventId: event.id, status: 'going'),
-                          ),
-                      onInterested: () => context.read<EventBloc>().add(
-                            RsvpEvent(
-                              eventId: event.id,
-                              status: 'interested',
-                            ),
-                          ),
-                      onLeave: () => context.read<EventBloc>().add(
-                            RsvpEvent(
-                              eventId: event.id,
-                              status: 'not_going',
-                            ),
-                          ),
-                    );
-                  },
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemCount: remaining.length,
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 110),
+                  sliver: remaining.isEmpty
+                      ? const SliverToBoxAdapter(child: SizedBox.shrink())
+                      : SliverList.separated(
+                          itemBuilder: (context, index) {
+                            final event = remaining[index];
+                            return EventCard(
+                              event: event,
+                              compact: true,
+                              onTap: () => _openEventDetails(event),
+                              onGoing: () => context.read<EventBloc>().add(
+                                    RsvpEvent(
+                                      eventId: event.id,
+                                      status: 'going',
+                                    ),
+                                  ),
+                              onInterested: () => context.read<EventBloc>().add(
+                                    RsvpEvent(
+                                      eventId: event.id,
+                                      status: 'interested',
+                                    ),
+                                  ),
+                              onLeave: () => context.read<EventBloc>().add(
+                                    RsvpEvent(
+                                      eventId: event.id,
+                                      status: 'not_going',
+                                    ),
+                                  ),
+                            );
+                          },
+                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          itemCount: remaining.length,
+                        ),
                 ),
-              ),
-              if (state.hasMore && state.events.isNotEmpty)
+              ],
+              if (!isInitialLoading &&
+                  !isEmpty &&
+                  state.hasMore &&
+                  state.events.isNotEmpty)
                 const SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.only(bottom: 24),

@@ -297,7 +297,7 @@ class _LoginPageState extends State<LoginPage> {
                 icon: Icons.g_mobiledata, color: AppColors.red, onTap: () {}),
             const SizedBox(width: 20),
             _buildSocialButton(
-                icon: Icons.apple, color: AppColors.black, onTap: () {}),
+                icon: Icons.apple, color: AppColors.text, onTap: () {}),
             const SizedBox(width: 20),
             _buildSocialButton(
                 icon: Icons.facebook, color: AppColors.blue, onTap: () {}),

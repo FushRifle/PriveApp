@@ -785,7 +785,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? AppColors.red : AppColors.green,
+        backgroundColor: isError ? AppColors.red : AppColors.text,
         behavior: SnackBarBehavior.floating,
         duration: Duration(seconds: isError ? 3 : 2),
       ),

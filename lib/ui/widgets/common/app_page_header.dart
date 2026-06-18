@@ -110,13 +110,13 @@ class AppPageHeader extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: AppColors.primary,
+                  color: AppColors.primary.withOpacity(0.7),
                   shape: BoxShape.circle,
                   border: Border.all(color: border),
                   boxShadow: [
                     BoxShadow(
                       color: shadow,
-                      blurRadius: 12,
+                      blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
                   ],
