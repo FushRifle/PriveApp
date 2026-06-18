@@ -9,8 +9,8 @@ import 'package:clique/bloc/chat/chat_bloc.dart';
 import 'package:clique/bloc/event/event_bloc.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
+import 'package:clique/core/router/named_routes.dart';
 
-import 'package:clique/ui/pages/main/home/create_post_page.dart';
 import 'package:clique/ui/pages/main/chat/inbox_page.dart';
 import 'package:clique/ui/pages/main/home/home_page.dart';
 import 'package:clique/ui/pages/main/event/events_page.dart';
@@ -27,6 +27,8 @@ class _MainWrapperState extends State<MainWrapper>
     with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
   final PageStorageBucket _bucket = PageStorageBucket();
   late final PageController _pageController;
+  late final FeedBloc _feedBloc;
+  late final StoriesBloc _storiesBloc;
   int _currentIndex = 0;
   final Set<int> _visitedTabs = {0};
   final GlobalKey<CurvedNavigationBarState> _bottomNavigationKey = GlobalKey();
@@ -49,6 +51,8 @@ class _MainWrapperState extends State<MainWrapper>
   void initState() {
     super.initState();
     _pageController = PageController();
+    _feedBloc = FeedBloc();
+    _storiesBloc = StoriesBloc();
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -64,6 +68,8 @@ class _MainWrapperState extends State<MainWrapper>
   @override
   void dispose() {
     _pageController.dispose();
+    _feedBloc.close();
+    _storiesBloc.close();
     _pulseController.dispose();
     super.dispose();
   }
@@ -103,18 +109,13 @@ class _MainWrapperState extends State<MainWrapper>
     HapticFeedback.mediumImpact();
     _pulseController.forward().then((_) => _pulseController.reverse());
 
-    final created = await Navigator.push<bool>(
+    final created = await Navigator.pushNamed<bool>(
       context,
-      MaterialPageRoute(
-        builder: (_) => BlocProvider.value(
-          value: context.read<FeedBloc>(),
-          child: const CreatePostPage(),
-        ),
-      ),
+      NamedRoutes.createPostScreen,
     );
 
     if (created == true && context.mounted) {
-      context.read<FeedBloc>().add(RefreshFeed());
+      _feedBloc.add(RefreshFeed());
     }
   }
 
@@ -141,8 +142,8 @@ class _MainWrapperState extends State<MainWrapper>
 
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (_) => FeedBloc()),
-        BlocProvider(create: (_) => StoriesBloc()),
+        BlocProvider.value(value: _feedBloc),
+        BlocProvider.value(value: _storiesBloc),
       ],
       child: PopScope(
         canPop: _currentIndex == 0,
@@ -155,41 +156,46 @@ class _MainWrapperState extends State<MainWrapper>
           extendBody: true,
           body: Stack(
             children: [
-              PageStorage(
-                bucket: _bucket,
-                child: PageView(
-                  controller: _pageController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  onPageChanged: (index) {
-                    if (_currentIndex == index) return;
-                    setState(() {
-                      _currentIndex = index;
-                      _visitedTabs.add(index);
-                      _navBarIndex = _pageIndexToNavIndex(index);
-                    });
-                  },
-                  children: [
-                    _DeferredTab(
-                        enabled: _visitedTabs.contains(0),
-                        child:
-                            const HomePage(key: PageStorageKey('home_page'))),
-                    _DeferredTab(
-                        enabled: _visitedTabs.contains(1),
-                        child: ReelsPage(
-                            key: PageStorageKey('reels_page'),
-                            onBack: () => _onTabChanged(0),
-                            isVisible: _currentIndex == 1)),
-                    _DeferredTab(
-                        enabled: _visitedTabs.contains(2),
-                        child: const _EventTabScope(
-                            key: PageStorageKey('events_page'),
-                            child: EventsPage())),
-                    _DeferredTab(
-                        enabled: _visitedTabs.contains(3),
-                        child: const _ChatTabScope(
-                            key: PageStorageKey('inbox_page'),
-                            child: InboxPage())),
-                  ],
+              Padding(
+                padding: EdgeInsets.only(
+                  bottom: _showBottomBar ? 96 : 0,
+                ),
+                child: PageStorage(
+                  bucket: _bucket,
+                  child: PageView(
+                    controller: _pageController,
+                    physics: const NeverScrollableScrollPhysics(),
+                    onPageChanged: (index) {
+                      if (_currentIndex == index) return;
+                      setState(() {
+                        _currentIndex = index;
+                        _visitedTabs.add(index);
+                        _navBarIndex = _pageIndexToNavIndex(index);
+                      });
+                    },
+                    children: [
+                      _DeferredTab(
+                          enabled: _visitedTabs.contains(0),
+                          child:
+                              const HomePage(key: PageStorageKey('home_page'))),
+                      _DeferredTab(
+                          enabled: _visitedTabs.contains(1),
+                          child: ReelsPage(
+                              key: PageStorageKey('reels_page'),
+                              onBack: () => _onTabChanged(0),
+                              isVisible: _currentIndex == 1)),
+                      _DeferredTab(
+                          enabled: _visitedTabs.contains(2),
+                          child: const _EventTabScope(
+                              key: PageStorageKey('events_page'),
+                              child: EventsPage())),
+                      _DeferredTab(
+                          enabled: _visitedTabs.contains(3),
+                          child: const _ChatTabScope(
+                              key: PageStorageKey('inbox_page'),
+                              child: InboxPage())),
+                    ],
+                  ),
                 ),
               ),
               if (_showBottomBar)
@@ -197,12 +203,13 @@ class _MainWrapperState extends State<MainWrapper>
                     child: IgnorePointer(child: _BackgroundGradient())),
               if (_showBottomBar)
                 Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
+                  left: 12,
+                  right: 12,
+                  bottom: 12,
                   child: Container(
                     decoration: BoxDecoration(
                       color: backgroundColor,
+                      borderRadius: BorderRadius.circular(28),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.1),
