@@ -34,23 +34,24 @@ class EventCard extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(20),
             child: Container(
               decoration: BoxDecoration(
                 color: AppColors.card,
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: AppColors.border),
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.black.withOpacity(0.03),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
               clipBehavior: Clip.antiAlias,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Stack(
                     children: [
@@ -59,9 +60,9 @@ class EventCard extends StatelessWidget {
                         compact: isCompactImage,
                       ),
                       Positioned(
-                        top: 14,
-                        left: 14,
-                        right: 14,
+                        top: 10,
+                        left: 10,
+                        right: 10,
                         child: Row(
                           children: [
                             if (event.category.isNotEmpty)
@@ -81,50 +82,52 @@ class EventCard extends StatelessWidget {
                     ],
                   ),
                   Padding(
-                    padding: EdgeInsets.all(isCompactImage ? 14 : 16),
+                    padding: EdgeInsets.all(isCompactImage ? 12 : 14),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _DateRail(date: event.startsAt),
-                            const SizedBox(width: 14),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
                                     event.title,
-                                    maxLines: isCompactImage ? 2 : 3,
+                                    maxLines: isCompactImage ? 2 : 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: AppTheme.blackTextStyle.copyWith(
-                                      fontSize: isCompactImage ? 16 : 18,
+                                      fontSize: isCompactImage ? 15 : 16,
                                       fontWeight: AppTheme.bold,
-                                      height: 1.15,
+                                      height: 1.2,
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    event.description.isEmpty
-                                        ? 'No description provided.'
-                                        : event.description,
-                                    maxLines: isCompactImage ? 2 : 3,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: AppTheme.greyTextStyle.copyWith(
-                                      height: 1.45,
-                                      fontSize: 13,
+                                  if (event.description.isNotEmpty) ...[
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      event.description,
+                                      maxLines: isCompactImage ? 1 : 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: AppTheme.greyTextStyle.copyWith(
+                                        height: 1.4,
+                                        fontSize: 13,
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ],
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 12),
                         Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
+                          spacing: 6,
+                          runSpacing: 6,
                           children: [
                             if (event.location.isNotEmpty)
                               _MetaChip(
@@ -146,45 +149,58 @@ class EventCard extends StatelessWidget {
                               ),
                           ],
                         ),
-                        const SizedBox(height: 14),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
+                        const SizedBox(height: 12),
+                        Row(
                           children: [
-                            FilledButton(
-                              onPressed: event.isGoing ? onLeave : onGoing,
-                              style: FilledButton.styleFrom(
-                                backgroundColor: event.isGoing
-                                    ? AppColors.success.withOpacity(0.12)
-                                    : AppColors.primary,
-                                foregroundColor: event.isGoing
-                                    ? AppColors.success
-                                    : AppColors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
+                            Expanded(
+                              child: FilledButton(
+                                onPressed: event.isGoing ? onLeave : onGoing,
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: event.isGoing
+                                      ? AppColors.success.withOpacity(0.12)
+                                      : AppColors.primary,
+                                  foregroundColor: event.isGoing
+                                      ? AppColors.success
+                                      : AppColors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 10,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                 ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
+                                child: Text(
+                                  event.isGoing ? 'Going' : 'RSVP',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
-                              child:
-                                  Text(event.isGoing ? 'Going' : 'RSVP going'),
                             ),
-                            OutlinedButton(
-                              onPressed:
-                                  event.isInterested ? onLeave : onInterested,
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: event.isInterested ? onLeave : onInterested,
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 10,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                 ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
+                                child: Text(
+                                  event.isInterested ? 'Saved' : 'Interested',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
-                              ),
-                              child: Text(
-                                event.isInterested ? 'Saved' : 'Interested',
                               ),
                             ),
                           ],
@@ -211,34 +227,36 @@ class _DateRail extends StatelessWidget {
   Widget build(BuildContext context) {
     final local = date.toLocal();
     return Container(
-      width: 58,
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      width: 52,
+      padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         color: AppColors.background,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             _monthLabel(local.month),
             style: AppTheme.greyTextStyle.copyWith(
-              fontSize: 11,
-              fontWeight: AppTheme.bold,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '${local.day}',
-            style: AppTheme.blackTextStyle.copyWith(
-              fontSize: 20,
+              fontSize: 10,
               fontWeight: AppTheme.bold,
             ),
           ),
           const SizedBox(height: 2),
           Text(
+            '${local.day}',
+            style: AppTheme.blackTextStyle.copyWith(
+              fontSize: 18,
+              fontWeight: AppTheme.bold,
+              height: 1,
+            ),
+          ),
+          const SizedBox(height: 1),
+          Text(
             _weekdayLabel(local.weekday),
-            style: AppTheme.greyTextStyle.copyWith(fontSize: 10),
+            style: AppTheme.greyTextStyle.copyWith(fontSize: 9),
           ),
         ],
       ),
@@ -257,7 +275,7 @@ class _EventImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final height = compact ? 136.0 : 178.0;
+    final height = compact ? 120.0 : 150.0;
 
     if (imageUrl.trim().startsWith('http')) {
       return SizedBox(
@@ -272,44 +290,27 @@ class _EventImage extends StatelessWidget {
       );
     }
 
+    return _placeholder(height);
+  }
+
+  Widget _placeholder(double height) {
     return Container(
       height: height,
       width: double.infinity,
       color: AppColors.background,
       child: Center(
         child: Container(
-          width: 72,
-          height: 72,
+          width: 56,
+          height: 56,
           decoration: BoxDecoration(
             color: AppColors.primary.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
           ),
           child: const Icon(
             Icons.event_outlined,
             color: AppColors.primary,
-            size: 34,
+            size: 28,
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _placeholder(double height) {
-    return Container(
-      height: height,
-      color: AppColors.background,
-      alignment: Alignment.center,
-      child: Container(
-        width: 72,
-        height: 72,
-        decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: const Icon(
-          Icons.event_outlined,
-          color: AppColors.primary,
-          size: 34,
         ),
       ),
     );
@@ -328,7 +329,7 @@ class _MetaChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(999),
@@ -337,12 +338,12 @@ class _MetaChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: AppColors.textSecondary),
-          const SizedBox(width: 6),
+          Icon(icon, size: 12, color: AppColors.textSecondary),
+          const SizedBox(width: 4),
           Text(
             label,
             style: AppTheme.greyTextStyle.copyWith(
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: AppTheme.medium,
             ),
           ),
@@ -364,7 +365,7 @@ class _FloatingTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
         color: AppColors.black.withOpacity(0.45),
         borderRadius: BorderRadius.circular(999),
@@ -373,12 +374,12 @@ class _FloatingTag extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: AppColors.white),
-          const SizedBox(width: 5),
+          Icon(icon, size: 11, color: AppColors.white),
+          const SizedBox(width: 4),
           Text(
             label,
             style: AppTheme.whiteTextStyle.copyWith(
-              fontSize: 11,
+              fontSize: 10,
               fontWeight: AppTheme.bold,
             ),
           ),

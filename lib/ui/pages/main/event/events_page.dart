@@ -3,12 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/event/event_bloc.dart';
 import 'package:clique/core/models/event_model.dart';
 import 'package:clique/ui/widgets/common/app_page_header.dart';
 import 'package:clique/ui/widgets/events/event_card.dart';
 import 'package:clique/ui/widgets/events/events_empty_state.dart';
-import 'package:clique/ui/widgets/events/events_hero_stat_chip.dart';
 import 'package:clique/ui/widgets/events/events_loading_shimmer.dart';
 import 'package:clique/ui/widgets/events/events_section_label.dart';
 import 'package:clique/ui/widgets/events/events_search_and_filters.dart';
@@ -62,10 +62,6 @@ class _EventsPageState extends State<EventsPage>
           previous.actionStatus != current.actionStatus,
       listener: _handleStateChange,
       builder: (context, state) {
-        final todayCount = state.events
-            .where((event) => _isSameDay(event.startsAt, DateTime.now()))
-            .length;
-        final goingCount = state.events.where((event) => event.isGoing).length;
         final isInitialLoading =
             state.status == EventStatus.loading && state.events.isEmpty;
         final isEmpty = state.events.isEmpty && !isInitialLoading;
@@ -92,29 +88,6 @@ class _EventsPageState extends State<EventsPage>
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  child: Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      EventsHeroStatChip(
-                        icon: Icons.event_available_outlined,
-                        label: '${state.events.length} total',
-                      ),
-                      EventsHeroStatChip(
-                        icon: Icons.today_outlined,
-                        label: '$todayCount today',
-                      ),
-                      EventsHeroStatChip(
-                        icon: Icons.how_to_reg_outlined,
-                        label: '$goingCount going',
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   child: EventsSearchAndFilters(
                     searchController: _searchController,
                     category: _category,
@@ -125,7 +98,7 @@ class _EventsPageState extends State<EventsPage>
               ),
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                   child: EventsSectionLabel(
                     title: 'Featured',
                     subtitle: isInitialLoading
@@ -134,6 +107,13 @@ class _EventsPageState extends State<EventsPage>
                   ),
                 ),
               ),
+              if (state.status == EventStatus.loading && state.events.isNotEmpty)
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: _BackgroundUpdatePill(),
+                  ),
+                ),
               if (isInitialLoading)
                 const SliverToBoxAdapter(
                   child: Padding(
@@ -331,10 +311,43 @@ class _EventsPageState extends State<EventsPage>
   }
 }
 
-bool _isSameDay(DateTime a, DateTime b) {
-  final left = a.toLocal();
-  final right = b.toLocal();
-  return left.year == right.year &&
-      left.month == right.month &&
-      left.day == right.day;
+class _BackgroundUpdatePill extends StatelessWidget {
+  const _BackgroundUpdatePill();
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withOpacity(0.10),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: AppColors.primary.withOpacity(0.18)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 12,
+              height: 12,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Updating events',
+              style: AppTheme.greyTextStyle.copyWith(
+                color: AppColors.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
