@@ -9,7 +9,7 @@ import 'package:clique/bloc/chat/chat_bloc.dart';
 import 'package:clique/bloc/event/event_bloc.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
-import 'package:clique/core/router/named_routes.dart';
+import 'package:clique/ui/pages/main/home/create_post_page.dart';
 
 import 'package:clique/ui/pages/main/chat/inbox_page.dart';
 import 'package:clique/ui/pages/main/home/home_page.dart';
@@ -100,7 +100,7 @@ class _MainWrapperState extends State<MainWrapper>
       _handleCreatePost();
       return;
     }
-    
+
     final pageIndex = _navIndexToPageIndex(navIndex);
     _onTabChanged(pageIndex);
   }
@@ -109,9 +109,13 @@ class _MainWrapperState extends State<MainWrapper>
     HapticFeedback.mediumImpact();
     _pulseController.forward().then((_) => _pulseController.reverse());
 
-    final created = await Navigator.pushNamed<bool>(
-      context,
-      NamedRoutes.createPostScreen,
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: _feedBloc,
+          child: const CreatePostPage(),
+        ),
+      ),
     );
 
     if (created == true && context.mounted) {
@@ -137,8 +141,10 @@ class _MainWrapperState extends State<MainWrapper>
   Widget build(BuildContext context) {
     super.build(context);
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDarkMode ? AppColors.darkBackground : AppColors.cardColor;
-    final unselectedColor = isDarkMode ? Colors.grey.shade500 : Colors.grey.shade600;
+    final backgroundColor =
+        isDarkMode ? AppColors.darkBackground : AppColors.cardColor;
+    final unselectedColor =
+        isDarkMode ? Colors.grey.shade500 : Colors.grey.shade600;
 
     return MultiBlocProvider(
       providers: [
@@ -212,7 +218,8 @@ class _MainWrapperState extends State<MainWrapper>
                       borderRadius: BorderRadius.circular(28),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.1),
+                          color:
+                              Colors.black.withOpacity(isDarkMode ? 0.3 : 0.1),
                           blurRadius: 20,
                           offset: const Offset(0, -5),
                         ),
@@ -249,12 +256,12 @@ class _MainWrapperState extends State<MainWrapper>
                             ),
                             const SizedBox.shrink(),
                             _buildNavItem(
-                              icon: Icons.event_available_rounded,
+                              icon: Icons.date_range_rounded,
                               isSelected: _navBarIndex == 3,
                               unselectedColor: unselectedColor,
                             ),
                             _buildNavItem(
-                              icon: Icons.chat_rounded,
+                              icon: Icons.send_rounded,
                               isSelected: _navBarIndex == 4,
                               unselectedColor: unselectedColor,
                             ),
@@ -295,10 +302,6 @@ class _MainWrapperState extends State<MainWrapper>
             curve: Curves.easeInOut,
             width: isSelected ? 32 : 0,
             height: 3,
-            decoration: BoxDecoration(
-              color: isSelected ? AppColors.primary : Colors.transparent,
-              borderRadius: BorderRadius.circular(2),
-            ),
           ),
           const SizedBox(height: 6),
           AnimatedContainer(
@@ -308,12 +311,12 @@ class _MainWrapperState extends State<MainWrapper>
             height: isSelected ? 44 : 36,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isSelected 
-                  ? AppColors.border.withOpacity(0.1) 
+              color: isSelected
+                  ? AppColors.border.withOpacity(0.1)
                   : Colors.transparent,
               border: Border.all(
-                color: isSelected 
-                    ? AppColors.border.withOpacity(0.3) 
+                color: isSelected
+                    ? AppColors.border.withOpacity(0.3)
                     : Colors.transparent,
                 width: isSelected ? 1.5 : 0,
               ),
@@ -321,7 +324,7 @@ class _MainWrapperState extends State<MainWrapper>
                   ? [
                       BoxShadow(
                         color: AppColors.primary.withOpacity(0.15),
-                        blurRadius: 8,
+                        blurRadius: 7,
                         spreadRadius: 0,
                       ),
                     ]
@@ -329,7 +332,7 @@ class _MainWrapperState extends State<MainWrapper>
             ),
             child: Icon(
               icon,
-              size: isSelected ? 29 : 25,
+              size: isSelected ? 30 : 25,
               color: isSelected ? AppColors.primary : unselectedColor,
             ),
           ),

@@ -78,8 +78,7 @@ class _TopicsPageState extends State<TopicsPage> {
       await _loadPosts(refresh: true);
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-      });
+      setState(() {});
     } finally {
       if (mounted) {
         setState(() {
@@ -131,8 +130,7 @@ class _TopicsPageState extends State<TopicsPage> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-      });
+      setState(() {});
     } finally {
       if (mounted) {
         setState(() {
@@ -503,25 +501,6 @@ class _TrendTile extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (selected)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.09),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            'Active',
-                            style: AppTheme.blackTextStyle.copyWith(
-                              color: AppColors.primary,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                   const SizedBox(height: 4),

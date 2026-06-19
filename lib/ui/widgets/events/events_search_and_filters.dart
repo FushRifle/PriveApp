@@ -36,7 +36,7 @@ class EventsSearchAndFilters extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.card,
+            AppColors.cardColor,
             AppColors.secondary.withOpacity(0.04),
           ],
         ),

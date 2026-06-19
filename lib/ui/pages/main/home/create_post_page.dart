@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
@@ -8,14 +7,15 @@ import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/core/services/media_service.dart';
 import 'package:clique/core/services/user/user_service.dart';
 import 'package:clique/core/models/create_post_models.dart';
-import 'package:clique/ui/widgets/home/create-post/create_post_options_view.dart';
-import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
+import 'package:clique/core/router/named_routes.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:clique/ui/widgets/home/create-post/create_post_options_view.dart';
+import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
 part '../../../widgets/home/create-post/create_post_page_header.dart';
 part '../../../widgets/home/create-post/create_post_composer.dart';
 part '../../../widgets/home/create-post/create_post_upload_overlay.dart';
@@ -138,77 +138,65 @@ class _CreatePostPageState extends State<CreatePostPage> {
       child: Scaffold(
         resizeToAvoidBottomInset: true,
         backgroundColor: AppColors.backgroundColor,
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColors.backgroundColor,
-                AppColors.secondary.withOpacity(0.05),
-              ],
-            ),
-          ),
-          child: SafeArea(
-            child: Stack(
-              children: [
-                Positioned(
-                  top: -90,
-                  right: -70,
-                  child: Container(
-                    width: 220,
-                    height: 220,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          AppColors.primary.withOpacity(0.12),
-                          AppColors.transparent,
-                        ],
-                      ),
+        body: SafeArea(
+          child: Stack(
+            children: [
+              Positioned(
+                top: -90,
+                right: -70,
+                child: Container(
+                  width: 220,
+                  height: 220,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        AppColors.primary.withOpacity(0.12),
+                        AppColors.transparent,
+                      ],
                     ),
                   ),
                 ),
-                Positioned(
-                  bottom: -100,
-                  left: -80,
-                  child: Container(
-                    width: 240,
-                    height: 240,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          AppColors.secondary.withOpacity(0.10),
-                          AppColors.transparent,
-                        ],
-                      ),
+              ),
+              Positioned(
+                bottom: -100,
+                left: -80,
+                child: Container(
+                  width: 240,
+                  height: 240,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        AppColors.secondary.withOpacity(0.10),
+                        AppColors.transparent,
+                      ],
                     ),
                   ),
                 ),
-                Column(
-                  children: [
-                    _Header(
-                      title: _title,
-                      isFirstStep: _currentStep == PostCreationStep.options,
-                      isSubmitting: _isSubmitting,
-                      canSubmit: _canSubmit,
-                      onBack: _handleBack,
-                      onSubmit: _handleSubmit,
+              ),
+              Column(
+                children: [
+                  _Header(
+                    title: _title,
+                    isFirstStep: _currentStep == PostCreationStep.options,
+                    isSubmitting: _isSubmitting,
+                    canSubmit: _canSubmit,
+                    onBack: _handleBack,
+                    onSubmit: _handleSubmit,
+                  ),
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 240),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      child: _buildCurrentStep(),
                     ),
-                    Expanded(
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 240),
-                        switchInCurve: Curves.easeOutCubic,
-                        switchOutCurve: Curves.easeInCubic,
-                        child: _buildCurrentStep(),
-                      ),
-                    ),
-                  ],
-                ),
-                if (_isSubmitting) _UploadOverlay(progress: _uploadProgress),
-              ],
-            ),
+                  ),
+                ],
+              ),
+              if (_isSubmitting) _UploadOverlay(progress: _uploadProgress),
+            ],
           ),
         ),
       ),
@@ -274,6 +262,10 @@ class _CreatePostPageState extends State<CreatePostPage> {
           onImage: () => _pickMedia(MediaType.image, ImageSource.gallery),
           onCamera: () => _pickMedia(MediaType.image, ImageSource.camera),
           onVideo: () => _pickMedia(MediaType.video, ImageSource.gallery),
+          onReels: () {
+            HapticFeedback.lightImpact();
+            Navigator.pushNamed(context, NamedRoutes.createReelScreen);
+          },
           onAudio: _showComingSoon,
         );
 
@@ -699,24 +691,23 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
     try {
       final feedBloc = context.read<FeedBloc>();
-      final initialPostIds = feedBloc.state.posts.map((post) => post.id).toSet();
+      final initialPostIds =
+          feedBloc.state.posts.map((post) => post.id).toSet();
 
       feedBloc.add(
-            CreateFeedPost(
-              content: content,
-              attachments: null,
-              postType: _postType.apiValue,
-              isAnonymous: _postType == PostComposerType.anonymous,
-              anonymousCategory: _postType == PostComposerType.anonymous
-                  ? _anonymousCategory
-                  : null,
-              pollOptions:
-                  _postType == PostComposerType.poll ? _pollOptions : null,
-              pollExpirationHours: _postType == PostComposerType.poll
-                  ? _pollExpirationHours
-                  : null,
-            ),
-          );
+        CreateFeedPost(
+          content: content,
+          attachments: null,
+          postType: _postType.apiValue,
+          isAnonymous: _postType == PostComposerType.anonymous,
+          anonymousCategory: _postType == PostComposerType.anonymous
+              ? _anonymousCategory
+              : null,
+          pollOptions: _postType == PostComposerType.poll ? _pollOptions : null,
+          pollExpirationHours:
+              _postType == PostComposerType.poll ? _pollExpirationHours : null,
+        ),
+      );
 
       final created = await _waitForPostCreation(
         feedBloc,
@@ -786,26 +777,25 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
       final content = _contentWithHashtags();
       final feedBloc = context.read<FeedBloc>();
-      final initialPostIds = feedBloc.state.posts.map((post) => post.id).toSet();
+      final initialPostIds =
+          feedBloc.state.posts.map((post) => post.id).toSet();
 
       feedBloc.add(
-            CreateFeedPost(
-              content: content,
-              attachments: attachments.isNotEmpty
-                  ? attachments.map((item) => item.toJson()).toList()
-                  : null,
-              postType: _postType.apiValue,
-              isAnonymous: _postType == PostComposerType.anonymous,
-              anonymousCategory: _postType == PostComposerType.anonymous
-                  ? _anonymousCategory
-                  : null,
-              pollOptions:
-                  _postType == PostComposerType.poll ? _pollOptions : null,
-              pollExpirationHours: _postType == PostComposerType.poll
-                  ? _pollExpirationHours
-                  : null,
-            ),
-          );
+        CreateFeedPost(
+          content: content,
+          attachments: attachments.isNotEmpty
+              ? attachments.map((item) => item.toJson()).toList()
+              : null,
+          postType: _postType.apiValue,
+          isAnonymous: _postType == PostComposerType.anonymous,
+          anonymousCategory: _postType == PostComposerType.anonymous
+              ? _anonymousCategory
+              : null,
+          pollOptions: _postType == PostComposerType.poll ? _pollOptions : null,
+          pollExpirationHours:
+              _postType == PostComposerType.poll ? _pollExpirationHours : null,
+        ),
+      );
 
       final created = await _waitForPostCreation(
         feedBloc,

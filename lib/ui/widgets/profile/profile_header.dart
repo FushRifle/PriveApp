@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
+import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/bloc/profile/gallery_profile_cubit.dart';
 import 'package:clique/core/models/profile_view.dart';
 import 'package:clique/core/router/named_routes.dart';
@@ -477,6 +478,12 @@ class ProfileStatsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final userId = profile.userId != 0 ? profile.userId : profile.id;
+    FeedBloc? feedBloc;
+    try {
+      feedBloc = context.read<FeedBloc>();
+    } catch (_) {
+      feedBloc = null;
+    }
 
     return FutureBuilder<FollowStats>(
       future: isOwnProfile
@@ -485,20 +492,63 @@ class ProfileStatsRow extends StatelessWidget {
       builder: (context, snapshot) {
         final stats = snapshot.data;
 
-        return BlocBuilder<GalleryProfileCubit, GalleryProfileState>(
-          builder: (context, galleryState) {
-            final totalLikes = galleryState is GalleryProfileLoaded
-                ? galleryState.galleryProfiles.fold<int>(
-                    0,
-                    (total, item) => total + item.likesCount,
-                  )
-                : 0;
+        Widget buildStats([int? feedLikes]) {
+          return BlocBuilder<GalleryProfileCubit, GalleryProfileState>(
+            builder: (context, galleryState) {
+              final galleryLikes = galleryState is GalleryProfileLoaded
+                  ? galleryState.galleryProfiles.fold<int>(
+                      0,
+                      (total, item) => total + item.likesCount,
+                    )
+                  : 0;
 
-            return LayoutBuilder(
-              builder: (context, constraints) {
-                final isCompact = constraints.maxWidth < 360;
+              final totalLikes =
+                  (feedLikes ?? 0) > 0 ? feedLikes! : galleryLikes;
 
-                if (isCompact) {
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  final isCompact = constraints.maxWidth < 360;
+
+                  if (isCompact) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.backgroundColor.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(
+                          color: AppColors.border.withOpacity(0.35),
+                        ),
+                      ),
+                      child: Wrap(
+                        alignment: WrapAlignment.spaceEvenly,
+                        runSpacing: 12,
+                        children: [
+                          SizedBox(
+                            width: constraints.maxWidth / 3 - 12,
+                            child: ProfileStatBlock(
+                              value: _formatCount(stats?.followingCount ?? 0),
+                              label: 'Following',
+                            ),
+                          ),
+                          SizedBox(
+                            width: constraints.maxWidth / 3 - 12,
+                            child: ProfileStatBlock(
+                              value: _formatCount(stats?.followersCount ?? 0),
+                              label: 'Followers',
+                            ),
+                          ),
+                          SizedBox(
+                            width: constraints.maxWidth / 3 - 12,
+                            child: ProfileStatBlock(
+                              value: _formatCount(totalLikes),
+                              label: 'Likes',
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
                   return Container(
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
@@ -508,26 +558,31 @@ class ProfileStatsRow extends StatelessWidget {
                         color: AppColors.border.withOpacity(0.35),
                       ),
                     ),
-                    child: Wrap(
-                      alignment: WrapAlignment.spaceEvenly,
-                      runSpacing: 12,
+                    child: Row(
                       children: [
-                        SizedBox(
-                          width: constraints.maxWidth / 3 - 12,
+                        Expanded(
                           child: ProfileStatBlock(
                             value: _formatCount(stats?.followingCount ?? 0),
                             label: 'Following',
                           ),
                         ),
-                        SizedBox(
-                          width: constraints.maxWidth / 3 - 12,
+                        Container(
+                          width: 1,
+                          height: 28,
+                          color: AppColors.border,
+                        ),
+                        Expanded(
                           child: ProfileStatBlock(
                             value: _formatCount(stats?.followersCount ?? 0),
                             label: 'Followers',
                           ),
                         ),
-                        SizedBox(
-                          width: constraints.maxWidth / 3 - 12,
+                        Container(
+                          width: 1,
+                          height: 28,
+                          color: AppColors.border,
+                        ),
+                        Expanded(
                           child: ProfileStatBlock(
                             value: _formatCount(totalLikes),
                             label: 'Likes',
@@ -536,43 +591,23 @@ class ProfileStatsRow extends StatelessWidget {
                       ],
                     ),
                   );
-                }
+                },
+              );
+            },
+          );
+        }
 
-                return Container(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.backgroundColor.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(22),
-                    border:
-                        Border.all(color: AppColors.border.withOpacity(0.35)),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: ProfileStatBlock(
-                          value: _formatCount(stats?.followingCount ?? 0),
-                          label: 'Following',
-                        ),
-                      ),
-                      Container(width: 1, height: 28, color: AppColors.border),
-                      Expanded(
-                        child: ProfileStatBlock(
-                          value: _formatCount(stats?.followersCount ?? 0),
-                          label: 'Followers',
-                        ),
-                      ),
-                      Container(width: 1, height: 28, color: AppColors.border),
-                      Expanded(
-                        child: ProfileStatBlock(
-                          value: _formatCount(totalLikes),
-                          label: 'Likes',
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
+        if (feedBloc == null) {
+          return buildStats();
+        }
+
+        return BlocBuilder<FeedBloc, FeedState>(
+          bloc: feedBloc,
+          builder: (context, feedState) {
+            final feedLikes = feedState.posts
+                .where((post) => post.user.id == userId)
+                .fold<int>(0, (total, post) => total + post.likes);
+            return buildStats(feedLikes);
           },
         );
       },
@@ -799,10 +834,12 @@ class ProfileIconActionButton extends StatelessWidget {
 
 class ProfileStickyTabBar extends StatelessWidget {
   final TabController tabController;
+  final bool showInsightsTab;
 
   const ProfileStickyTabBar({
     super.key,
     required this.tabController,
+    this.showInsightsTab = false,
   });
 
   @override
@@ -818,10 +855,11 @@ class ProfileStickyTabBar extends StatelessWidget {
       unselectedLabelColor: AppColors.textSecondary,
       splashFactory: NoSplash.splashFactory,
       overlayColor: WidgetStatePropertyAll<Color>(AppColors.transparent),
-      tabs: const [
-        Tab(icon: Icon(Icons.grid_on_rounded)),
-        Tab(icon: Icon(Icons.movie_filter_outlined)),
-        Tab(icon: Icon(Icons.bookmark_border_rounded)),
+      tabs: [
+        const Tab(icon: Icon(Icons.grid_on_rounded)),
+        const Tab(icon: Icon(Icons.movie_filter_outlined)),
+        const Tab(icon: Icon(Icons.bookmark_border_rounded)),
+        if (showInsightsTab) const Tab(icon: Icon(Icons.insights_rounded)),
       ],
     );
 

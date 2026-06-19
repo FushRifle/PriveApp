@@ -6,6 +6,7 @@ import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/event/event_bloc.dart';
 import 'package:clique/core/models/event_model.dart';
+
 import 'package:clique/ui/widgets/common/app_page_header.dart';
 import 'package:clique/ui/widgets/events/event_card.dart';
 import 'package:clique/ui/widgets/events/events_empty_state.dart';
@@ -55,6 +56,7 @@ class _EventsPageState extends State<EventsPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final theme = Theme.of(context);
 
     return BlocConsumer<EventBloc, EventState>(
       listenWhen: (previous, current) =>
@@ -70,7 +72,7 @@ class _EventsPageState extends State<EventsPage>
             : const <EventModel>[];
 
         return Scaffold(
-          backgroundColor: AppColors.background,
+          backgroundColor: theme.scaffoldBackgroundColor,
           body: CustomScrollView(
             controller: _scrollController,
             physics: const AlwaysScrollableScrollPhysics(),
@@ -107,7 +109,8 @@ class _EventsPageState extends State<EventsPage>
                   ),
                 ),
               ),
-              if (state.status == EventStatus.loading && state.events.isNotEmpty)
+              if (state.status == EventStatus.loading &&
+                  state.events.isNotEmpty)
                 const SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -164,7 +167,8 @@ class _EventsPageState extends State<EventsPage>
                 ),
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 16),
                     child: EventsSectionLabel(
                       title: 'More events',
                       subtitle: remaining.isEmpty
@@ -204,7 +208,8 @@ class _EventsPageState extends State<EventsPage>
                                   ),
                             );
                           },
-                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 12),
                           itemCount: remaining.length,
                         ),
                 ),

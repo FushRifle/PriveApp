@@ -5,16 +5,20 @@ import 'package:clique/bloc/status/stories_bloc.dart';
 import 'package:clique/core/clients/cloudinary_service.dart';
 import 'package:clique/core/models/status_model.dart';
 import 'package:clique/core/services/status/status_services.dart';
-import 'package:clique/ui/widgets/status/create/create_status_composer_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:video_player/video_player.dart';
 
-enum _StatusComposerStyle {
-  editorial,
-  neon,
-}
+import 'package:clique/ui/widgets/status/create/create_status_composer_panel.dart';
+import 'package:clique/ui/widgets/status/create/create_status_composer_tools.dart';
+import 'package:clique/ui/widgets/status/create/background_orb.dart';
+import 'package:clique/ui/widgets/status/create/hashtag_chip.dart';
+import 'package:clique/ui/widgets/status/create/icon_button_circle.dart';
+import 'package:clique/ui/widgets/status/create/loading_overlay.dart';
+import 'package:clique/ui/widgets/status/create/media_preview.dart';
+import 'package:clique/ui/widgets/status/create/style_controls.dart';
 
 class CreateStatusPage extends StatefulWidget {
   const CreateStatusPage({super.key});
@@ -23,7 +27,8 @@ class CreateStatusPage extends StatefulWidget {
   State<CreateStatusPage> createState() => _CreateStatusPageState();
 }
 
-class _CreateStatusPageState extends State<CreateStatusPage> {
+class _CreateStatusPageState extends State<CreateStatusPage>
+    with TickerProviderStateMixin {
   final TextEditingController _textController = TextEditingController();
   final TextEditingController _hashtagController = TextEditingController();
   final CloudinaryService _cloudinaryService = CloudinaryService();
@@ -32,26 +37,30 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
 
   File? _selectedMediaFile;
   String? _selectedMediaType;
+  VideoPlayerController? _previewVideoController;
+  bool _isPreviewVideoReady = false;
   bool _isSubmitting = false;
+  bool _isComposerOptionsOpen = false;
   double _uploadProgress = 0.0;
 
-  Color _selectedColor = AppColors.storyTextBackground;
+  Color _selectedColor = const Color(0xFF1A1B2F);
   double _fontSize = 28;
   TextAlign _textAlign = TextAlign.center;
   final List<String> _hashtags = [];
-  final _StatusComposerStyle _stylePreset = _StatusComposerStyle.editorial;
+
+  late final AnimationController _pulseController;
 
   static const List<Color> _backgroundColors = [
-    AppColors.storyTextBackground,
-    AppColors.storyPurple,
-    AppColors.storyRed,
-    AppColors.storyDeepPurple,
-    AppColors.storyTeal,
-    AppColors.storyMuted,
+    Color(0xFF1A1B2F),
+    Color(0xFF6C3BD4),
+    Color(0xFFE74C3C),
+    Color(0xFF2D1B69),
+    Color(0xFF0D9488),
+    Color(0xFF374151),
     AppColors.primary,
     AppColors.secondary,
-    AppColors.storyYellow,
-    AppColors.storyGreen,
+    Color(0xFFEAB308),
+    Color(0xFF22C55E),
   ];
 
   @override
@@ -59,14 +68,22 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
     super.initState();
     _textController.addListener(_onComposerChanged);
     _hashtagController.addListener(_onComposerChanged);
+
+    // Initialize animation controller
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
   }
 
   @override
   void dispose() {
+    _disposePreviewVideoController();
     _textController.removeListener(_onComposerChanged);
     _hashtagController.removeListener(_onComposerChanged);
     _textController.dispose();
     _hashtagController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -77,6 +94,61 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   void _onComposerChanged() {
     if (!mounted) return;
     setState(() {});
+  }
+
+  void _closeComposerOptions() {
+    if (!_isComposerOptionsOpen) return;
+    setState(() => _isComposerOptionsOpen = false);
+  }
+
+  void _toggleComposerOptions() {
+    setState(() => _isComposerOptionsOpen = !_isComposerOptionsOpen);
+  }
+
+  void _runComposerOption(VoidCallback action) {
+    _closeComposerOptions();
+    action();
+  }
+
+  Future<void> _disposePreviewVideoController() async {
+    final controller = _previewVideoController;
+    _previewVideoController = null;
+    _isPreviewVideoReady = false;
+    if (controller != null) {
+      await controller.pause();
+      await controller.dispose();
+    }
+  }
+
+  Future<void> _preparePreviewController(File file) async {
+    await _disposePreviewVideoController();
+
+    final controller = VideoPlayerController.file(file);
+    _previewVideoController = controller;
+
+    try {
+      await controller.initialize();
+      await controller.setLooping(true);
+      await controller.setVolume(0);
+
+      if (!mounted || _previewVideoController != controller) {
+        await controller.dispose();
+        return;
+      }
+
+      setState(() {
+        _isPreviewVideoReady = true;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      await controller.dispose();
+      setState(() {
+        _selectedMediaFile = null;
+        _selectedMediaType = null;
+        _isPreviewVideoReady = false;
+      });
+      _showSnackBar('Failed to prepare media preview: $e', isError: true);
+    }
   }
 
   @override
@@ -90,7 +162,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.backgroundColor,
+        backgroundColor: const Color(0xFF0F1119),
         body: Stack(
           children: [
             _buildBackdrop(),
@@ -99,27 +171,56 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                 children: [
                   _buildHeader(),
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 40),
-                      child: Column(
-                        children: [
-                          Expanded(
-                            child: Center(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (_hasMedia) ...[
+                              MediaPreviewWidget(
+                                selectedMediaFile: _selectedMediaFile,
+                                selectedMediaType: _selectedMediaType,
+                                isPreviewVideoReady: _isPreviewVideoReady,
+                                previewVideoController: _previewVideoController,
+                                onRemoveMedia: () {
+                                  setState(() {
+                                    _selectedMediaFile = null;
+                                    _selectedMediaType = null;
+                                    _isPreviewVideoReady = false;
+                                  });
+                                  _disposePreviewVideoController();
+                                },
+                              ),
+                              const SizedBox(height: 18),
+                            ],
+                            Align(
+                              alignment: Alignment.topCenter,
                               child: ConstrainedBox(
-                                constraints: const BoxConstraints(maxWidth: 980),
+                                constraints: const BoxConstraints(
+                                  maxWidth: 980,
+                                  minHeight: 120,
+                                  maxHeight: 420,
+                                ),
                                 child: _buildComposerCard(),
                               ),
                             ),
-                          ),
-                          _buildBottomControls(),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            if (_isSubmitting) _buildLoadingOverlay(),
+            _buildComposerOptionsScrim(),
+            _buildComposerOptionsDrawer(),
+            if (_isSubmitting)
+              LoadingOverlay(
+                uploadProgress: _uploadProgress,
+                isSubmitting: _isSubmitting,
+              ),
           ],
         ),
       ),
@@ -136,24 +237,30 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  AppColors.backgroundColor,
+                  const Color(0xFF0F1119),
                   _hasMedia
-                      ? AppColors.primary.withOpacity(0.08)
-                      : _selectedColor.withOpacity(0.88),
-                  AppColors.secondary.withOpacity(0.06),
+                      ? AppColors.primary.withOpacity(0.06)
+                      : _selectedColor.withOpacity(0.85),
+                  AppColors.secondary.withOpacity(0.04),
                 ],
               ),
             ),
           ),
           Positioned(
-            top: -80,
-            right: -40,
-            child: _GlowOrb(color: AppColors.primary.withOpacity(0.18)),
+            top: -60,
+            right: -30,
+            child: BackgroundOrb(
+              color: AppColors.primary.withOpacity(0.12),
+              size: 200,
+            ),
           ),
           Positioned(
-            bottom: -120,
-            left: -90,
-            child: _GlowOrb(color: AppColors.secondary.withOpacity(0.14)),
+            bottom: -90,
+            left: -70,
+            child: BackgroundOrb(
+              color: AppColors.secondary.withOpacity(0.1),
+              size: 250,
+            ),
           ),
         ],
       ),
@@ -162,54 +269,104 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
       child: Row(
         children: [
-          _TopIconButton(
+          IconButtonCircle(
             icon: Icons.arrow_back_ios_new_rounded,
             onTap: _handleBack,
-            backgroundColor: _stylePreset == _StatusComposerStyle.neon
-                ? const Color(0xFF171B2E).withOpacity(0.92)
-                : AppColors.cardColor.withOpacity(0.88),
-            iconColor: _stylePreset == _StatusComposerStyle.neon
-                ? AppColors.white
-                : AppColors.text,
+            backgroundColor: AppColors.primary.withOpacity(0.9),
+            iconColor: Colors.white,
+            size: 44,
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                
+                Text(
+                  'Create Story',
+                  style: AppTheme.blackTextStyle.copyWith(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _hasContent ? 'Ready to share' : 'Add content to start',
+                  style: AppTheme.greyTextStyle.copyWith(
+                    color: Colors.white.withOpacity(0.5),
+                    fontSize: 12,
+                  ),
+                ),
               ],
             ),
           ),
           const SizedBox(width: 12),
-          FilledButton(
-            onPressed: _isSubmitting ? null : _shareStatus,
-            style: FilledButton.styleFrom(
-              backgroundColor: _actionColor,
-              foregroundColor: AppColors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-              ),
-              minimumSize: const Size(84, 42),
-            ),
-            child: _isSubmitting
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: AppColors.white,
-                    ),
-                  )
-                : Text(
-                    _hasContent ? 'Post' : 'Share',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                    ),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _isSubmitting ? null : _shareStatus,
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
                   ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: _hasContent
+                          ? [AppColors.primary, AppColors.secondary]
+                          : [
+                              Colors.white.withOpacity(0.1),
+                              Colors.white.withOpacity(0.05)
+                            ],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: _hasContent
+                          ? Colors.white.withOpacity(0.2)
+                          : Colors.white.withOpacity(0.1),
+                    ),
+                    boxShadow: _hasContent
+                        ? [
+                            BoxShadow(
+                              color: AppColors.primary.withOpacity(0.3),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Share',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -217,217 +374,285 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   }
 
   Widget _buildComposerCard() {
-    return CreateStatusComposerPanel(
-      textController: _textController,
-      textAlign: _textAlign,
-      onAddMedia: _showMediaPicker,
-      onAddHashtags: _showHashtagSheet,
-      onClearAll: _clearAll,
-      onTextAlignChanged: (value) => setState(() => _textAlign = value),
-    );
-  }
-
-  Widget _buildBottomControls() {
-    return _buildFontAndPaletteFooter();
-  }
-
-  Widget _buildFontAndPaletteFooter() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Stack(
+      clipBehavior: Clip.none,
       children: [
-        Row(
-          children: [
-            Text(
-              '${_textController.text.trim().length} chars',
-              style: AppTheme.greyTextStyle.copyWith(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
               ),
-            ),
-            const Spacer(),
-            Text(
-              'Size ${_fontSize.toInt()}',
-              style: AppTheme.greyTextStyle.copyWith(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-        SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            trackHeight: 2.2,
-            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
-            overlayShape: SliderComponentShape.noOverlay,
+            ],
           ),
-          child: Slider(
-            value: _fontSize,
-            min: 18,
-            max: 42,
-            divisions: 24,
-            activeColor: AppColors.primary,
-            onChanged: (value) => setState(() => _fontSize = value),
+          child: CreateStatusComposerPanel(
+            textController: _textController,
+            textAlign: _textAlign,
           ),
         ),
-        const SizedBox(height: 4),
-        SizedBox(
-          height: 42,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            itemCount: _backgroundColors.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
-            itemBuilder: (context, index) {
-              final color = _backgroundColors[index];
-              final selected = color.value == _selectedColor.value;
-              return GestureDetector(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  setState(() {
-                    _selectedColor = color;
-                    _selectedMediaFile = null;
-                    _selectedMediaType = null;
-                  });
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  curve: Curves.easeOut,
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                  color: color,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: selected ? AppColors.primary : AppColors.text,
-                    width: selected ? 2.2 : 1,
-                  ),
-                  ),
-                  child: selected
-                      ? const Icon(Icons.check_rounded, color: AppColors.primary, size: 18)
-                      : null,
-                ),
-              );
-            },
-          ),
+        Positioned(
+          right: -10,
+          top: 20,
+          child: _buildComposerOptionsTab(),
         ),
       ],
     );
   }
 
-  Widget _buildLoadingOverlay() {
-    return Positioned.fill(
-      child: Container(
-        color: AppColors.black.withOpacity(0.78),
-        child: Center(
-          child: Container(
-            width: 260,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppColors.cardColor,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppColors.cardBorderColor),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.black.withOpacity(0.18),
-                  blurRadius: 24,
-                  offset: const Offset(0, 10),
-                ),
-              ],
+  Widget _buildComposerOptionsTab() {
+    return Material(
+      color: const Color(0xFF1E2030),
+      elevation: 8,
+      borderRadius: const BorderRadius.horizontal(
+        left: Radius.circular(16),
+        right: Radius.circular(16),
+      ),
+      child: InkWell(
+        borderRadius: const BorderRadius.horizontal(
+          left: Radius.circular(16),
+          right: Radius.circular(16),
+        ),
+        onTap: _toggleComposerOptions,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOut,
+          width: 34,
+          height: 56,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.horizontal(
+              left: Radius.circular(16),
+              right: Radius.circular(16),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  width: 56,
-                  height: 56,
-                  child: CircularProgressIndicator(
-                    value: _uploadProgress > 0 ? _uploadProgress : null,
-                    strokeWidth: 3,
-                    color: AppColors.primary,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  _uploadProgress > 0
-                      ? 'Uploading ${(_uploadProgress * 100).toStringAsFixed(0)}%'
-                      : 'Publishing story',
-                  style: AppTheme.blackTextStyle.copyWith(
-                    color: AppColors.text,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Please wait while the story is processed.',
-                  textAlign: TextAlign.center,
-                  style: AppTheme.greyTextStyle.copyWith(
-                    fontSize: 12,
-                    height: 1.4,
-                  ),
-                ),
-              ],
+            border: Border.all(
+              color: Colors.white.withOpacity(0.08),
             ),
+          ),
+          child: Icon(
+            _isComposerOptionsOpen
+                ? Icons.chevron_right_rounded
+                : Icons.tune_rounded,
+            color: Colors.white,
+            size: 22,
           ),
         ),
       ),
     );
   }
 
-  Color get _actionColor => AppColors.primary;
+  Widget _buildComposerOptionsScrim() {
+    return Positioned.fill(
+      child: IgnorePointer(
+        ignoring: !_isComposerOptionsOpen,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOut,
+          opacity: _isComposerOptionsOpen ? 1 : 0,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _closeComposerOptions,
+            child: Container(color: Colors.black.withOpacity(0.26)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildComposerOptionsDrawer() {
+    return Positioned.fill(
+      child: IgnorePointer(
+        ignoring: !_isComposerOptionsOpen,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final drawerWidth =
+                (constraints.maxWidth * 0.72).clamp(240.0, 300.0);
+            final drawerHeight =
+                (constraints.maxHeight * 0.58).clamp(320.0, 480.0);
+
+            return Align(
+              alignment: Alignment.centerRight,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 14, 10, 14),
+                child: AnimatedSlide(
+                  duration: const Duration(milliseconds: 260),
+                  curve: Curves.easeOutCubic,
+                  offset: _isComposerOptionsOpen
+                      ? Offset.zero
+                      : const Offset(1.08, 0),
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOut,
+                    opacity: _isComposerOptionsOpen ? 1 : 0,
+                    child: Container(
+                      width: drawerWidth,
+                      height: drawerHeight,
+                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E2030),
+                        borderRadius: BorderRadius.circular(28),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.08),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.26),
+                            blurRadius: 30,
+                            offset: const Offset(0, 12),
+                          ),
+                        ],
+                      ),
+                      child: SafeArea(
+                        top: false,
+                        bottom: false,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'Tools',
+                                    style: AppTheme.blackTextStyle.copyWith(
+                                      color: Colors.white,
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                                IconButton(
+                                  onPressed: _closeComposerOptions,
+                                  icon: const Icon(
+                                    Icons.close_rounded,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Expanded(
+                              child: SingleChildScrollView(
+                                physics: const BouncingScrollPhysics(),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    CreateStatusComposerTools(
+                                      onAddMedia: () =>
+                                          _runComposerOption(_showMediaPicker),
+                                      onAddHashtags: () =>
+                                          _runComposerOption(_showHashtagSheet),
+                                      onClearAll: () =>
+                                          _runComposerOption(_clearAll),
+                                      onTextAlignChanged: (value) =>
+                                          _runComposerOption(() {
+                                        setState(() => _textAlign = value);
+                                      }),
+                                      activeAlignment: _textAlign,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    StyleControls(
+                                      fontSize: _fontSize,
+                                      textLength:
+                                          _textController.text.trim().length,
+                                      selectedColor: _selectedColor,
+                                      backgroundColors: _backgroundColors,
+                                      onFontSizeChanged: (value) =>
+                                          setState(() => _fontSize = value),
+                                      onFontSizeChangeEnd:
+                                          _closeComposerOptions,
+                                      onColorSelected: (color) {
+                                        HapticFeedback.selectionClick();
+                                        setState(() {
+                                          _selectedColor = color;
+                                          _selectedMediaFile = null;
+                                          _selectedMediaType = null;
+                                          _isPreviewVideoReady = false;
+                                        });
+                                        _disposePreviewVideoController();
+                                        _closeComposerOptions();
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
 
   void _showMediaPicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.transparent,
+      backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) {
-        return SafeArea(
-          child: Container(
-            margin: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.cardColor,
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: AppColors.cardBorderColor),
-            ),
+        return Container(
+          margin: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E2030),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: Colors.white.withOpacity(0.08)),
+          ),
+          child: SafeArea(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 Container(
-                  width: 44,
+                  width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.greyColor.withOpacity(0.24),
-                    borderRadius: BorderRadius.circular(999),
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Text(
+                    'Add Media',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
-                ListTile(
-                  leading: const Icon(Icons.photo_library_outlined),
-                  title: const Text('Choose image'),
-                  onTap: () => _pickMedia(
-                    ImageSource.gallery,
-                    mediaType: 'image',
-                  ),
+                _MediaPickerOption(
+                  icon: Icons.photo_library_rounded,
+                  title: 'Choose from Gallery',
+                  subtitle: 'Select photos or videos',
+                  onTap: () =>
+                      _pickMedia(ImageSource.gallery, mediaType: 'image'),
                 ),
-                ListTile(
-                  leading: const Icon(Icons.videocam_outlined),
-                  title: const Text('Choose video'),
-                  onTap: () => _pickMedia(
-                    ImageSource.gallery,
-                    mediaType: 'video',
-                  ),
+                _MediaPickerOption(
+                  icon: Icons.videocam_rounded,
+                  title: 'Record Video',
+                  subtitle: 'Capture a video clip',
+                  onTap: () =>
+                      _pickMedia(ImageSource.gallery, mediaType: 'video'),
                 ),
-                ListTile(
-                  leading: const Icon(Icons.camera_alt_outlined),
-                  title: const Text('Take a photo'),
-                  onTap: () => _pickMedia(
-                    ImageSource.camera,
-                    mediaType: 'image',
-                  ),
+                _MediaPickerOption(
+                  icon: Icons.camera_alt_rounded,
+                  title: 'Take Photo',
+                  subtitle: 'Capture with camera',
+                  onTap: () =>
+                      _pickMedia(ImageSource.camera, mediaType: 'image'),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 16),
               ],
             ),
           ),
@@ -436,10 +661,8 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
     );
   }
 
-  Future<void> _pickMedia(
-    ImageSource source, {
-    required String mediaType,
-  }) async {
+  Future<void> _pickMedia(ImageSource source,
+      {required String mediaType}) async {
     Navigator.pop(context);
 
     try {
@@ -458,8 +681,14 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
       setState(() {
         _selectedMediaFile = File(pickedFile.path);
         _selectedMediaType = mediaType;
-        _selectedColor = AppColors.transparent;
+        _selectedColor = Colors.transparent;
       });
+
+      if (mediaType == 'video') {
+        await _preparePreviewController(File(pickedFile.path));
+      } else {
+        await _disposePreviewVideoController();
+      }
     } catch (e) {
       _showSnackBar('Failed to pick media: $e', isError: true);
     }
@@ -496,7 +725,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.transparent,
+      backgroundColor: Colors.transparent,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
@@ -505,12 +734,12 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                 bottom: MediaQuery.viewInsetsOf(context).bottom,
               ),
               child: Container(
-                margin: const EdgeInsets.all(12),
-                padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+                margin: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
                 decoration: BoxDecoration(
-                  color: AppColors.cardColor,
+                  color: const Color(0xFF1E2030),
                   borderRadius: BorderRadius.circular(28),
-                  border: Border.all(color: AppColors.cardBorderColor),
+                  border: Border.all(color: Colors.white.withOpacity(0.08)),
                 ),
                 child: SafeArea(
                   top: false,
@@ -519,25 +748,26 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Hashtags',
-                        style: AppTheme.blackTextStyle.copyWith(
-                          color: AppColors.text,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
+                        'Add Hashtags',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Add tags to make the story easier to discover.',
-                        style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
+                        'Increase discoverability with relevant tags',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.5),
+                          fontSize: 13,
+                        ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 20),
                       TextField(
                         controller: _hashtagController,
                         autofocus: true,
-                        style: AppTheme.blackTextStyle.copyWith(
-                          color: AppColors.text,
-                        ),
+                        style: const TextStyle(color: Colors.white),
                         textInputAction: TextInputAction.done,
                         onChanged: (_) => setSheetState(() {}),
                         onSubmitted: (value) {
@@ -545,26 +775,35 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                           setSheetState(() {});
                         },
                         decoration: InputDecoration(
-                          hintText: 'Type hashtags separated by space or comma',
+                          hintText: 'Type tags separated by space or comma',
                           hintStyle: TextStyle(
-                            color: AppColors.textSecondary.withOpacity(0.6),
+                            color: Colors.white.withOpacity(0.3),
                           ),
-                          prefixIcon: const Icon(Icons.tag_rounded),
+                          prefixIcon: Icon(
+                            Icons.tag_rounded,
+                            color: AppColors.primary.withOpacity(0.7),
+                          ),
                           filled: true,
-                          fillColor: AppColors.backgroundColor,
+                          fillColor: Colors.white.withOpacity(0.05),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(18),
+                            borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(
+                              color: AppColors.primary.withOpacity(0.3),
+                            ),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 16),
                       if (_currentDraftHashtags.isNotEmpty)
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
                           children: _currentDraftHashtags.map((tag) {
-                            return _StoryHashtagChip(
+                            return HashtagChip(
                               tag: tag,
                               onRemove: () {
                                 _removeHashtag(tag);
@@ -573,7 +812,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                             );
                           }).toList(),
                         ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 20),
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
@@ -583,13 +822,20 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
-                            foregroundColor: AppColors.white,
-                            minimumSize: const Size.fromHeight(50),
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size.fromHeight(52),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
+                            elevation: 0,
                           ),
-                          child: const Text('Done'),
+                          child: const Text(
+                            'Add Tags',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -671,6 +917,8 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
       _uploadProgress = 0.0;
     });
 
+    _pulseController.repeat(reverse: true);
+
     final storiesBloc = context.read<StoriesBloc>();
 
     try {
@@ -692,8 +940,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
       final createdStory = await _statusService.createStory(
         content: _storyContentWithHashtags(),
         attachments: attachments.isNotEmpty ? attachments : null,
-        backgroundColor:
-            _hasMedia ? null : _colorToHex(_selectedColor),
+        backgroundColor: _hasMedia ? null : _colorToHex(_selectedColor),
         textAlign: _textAlign == TextAlign.center
             ? 'center'
             : _textAlign == TextAlign.right
@@ -718,6 +965,7 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
         _isSubmitting = false;
         _uploadProgress = 0.0;
       });
+      _pulseController.stop();
     }
   }
 
@@ -728,11 +976,13 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
       _hashtags.clear();
       _selectedMediaFile = null;
       _selectedMediaType = null;
-      _selectedColor = AppColors.storyTextBackground;
+      _isPreviewVideoReady = false;
+      _selectedColor = const Color(0xFF1A1B2F);
       _textAlign = TextAlign.center;
       _fontSize = 28;
       _uploadProgress = 0.0;
     });
+    _disposePreviewVideoController();
     _showSnackBar('All cleared');
   }
 
@@ -754,28 +1004,99 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
     showDialog<void>(
       context: context,
       builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: AppColors.cardColor,
-          title: const Text('Discard draft?'),
-          content: const Text(
-            'Your story draft will be cleared if you leave now.',
+        return Dialog(
+          backgroundColor: const Color(0xFF1E2030),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Keep editing'),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.delete_outline_rounded,
+                    color: Colors.red,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Discard Story?',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Your story draft will be permanently deleted.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.5),
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: BorderSide(
+                            color: Colors.white.withOpacity(0.2),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          minimumSize: const Size.fromHeight(48),
+                        ),
+                        child: const Text(
+                          'Keep Editing',
+                          style: TextStyle(
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(dialogContext);
+                          Navigator.pop(context);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.withOpacity(0.2),
+                          foregroundColor: Colors.red,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          minimumSize: const Size.fromHeight(48),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          'Discard',
+                          style: TextStyle(
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                Navigator.pop(context);
-              },
-              child: Text(
-                'Discard',
-                style: TextStyle(color: AppColors.redColor),
-              ),
-            ),
-          ],
+          ),
         );
       },
     );
@@ -785,8 +1106,12 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? AppColors.red : AppColors.text,
+        backgroundColor: isError ? Colors.red.withOpacity(0.9) : AppColors.text,
         behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        margin: const EdgeInsets.all(16),
         duration: Duration(seconds: isError ? 3 : 2),
       ),
     );
@@ -797,104 +1122,73 @@ class _CreateStatusPageState extends State<CreateStatusPage> {
   }
 }
 
-class _TopIconButton extends StatelessWidget {
+class _MediaPickerOption extends StatelessWidget {
   final IconData icon;
+  final String title;
+  final String subtitle;
   final VoidCallback onTap;
-  final Color backgroundColor;
-  final Color iconColor;
 
-  const _TopIconButton({
+  const _MediaPickerOption({
     required this.icon,
+    required this.title,
+    required this.subtitle,
     required this.onTap,
-    required this.backgroundColor,
-    required this.iconColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: backgroundColor,
-      shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: SizedBox(
-          width: 46,
-          height: 46,
-          child: Icon(
-            icon,
-            color: iconColor,
-            size: 20,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GlowOrb extends StatelessWidget {
-  final Color color;
-
-  const _GlowOrb({
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 220,
-      height: 220,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(
-          colors: [
-            color,
-            AppColors.transparent,
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StoryHashtagChip extends StatelessWidget {
-  final String tag;
-  final VoidCallback onRemove;
-
-  const _StoryHashtagChip({
-    required this.tag,
-    required this.onRemove,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 7, 8, 7),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.primary.withOpacity(0.28)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '#$tag',
-            style: TextStyle(
-              color: AppColors.text,
-              fontWeight: FontWeight.w800,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(icon, color: AppColors.primary, size: 24),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.5),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.white.withOpacity(0.3),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 6),
-          GestureDetector(
-            onTap: onRemove,
-            child: Icon(
-              Icons.close_rounded,
-              color: AppColors.text,
-              size: 15,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

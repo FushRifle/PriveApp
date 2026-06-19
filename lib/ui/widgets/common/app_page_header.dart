@@ -88,8 +88,8 @@ class AppPageHeader extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: AppTheme.greyTextStyle.copyWith(
                     color: muted,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
@@ -123,7 +123,7 @@ class AppPageHeader extends StatelessWidget {
                 ),
                 child: Icon(
                   actionIcon,
-                  color: text,
+                  color: AppColors.white,
                   size: 22,
                 ),
               ),

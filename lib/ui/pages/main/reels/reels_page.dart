@@ -1,4 +1,3 @@
-import 'package:clique/ui/pages/main/reels/create_reel_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -196,39 +195,6 @@ class _ReelsPageState extends State<ReelsPage> {
                                 ),
                               ),
                             ),
-                            GestureDetector(
-                              onTap: () async {
-                                HapticFeedback.lightImpact();
-                                final reelBloc = context.read<ReelBloc>();
-                                final created = await Navigator.push<bool>(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => BlocProvider.value(
-                                      value: reelBloc,
-                                      child: const CreateReelPage(),
-                                    ),
-                                  ),
-                                );
-
-                                if (!mounted || created != true) return;
-
-                                reelBloc.add(RefreshReels());
-                                _jumpToFirstReel();
-                              },
-                              child: Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withOpacity(0.7),
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: const Icon(
-                                  Icons.add,
-                                  color: AppColors.white,
-                                  size: 20,
-                                ),
-                              ),
-                            ),
                           ],
                         ),
                       ),
@@ -255,15 +221,5 @@ class _ReelsPageState extends State<ReelsPage> {
     }
 
     Navigator.pushReplacementNamed(context, NamedRoutes.homeScreen);
-  }
-
-  void _jumpToFirstReel() {
-    if (!_pageController.hasClients) return;
-
-    setState(() {
-      _currentIndex = 0;
-    });
-
-    _pageController.jumpToPage(0);
   }
 }

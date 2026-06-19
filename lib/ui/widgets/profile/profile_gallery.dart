@@ -1,12 +1,15 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
-import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/bloc/profile/gallery_profile_cubit.dart';
+import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/models/gallery_model.dart';
+import 'package:clique/core/models/feeds_models.dart';
+import 'package:clique/core/services/home/feed_service.dart';
 import 'package:clique/ui/widgets/post/normal-post/repost_card.dart';
 
 enum ProfileGalleryTabType {
@@ -95,107 +98,275 @@ class ProfileSavedPostsTab extends StatefulWidget {
 }
 
 class _ProfileSavedPostsTabState extends State<ProfileSavedPostsTab> {
-  int _lastRequestedPostCount = -1;
-
-  FeedBloc? _feedBlocOrNull(BuildContext context) {
-    try {
-      return context.read<FeedBloc>();
-    } catch (_) {
-      return null;
-    }
-  }
+  final FeedService _feedService = FeedService();
+  List<FeedPost> _savedPosts = const [];
+  bool _isLoading = true;
+  bool _isRefreshing = false;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _ensureFeedLoaded());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadSavedPosts());
   }
 
-  void _ensureFeedLoaded() {
-    if (!mounted) return;
-    final feedBloc = _feedBlocOrNull(context);
-    if (feedBloc == null) return;
-
-    final state = feedBloc.state;
-    if (state.posts.isEmpty && state.postsStatus == FeedStatus.initial) {
-      feedBloc.add(const GetFeedPosts(page: 1, refresh: true, silent: true));
+  Future<void> _loadSavedPosts({bool refresh = false}) async {
+    if (refresh) {
+      setState(() {
+        _isRefreshing = true;
+        _error = null;
+      });
+    } else {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
     }
-  }
 
-  void _maybeLoadMore(FeedState state) {
-    if (!mounted) return;
-    if (!state.hasMorePosts || state.isLoadingMore) return;
-    if (state.posts.length == _lastRequestedPostCount) return;
+    try {
+      final response = await _feedService.getSavedPosts(
+        page: 1,
+        forceRefresh: refresh,
+      );
 
-    _lastRequestedPostCount = state.posts.length;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final feedBloc = _feedBlocOrNull(context);
-      feedBloc?.add(LoadMoreFeedPosts());
-    });
+
+      setState(() {
+        _savedPosts = response.posts;
+        _isLoading = false;
+        _isRefreshing = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+        _isRefreshing = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final feedBloc = _feedBlocOrNull(context);
-    if (feedBloc == null) {
-      return const ProfileEmptyState(
+    if (_isLoading && _savedPosts.isEmpty) {
+      return const ProfileLoadingState();
+    }
+
+    if (_error != null && _savedPosts.isEmpty) {
+      return ProfileEmptyState(
         icon: Icons.bookmark_border_rounded,
-        message: 'Saved posts need feed access',
-        subtitle: 'This tab will appear once the feed bloc is available.',
+        message: 'Could not load saved posts',
+        subtitle: _error!,
       );
     }
 
-    return BlocBuilder<FeedBloc, FeedState>(
-      bloc: feedBloc,
-      buildWhen: (previous, current) {
-        return previous.posts != current.posts ||
-            previous.postsStatus != current.postsStatus ||
-            previous.hasMorePosts != current.hasMorePosts ||
-            previous.currentPage != current.currentPage;
-      },
-      builder: (context, state) {
-        _maybeLoadMore(state);
-        final savedPosts = state.posts.where((post) => post.isSaved).toList();
+    if (_savedPosts.isEmpty) {
+      return ProfileEmptyState(
+        icon: Icons.bookmark_border_rounded,
+        message: 'No saved posts yet',
+        subtitle: 'Tap bookmark on a post to keep it here.',
+        actionText: 'Refresh',
+        onAction: () => _loadSavedPosts(refresh: true),
+      );
+    }
 
-        if (state.postsStatus == FeedStatus.loading && savedPosts.isEmpty) {
-          return const ProfileLoadingState();
-        }
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: () => _loadSavedPosts(refresh: true),
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
+        itemCount: _savedPosts.length + (_isRefreshing ? 1 : 0),
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          if (index >= _savedPosts.length) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(
+                child: CircularProgressIndicator(
+                  color: AppColors.primary,
+                  strokeWidth: 2,
+                ),
+              ),
+            );
+          }
 
-        if (savedPosts.isEmpty) {
-          return const ProfileEmptyState(
-            icon: Icons.bookmark_border_rounded,
-            message: 'No saved posts yet',
-            subtitle: 'Tap bookmark on a post to keep it here.',
+          return RepostCard(
+            post: _savedPosts[index],
+            isDetailView: false,
           );
-        }
+        },
+      ),
+    );
+  }
+}
 
-        return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-          physics: const BouncingScrollPhysics(),
-          itemCount: savedPosts.length +
-              (state.hasMorePosts && state.isLoadingMore ? 1 : 0),
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            if (index >= savedPosts.length) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.primary,
-                    strokeWidth: 2,
+class ProfileInsightsTab extends StatelessWidget {
+  final VoidCallback? onOpenInsights;
+
+  const ProfileInsightsTab({
+    super.key,
+    this.onOpenInsights,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      physics: const BouncingScrollPhysics(),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.cardColor,
+            borderRadius: BorderRadius.circular(26),
+            border: Border.all(color: AppColors.cardBorderColor),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.black.withOpacity(0.05),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary.withOpacity(0.18),
+                      AppColors.secondary.withOpacity(0.16),
+                    ],
                   ),
                 ),
-              );
-            }
+                child: const Icon(
+                  Icons.insights_rounded,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Profile insights',
+                style: AppTheme.blackTextStyle.copyWith(
+                  color: AppColors.text,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Track how your profile performs, see engagement trends, and review audience activity.',
+                style: AppTheme.greyTextStyle.copyWith(
+                  color: AppColors.textSecondary,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  if (onOpenInsights != null) {
+                    onOpenInsights!();
+                    return;
+                  }
+                  Navigator.pushNamed(context, NamedRoutes.insightsScreen);
+                },
+                icon: const Icon(Icons.bar_chart_rounded),
+                label: const Text('Open insights'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 52),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _InsightHint(
+          icon: Icons.show_chart_rounded,
+          title: 'Engagement trends',
+          subtitle: 'See how views, reach, and interactions move over time.',
+        ),
+        const SizedBox(height: 12),
+        _InsightHint(
+          icon: Icons.people_alt_rounded,
+          title: 'Audience breakdown',
+          subtitle:
+              'Review the profile visitors and follower mix behind the numbers.',
+        ),
+      ],
+    );
+  }
+}
 
-            return RepostCard(
-              post: savedPosts[index],
-              isDetailView: false,
-            );
-          },
-        );
-      },
+class _InsightHint extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _InsightHint({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundColor.withOpacity(0.92),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.cardBorderColor),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.09),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(icon, color: AppColors.primary),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTheme.blackTextStyle.copyWith(
+                    color: AppColors.text,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: AppTheme.greyTextStyle.copyWith(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -226,7 +397,8 @@ class ProfilePostsTab extends StatelessWidget {
     return NotificationListener<ScrollNotification>(
       onNotification: (scrollInfo) {
         if (!hasMore || isLoadingMore) return false;
-        if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 350) {
+        if (scrollInfo.metrics.pixels >=
+            scrollInfo.metrics.maxScrollExtent - 350) {
           onLoadMore();
         }
         return false;
@@ -250,7 +422,8 @@ class ProfilePostsTab extends StatelessWidget {
               ),
             );
           }
-          return ProfileGalleryTile(gallery: items[index], isVideo: items[index].type == 'video');
+          return ProfileGalleryTile(
+              gallery: items[index], isVideo: items[index].type == 'video');
         },
       ),
     );
@@ -283,7 +456,8 @@ class ProfileMediaGrid extends StatelessWidget {
     return NotificationListener<ScrollNotification>(
       onNotification: (scrollInfo) {
         if (!hasMore || isLoadingMore) return false;
-        if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 350) {
+        if (scrollInfo.metrics.pixels >=
+            scrollInfo.metrics.maxScrollExtent - 350) {
           onLoadMore();
         }
         return false;
@@ -338,10 +512,12 @@ class ProfileGalleryTile extends StatelessWidget {
           CachedNetworkImage(
             imageUrl: gallery.image,
             fit: BoxFit.cover,
-            placeholder: (_, __) => Container(color: AppColors.greyColor.withOpacity(0.12)),
+            placeholder: (_, __) =>
+                Container(color: AppColors.greyColor.withOpacity(0.12)),
             errorWidget: (_, __, ___) => Container(
               color: AppColors.greyColor.withOpacity(0.12),
-              child: Icon(Icons.broken_image_outlined, color: AppColors.greyColor),
+              child:
+                  Icon(Icons.broken_image_outlined, color: AppColors.greyColor),
             ),
           ),
           Container(
@@ -421,12 +597,16 @@ class ProfileEmptyState extends StatelessWidget {
   final IconData icon;
   final String message;
   final String? subtitle;
+  final String? actionText;
+  final VoidCallback? onAction;
 
   const ProfileEmptyState({
     super.key,
     required this.icon,
     required this.message,
     this.subtitle,
+    this.actionText,
+    this.onAction,
   });
 
   @override
@@ -450,6 +630,13 @@ class ProfileEmptyState extends StatelessWidget {
                 subtitle!,
                 textAlign: TextAlign.center,
                 style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
+              ),
+            ],
+            if (actionText != null && onAction != null) ...[
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: onAction,
+                child: Text(actionText!),
               ),
             ],
           ],
@@ -487,7 +674,8 @@ class ProfileErrorState extends StatelessWidget {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: onRetry,
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              style:
+                  ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
               child: const Text('Retry'),
             ),
           ],

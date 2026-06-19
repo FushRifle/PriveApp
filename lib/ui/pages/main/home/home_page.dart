@@ -220,12 +220,68 @@ class _HomePageState extends State<HomePage>
           child: AnimatedOpacity(
             duration: const Duration(milliseconds: 180),
             opacity: _showJumpToTop ? 1 : 0,
-            child: FloatingActionButton.extended(
-              onPressed: _jumpToTop,
-              backgroundColor: palette.primary,
-              foregroundColor: AppColors.white,
-              icon: const Icon(Icons.vertical_align_top_rounded),
-              label: const Text('Top'),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _jumpToTop,
+                borderRadius: BorderRadius.circular(999),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        palette.primary,
+                        palette.secondary,
+                      ],
+                    ),
+                    border: Border.all(
+                      color: Colors.white
+                          .withOpacity(palette.isDark ? 0.16 : 0.22),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: palette.primary.withOpacity(0.28),
+                        blurRadius: 18,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: AppColors.white.withOpacity(0.16),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.vertical_align_top_rounded,
+                          size: 18,
+                          color: AppColors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Back to top',
+                        style: AppTheme.blackTextStyle.copyWith(
+                          color: AppColors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ),

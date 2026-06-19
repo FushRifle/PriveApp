@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'package:clique/app/configs/colors.dart';
 
 class StoryProgress extends StatelessWidget {

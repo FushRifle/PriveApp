@@ -176,7 +176,33 @@ class _StatusViewPageState extends State<StatusViewPage>
       ),
     );
 
-    return _buildViewer(_stories);
+    return BlocListener<StoriesBloc, StoriesState>(
+      listenWhen: (previous, current) {
+        return previous.stories != current.stories;
+      },
+      listener: (context, state) {
+        if (!mounted || state.stories.isEmpty) return;
+
+        final nextStories = List<Story>.from(state.stories);
+        if (nextStories.length == _stories.length &&
+            nextStories.every((story) => _stories.any((item) =>
+                item.id == story.id &&
+                item.isLiked == story.isLiked &&
+                item.isReshared == story.isReshared &&
+                item.likeCount == story.likeCount &&
+                item.reshareCount == story.reshareCount))) {
+          return;
+        }
+
+        setState(() {
+          _stories = nextStories;
+          if (currentIndex >= _stories.length) {
+            currentIndex = _stories.length - 1;
+          }
+        });
+      },
+      child: _buildViewer(_stories),
+    );
   }
 
   Widget _buildViewer(List<Story> stories) {
@@ -452,7 +478,14 @@ class _StatusViewPageState extends State<StatusViewPage>
             icon: const Icon(Icons.close, color: AppColors.white, size: 28),
             onPressed: () {
               HapticFeedback.lightImpact();
-              Navigator.pushReplacementNamed(context, NamedRoutes.homeScreen);
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              } else {
+                Navigator.pushReplacementNamed(
+                  context,
+                  NamedRoutes.homeScreen,
+                );
+              }
             },
           ),
           if (_isOwnStory(story))
@@ -553,8 +586,7 @@ class _StatusViewPageState extends State<StatusViewPage>
       bottom: 30,
       left: 16,
       right: 16,
-      child: 
-      Row(
+      child: Row(
         children: [
           Expanded(
             child: Container(

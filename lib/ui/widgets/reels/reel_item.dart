@@ -1524,14 +1524,21 @@ class _ReelCommentsSheetState extends State<_ReelCommentsSheet> {
       );
     }
 
-    return ListView.separated(
-      controller: controller,
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      itemCount: _comments.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 14),
-      itemBuilder: (context, index) {
-        return _CommentTile(comment: _comments[index]);
-      },
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: _loadComments,
+      child: ListView.separated(
+        controller: controller,
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        itemCount: _comments.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 14),
+        itemBuilder: (context, index) {
+          return _CommentTile(comment: _comments[index]);
+        },
+      ),
     );
   }
 
@@ -1967,42 +1974,152 @@ class _CommentTile extends StatelessWidget {
         data['comment']?.toString() ??
         data['text']?.toString() ??
         '';
+    final timeLabel = data['createdAt']?.toString() ??
+        data['created_at']?.toString() ??
+        data['time']?.toString() ??
+        '';
+    final likes = _readCommentInt(
+      data['likes'] ?? data['likesCount'] ?? data['_count']?['likes'],
+    );
+    final replies = _readCommentInt(
+      data['replyCount'] ?? data['repliesCount'] ?? data['_count']?['replies'],
+    );
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        CommentAvatar(
-          imageUrl: avatar,
-          fallback: name,
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: AppColors.text,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                text,
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 14,
-                  height: 1.25,
-                ),
-              ),
-            ],
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.cardBorderColor),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CommentAvatar(
+            imageUrl: avatar,
+            fallback: name,
+            size: 40,
           ),
-        ),
-      ],
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: AppColors.text,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    if (timeLabel.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        timeLabel,
+                        style: TextStyle(
+                          color: AppColors.textHint,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  text,
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                    height: 1.35,
+                  ),
+                ),
+                if (likes > 0 || replies > 0) ...[
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (likes > 0)
+                        _MiniStat(
+                          icon: Icons.favorite_rounded,
+                          label: _formatCommentCount(likes),
+                        ),
+                      if (replies > 0)
+                        _MiniStat(
+                          icon: Icons.reply_rounded,
+                          label: _formatCommentCount(replies),
+                        ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+int _readCommentInt(dynamic value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? 0;
+  return 0;
+}
+
+String _formatCommentCount(int count) {
+  if (count >= 1000000) {
+    return '${(count / 1000000).toStringAsFixed(1)}M';
+  }
+
+  if (count >= 1000) {
+    return '${(count / 1000).toStringAsFixed(1)}K';
+  }
+
+  return count.toString();
+}
+
+class _MiniStat extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _MiniStat({
+    required this.icon,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppColors.primary),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: AppColors.primary,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -36,7 +36,7 @@ class _ProfilePageState extends State<ProfilePage>
   void initState() {
     super.initState();
 
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(_handleTabChanged);
     _scrollController = ScrollController();
     _galleryCubit = GalleryProfileCubit();
@@ -243,6 +243,10 @@ class _ProfilePageState extends State<ProfilePage>
                     });
                   },
                   onOpenAccountSwitcher: _openAccountSwitcher,
+                  onOpenInsights: () {
+                    Navigator.pushNamed(context, NamedRoutes.insightsScreen);
+                  },
+                  showInsightsTab: true,
                   onLoadMoreMedia: _loadMoreMedia,
                 );
               },

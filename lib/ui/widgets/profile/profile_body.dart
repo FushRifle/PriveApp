@@ -15,6 +15,8 @@ class ProfileBody extends StatelessWidget {
   final VoidCallback onToggleFollow;
   final ValueChanged<ProfileView>? onMessage;
   final VoidCallback? onOpenAccountSwitcher;
+  final VoidCallback? onOpenInsights;
+  final bool showInsightsTab;
   final void Function(int userId, ProfileGalleryTabType type) onLoadMoreMedia;
 
   const ProfileBody({
@@ -30,6 +32,8 @@ class ProfileBody extends StatelessWidget {
     required this.onToggleFollow,
     this.onMessage,
     this.onOpenAccountSwitcher,
+    this.onOpenInsights,
+    this.showInsightsTab = false,
     required this.onLoadMoreMedia,
   });
 
@@ -72,7 +76,10 @@ class ProfileBody extends StatelessWidget {
               onOpenAccountSwitcher: onOpenAccountSwitcher,
             ),
           ),
-          ProfileStickyTabBar(tabController: tabController),
+          ProfileStickyTabBar(
+            tabController: tabController,
+            showInsightsTab: showInsightsTab,
+          ),
         ];
       },
       body: TabBarView(
@@ -92,6 +99,10 @@ class ProfileBody extends StatelessWidget {
                 onLoadMoreMedia(userId, ProfileGalleryTabType.media),
           ),
           const ProfileSavedPostsTab(),
+          if (showInsightsTab)
+            ProfileInsightsTab(
+              onOpenInsights: onOpenInsights,
+            ),
         ],
       ),
     );

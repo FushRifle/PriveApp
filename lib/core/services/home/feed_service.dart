@@ -377,6 +377,59 @@ class FeedService {
     }
   }
 
+  Future<PostsResponse> getSavedPosts({
+    int page = 1,
+    bool forceRefresh = false,
+  }) async {
+    final endpoints = <String>[
+      '/api/feed/posts/saved',
+      '/api/feed/posts',
+      '/api/posts/saved',
+    ];
+
+    DioException? lastError;
+
+    for (final endpoint in endpoints) {
+      try {
+        final response = await _api.get(
+          endpoint,
+          queryParameters: endpoint.endsWith('/posts')
+              ? {'page': page, 'filter': 'saved'}
+              : {'page': page},
+          forceRefresh: forceRefresh,
+        );
+
+        if (response.data is List) {
+          final posts = (response.data as List)
+              .map((json) => FeedPost.fromJson(_readMap(json)))
+              .toList();
+          return PostsResponse(
+            posts: posts,
+            hasMore: posts.length >= 10,
+            page: page,
+          );
+        }
+
+        if (response.data is Map) {
+          final parsed = PostsResponse.fromJson(_readMap(response.data));
+          if (parsed.posts.isNotEmpty) {
+            return parsed;
+          }
+        }
+      } on DioException catch (e) {
+        lastError = e;
+        if (e.response?.statusCode == 404) {
+          continue;
+        }
+      }
+    }
+
+    throw _readError(
+      lastError?.response?.data,
+      'Failed to get saved posts',
+    );
+  }
+
   Future<Map<String, dynamic>> sharePost(int postId) async {
     try {
       final response = await _api.post('/api/feed/posts/$postId/share');

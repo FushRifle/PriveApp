@@ -20,36 +20,42 @@ class CreateStatusComposerTools extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 72,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: [
-          _ToolButton(
-            icon: Icons.photo_library_outlined,
-            label: 'Media',
-            onTap: onAddMedia,
-          ),
-          const SizedBox(height: 10),
-          _ToolButton(
-            icon: Icons.tag_rounded,
-            label: 'Tags',
-            onTap: onAddHashtags,
-          ),
-          const SizedBox(height: 10),
-          _ToolButton(
-            icon: Icons.clear_all_rounded,
-            label: 'Clear',
-            onTap: onClearAll,
-            destructive: true,
-          ),
-          const SizedBox(height: 14),
-          _AlignStack(
-            activeAlignment: activeAlignment,
-            onChanged: onTextAlignChanged,
-          ),
-        ],
-      ),
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 8,
+      crossAxisSpacing: 8,
+      childAspectRatio: 1.14,
+      children: [
+        _ToolButton(
+          icon: Icons.photo_library_outlined,
+          label: 'Media',
+          onTap: onAddMedia,
+        ),
+        _ToolButton(
+          icon: Icons.tag_rounded,
+          label: 'Tags',
+          onTap: onAddHashtags,
+        ),
+        _ToolButton(
+          icon: Icons.clear_all_rounded,
+          label: 'Clear',
+          onTap: onClearAll,
+          destructive: true,
+        ),
+        _AlignCycleButton(
+          activeAlignment: activeAlignment,
+          onTap: () {
+            final next = switch (activeAlignment) {
+              TextAlign.left => TextAlign.center,
+              TextAlign.center => TextAlign.right,
+              _ => TextAlign.left,
+            };
+            onTextAlignChanged(next);
+          },
+        ),
+      ],
     );
   }
 }
@@ -72,22 +78,22 @@ class _ToolButton extends StatelessWidget {
     final color = destructive ? AppColors.text : AppColors.primary;
     return Material(
       color: AppColors.backgroundColor.withOpacity(0.7),
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: SizedBox(
-          width: 72,
-          height: 62,
+          width: double.infinity,
+          height: double.infinity,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 20, color: color),
-              const SizedBox(height: 4),
+              Icon(icon, size: 18, color: color),
+              const SizedBox(height: 3),
               Text(
                 label,
                 style: AppTheme.greyTextStyle.copyWith(
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.bold,
                   color: color,
                 ),
@@ -100,72 +106,54 @@ class _ToolButton extends StatelessWidget {
   }
 }
 
-class _AlignStack extends StatelessWidget {
+class _AlignCycleButton extends StatelessWidget {
   final TextAlign activeAlignment;
-  final ValueChanged<TextAlign> onChanged;
-
-  const _AlignStack({
-    required this.activeAlignment,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: AppColors.backgroundColor.withOpacity(0.7),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        children: [
-          _AlignButton(
-            icon: Icons.format_align_left_rounded,
-            active: activeAlignment == TextAlign.left,
-            onTap: () => onChanged(TextAlign.left),
-          ),
-          const SizedBox(height: 6),
-          _AlignButton(
-            icon: Icons.format_align_center_rounded,
-            active: activeAlignment == TextAlign.center,
-            onTap: () => onChanged(TextAlign.center),
-          ),
-          const SizedBox(height: 6),
-          _AlignButton(
-            icon: Icons.format_align_right_rounded,
-            active: activeAlignment == TextAlign.right,
-            onTap: () => onChanged(TextAlign.right),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AlignButton extends StatelessWidget {
-  final IconData icon;
-  final bool active;
   final VoidCallback onTap;
 
-  const _AlignButton({
-    required this.icon,
-    required this.active,
+  const _AlignCycleButton({
+    required this.activeAlignment,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? AppColors.primary : AppColors.textSecondary;
+    final label = switch (activeAlignment) {
+      TextAlign.left => 'Left',
+      TextAlign.center => 'Center',
+      TextAlign.right => 'Right',
+      _ => 'Align',
+    };
+    final icon = switch (activeAlignment) {
+      TextAlign.left => Icons.format_align_left_rounded,
+      TextAlign.center => Icons.format_align_center_rounded,
+      TextAlign.right => Icons.format_align_right_rounded,
+      _ => Icons.format_align_center_rounded,
+    };
+
     return Material(
-      color: active ? AppColors.primary.withOpacity(0.10) : Colors.transparent,
-      borderRadius: BorderRadius.circular(14),
+      color: AppColors.backgroundColor.withOpacity(0.7),
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: SizedBox(
-          width: 52,
-          height: 36,
-          child: Icon(icon, color: color, size: 18),
+          width: double.infinity,
+          height: double.infinity,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 18, color: AppColors.primary),
+              const SizedBox(height: 3),
+              Text(
+                label,
+                style: AppTheme.greyTextStyle.copyWith(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
