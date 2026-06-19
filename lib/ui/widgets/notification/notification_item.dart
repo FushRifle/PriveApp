@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/router/named_routes.dart';
+import 'package:clique/core/services/friends/friends_service.dart';
 import 'package:clique/core/services/notification/notification_service.dart';
 import 'package:clique/ui/widgets/notification/notification_utils.dart';
 import 'package:clique/ui/pages/main/notification/notification_details_page.dart';
@@ -23,8 +24,11 @@ class NotificationItem extends StatefulWidget {
 
 class _NotificationItemState extends State<NotificationItem> {
   final NotificationService _notificationService = NotificationService();
-  
+  final FriendsService _friendsService = FriendsService();
+
   bool _isUnread = false;
+  bool _isHandlingFollow = false;
+  bool _followHandled = false;
   late Map<String, dynamic> _notification;
 
   @override
@@ -38,7 +42,7 @@ class _NotificationItemState extends State<NotificationItem> {
     try {
       await _notificationService.markAsRead(notificationId);
       if (!mounted) return;
-      
+
       setState(() {
         _isUnread = false;
         _notification['isUnread'] = false;
@@ -54,7 +58,7 @@ class _NotificationItemState extends State<NotificationItem> {
         await _notificationService.markAsRead(id);
       }
       if (!mounted) return;
-      
+
       setState(() {
         _isUnread = false;
         _notification['isUnread'] = false;
@@ -72,7 +76,7 @@ class _NotificationItemState extends State<NotificationItem> {
     try {
       await _notificationService.deleteNotification(notificationId);
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Notification deleted'),
@@ -96,7 +100,7 @@ class _NotificationItemState extends State<NotificationItem> {
         await _notificationService.deleteNotification(id);
       }
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Group notifications deleted'),
@@ -142,11 +146,12 @@ class _NotificationItemState extends State<NotificationItem> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => NotificationDetailsPage(notification: _notification),
+            builder: (_) =>
+                NotificationDetailsPage(notification: _notification),
           ),
         );
         break;
-        
+
       case 'reel_like':
       case 'reel_comment':
       case 'reel_mention':
@@ -154,7 +159,7 @@ class _NotificationItemState extends State<NotificationItem> {
       case 'reel_repost':
         Navigator.pushNamed(context, NamedRoutes.reelsScreen);
         break;
-        
+
       case 'story_like':
       case 'story_comment':
       case 'story_mention':
@@ -165,7 +170,7 @@ class _NotificationItemState extends State<NotificationItem> {
       case 'status_repost':
         Navigator.pushNamed(context, NamedRoutes.statusScreen);
         break;
-        
+
       case 'follow':
       case 'friend_request':
       case 'friend_accepted':
@@ -176,7 +181,7 @@ class _NotificationItemState extends State<NotificationItem> {
           Navigator.pushNamed(context, NamedRoutes.friendListScreen);
         }
         break;
-        
+
       case 'match':
         if (actorId > 0) {
           Navigator.pushNamed(context, NamedRoutes.otherProfileScreen,
@@ -185,7 +190,7 @@ class _NotificationItemState extends State<NotificationItem> {
           Navigator.pushNamed(context, NamedRoutes.matchScreen);
         }
         break;
-        
+
       case 'message':
       case 'chat':
         if (conversationId > 0) {
@@ -203,19 +208,21 @@ class _NotificationItemState extends State<NotificationItem> {
           Navigator.pushNamed(context, NamedRoutes.inboxScreen);
         }
         break;
-        
+
       default:
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => NotificationDetailsPage(notification: _notification),
+            builder: (_) =>
+                NotificationDetailsPage(notification: _notification),
           ),
         );
     }
   }
 
   List<int> _getNotificationIds() {
-    final groupItems = (_notification['groupItems'] as List?)?.cast<Map>() ?? [];
+    final groupItems =
+        (_notification['groupItems'] as List?)?.cast<Map>() ?? [];
     if (groupItems.isNotEmpty) {
       return groupItems
           .map((entry) => NotificationUtils.readInt(entry['id']))
@@ -227,9 +234,9 @@ class _NotificationItemState extends State<NotificationItem> {
 
   void _handleTap() {
     HapticFeedback.lightImpact();
-    
+
     final ids = _getNotificationIds();
-    
+
     if (_isUnread) {
       if (ids.length > 1) {
         unawaited(_markGroupAsRead(ids));
@@ -246,6 +253,85 @@ class _NotificationItemState extends State<NotificationItem> {
     _showDeleteDialog(ids, isGroup);
   }
 
+  Future<void> _acceptFollower() async {
+    final actorId = _actorId();
+    if (actorId <= 0 || _isHandlingFollow) return;
+    setState(() => _isHandlingFollow = true);
+    try {
+      await _friendsService.followUser(actorId);
+      await _markFollowHandled('Follower accepted');
+    } catch (e) {
+      final message = e.toString().toLowerCase();
+      if (message.contains('already')) {
+        await _markFollowHandled('Already following');
+        return;
+      }
+      _showActionSnack(e.toString(), isError: true);
+    } finally {
+      if (mounted) setState(() => _isHandlingFollow = false);
+    }
+  }
+
+  Future<void> _rejectFollower() async {
+    final actorId = _actorId();
+    if (actorId <= 0 || _isHandlingFollow) return;
+    setState(() => _isHandlingFollow = true);
+    try {
+      await _friendsService.removeFollower(actorId);
+      await _markFollowHandled('Follower rejected');
+    } catch (e) {
+      _showActionSnack(e.toString(), isError: true);
+    } finally {
+      if (mounted) setState(() => _isHandlingFollow = false);
+    }
+  }
+
+  Future<void> _markFollowHandled(String message) async {
+    final ids = _getNotificationIds();
+    if (ids.isNotEmpty) {
+      if (ids.length > 1) {
+        await _markGroupAsRead(ids);
+      } else {
+        await _markAsRead(ids.first);
+      }
+    }
+    if (!mounted) return;
+    setState(() => _followHandled = true);
+    _showActionSnack(message);
+  }
+
+  void _showActionSnack(String message, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: TextStyle(color: AppColors.text),
+        ),
+        backgroundColor: isError ? AppColors.red : AppColors.green,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  int _actorId() {
+    final data = NotificationUtils.asMap(_notification['data']);
+    return NotificationUtils.readInt(
+      _notification['actorId'] ??
+          data['actorId'] ??
+          data['actorUserId'] ??
+          data['fromUserId'] ??
+          data['followerUserId'],
+    );
+  }
+
+  bool _shouldShowFollowActions() {
+    if (_followHandled) return false;
+    final type = _notification['type']?.toString() ?? '';
+    return type == 'follow' && _actorId() > 0;
+  }
+
   void _showDeleteDialog(List<int> notificationIds, bool isGroup) {
     showDialog(
       context: context,
@@ -256,7 +342,7 @@ class _NotificationItemState extends State<NotificationItem> {
           style: AppTheme.blackTextStyle.copyWith(fontWeight: FontWeight.bold),
         ),
         content: Text(
-          isGroup 
+          isGroup
               ? 'Are you sure you want to delete all ${notificationIds.length} notifications in this group?'
               : 'Are you sure you want to delete this notification?',
           style: AppTheme.greyTextStyle,
@@ -279,7 +365,8 @@ class _NotificationItemState extends State<NotificationItem> {
             },
             child: Text(
               'Delete',
-              style: AppTheme.blackTextStyle.copyWith(color: AppColors.redColor),
+              style:
+                  AppTheme.blackTextStyle.copyWith(color: AppColors.redColor),
             ),
           ),
         ],
@@ -292,12 +379,44 @@ class _NotificationItemState extends State<NotificationItem> {
     final type = _notification['type']?.toString() ?? 'general';
     final accent = NotificationUtils.notificationColor(type);
 
-    return NotificationGroupWidget(
-      notification: _notification,
-      isUnread: _isUnread,
-      accent: accent,
-      onTap: _handleTap,
-      onLongPress: _handleLongPress,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        NotificationGroupWidget(
+          notification: _notification,
+          isUnread: _isUnread,
+          accent: accent,
+          onTap: _handleTap,
+          onLongPress: _handleLongPress,
+        ),
+        if (_shouldShowFollowActions())
+          Padding(
+            padding: const EdgeInsets.fromLTRB(28, 0, 28, 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _isHandlingFollow ? null : _rejectFollower,
+                    child: const Text('Reject'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _isHandlingFollow ? null : _acceptFollower,
+                    child: _isHandlingFollow
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Accept'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

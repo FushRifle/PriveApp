@@ -3,6 +3,10 @@ import '../../clients/api_service.dart';
 import '../../models/status_model.dart';
 
 class StatusService {
+  static final StatusService _instance = StatusService._internal();
+  factory StatusService() => _instance;
+  StatusService._internal();
+
   final ApiService _api = ApiService();
 
   void setAuthToken(String token) {
@@ -108,15 +112,22 @@ class StatusService {
     }
   }
 
-  Future<void> replyToStory({
+  Future<Map<String, dynamic>?> replyToStory({
     required String storyId,
     required String content,
   }) async {
     try {
-      await _api.post(
+      final response = await _api.post(
         '/api/stories/$storyId/replies',
         data: {'content': content},
       );
+      if (response.data is Map<String, dynamic>) {
+        return Map<String, dynamic>.from(response.data);
+      }
+      if (response.data is Map) {
+        return Map<String, dynamic>.from(response.data);
+      }
+      return null;
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to reply to story');
     }

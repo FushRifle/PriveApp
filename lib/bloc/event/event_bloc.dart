@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 
@@ -36,7 +38,8 @@ class EventBloc extends Bloc<EventEvent, EventState> {
     final nextPage = event.refresh ? 1 : event.page;
 
     emit(state.copyWith(
-      status: nextPage == 1 ? EventStatus.loading : state.status,
+      status:
+          nextPage == 1 && !event.silent ? EventStatus.loading : state.status,
       clearError: true,
       page: nextPage,
       events: state.events,
@@ -128,7 +131,7 @@ class EventBloc extends Bloc<EventEvent, EventState> {
         events: [created, ...state.events],
         clearError: true,
       ));
-      add(const LoadEvents(refresh: true));
+      _scheduleSilentRefreshes();
     } catch (e) {
       emit(state.copyWith(
         actionStatus: EventActionStatus.error,
@@ -163,13 +166,22 @@ class EventBloc extends Bloc<EventEvent, EventState> {
         }).toList(),
         clearError: true,
       ));
-      add(const LoadEvents(refresh: true));
+      _scheduleSilentRefreshes();
     } catch (e) {
       emit(state.copyWith(
         actionStatus: EventActionStatus.error,
         error: e.toString(),
       ));
     }
+  }
+
+  void _scheduleSilentRefreshes() {
+    unawaited(Future<void>.delayed(const Duration(milliseconds: 900), () {
+      add(const LoadEvents(refresh: true, silent: true));
+    }));
+    unawaited(Future<void>.delayed(const Duration(seconds: 4), () {
+      add(const LoadEvents(refresh: true, silent: true));
+    }));
   }
 
   Future<void> _onRsvpEvent(

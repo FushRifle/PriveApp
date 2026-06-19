@@ -378,9 +378,16 @@ class AppRouter {
         );
 
       case NamedRoutes.lockScreenScreen:
-        final userId = _readInt(settings.arguments);
+        final args = settings.arguments;
+        final userId = args is Map
+            ? _readInt(args['userId'])
+            : _readInt(settings.arguments);
+        final verifyOnly = args is Map && args['verifyOnly'] == true;
         return _page(
-          LockScreenPage(userId: userId > 0 ? userId : null),
+          LockScreenPage(
+            userId: userId > 0 ? userId : null,
+            verifyOnly: verifyOnly,
+          ),
         );
 
       case NamedRoutes.postDetailScreen:
@@ -465,8 +472,10 @@ class AppRouter {
       'userAvatar':
           (arguments['userAvatar'] ?? arguments['avatar'] ?? '').toString(),
       'userId': _readInt(arguments['userId'] ?? arguments['user_id']),
-      'messageLimit': _readInt(arguments['messageLimit'] ?? arguments['message_limit']),
-      'messageLimitHint': arguments['messageLimitHint'] ?? arguments['message_limit_hint'],
+      'messageLimit':
+          _readInt(arguments['messageLimit'] ?? arguments['message_limit']),
+      'messageLimitHint':
+          arguments['messageLimitHint'] ?? arguments['message_limit_hint'],
     };
   }
 

@@ -12,6 +12,8 @@ class EventCard extends StatelessWidget {
   final VoidCallback onGoing;
   final VoidCallback onInterested;
   final VoidCallback onLeave;
+  final bool isOwner;
+  final VoidCallback? onEdit;
 
   const EventCard({
     super.key,
@@ -21,6 +23,8 @@ class EventCard extends StatelessWidget {
     required this.onGoing,
     required this.onInterested,
     required this.onLeave,
+    this.isOwner = false,
+    this.onEdit,
   });
 
   @override
@@ -150,61 +154,78 @@ class EventCard extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: FilledButton(
-                                onPressed: event.isGoing ? onLeave : onGoing,
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: event.isGoing
-                                      ? AppColors.success.withOpacity(0.12)
-                                      : AppColors.primary,
-                                  foregroundColor: event.isGoing
-                                      ? AppColors.success
-                                      : AppColors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 10,
+                        if (isOwner)
+                          FilledButton.icon(
+                            onPressed: onEdit ?? onTap,
+                            icon: const Icon(Icons.edit_outlined, size: 17),
+                            label: const Text('Edit'),
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size(double.infinity, 42),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          )
+                        else
+                          Row(
+                            children: [
+                              Expanded(
+                                child: FilledButton(
+                                  onPressed: event.isGoing ? onLeave : onGoing,
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: event.isGoing
+                                        ? AppColors.success.withOpacity(0.12)
+                                        : AppColors.primary,
+                                    foregroundColor: event.isGoing
+                                        ? AppColors.success
+                                        : AppColors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 10,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
                                   ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  minimumSize: Size.zero,
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                ),
-                                child: Text(
-                                  event.isGoing ? 'Going' : 'RSVP',
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
+                                  child: Text(
+                                    event.isGoing ? 'Going' : 'RSVP',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: event.isInterested ? onLeave : onInterested,
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 10,
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: event.isInterested
+                                      ? onLeave
+                                      : onInterested,
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 10,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
                                   ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  minimumSize: Size.zero,
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                ),
-                                child: Text(
-                                  event.isInterested ? 'Saved' : 'Interested',
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
+                                  child: Text(
+                                    event.isInterested ? 'Saved' : 'Interested',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
                       ],
                     ),
                   ),

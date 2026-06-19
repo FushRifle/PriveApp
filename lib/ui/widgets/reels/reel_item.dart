@@ -162,6 +162,7 @@ class _ReelItemState extends State<ReelItem>
     _syncLocalState();
     _loadMutePreference();
     _initializeVideo();
+    _refreshRelationship();
   }
 
   @override
@@ -204,6 +205,20 @@ class _ReelItemState extends State<ReelItem>
     _localCommentDelta = 0;
     _localShareDelta = 0;
     _localRepostDelta = 0;
+  }
+
+  Future<void> _refreshRelationship() async {
+    if (_isCurrentUser() || _userId <= 0) return;
+
+    try {
+      final relationship = await FriendsService().checkRelationship(_userId);
+      if (!mounted) return;
+      setState(() {
+        _isFollowing = relationship.isFollowing;
+      });
+    } catch (_) {
+      // Keep the server-provided reel flag when relationship lookup is unavailable.
+    }
   }
 
   Future<void> _loadMutePreference() async {
@@ -570,6 +585,7 @@ class _ReelItemState extends State<ReelItem>
       SnackBar(
         content: Text(
           content.isEmpty ? 'Reel reposted' : 'Reel reposted with caption',
+          style: TextStyle(color: AppColors.text),
         ),
       ),
     );
@@ -602,12 +618,21 @@ class _ReelItemState extends State<ReelItem>
       }
     } catch (error) {
       if (!mounted) return;
+      final message = error.toString().toLowerCase();
+      if (nextFollowing &&
+          (message.contains('already') || message.contains('exists'))) {
+        setState(() => _isFollowing = true);
+        return;
+      }
       setState(() {
         _isFollowing = !nextFollowing;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(error.toString()),
+          content: Text(
+            error.toString(),
+            style: TextStyle(color: AppColors.text),
+          ),
           backgroundColor: AppColors.red,
         ),
       );
@@ -637,6 +662,124 @@ class _ReelItemState extends State<ReelItem>
     if (userId is int) return userId;
     if (userId is String) return int.tryParse(userId) ?? 0;
     return 0;
+  }
+
+  Future<void> _showMoreActions() async {
+    _pauseVideo();
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (context) {
+        final isOwner = _isCurrentUser();
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 42,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.textSecondary.withOpacity(0.35),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                if (isOwner)
+                  ListTile(
+                    leading: const Icon(Icons.delete_outline_rounded),
+                    title: const Text('Delete'),
+                    textColor: AppColors.redColor,
+                    iconColor: AppColors.redColor,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _deleteReel();
+                    },
+                  ),
+                ListTile(
+                  leading: const Icon(Icons.bookmark_border_rounded),
+                  title: const Text('Save'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _saveReel();
+                  },
+                ),
+                if (!isOwner)
+                  ListTile(
+                    leading: const Icon(Icons.flag_outlined),
+                    title: const Text('Report'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _reportReel();
+                    },
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (widget.isActive) {
+      _playVideo();
+    }
+  }
+
+  Future<void> _saveReel() async {
+    final reelId = _reelId;
+    if (reelId == null) return;
+    try {
+      await ReelService().saveReel(reelId);
+      if (!mounted) return;
+      _showSnackBar('Reel saved');
+    } catch (e) {
+      if (!mounted) return;
+      _showSnackBar(e.toString(), isError: true);
+    }
+  }
+
+  Future<void> _reportReel() async {
+    final reelId = _reelId;
+    if (reelId == null) return;
+    try {
+      await ReelService().reportReel(reelId);
+      if (!mounted) return;
+      _showSnackBar('Report submitted');
+    } catch (e) {
+      if (!mounted) return;
+      _showSnackBar(e.toString(), isError: true);
+    }
+  }
+
+  Future<void> _deleteReel() async {
+    final reelId = _reelId;
+    if (reelId == null) return;
+    try {
+      await ReelService().deleteReel(reelId);
+      if (!mounted) return;
+      _showSnackBar('Reel deleted');
+      context.read<ReelBloc>().add(RefreshReels());
+    } catch (e) {
+      if (!mounted) return;
+      _showSnackBar(e.toString(), isError: true);
+    }
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: TextStyle(color: AppColors.text),
+        ),
+        backgroundColor: isError ? AppColors.red : null,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   String? get _reelId {
@@ -810,7 +953,7 @@ class _ReelItemState extends State<ReelItem>
             _ActionButton(
               icon: Icons.more_horiz,
               label: '',
-              onTap: () {},
+              onTap: _showMoreActions,
             ),
             const SizedBox(height: 22),
             _AudioAvatar(

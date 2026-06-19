@@ -24,7 +24,7 @@ class EventDetailsPage extends StatelessWidget {
         ? rawId
         : rawId is String
             ? int.tryParse(rawId)
-        : null;
+            : null;
     final hostId = event.hostId != 0 ? event.hostId : event.host?.id;
     return currentUserId != null && hostId != null && currentUserId == hostId;
   }
@@ -57,6 +57,7 @@ class EventDetailsPage extends StatelessWidget {
               child: _HeaderCard(
                 event: event,
                 isOwner: isOwner,
+                onEdit: () => _openEdit(context),
                 onGoing: () => context.read<EventBloc>().add(
                       RsvpEvent(eventId: event.id, status: 'going'),
                     ),
@@ -77,7 +78,9 @@ class EventDetailsPage extends StatelessWidget {
                 title: 'Where',
                 child: _InfoRow(
                   icon: Icons.place_outlined,
-                  title: event.location.isEmpty ? 'Location not set' : event.location,
+                  title: event.location.isEmpty
+                      ? 'Location not set'
+                      : event.location,
                   subtitle: event.isPrivate
                       ? 'Private event'
                       : 'Visible to the community',
@@ -129,7 +132,8 @@ class EventDetailsPage extends StatelessWidget {
                                 : event.host?.username.isNotEmpty == true
                                     ? '@${event.host!.username}'
                                     : 'Organizer details unavailable',
-                            style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
+                            style:
+                                AppTheme.greyTextStyle.copyWith(fontSize: 12),
                           ),
                         ],
                       ),
@@ -188,6 +192,7 @@ class EventDetailsPage extends StatelessWidget {
 class _HeaderCard extends StatelessWidget {
   final EventModel event;
   final bool isOwner;
+  final VoidCallback onEdit;
   final VoidCallback onGoing;
   final VoidCallback onInterested;
   final VoidCallback onLeave;
@@ -195,6 +200,7 @@ class _HeaderCard extends StatelessWidget {
   const _HeaderCard({
     required this.event,
     required this.isOwner,
+    required this.onEdit,
     required this.onGoing,
     required this.onInterested,
     required this.onLeave,
@@ -231,7 +237,8 @@ class _HeaderCard extends StatelessWidget {
                     runSpacing: 8,
                     children: [
                       if (isOwner)
-                        _Chip(label: 'Your event', icon: Icons.verified_outlined),
+                        _Chip(
+                            label: 'Your event', icon: Icons.verified_outlined),
                       if (event.category.isNotEmpty)
                         _Chip(label: event.category, icon: Icons.sell_outlined),
                       if (event.isPrivate)
@@ -267,6 +274,8 @@ class _HeaderCard extends StatelessWidget {
                 const SizedBox(height: 16),
                 _RSVPBar(
                   event: event,
+                  isOwner: isOwner,
+                  onEdit: onEdit,
                   onGoing: onGoing,
                   onInterested: onInterested,
                   onLeave: onLeave,
@@ -503,12 +512,16 @@ class _Chip extends StatelessWidget {
 
 class _RSVPBar extends StatelessWidget {
   final EventModel event;
+  final bool isOwner;
+  final VoidCallback onEdit;
   final VoidCallback onGoing;
   final VoidCallback onInterested;
   final VoidCallback onLeave;
 
   const _RSVPBar({
     required this.event,
+    required this.isOwner,
+    required this.onEdit,
     required this.onGoing,
     required this.onInterested,
     required this.onLeave,
@@ -516,6 +529,21 @@ class _RSVPBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (isOwner) {
+      return FilledButton.icon(
+        onPressed: onEdit,
+        icon: const Icon(Icons.edit_outlined),
+        label: const Text('Edit'),
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(double.infinity, 54),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      );
+    }
+
     return Wrap(
       spacing: 10,
       runSpacing: 10,

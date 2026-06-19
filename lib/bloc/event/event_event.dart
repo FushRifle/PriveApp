@@ -9,15 +9,17 @@ sealed class EventEvent extends Equatable {
 
 class LoadEvents extends EventEvent {
   final bool refresh;
+  final bool silent;
   final int page;
 
   const LoadEvents({
     this.refresh = false,
+    this.silent = false,
     this.page = 1,
   });
 
   @override
-  List<Object?> get props => [refresh, page];
+  List<Object?> get props => [refresh, silent, page];
 }
 
 class SearchEvents extends EventEvent {

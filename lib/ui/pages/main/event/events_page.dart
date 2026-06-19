@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
+import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/bloc/event/event_bloc.dart';
 import 'package:clique/core/models/event_model.dart';
 
@@ -142,6 +143,8 @@ class _EventsPageState extends State<EventsPage>
                           event: currentFeatured,
                           compact: false,
                           onTap: () => _openEventDetails(currentFeatured),
+                          isOwner: _isOwner(currentFeatured),
+                          onEdit: () => _openEditEvent(currentFeatured),
                           onGoing: () => context.read<EventBloc>().add(
                                 RsvpEvent(
                                   eventId: currentFeatured.id,
@@ -188,6 +191,8 @@ class _EventsPageState extends State<EventsPage>
                               event: event,
                               compact: true,
                               onTap: () => _openEventDetails(event),
+                              isOwner: _isOwner(event),
+                              onEdit: () => _openEditEvent(event),
                               onGoing: () => context.read<EventBloc>().add(
                                     RsvpEvent(
                                       eventId: event.id,
@@ -313,6 +318,31 @@ class _EventsPageState extends State<EventsPage>
         ),
       ),
     );
+  }
+
+  void _openEditEvent(EventModel event) {
+    HapticFeedback.lightImpact();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: context.read<EventBloc>(),
+          child: CreateEventPage(event: event),
+        ),
+      ),
+    );
+  }
+
+  bool _isOwner(EventModel event) {
+    final user = context.read<AuthBloc>().state.user;
+    final rawId = user?['id'];
+    final currentUserId = rawId is int
+        ? rawId
+        : rawId is String
+            ? int.tryParse(rawId)
+            : null;
+    final hostId = event.hostId != 0 ? event.hostId : event.host?.id;
+    return currentUserId != null && hostId != null && currentUserId == hostId;
   }
 }
 

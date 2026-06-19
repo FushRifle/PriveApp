@@ -11,10 +11,12 @@ import 'package:clique/core/services/security/app_lock_service.dart';
 
 class LockScreenPage extends StatefulWidget {
   final int? userId;
+  final bool verifyOnly;
 
   const LockScreenPage({
     super.key,
     this.userId,
+    this.verifyOnly = false,
   });
 
   @override
@@ -96,9 +98,53 @@ class _LockScreenPageState extends State<LockScreenPage> {
   }
 
   Future<void> _maybeAutoUnlock() async {
-    if (!_isBiometricEnabled || !_isBiometricAvailable) return;
     if (_isVerifying) return;
-    await _enableBiometric();
+    if (_isBiometricEnabled && _isBiometricAvailable) {
+      await _verifyBiometric();
+      return;
+    }
+    if (widget.verifyOnly && _isPinEnabled && _savedPin.isNotEmpty) {
+      await _verifyPinForUnlock();
+    }
+  }
+
+  Future<void> _verifyBiometric() async {
+    setState(() {
+      _isVerifying = true;
+      _error = null;
+    });
+
+    try {
+      final isAuthenticated = await _localAuth.authenticate(
+        localizedReason: 'Authenticate to unlock Clique',
+        biometricOnly: true,
+      );
+      if (isAuthenticated && mounted) {
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = 'Error: ${e.toString()}');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isVerifying = false);
+      }
+    }
+  }
+
+  Future<void> _verifyPinForUnlock() async {
+    final success = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: Colors.transparent,
+      builder: (context) => ModernPinVerifySheet(savedPin: _savedPin),
+    );
+    if (success == true && mounted) {
+      Navigator.pop(context, true);
+    }
   }
 
   Future<void> _refreshRemoteSettings() async {

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -30,6 +31,7 @@ class _MainWrapperState extends State<MainWrapper>
   late final FeedBloc _feedBloc;
   late final StoriesBloc _storiesBloc;
   int _currentIndex = 0;
+  bool _isOpeningCreatePost = false;
   final Set<int> _visitedTabs = {0};
   final GlobalKey<CurvedNavigationBarState> _bottomNavigationKey = GlobalKey();
 
@@ -106,20 +108,27 @@ class _MainWrapperState extends State<MainWrapper>
   }
 
   Future<void> _handleCreatePost() async {
+    if (_isOpeningCreatePost) return;
+    _isOpeningCreatePost = true;
     HapticFeedback.mediumImpact();
-    _pulseController.forward().then((_) => _pulseController.reverse());
+    unawaited(
+        _pulseController.forward().then((_) => _pulseController.reverse()));
 
-    final created = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => BlocProvider.value(
-          value: _feedBloc,
-          child: const CreatePostPage(),
+    try {
+      final created = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => BlocProvider.value(
+            value: _feedBloc,
+            child: const CreatePostPage(),
+          ),
         ),
-      ),
-    );
+      );
 
-    if (created == true && context.mounted) {
-      _feedBloc.add(RefreshFeed());
+      if (created == true && context.mounted) {
+        _feedBloc.add(RefreshFeed());
+      }
+    } finally {
+      _isOpeningCreatePost = false;
     }
   }
 
@@ -440,41 +449,48 @@ class _CreateButton extends StatelessWidget {
       builder: (context, child) {
         return Transform.scale(
           scale: pulseAnimation.value,
-          child: GestureDetector(
-            onTap: onTap,
-            child: Container(
-              width: 58,
-              height: 58,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.primary,
-                    AppColors.primary.withOpacity(0.8),
+          child: Material(
+            color: Colors.transparent,
+            shape: const CircleBorder(),
+            child: InkResponse(
+              onTap: onTap,
+              radius: 36,
+              containedInkWell: true,
+              customBorder: const CircleBorder(),
+              child: Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.primary,
+                      AppColors.primary.withOpacity(0.8),
+                    ],
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.4),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                      offset: const Offset(0, 4),
+                    ),
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.2),
+                      blurRadius: 20,
+                      spreadRadius: 1,
+                      offset: const Offset(0, 8),
+                    ),
                   ],
                 ),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.4),
-                    blurRadius: 12,
-                    spreadRadius: 2,
-                    offset: const Offset(0, 4),
+                child: const Center(
+                  child: Icon(
+                    Icons.add_rounded,
+                    size: 32,
+                    color: Colors.white,
                   ),
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.2),
-                    blurRadius: 20,
-                    spreadRadius: 1,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: const Center(
-                child: Icon(
-                  Icons.add_rounded,
-                  size: 32,
-                  color: Colors.white,
                 ),
               ),
             ),

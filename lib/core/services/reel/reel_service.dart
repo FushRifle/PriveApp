@@ -91,6 +91,36 @@ class ReelService {
     }
   }
 
+  Future<void> saveReel(String reelId) async {
+    try {
+      await _api.post('/api/reels/$reelId/save');
+      _invalidateReelCaches(reelId);
+    } on DioException catch (e) {
+      throw _readErrorMessage(e, 'Failed to save reel');
+    }
+  }
+
+  Future<void> reportReel(String reelId,
+      {String reason = 'Inappropriate'}) async {
+    try {
+      await _api.post(
+        '/api/reels/$reelId/report',
+        data: {'reason': reason},
+      );
+    } on DioException catch (e) {
+      throw _readErrorMessage(e, 'Failed to report reel');
+    }
+  }
+
+  Future<void> deleteReel(String reelId) async {
+    try {
+      await _api.delete('/api/reels/$reelId');
+      _invalidateReelCaches(reelId);
+    } on DioException catch (e) {
+      throw _readErrorMessage(e, 'Failed to delete reel');
+    }
+  }
+
   Future<Map<String, dynamic>> repostReel({
     required String reelId,
     String content = '',

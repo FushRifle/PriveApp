@@ -32,6 +32,15 @@ class FriendsService {
     }
   }
 
+  Future<void> removeFollower(int userId) async {
+    try {
+      await _api.delete('/api/friends/followers/$userId');
+      _clearFollowCaches();
+    } on DioException catch (e) {
+      throw _handleError(e, 'Failed to remove follower');
+    }
+  }
+
   // Get followers list
   Future<FriendsResponse> getFollowers(
       {int page = 1, int pageSize = 20}) async {

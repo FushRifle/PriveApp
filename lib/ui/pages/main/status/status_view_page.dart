@@ -1,5 +1,6 @@
 import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/models/status_model.dart';
+import 'package:clique/core/services/status/status_services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -30,11 +31,14 @@ class _StatusViewPageState extends State<StatusViewPage>
   late PageController _pageController;
   late final TextEditingController _replyController;
   late final FocusNode _replyFocusNode;
+  final StatusService _statusService = StatusService();
   late List<Story> _stories;
   bool _isPaused = false;
   bool _pausedForReply = false;
   bool _pausedForInteraction = false;
   bool _shouldResumeAfterInteraction = false;
+  bool _isSendingReply = false;
+  bool _showReplySent = false;
 
   @override
   void initState() {
@@ -270,6 +274,7 @@ class _StatusViewPageState extends State<StatusViewPage>
             _buildHeader(stories),
             _buildProgressBars(stories),
             _buildBottomActions(stories),
+            if (_showReplySent) _buildReplySentToast(),
             if (_isPaused && !_replyFocusNode.hasFocus)
               Positioned(
                 top: MediaQuery.of(context).padding.top + 90,
@@ -368,7 +373,7 @@ class _StatusViewPageState extends State<StatusViewPage>
 
   ImageProvider _getImageProvider(String imageUrl) {
     if (imageUrl.startsWith('http')) {
-      return NetworkImage(imageUrl);
+      return CachedNetworkImageProvider(imageUrl);
     }
     return AssetImage(imageUrl);
   }
@@ -615,10 +620,8 @@ class _StatusViewPageState extends State<StatusViewPage>
                   ),
                 ),
                 onSubmitted: (value) {
-                  if (value.isNotEmpty) {
+                  if (value.trim().isNotEmpty) {
                     _sendReply(value, story);
-                    _replyController.clear();
-                    _replyFocusNode.unfocus();
                   }
                 },
               ),
@@ -662,10 +665,8 @@ class _StatusViewPageState extends State<StatusViewPage>
           const SizedBox(width: 8),
           GestureDetector(
             onTap: () {
-              if (_replyController.text.isNotEmpty) {
+              if (_replyController.text.trim().isNotEmpty) {
                 _sendReply(_replyController.text, story);
-                _replyController.clear();
-                _replyFocusNode.unfocus();
               }
             },
             child: Container(
@@ -675,14 +676,57 @@ class _StatusViewPageState extends State<StatusViewPage>
                 shape: BoxShape.circle,
                 color: AppColors.primary,
               ),
-              child: const Icon(
-                Icons.send,
-                color: AppColors.white,
-                size: 20,
-              ),
+              child: _isSendingReply
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.white,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.send,
+                      color: AppColors.white,
+                      size: 20,
+                    ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildReplySentToast() {
+    return Positioned(
+      left: 24,
+      right: 24,
+      bottom: 96,
+      child: IgnorePointer(
+        child: AnimatedOpacity(
+          opacity: _showReplySent ? 1 : 0,
+          duration: const Duration(milliseconds: 180),
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.black.withOpacity(0.72),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: AppColors.white.withOpacity(0.4),
+                ),
+              ),
+              child: const Text(
+                'Reply sent',
+                style: TextStyle(
+                  color: AppColors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -770,15 +814,44 @@ class _StatusViewPageState extends State<StatusViewPage>
     });
   }
 
-  void _sendReply(String message, Story story) {
-    final bloc = _storiesBlocOrNull();
-    if (bloc == null) return;
-    bloc.add(
-      ReplyToStoryEvent(
+  Future<void> _sendReply(String message, Story story) async {
+    final trimmed = message.trim();
+    if (trimmed.isEmpty || _isSendingReply || story.userId <= 0) return;
+
+    setState(() => _isSendingReply = true);
+    _pausePlaybackForInteraction();
+
+    try {
+      await _statusService.replyToStory(
         storyId: story.id,
-        content: message.trim(),
-      ),
-    );
+        content: trimmed,
+      );
+      _replaceCurrentStory(
+        story.copyWith(replyCount: story.replyCount + 1),
+      );
+
+      if (!mounted) return;
+      _replyController.clear();
+      _replyFocusNode.unfocus();
+      setState(() => _showReplySent = true);
+      Future.delayed(const Duration(milliseconds: 1400), () {
+        if (mounted) setState(() => _showReplySent = false);
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to send reply',
+            style: TextStyle(color: AppColors.text),
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSendingReply = false);
+      _resumePlaybackAfterInteraction();
+    }
   }
 
   void _showRepostSheet(Story story) {

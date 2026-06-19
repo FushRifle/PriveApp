@@ -145,6 +145,13 @@ class AppTheme {
       surfaceTintColor: Colors.transparent,
       elevation: 0,
     ),
+    snackBarTheme: SnackBarThemeData(
+      contentTextStyle: GoogleFonts.poppins(
+        color: AppColors.text,
+        fontSize: 14,
+        fontWeight: medium,
+      ),
+    ),
   );
 
   static final ThemeData darkTheme = ThemeData(
@@ -270,6 +277,13 @@ class AppTheme {
       indicatorColor: AppColors.primary,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
+    ),
+    snackBarTheme: SnackBarThemeData(
+      contentTextStyle: GoogleFonts.poppins(
+        color: AppColors.text,
+        fontSize: 14,
+        fontWeight: medium,
+      ),
     ),
   );
 }

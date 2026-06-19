@@ -156,6 +156,7 @@ class ProfileHeaderCard extends StatelessWidget {
   final VoidCallback onToggleFollow;
   final ValueChanged<ProfileView>? onMessage;
   final VoidCallback? onOpenAccountSwitcher;
+  final VoidCallback? onOpenInsights;
 
   const ProfileHeaderCard({
     super.key,
@@ -165,6 +166,7 @@ class ProfileHeaderCard extends StatelessWidget {
     required this.onToggleFollow,
     this.onMessage,
     this.onOpenAccountSwitcher,
+    this.onOpenInsights,
   });
 
   @override
@@ -226,6 +228,7 @@ class ProfileHeaderCard extends StatelessWidget {
                     isFollowing: isFollowing,
                     onToggleFollow: onToggleFollow,
                     onMessage: onMessage,
+                    onOpenInsights: onOpenInsights,
                   ),
                   const SizedBox(height: 14),
                   ProfileStatsRow(profile: profile, isOwnProfile: isOwnProfile),
@@ -662,6 +665,7 @@ class ProfileActionRow extends StatelessWidget {
   final bool isFollowing;
   final VoidCallback onToggleFollow;
   final ValueChanged<ProfileView>? onMessage;
+  final VoidCallback? onOpenInsights;
 
   const ProfileActionRow({
     super.key,
@@ -670,6 +674,7 @@ class ProfileActionRow extends StatelessWidget {
     required this.isFollowing,
     required this.onToggleFollow,
     this.onMessage,
+    this.onOpenInsights,
   });
 
   @override
@@ -706,6 +711,15 @@ class ProfileActionRow extends StatelessWidget {
                 color: AppColors.text,
                 onTap: () =>
                     Navigator.pushNamed(context, NamedRoutes.settingsScreen),
+              ),
+              ProfileIconActionButton(
+                icon: Icons.insights_rounded,
+                color: AppColors.primary,
+                onTap: onOpenInsights ??
+                    () => Navigator.pushNamed(
+                          context,
+                          NamedRoutes.insightsScreen,
+                        ),
               ),
             ],
           );
@@ -834,12 +848,10 @@ class ProfileIconActionButton extends StatelessWidget {
 
 class ProfileStickyTabBar extends StatelessWidget {
   final TabController tabController;
-  final bool showInsightsTab;
 
   const ProfileStickyTabBar({
     super.key,
     required this.tabController,
-    this.showInsightsTab = false,
   });
 
   @override
@@ -859,7 +871,6 @@ class ProfileStickyTabBar extends StatelessWidget {
         const Tab(icon: Icon(Icons.grid_on_rounded)),
         const Tab(icon: Icon(Icons.movie_filter_outlined)),
         const Tab(icon: Icon(Icons.bookmark_border_rounded)),
-        if (showInsightsTab) const Tab(icon: Icon(Icons.insights_rounded)),
       ],
     );
 
