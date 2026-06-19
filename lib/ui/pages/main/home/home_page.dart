@@ -214,77 +214,40 @@ class _HomePageState extends State<HomePage>
       child: Scaffold(
         backgroundColor: palette.background,
         floatingActionButton: AnimatedSlide(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOut,
-          offset: _showJumpToTop ? Offset.zero : const Offset(0, 0.2),
-          child: AnimatedOpacity(
-            duration: const Duration(milliseconds: 180),
-            opacity: _showJumpToTop ? 1 : 0,
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: _jumpToTop,
-                borderRadius: BorderRadius.circular(999),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(999),
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        palette.primary,
-                        palette.secondary,
-                      ],
-                    ),
-                    border: Border.all(
-                      color: Colors.white
-                          .withOpacity(palette.isDark ? 0.16 : 0.22),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: palette.primary.withOpacity(0.28),
-                        blurRadius: 18,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: AppColors.white.withOpacity(0.16),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.vertical_align_top_rounded,
-                          size: 18,
-                          color: AppColors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        'Back to top',
-                        style: AppTheme.blackTextStyle.copyWith(
-                          color: AppColors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.2,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+  duration: const Duration(milliseconds: 220),
+  curve: Curves.easeOut,
+  offset: _showJumpToTop ? Offset.zero : const Offset(0, 0.2),
+  child: AnimatedOpacity(
+    duration: const Duration(milliseconds: 180),
+    opacity: _showJumpToTop ? 1 : 0,
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _jumpToTop,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.primary,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.28),
+                blurRadius: 18,
+                offset: const Offset(0, 10),
               ),
-            ),
+            ],
+          ),
+          child: const Icon(
+            Icons.keyboard_double_arrow_up_rounded,
+            size: 27,
+            color: AppColors.white,
           ),
         ),
+      ),
+    ),
+  ),
+),
         body: SafeArea(
           top: false,
           child: RefreshIndicator(
@@ -799,9 +762,12 @@ class _StoriesSection extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => StatusViewPage(
-                            stories: group.stories,
-                            initialIndex: 0,
+                          builder: (_) => BlocProvider.value(
+                            value: context.read<StoriesBloc>(),
+                            child: StatusViewPage(
+                              stories: group.stories,
+                              initialIndex: 0,
+                            ),
                           ),
                         ),
                       );

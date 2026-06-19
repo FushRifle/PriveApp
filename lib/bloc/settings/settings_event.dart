@@ -10,11 +10,15 @@ abstract class SettingsEvent extends Equatable {
 // Load settings
 class LoadSettings extends SettingsEvent {
   final int? userId;
+  final bool silent;
 
-  const LoadSettings({this.userId});
+  const LoadSettings({
+    this.userId,
+    this.silent = false,
+  });
 
   @override
-  List<Object?> get props => [userId];
+  List<Object?> get props => [userId, silent];
 }
 
 // Update settings

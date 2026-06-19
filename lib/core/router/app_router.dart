@@ -54,10 +54,10 @@ import 'package:clique/ui/pages/main/status/status_page.dart';
 import 'package:clique/ui/pages/settings/settings_page.dart';
 import 'package:clique/ui/pages/settings/subscribe_page.dart';
 
-import 'package:clique/ui/pages/settings/Clique/about_page.dart';
-import 'package:clique/ui/pages/settings/Clique/help_page.dart';
-import 'package:clique/ui/pages/settings/Clique/privacy_page.dart';
-import 'package:clique/ui/pages/settings/Clique/terms_page.dart';
+import 'package:clique/ui/pages/Clique/about_page.dart';
+import 'package:clique/ui/pages/Clique/help_page.dart';
+import 'package:clique/ui/pages/Clique/privacy_page.dart';
+import 'package:clique/ui/pages/Clique/terms_page.dart';
 
 import 'package:clique/ui/pages/social/friends_list_page.dart';
 import 'package:clique/ui/pages/social/insights_page.dart';

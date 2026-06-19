@@ -82,7 +82,7 @@ class AboutPage extends StatelessWidget {
           ),
           child: Center(
             child: Image.asset(
-              'assets/images/Clique.png',
+              'assets/images/clique.png',
               width: 32,
               height: 32,
               errorBuilder: (_, __, ___) => const SizedBox(),
@@ -100,7 +100,7 @@ class AboutPage extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'Version 1.0.0 (Build 1)',
+          'Version 1.0.0',
           style: AppTheme.greyTextStyle.copyWith(fontSize: 14),
         ),
       ],

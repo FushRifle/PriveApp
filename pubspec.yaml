@@ -92,6 +92,7 @@ dependencies:
   stream_video_flutter: ^1.4.0
   stream_video: ^1.4.0
   curved_navigation_bar: ^1.0.6
+  introduction_screen: ^4.0.0
 
 dev_dependencies:
   flutter_test:

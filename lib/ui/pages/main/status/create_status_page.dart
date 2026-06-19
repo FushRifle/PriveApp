@@ -174,7 +174,7 @@ class _CreateStatusPageState extends State<CreateStatusPage>
                     child: SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -193,7 +193,7 @@ class _CreateStatusPageState extends State<CreateStatusPage>
                                   _disposePreviewVideoController();
                                 },
                               ),
-                              const SizedBox(height: 18),
+                              const SizedBox(height: 20),
                             ],
                             Align(
                               alignment: Alignment.topCenter,
@@ -320,7 +320,7 @@ class _CreateStatusPageState extends State<CreateStatusPage>
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: _hasContent
-                          ? [AppColors.primary, AppColors.secondary]
+                          ? [AppColors.primary]
                           : [
                               Colors.white.withOpacity(0.1),
                               Colors.white.withOpacity(0.05)
@@ -395,7 +395,7 @@ class _CreateStatusPageState extends State<CreateStatusPage>
         ),
         Positioned(
           right: -10,
-          top: 20,
+          top: 100,
           child: _buildComposerOptionsTab(),
         ),
       ],
@@ -404,7 +404,7 @@ class _CreateStatusPageState extends State<CreateStatusPage>
 
   Widget _buildComposerOptionsTab() {
     return Material(
-      color: const Color(0xFF1E2030),
+      color: AppColors.primary,
       elevation: 8,
       borderRadius: const BorderRadius.horizontal(
         left: Radius.circular(16),
@@ -420,7 +420,7 @@ class _CreateStatusPageState extends State<CreateStatusPage>
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOut,
           width: 34,
-          height: 56,
+          height: 70,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             borderRadius: const BorderRadius.horizontal(
@@ -434,9 +434,9 @@ class _CreateStatusPageState extends State<CreateStatusPage>
           child: Icon(
             _isComposerOptionsOpen
                 ? Icons.chevron_right_rounded
-                : Icons.tune_rounded,
+                : Icons.chevron_left_rounded,
             color: Colors.white,
-            size: 22,
+            size: 30,
           ),
         ),
       ),
@@ -491,7 +491,7 @@ class _CreateStatusPageState extends State<CreateStatusPage>
                       height: drawerHeight,
                       padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1E2030),
+                        color: AppColors.card,
                         borderRadius: BorderRadius.circular(28),
                         border: Border.all(
                           color: Colors.white.withOpacity(0.08),
@@ -526,12 +526,11 @@ class _CreateStatusPageState extends State<CreateStatusPage>
                                   onPressed: _closeComposerOptions,
                                   icon: const Icon(
                                     Icons.close_rounded,
-                                    color: Colors.white,
+                                    color: Colors.red,
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
                             Expanded(
                               child: SingleChildScrollView(
                                 physics: const BouncingScrollPhysics(),
@@ -551,7 +550,7 @@ class _CreateStatusPageState extends State<CreateStatusPage>
                                       }),
                                       activeAlignment: _textAlign,
                                     ),
-                                    const SizedBox(height: 12),
+                                    const SizedBox(height: 5),
                                     StyleControls(
                                       fontSize: _fontSize,
                                       textLength:

@@ -160,9 +160,12 @@ class _StatusBody extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (_) {
-                          return StatusViewPage(
-                            stories: group.stories,
-                            initialIndex: 0,
+                          return BlocProvider.value(
+                            value: context.read<StoriesBloc>(),
+                            child: StatusViewPage(
+                              stories: group.stories,
+                              initialIndex: 0,
+                            ),
                           );
                         },
                       ),

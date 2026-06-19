@@ -284,8 +284,24 @@ class _SecurityGateState extends State<_SecurityGate>
     if (_isPrompting) return;
 
     try {
+      final authState = context.read<AuthBloc>().state;
+
+      if (authState.status == AuthStatus.initial ||
+          authState.status == AuthStatus.loading) {
+        return;
+      }
+
+      if (!authState.isAuthenticated || authState.token == null) {
+        if (!mounted) return;
+        setState(() {
+          _isLoading = false;
+          _isUnlocked = true;
+        });
+        return;
+      }
+
       final userId = _currentUserId();
-      final settings = await widget.appLockService.loadCached(userId: userId);
+      final settings = await _resolveAppLockSettings(userId);
       if (!mounted) return;
 
       if (_isLoading) {
@@ -361,18 +377,50 @@ class _SecurityGateState extends State<_SecurityGate>
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (_isLoading && !_isUnlocked) {
-      return Scaffold(
-        backgroundColor: AppColors.backgroundColor,
-        body: const Center(
-          child: CircularProgressIndicator(),
-        ),
+  Future<AppLockSettings> _resolveAppLockSettings(int? userId) async {
+    final cached = await widget.appLockService.loadCached(userId: userId);
+
+    if (cached.enabled) {
+      unawaited(
+        widget.appLockService.load(userId: userId).catchError((_) => cached),
       );
+      return cached;
     }
 
-    return widget.child;
+    try {
+      return await widget.appLockService.load(userId: userId);
+    } catch (_) {
+      return cached;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<AuthBloc, AuthState>(
+      listenWhen: (previous, current) {
+        return previous.status != current.status ||
+            previous.token != current.token ||
+            previous.user != current.user;
+      },
+      listener: (context, state) {
+        if (state.status == AuthStatus.authenticated) {
+          _bootstrap(forcePrompt: true);
+        } else if (state.status == AuthStatus.unauthenticated) {
+          setState(() {
+            _isLoading = false;
+            _isUnlocked = true;
+          });
+        }
+      },
+      child: _isLoading && !_isUnlocked
+          ? Scaffold(
+              backgroundColor: AppColors.backgroundColor,
+              body: const Center(
+                child: CircularProgressIndicator(),
+              ),
+            )
+          : widget.child,
+    );
   }
 
   int? _currentUserId() {

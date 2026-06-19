@@ -38,15 +38,25 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   ) async {
     final cachedLock = await _appLockService.loadCached(userId: event.userId);
 
-    emit(state.copyWith(
-      appLockEnabled: cachedLock.enabled,
-      appLockBiometricEnabled: cachedLock.biometricEnabled,
-      appLockPinEnabled: cachedLock.pinEnabled,
-      appLockTimeoutSeconds: cachedLock.timeoutSeconds,
-      status: SettingsStatus.loading,
-      isLoading: true,
-      clearError: true,
-    ));
+    if (!event.silent) {
+      emit(state.copyWith(
+        appLockEnabled: cachedLock.enabled,
+        appLockBiometricEnabled: cachedLock.biometricEnabled,
+        appLockPinEnabled: cachedLock.pinEnabled,
+        appLockTimeoutSeconds: cachedLock.timeoutSeconds,
+        status: SettingsStatus.loading,
+        isLoading: true,
+        clearError: true,
+      ));
+    } else {
+      emit(state.copyWith(
+        appLockEnabled: cachedLock.enabled,
+        appLockBiometricEnabled: cachedLock.biometricEnabled,
+        appLockPinEnabled: cachedLock.pinEnabled,
+        appLockTimeoutSeconds: cachedLock.timeoutSeconds,
+        clearError: true,
+      ));
+    }
 
     try {
       final settings = await _settingsService.getSettings();

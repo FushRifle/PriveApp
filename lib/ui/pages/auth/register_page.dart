@@ -73,7 +73,7 @@ class _RegisterPageState extends State<RegisterPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           GestureDetector(
             onTap: () {
               HapticFeedback.lightImpact();
@@ -83,12 +83,12 @@ class _RegisterPageState extends State<RegisterPage> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: AppColors.backgroundColor,
+                color: AppColors.primary,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
                 Icons.arrow_back_ios_new,
-                color: AppColors.black,
+                color: AppColors.white,
                 size: 18,
               ),
             ),
@@ -450,7 +450,7 @@ class _RegisterPageState extends State<RegisterPage> {
         Text(
           label,
           style: AppTheme.blackTextStyle.copyWith(
-            fontWeight: AppTheme.medium,
+            fontWeight: AppTheme.bold,
             fontSize: 14,
           ),
         ),
@@ -458,7 +458,7 @@ class _RegisterPageState extends State<RegisterPage> {
         Container(
           decoration: BoxDecoration(
             color: AppColors.backgroundColor,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: AppColors.greyColor.withOpacity(0.2),
               width: 1,

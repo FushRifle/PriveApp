@@ -62,6 +62,7 @@ class StyleControls extends StatelessWidget {
           crossAxisCount: 5,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
           mainAxisSpacing: 8,
           crossAxisSpacing: 8,
           childAspectRatio: 1,

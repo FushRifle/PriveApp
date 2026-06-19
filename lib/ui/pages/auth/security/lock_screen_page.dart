@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/auth/auth_bloc.dart';
+import 'package:clique/bloc/settings/settings_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/core/services/security/app_lock_service.dart';
 
@@ -65,8 +66,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
 
   Future<void> _loadSettings() async {
     try {
-      final settings =
-          await _appLockService.loadCached(userId: _resolvedUserId);
+      final settings = await _appLockService.load(userId: _resolvedUserId);
       final savedPin =
           await _appLockService.getPin(userId: _resolvedUserId) ?? '';
 
@@ -144,6 +144,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
             _isBiometricEnabled = true;
           });
         }
+        _reloadSettingsSilently();
         _showSuccessSheet('Biometric lock enabled successfully');
       } else {
         setState(() {
@@ -248,6 +249,19 @@ class _LockScreenPageState extends State<LockScreenPage> {
         _savedPin = '';
       }
     });
+    _reloadSettingsSilently();
+  }
+
+  void _reloadSettingsSilently() {
+    try {
+      final userId = _resolvedUserId;
+      context.read<SettingsBloc>().add(
+            LoadSettings(
+              userId: userId,
+              silent: true,
+            ),
+          );
+    } catch (_) {}
   }
 
   void _showSuccessSheet(String message) {

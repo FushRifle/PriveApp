@@ -1,13 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/router/named_routes.dart';
-
-import 'package:clique/core/models/onboarding_model.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:introduction_screen/introduction_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class OnboardingPage extends StatefulWidget {
   final String completionRoute;
@@ -23,31 +20,72 @@ class OnboardingPage extends StatefulWidget {
 
 class _OnboardingPageState extends State<OnboardingPage> {
   static const String _onboardingKey = 'onboarding_completed';
-
-  late final PageController _pageController;
-
-  int _currentPage = 0;
-
+  final _introKey = GlobalKey<IntroductionScreenState>();
   bool _isNavigating = false;
 
-  final List<OnboardingModel> _onboardingData = [
-    OnboardingModel(
-      image: 'assets/images/onboarding_1.png',
-      title: 'Connect with Friends',
-      description:
-          'Stay connected with friends and family. Share moments, chat, and make memories together.',
+  late final List<PageViewModel> _pages = [
+    PageViewModel(
+      titleWidget: const _IntroTitle(
+        title: 'Share what actually feels real',
+      ),
+      bodyWidget: const _IntroBody(
+        text:
+            'Post stories, reels, and status updates that are quick to make and easy to remember.',
+      ),
+      image: const _IntroArtwork(
+        imagePath: 'assets/images/img_post_1.jpeg',
+        badge: 'Stories',
+        accent: Color(0xFF6C3BD4),
+      ),
+      decoration: const PageDecoration(
+        pageColor: Color(0xFF0F1119),
+        imagePadding: EdgeInsets.only(top: 24),
+        titlePadding: EdgeInsets.only(top: 16, bottom: 12),
+        bodyPadding: EdgeInsets.symmetric(horizontal: 24),
+        pageMargin: EdgeInsets.zero,
+      ),
     ),
-    OnboardingModel(
-      image: 'assets/images/onboarding_2.png',
-      title: 'Discover New Content',
-      description:
-          'Explore trending posts, reels, and stories from creators around the world.',
+    PageViewModel(
+      titleWidget: const _IntroTitle(
+        title: 'Find your people faster',
+      ),
+      bodyWidget: const _IntroBody(
+        text:
+            'Explore topics, communities, events, and people without the noise.',
+      ),
+      image: const _IntroArtwork(
+        imagePath: 'assets/images/img_post_2.jpeg',
+        badge: 'Discover',
+        accent: Color(0xFF0D9488),
+      ),
+      decoration: const PageDecoration(
+        pageColor: Color(0xFF101827),
+        imagePadding: EdgeInsets.only(top: 24),
+        titlePadding: EdgeInsets.only(top: 16, bottom: 12),
+        bodyPadding: EdgeInsets.symmetric(horizontal: 24),
+        pageMargin: EdgeInsets.zero,
+      ),
     ),
-    OnboardingModel(
-      image: 'assets/images/onboarding_3.png',
-      title: 'Express Yourself',
-      description:
-          'Share your stories, post photos, create reels, and let your creativity shine.',
+    PageViewModel(
+      titleWidget: const _IntroTitle(
+        title: 'Keep the vibe moving',
+      ),
+      bodyWidget: const _IntroBody(
+        text:
+            'React, reply, save, and jump back in wherever the conversation is still alive.',
+      ),
+      image: const _IntroArtwork(
+        imagePath: 'assets/images/img_post_3.jpeg',
+        badge: 'Connect',
+        accent: Color(0xFFE74C3C),
+      ),
+      decoration: const PageDecoration(
+        pageColor: Color(0xFF12111A),
+        imagePadding: EdgeInsets.only(top: 24),
+        titlePadding: EdgeInsets.only(top: 16, bottom: 12),
+        bodyPadding: EdgeInsets.symmetric(horizontal: 24),
+        pageMargin: EdgeInsets.zero,
+      ),
     ),
   ];
 
@@ -55,312 +93,247 @@ class _OnboardingPageState extends State<OnboardingPage> {
   void initState() {
     super.initState();
 
-    _pageController = PageController();
-
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
-        statusBarColor: AppColors.transparent,
-        statusBarIconBrightness: Brightness.dark,
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
       ),
     );
   }
 
-  @override
-  void dispose() {
-    _pageController.dispose();
-
-    super.dispose();
-  }
-
   Future<void> _completeOnboarding() async {
     if (_isNavigating) return;
-
     _isNavigating = true;
 
     HapticFeedback.lightImpact();
 
     final prefs = await SharedPreferences.getInstance();
-
-    await prefs.setBool(
-      _onboardingKey,
-      true,
-    );
+    await prefs.setBool(_onboardingKey, true);
 
     if (!mounted) return;
-
-    Navigator.pushReplacementNamed(
-      context,
-      widget.completionRoute,
-    );
+    Navigator.pushReplacementNamed(context, widget.completionRoute);
   }
 
-  void _nextPage() {
-    if (_currentPage < _onboardingData.length - 1) {
-      HapticFeedback.lightImpact();
-
-      _pageController.nextPage(
-        duration: const Duration(
-          milliseconds: 280,
-        ),
-        curve: Curves.easeOutCubic,
-      );
-    } else {
-      _completeOnboarding();
-    }
+  void _skipToEnd() {
+    HapticFeedback.lightImpact();
+    _introKey.currentState?.skipToEnd();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.whiteColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildSkipButton(),
-            Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                itemCount: _onboardingData.length,
-                physics: const BouncingScrollPhysics(),
-                onPageChanged: (
-                  index,
-                ) {
-                  if (!mounted) {
-                    return;
-                  }
+      backgroundColor: const Color(0xFF0F1119),
+      body: IntroductionScreen(
+        key: _introKey,
+        pages: _pages,
+        globalBackgroundColor: const Color(0xFF0F1119),
+        showSkipButton: true,
+        showBackButton: false,
+        showNextButton: true,
+        showDoneButton: true,
+        skip: Text(
+          'Skip',
+          style: AppTheme.whiteTextStyle.copyWith(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        next: const Icon(
+          Icons.arrow_forward_rounded,
+          color: Colors.white,
+        ),
+        done: Text(
+          'Get started',
+          style: AppTheme.whiteTextStyle.copyWith(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        onDone: _completeOnboarding,
+        onSkip: _skipToEnd,
+        curve: Curves.easeOutCubic,
+        dotsDecorator: DotsDecorator(
+          size: const Size.square(7),
+          activeSize: const Size(22, 7),
+          activeColor: AppColors.primary,
+          color: Colors.white.withOpacity(0.18),
+          spacing: const EdgeInsets.symmetric(horizontal: 3),
+          activeShape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(99),
+          ),
+        ),
+        controlsPadding: const EdgeInsets.fromLTRB(24, 14, 24, 28),
+        nextFlex: 0,
+      ),
+    );
+  }
+}
 
-                  setState(() {
-                    _currentPage = index;
-                  });
-                },
-                itemBuilder: (context, index) {
-                  return RepaintBoundary(
-                    child: _OnboardingContent(
-                      data: _onboardingData[index],
-                      icon: _getIconForPage(
-                        index,
+class _IntroTitle extends StatelessWidget {
+  final String title;
+
+  const _IntroTitle({
+    required this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      textAlign: TextAlign.center,
+      style: AppTheme.whiteTextStyle.copyWith(
+        fontSize: 28,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.4,
+        height: 1.1,
+      ),
+    );
+  }
+}
+
+class _IntroBody extends StatelessWidget {
+  final String text;
+
+  const _IntroBody({
+    required this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      textAlign: TextAlign.center,
+      style: AppTheme.greyTextStyle.copyWith(
+        color: Colors.white.withOpacity(0.72),
+        fontSize: 15,
+        height: 1.55,
+      ),
+    );
+  }
+}
+
+class _IntroArtwork extends StatelessWidget {
+  final String imagePath;
+  final String badge;
+  final Color accent;
+
+  const _IntroArtwork({
+    required this.imagePath,
+    required this.badge,
+    required this.accent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: AspectRatio(
+        aspectRatio: 0.92,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(32),
+            boxShadow: [
+              BoxShadow(
+                color: accent.withOpacity(0.26),
+                blurRadius: 28,
+                offset: const Offset(0, 14),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(32),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.asset(
+                  imagePath,
+                  fit: BoxFit.cover,
+                ),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.15),
+                        Colors.black.withOpacity(0.55),
+                      ],
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 18,
+                  left: 18,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.36),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.12),
                       ),
                     ),
-                  );
-                },
-              ),
-            ),
-            _BottomSection(
-              currentPage: _currentPage,
-              totalPages: _onboardingData.length,
-              onNext: _nextPage,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSkipButton() {
-    return Padding(
-      padding: const EdgeInsets.only(
-        right: 24,
-        top: 16,
-      ),
-      child: Align(
-        alignment: Alignment.topRight,
-        child: TextButton(
-          onPressed: _completeOnboarding,
-          style: TextButton.styleFrom(
-            overlayColor: AppColors.transparent,
-          ),
-          child: Text(
-            'Skip',
-            style: AppTheme.blackTextStyle.copyWith(
-              fontWeight: AppTheme.bold,
-              fontSize: 16,
-              color: AppColors.primary,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  IconData _getIconForPage(
-    int index,
-  ) {
-    switch (index) {
-      case 0:
-        return Icons.people_outline;
-
-      case 1:
-        return Icons.explore_outlined;
-
-      case 2:
-        return Icons.auto_awesome_outlined;
-
-      default:
-        return Icons.people_outline;
-    }
-  }
-}
-
-class _OnboardingContent extends StatelessWidget {
-  final OnboardingModel data;
-
-  final IconData icon;
-
-  const _OnboardingContent({
-    required this.data,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 32,
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 280,
-            height: 280,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.primary.withOpacity(
-                    0.1,
+                    child: Text(
+                      badge,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
-                  AppColors.secondary.withOpacity(
-                    0.3,
-                  ),
-                ],
-              ),
-            ),
-            child: Center(
-              child: Icon(
-                icon,
-                size: 120,
-                color: AppColors.blackColor,
-              ),
-            ),
-          ),
-          const SizedBox(height: 60),
-          Text(
-            data.title,
-            textAlign: TextAlign.center,
-            style: AppTheme.blackTextStyle.copyWith(
-              fontWeight: AppTheme.bold,
-              fontSize: 28,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            data.description,
-            textAlign: TextAlign.center,
-            style: AppTheme.greyTextStyle.copyWith(
-              fontSize: 16,
-              height: 1.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BottomSection extends StatelessWidget {
-  final int currentPage;
-
-  final int totalPages;
-
-  final VoidCallback onNext;
-
-  const _BottomSection({
-    required this.currentPage,
-    required this.totalPages,
-    required this.onNext,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isLastPage = currentPage == totalPages - 1;
-
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(
-              totalPages,
-              (index) => AnimatedContainer(
-                duration: const Duration(
-                  milliseconds: 250,
                 ),
-                curve: Curves.easeOut,
-                margin: const EdgeInsets.symmetric(
-                  horizontal: 4,
-                ),
-                width: currentPage == index ? 24 : 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: currentPage == index
-                      ? AppColors.purpleColor
-                      : AppColors.purpleColor.withOpacity(
-                          0.3,
+                Positioned(
+                  left: 18,
+                  right: 18,
+                  bottom: 18,
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.36),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.1),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: accent.withOpacity(0.9),
+                          ),
+                          child: const Icon(
+                            Icons.auto_awesome_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                         ),
-                  borderRadius: BorderRadius.circular(
-                    4,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Built for quick posts, story moments, and real conversation.',
+                            style: AppTheme.whiteTextStyle.copyWith(
+                              fontSize: 12,
+                              height: 1.35,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
           ),
-          const SizedBox(height: 32),
-          GestureDetector(
-            onTap: onNext,
-            child: Container(
-              width: double.infinity,
-              height: 56,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.purpleColor,
-                    AppColors.purpleColor.withOpacity(
-                      0.8,
-                    ),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(
-                  28,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.purpleColor.withOpacity(
-                      0.3,
-                    ),
-                    blurRadius: 20,
-                    offset: const Offset(
-                      0,
-                      10,
-                    ),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Text(
-                  isLastPage ? 'Get Started' : 'Next',
-                  style: AppTheme.whiteTextStyle.copyWith(
-                    fontWeight: AppTheme.bold,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

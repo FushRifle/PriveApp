@@ -250,6 +250,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                 LoadSettings(
                                   userId:
                                       userId > 0 ? userId : _currentUserId(),
+                                  silent: true,
                                 ),
                               );
                             },

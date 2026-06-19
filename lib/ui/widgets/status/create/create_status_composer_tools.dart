@@ -24,6 +24,7 @@ class CreateStatusComposerTools extends StatelessWidget {
       crossAxisCount: 2,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
       mainAxisSpacing: 8,
       crossAxisSpacing: 8,
       childAspectRatio: 1.14,
