@@ -32,14 +32,7 @@ class EventsSearchAndFilters extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.cardColor,
-            AppColors.secondary.withOpacity(0.04),
-          ],
-        ),
+       color: AppColors.card,
         borderRadius: BorderRadius.circular(28),
         border: Border.all(color: AppColors.border.withOpacity(0.9)),
         boxShadow: [

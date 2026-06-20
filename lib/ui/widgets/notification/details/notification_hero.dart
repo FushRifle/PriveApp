@@ -26,13 +26,10 @@ class NotificationHero extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            accent.withOpacity(0.15),
-            AppColors.backgroundColor,
-          ],
+        color: AppColors.card,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(20),
+          bottomRight: Radius.circular(20),
         ),
       ),
       child: SafeArea(
@@ -55,14 +52,15 @@ class NotificationHero extends StatelessWidget {
                           actorName,
                           style: AppTheme.blackTextStyle.copyWith(
                             fontSize: 24,
-                            fontWeight: FontWeight.w900,
+                            color: AppColors.text,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           summary,
                           style: AppTheme.greyTextStyle.copyWith(
-                            color: AppColors.textSecondary,
+                            color: AppColors.textHint,
                             fontSize: 14,
                           ),
                         ),

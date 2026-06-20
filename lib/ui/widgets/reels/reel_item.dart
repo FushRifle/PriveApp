@@ -1260,6 +1260,7 @@ class _VideoProgress extends StatelessWidget {
   }
 }
 
+// REDESIGNED ACTION BUTTON
 class _ActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -1270,33 +1271,50 @@ class _ActionButton extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
-    this.color = AppColors.white,
+    this.color = Colors.white,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      behavior: HitTestBehavior.opaque,
       onTap: () {
-        HapticFeedback.lightImpact();
+        HapticFeedback.mediumImpact();
         onTap();
       },
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            color: color,
-            size: 32,
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.35),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withOpacity(0.1),
+                width: 1,
+              ),
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 26,
+            ),
           ),
           if (label.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
               label,
               style: const TextStyle(
-                color: AppColors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                shadows: [
+                  Shadow(
+                    color: Colors.black54,
+                    blurRadius: 3,
+                  ),
+                ],
               ),
             ),
           ],
@@ -1306,60 +1324,50 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
+// REDESIGNED PROFILE AVATAR
 class _ProfileAvatar extends StatelessWidget {
   final String imageUrl;
 
-  const _ProfileAvatar({
-    required this.imageUrl,
-  });
+  const _ProfileAvatar({required this.imageUrl});
 
   @override
   Widget build(BuildContext context) {
-    if (imageUrl.isEmpty) {
-      return _fallback();
-    }
-
-    if (!imageUrl.startsWith('http')) {
-      return _fallback();
-    }
-
     return Container(
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: AppColors.white,
-          width: 2,
+          color: Colors.white.withOpacity(0.3),
+          width: 1.5,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 8,
+          ),
+        ],
       ),
       child: ClipOval(
-        child: CachedNetworkImage(
-          imageUrl: imageUrl,
-          fit: BoxFit.cover,
-          errorWidget: (_, __, ___) => _fallback(),
-          placeholder: (_, __) => _fallback(),
-        ),
+        child: imageUrl.isNotEmpty && imageUrl.startsWith('http')
+            ? CachedNetworkImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.cover,
+                errorWidget: (_, __, ___) => _buildFallback(),
+                placeholder: (_, __) => _buildFallback(),
+              )
+            : _buildFallback(),
       ),
     );
   }
 
-  Widget _fallback() {
+  Widget _buildFallback() {
     return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: AppColors.white.withOpacity(0.14),
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: AppColors.white,
-          width: 2,
-        ),
-      ),
+      color: Colors.white.withOpacity(0.1),
       child: Icon(
-        Icons.person,
-        color: AppColors.white.withOpacity(0.55),
-        size: 20,
+        Icons.person_rounded,
+        color: Colors.white.withOpacity(0.5),
+        size: 24,
       ),
     );
   }

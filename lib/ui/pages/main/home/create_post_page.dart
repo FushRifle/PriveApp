@@ -265,12 +265,12 @@ class _CreatePostPageState extends State<CreatePostPage> {
             });
           },
           onImage: () => _pickMedia(MediaType.image, ImageSource.gallery),
-          onCamera: () => _pickMedia(MediaType.image, ImageSource.camera),
-          onVideo: () => _pickMedia(MediaType.video, ImageSource.gallery),
           onReels: () {
             HapticFeedback.lightImpact();
             Navigator.pushNamed(context, NamedRoutes.createReelScreen);
           },
+          onCamera: () => _pickMedia(MediaType.image, ImageSource.camera),
+          onVideo: () => _pickMedia(MediaType.video, ImageSource.gallery),
           onAudio: _showComingSoon,
         );
 

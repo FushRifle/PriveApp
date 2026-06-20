@@ -47,7 +47,7 @@ class CreatePostOptionsView extends StatelessWidget {
         type: PostComposerType.poll,
         icon: Icons.poll_rounded,
         title: 'Poll',
-        subtitle: 'Ask a question with multiple answers',
+        subtitle: 'Multiple choice answers',
         color: AppColors.orange,
         onTap: onPollSelected,
       ),
@@ -78,6 +78,13 @@ class CreatePostOptionsView extends StatelessWidget {
         onTap: onImage,
       ),
       _MediaAction(
+        icon: Icons.movie_rounded,
+        title: 'Reels',
+        subtitle: 'Open reel studio',
+        color: AppColors.primary,
+        onTap: onReels,
+      ),
+      _MediaAction(
         icon: Icons.camera_alt_rounded,
         title: 'Camera',
         subtitle: 'Capture now',
@@ -90,13 +97,6 @@ class CreatePostOptionsView extends StatelessWidget {
         subtitle: 'Upload clips',
         color: AppColors.green,
         onTap: onVideo,
-      ),
-      _MediaAction(
-        icon: Icons.movie_rounded,
-        title: 'Reels',
-        subtitle: 'Open the reel studio',
-        color: AppColors.primary,
-        onTap: onReels,
       ),
       _MediaAction(
         icon: Icons.music_note_rounded,
@@ -114,20 +114,29 @@ class CreatePostOptionsView extends StatelessWidget {
           physics: const BouncingScrollPhysics(),
           children: [
             _HeroPanel(currentType: currentType),
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
             _SectionLabel(
               title: 'Choose content type',
               subtitle: 'Pick the kind of post you want to create.',
             ),
             const SizedBox(height: 16),
-            ...contentOptions.map((action) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _ComposerTypeTile(
-                    action: action,
-                    selected: currentType == action.type,
-                  ),
-                )),
-            const SizedBox(height: 24),
+            // Content Types Grid - 2x2
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: contentOptions
+                  .map(
+                    (action) => SizedBox(
+                      width: (MediaQuery.of(context).size.width - 50) / 2,
+                      child: _ContentTypeCard(
+                        action: action,
+                        selected: currentType == action.type,
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+            const SizedBox(height: 28),
             _SectionLabel(
               title: 'Media tools',
               subtitle:
@@ -350,11 +359,12 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-class _ComposerTypeTile extends StatelessWidget {
+// New Content Type Card matching Media Action Card style
+class _ContentTypeCard extends StatelessWidget {
   final _ComposerAction action;
   final bool selected;
 
-  const _ComposerTypeTile({
+  const _ContentTypeCard({
     required this.action,
     required this.selected,
   });
@@ -362,89 +372,105 @@ class _ComposerTypeTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.card,
-      borderRadius: BorderRadius.circular(20),
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: () {
           HapticFeedback.lightImpact();
           action.onTap();
         },
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         splashColor: action.color.withOpacity(0.1),
-        highlightColor: action.color.withOpacity(0.05),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeInOut,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            color:
-                selected ? action.color.withOpacity(0.06) : AppColors.cardColor,
+            borderRadius: BorderRadius.circular(18),
+            color: selected
+                ? action.color.withOpacity(0.06)
+                : AppColors.cardColor,
             border: Border.all(
               color: selected
                   ? action.color.withOpacity(0.3)
-                  : AppColors.cardBorderColor.withOpacity(0.5),
+                  : AppColors.cardBorderColor.withOpacity(0.6),
               width: selected ? 1.5 : 1,
             ),
             boxShadow: selected
                 ? [
                     BoxShadow(
-                      color: action.color.withOpacity(0.08),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
+                      color: action.color.withOpacity(0.1),
+                      blurRadius: 14,
+                      offset: const Offset(0, 6),
                     ),
                   ]
-                : null,
+                : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
           ),
           child: Row(
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
-                  color: action.color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
+                  color: selected
+                      ? action.color.withOpacity(0.15)
+                      : action.color.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: selected
+                        ? action.color.withOpacity(0.3)
+                        : action.color.withOpacity(0.15),
+                    width: 1,
+                  ),
                 ),
                 child: Icon(
                   action.icon,
                   color: action.color,
-                  size: 24,
+                  size: 20,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       action.title,
                       style: AppTheme.blackTextStyle.copyWith(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 2),
                     Text(
                       action.subtitle,
                       style: AppTheme.greyTextStyle.copyWith(
-                        fontSize: 12,
-                        height: 1.3,
+                        fontSize: 11,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
               if (selected)
                 Container(
-                  width: 28,
-                  height: 28,
+                  width: 24,
+                  height: 24,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: action.color,
                     boxShadow: [
                       BoxShadow(
                         color: action.color.withOpacity(0.3),
-                        blurRadius: 8,
+                        blurRadius: 6,
                         offset: const Offset(0, 2),
                       ),
                     ],
@@ -452,7 +478,7 @@ class _ComposerTypeTile extends StatelessWidget {
                   child: const Icon(
                     Icons.check_rounded,
                     color: Colors.white,
-                    size: 18,
+                    size: 16,
                   ),
                 ),
             ],

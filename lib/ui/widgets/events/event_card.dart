@@ -43,12 +43,12 @@ class EventCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.card,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: AppColors.border, width: 1),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.black.withOpacity(0.03),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+                    color: AppColors.black.withOpacity(0.04),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
                   ),
                 ],
               ),
@@ -57,16 +57,37 @@ class EventCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Image Section
                   Stack(
                     children: [
                       _EventImage(
                         imageUrl: event.imageUrl,
                         compact: isCompactImage,
                       ),
+                      // Gradient overlay for better tag visibility
                       Positioned(
-                        top: 10,
-                        left: 10,
-                        right: 10,
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: 60,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.black.withOpacity(0.35),
+                                Colors.transparent,
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Tags
+                      Positioned(
+                        top: 12,
+                        left: 12,
+                        right: 12,
                         child: Row(
                           children: [
                             if (event.category.isNotEmpty)
@@ -77,7 +98,7 @@ class EventCard extends StatelessWidget {
                             const Spacer(),
                             if (event.isPrivate)
                               _FloatingTag(
-                                icon: Icons.lock_outline,
+                                icon: Icons.lock_outline_rounded,
                                 label: 'Private',
                               ),
                           ],
@@ -85,17 +106,20 @@ class EventCard extends StatelessWidget {
                       ),
                     ],
                   ),
+                  
+                  // Content Section
                   Padding(
-                    padding: EdgeInsets.all(isCompactImage ? 12 : 14),
+                    padding: EdgeInsets.all(isCompactImage ? 14 : 18),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // Title with Date
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _DateRail(date: event.startsAt),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: 14),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,20 +130,21 @@ class EventCard extends StatelessWidget {
                                     maxLines: isCompactImage ? 2 : 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: AppTheme.blackTextStyle.copyWith(
-                                      fontSize: isCompactImage ? 15 : 16,
+                                      fontSize: isCompactImage ? 16 : 18,
                                       fontWeight: AppTheme.bold,
-                                      height: 1.2,
+                                      height: 1.25,
+                                      letterSpacing: -0.2,
                                     ),
                                   ),
                                   if (event.description.isNotEmpty) ...[
-                                    const SizedBox(height: 6),
+                                    const SizedBox(height: 8),
                                     Text(
                                       event.description,
                                       maxLines: isCompactImage ? 1 : 2,
                                       overflow: TextOverflow.ellipsis,
                                       style: AppTheme.greyTextStyle.copyWith(
-                                        height: 1.4,
-                                        fontSize: 13,
+                                        height: 1.45,
+                                        fontSize: 13.5,
                                       ),
                                     ),
                                   ],
@@ -128,14 +153,17 @@ class EventCard extends StatelessWidget {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
+                        
+                        const SizedBox(height: 16),
+                        
+                        // Metadata Chips
                         Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
+                          spacing: 8,
+                          runSpacing: 8,
                           children: [
                             if (event.location.isNotEmpty)
                               _MetaChip(
-                                icon: Icons.place_outlined,
+                                icon: Icons.location_on_outlined,
                                 label: event.location,
                               ),
                             _MetaChip(
@@ -143,26 +171,36 @@ class EventCard extends StatelessWidget {
                               label: '${event.goingCount} going',
                             ),
                             _MetaChip(
-                              icon: Icons.favorite_border,
+                              icon: Icons.favorite_border_rounded,
                               label: '${event.interestedCount} interested',
                             ),
                             if (event.host?.name.isNotEmpty == true)
                               _MetaChip(
-                                icon: Icons.person_outline,
+                                icon: Icons.person_outline_rounded,
                                 label: event.host!.name,
                               ),
                           ],
                         ),
-                        const SizedBox(height: 12),
+                        
+                        const SizedBox(height: 18),
+                        
+                        // Action Buttons
                         if (isOwner)
                           FilledButton.icon(
                             onPressed: onEdit ?? onTap,
-                            icon: const Icon(Icons.edit_outlined, size: 17),
-                            label: const Text('Edit'),
+                            icon: const Icon(Icons.edit_outlined, size: 18),
+                            label: const Text('Edit Event'),
                             style: FilledButton.styleFrom(
-                              minimumSize: const Size(double.infinity, 42),
+                              minimumSize: const Size(double.infinity, 46),
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: AppColors.white,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              elevation: 0,
+                              textStyle: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           )
@@ -180,25 +218,38 @@ class EventCard extends StatelessWidget {
                                         ? AppColors.success
                                         : AppColors.white,
                                     padding: const EdgeInsets.symmetric(
-                                      vertical: 10,
+                                      vertical: 12,
                                     ),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius: BorderRadius.circular(14),
                                     ),
+                                    elevation: 0,
                                     minimumSize: Size.zero,
                                     tapTargetSize:
                                         MaterialTapTargetSize.shrinkWrap,
                                   ),
-                                  child: Text(
-                                    event.isGoing ? 'Going' : 'RSVP',
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        event.isGoing
+                                            ? Icons.check_circle_rounded
+                                            : Icons.calendar_month_rounded,
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        event.isGoing ? 'Going' : 'RSVP',
+                                        style: const TextStyle(
+                                          fontSize: 13.5,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 10),
                               Expanded(
                                 child: OutlinedButton(
                                   onPressed: event.isInterested
@@ -206,21 +257,44 @@ class EventCard extends StatelessWidget {
                                       : onInterested,
                                   style: OutlinedButton.styleFrom(
                                     padding: const EdgeInsets.symmetric(
-                                      vertical: 10,
+                                      vertical: 12,
                                     ),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    side: BorderSide(
+                                      color: event.isInterested
+                                          ? AppColors.primary
+                                          : AppColors.border,
+                                      width: 1.2,
                                     ),
                                     minimumSize: Size.zero,
                                     tapTargetSize:
                                         MaterialTapTargetSize.shrinkWrap,
+                                    foregroundColor: event.isInterested
+                                        ? AppColors.primary
+                                        : AppColors.text,
                                   ),
-                                  child: Text(
-                                    event.isInterested ? 'Saved' : 'Interested',
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        event.isInterested
+                                            ? Icons.bookmark_rounded
+                                            : Icons.bookmark_border_rounded,
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        event.isInterested
+                                            ? 'Saved'
+                                            : 'Interested',
+                                        style: const TextStyle(
+                                          fontSize: 13.5,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
@@ -248,36 +322,53 @@ class _DateRail extends StatelessWidget {
   Widget build(BuildContext context) {
     final local = date.toLocal();
     return Container(
-      width: 52,
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      width: 56,
+      padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        color: AppColors.primary.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.primary.withOpacity(0.15),
+          width: 1,
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             _monthLabel(local.month),
             style: AppTheme.greyTextStyle.copyWith(
               fontSize: 10,
               fontWeight: AppTheme.bold,
+              letterSpacing: 0.5,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 3),
           Text(
             '${local.day}',
             style: AppTheme.blackTextStyle.copyWith(
-              fontSize: 18,
+              fontSize: 20,
               fontWeight: AppTheme.bold,
               height: 1,
+              letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 1),
-          Text(
-            _weekdayLabel(local.weekday),
-            style: AppTheme.greyTextStyle.copyWith(fontSize: 9),
+          const SizedBox(height: 2),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              _weekdayLabel(local.weekday),
+              style: AppTheme.greyTextStyle.copyWith(
+                fontSize: 8,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.3,
+              ),
+            ),
           ),
         ],
       ),
@@ -296,7 +387,7 @@ class _EventImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final height = compact ? 120.0 : 150.0;
+    final height = compact ? 130.0 : 170.0;
 
     if (imageUrl.trim().startsWith('http')) {
       return SizedBox(
@@ -318,19 +409,28 @@ class _EventImage extends StatelessWidget {
     return Container(
       height: height,
       width: double.infinity,
-      color: AppColors.background,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary.withOpacity(0.05),
+            AppColors.primary.withOpacity(0.1),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
       child: Center(
         child: Container(
-          width: 56,
-          height: 56,
+          width: 64,
+          height: 64,
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(16),
+            color: AppColors.primary.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(18),
           ),
           child: const Icon(
-            Icons.event_outlined,
+            Icons.event_rounded,
             color: AppColors.primary,
-            size: 28,
+            size: 30,
           ),
         ),
       ),
@@ -350,22 +450,22 @@ class _MetaChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: AppColors.background,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.border, width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: AppColors.textSecondary),
-          const SizedBox(width: 4),
+          Icon(icon, size: 13, color: AppColors.textSecondary),
+          const SizedBox(width: 5),
           Text(
             label,
             style: AppTheme.greyTextStyle.copyWith(
-              fontSize: 11,
-              fontWeight: AppTheme.medium,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -386,22 +486,33 @@ class _FloatingTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.black.withOpacity(0.45),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.white24),
+        color: Colors.black.withOpacity(0.55),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.15),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 11, color: AppColors.white),
-          const SizedBox(width: 4),
+          Icon(icon, size: 13, color: Colors.white),
+          const SizedBox(width: 5),
           Text(
             label,
             style: AppTheme.whiteTextStyle.copyWith(
-              fontSize: 10,
-              fontWeight: AppTheme.bold,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
             ),
           ),
         ],

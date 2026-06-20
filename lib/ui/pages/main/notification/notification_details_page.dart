@@ -5,7 +5,6 @@ import 'package:clique/app/configs/colors.dart';
 import 'package:clique/core/services/home/feed_service.dart';
 import 'package:clique/ui/pages/main/home/post_detail_page.dart';
 import 'package:clique/ui/widgets/notification/details/notification_hero.dart';
-import 'package:clique/ui/widgets/notification/details/details_card.dart';
 import 'package:clique/ui/widgets/notification/details/post_section.dart';
 
 class NotificationDetailsPage extends StatefulWidget {
@@ -139,14 +138,8 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                DetailsCard(
-                  notification: notification,
-                  actorName: actorName,
-                  type: type,
-                  time: time,
-                  accent: accent,
-                ),
-                const SizedBox(height: 20),
+                
+                const SizedBox(height: 10),
                 
                 PostSection(
                   isLoading: _isLoadingPost,

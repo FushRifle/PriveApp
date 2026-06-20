@@ -400,35 +400,108 @@ class _NotificationItemState extends State<NotificationItem> {
           accent: accent,
           onTap: _handleTap,
           onLongPress: _handleLongPress,
+          trailing: _shouldShowFollowActions()
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Row(
+                    children: [
+                      _FollowActionButton(
+                        onPressed: _isHandlingFollow ? null : _rejectFollower,
+                        icon: Icons.close_rounded,
+                        color: AppColors.grey,
+                        label: 'Decline',
+                      ),
+                      const Spacer(),
+                      _FollowActionButton(
+                        onPressed: _isHandlingFollow ? null : _acceptFollower,
+                        icon: _isHandlingFollow
+                            ? null
+                            : Icons.check_rounded,
+                        color: AppColors.primary,
+                        label: 'Accept',
+                        isLoading: _isHandlingFollow,
+                      ),
+                    ],
+                  ),
+                )
+              : null,
         ),
-        if (_shouldShowFollowActions())
-          Padding(
-            padding: const EdgeInsets.fromLTRB(28, 0, 28, 10),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _isHandlingFollow ? null : _rejectFollower,
-                    child: const Text('Reject'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: _isHandlingFollow ? null : _acceptFollower,
-                    child: _isHandlingFollow
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Accept'),
-                  ),
-                ),
-              ],
+      ],
+    );
+  }
+}
+
+class _FollowActionButton extends StatelessWidget {
+  final VoidCallback? onPressed;
+  final IconData? icon;
+  final Color color;
+  final String label;
+  final bool isLoading;
+
+  const _FollowActionButton({
+    required this.onPressed,
+    this.icon,
+    required this.color,
+    required this.label,
+    this.isLoading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          decoration: BoxDecoration(
+            color: onPressed != null
+                ? color.withOpacity(0.12)
+                : color.withOpacity(0.06),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: onPressed != null
+                  ? color.withOpacity(0.3)
+                  : color.withOpacity(0.15),
+              width: 1,
             ),
           ),
-      ],
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isLoading)
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: color,
+                  ),
+                )
+              else if (icon != null)
+                Icon(
+                  icon,
+                  size: 16,
+                  color: onPressed != null
+                      ? color
+                      : color.withOpacity(0.5),
+                ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: AppTheme.blackTextStyle.copyWith(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: onPressed != null
+                      ? color
+                      : color.withOpacity(0.5),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

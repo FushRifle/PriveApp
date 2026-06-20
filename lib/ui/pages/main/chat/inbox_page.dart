@@ -8,6 +8,7 @@ import 'package:clique/bloc/chat/chat_bloc.dart';
 import 'package:clique/ui/pages/main/chat/chat_page.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/core/services/chat/chat_service.dart';
+
 import 'package:clique/ui/widgets/common/app_page_header.dart';
 import 'package:clique/ui/widgets/chat/inbox_loading_shimmer.dart';
 
@@ -51,13 +52,13 @@ class _InboxPageState extends State<InboxPage> {
       body: Column(
         children: [
           AppPageHeader(
-            title: 'Chats',
-            subtitle: 'Messages and conversations',
+            title: 'Messages',
+            subtitle: 'Your conversations',
             leadingIcon: Icons.message_outlined,
-            actionIcon: Icons.search,
+            actionIcon: Icons.archive_rounded,
             onActionTap: () {
               HapticFeedback.lightImpact();
-              debugPrint('Search tapped');
+              debugPrint('Archive message tapped');
             },
           ),
           Expanded(
@@ -81,27 +82,11 @@ class _InboxPageState extends State<InboxPage> {
                   }
 
                   if (conversations.isEmpty) {
-                    return ListView(
-                      physics: const AlwaysScrollableScrollPhysics(
-                        parent: BouncingScrollPhysics(),
-                      ),
-                      children: [
-                        const SizedBox(height: 120),
-                        Center(
-                          child: Text(
-                            'No conversations yet',
-                            style: AppTheme.greyTextStyle.copyWith(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
+                    return _buildEmptyState();
                   }
 
                   return Padding(
-                    padding: const EdgeInsets.only(top: 14),
+                    padding: const EdgeInsets.only(top: 8),
                     child: _buildMessageList(context, conversations),
                   );
                 },
@@ -113,39 +98,108 @@ class _InboxPageState extends State<InboxPage> {
     );
   }
 
+  Widget _buildEmptyState() {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: BouncingScrollPhysics(),
+      ),
+      children: [
+        const SizedBox(height: 80),
+        Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 88,
+                height: 88,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Icon(
+                  Icons.chat_bubble_outline_rounded,
+                  size: 40,
+                  color: AppColors.primary.withOpacity(0.6),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'No messages yet',
+                style: AppTheme.blackTextStyle.copyWith(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Start a conversation with someone\nto see your messages here',
+                style: AppTheme.greyTextStyle.copyWith(
+                  fontSize: 14,
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildErrorWidget(String? error) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.error_outline,
-            size: 64,
-            color: AppColors.greyColor.withOpacity(0.5),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            error ?? 'Failed to load conversations',
-            style: AppTheme.greyTextStyle.copyWith(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _loadConversations,
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(120, 48),
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.redColor.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Icon(
+                Icons.error_outline_rounded,
+                size: 36,
+                color: AppColors.redColor.withOpacity(0.6),
               ),
             ),
-            child: const Text('Try Again'),
-          ),
-        ],
+            const SizedBox(height: 24),
+            Text(
+              'Something went wrong',
+              style: AppTheme.blackTextStyle.copyWith(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error ?? 'Failed to load conversations',
+              style: AppTheme.greyTextStyle.copyWith(
+                fontSize: 14,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: _loadConversations,
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: const Text('Try Again'),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(140, 46),
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                elevation: 0,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -180,8 +234,8 @@ class _InboxPageState extends State<InboxPage> {
     });
 
     for (final conv in sortedConversations) {
-      final isBot = conv.name.toLowerCase() == 'Clique' ||
-          conv.username.toLowerCase() == 'Clique';
+      final isBot = conv.name.toLowerCase() == 'clique' ||
+          conv.username.toLowerCase() == 'clique';
       final latestCachedMessage = _latestCachedMessage(
         conv.id,
         ownerId: ownerId,
@@ -195,7 +249,7 @@ class _InboxPageState extends State<InboxPage> {
         name: conv.name,
         message: displayMessage.isNotEmpty
             ? displayMessage
-            : (isBot ? 'Welcome to Clique! 🤖' : 'No messages yet'),
+            : (isBot ? 'Welcome to Clique! 👋' : 'No messages yet'),
         time: _formatTimestamp(displayTime),
         avatar: conv.avatar,
         isUnread: conv.unreadCount > 0,
@@ -294,23 +348,35 @@ class _InboxPageState extends State<InboxPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.chat_bubble_outline,
-              size: 64,
-              color: AppColors.greyColor.withOpacity(0.5),
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Icon(
+                Icons.chat_bubble_outline_rounded,
+                size: 40,
+                color: AppColors.primary.withOpacity(0.6),
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             Text(
-              'No conversations yet',
-              style: AppTheme.greyTextStyle.copyWith(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
+              'No messages yet',
+              style: AppTheme.blackTextStyle.copyWith(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Start a conversation with someone!',
-              style: AppTheme.greyTextStyle.copyWith(fontSize: 14),
+              'Start a conversation with someone\nto see your messages here',
+              style: AppTheme.greyTextStyle.copyWith(
+                fontSize: 14,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -318,7 +384,7 @@ class _InboxPageState extends State<InboxPage> {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       physics: const BouncingScrollPhysics(),
       itemCount: conversations.length,
       itemBuilder: (context, index) {
@@ -331,36 +397,66 @@ class _InboxPageState extends State<InboxPage> {
   Widget _buildMessageItem(BuildContext context, _ChatMessage message) {
     final firstLetter =
         message.name.isNotEmpty ? message.name[0].toUpperCase() : 'U';
-    final isBot = message.name.toLowerCase() == 'Clique';
+    final isBot = message.name.toLowerCase() == 'clique';
 
     return Dismissible(
       key: Key(message.id),
       direction: DismissDirection.endToStart,
       background: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
-          color: AppColors.redColor,
-          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            colors: [
+              AppColors.redColor.withOpacity(0.9),
+              AppColors.redColor,
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
         ),
         alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        child: const Icon(Icons.delete_outline, color: AppColors.white),
+        padding: const EdgeInsets.only(right: 24),
+        child: const Icon(
+          Icons.delete_outline_rounded, 
+          color: AppColors.white,
+          size: 24,
+        ),
       ),
       confirmDismiss: (direction) async {
         return await showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Delete Conversation'),
-            content: Text('Delete conversation with ${message.name}?'),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: Text(
+              'Delete Conversation',
+              style: AppTheme.blackTextStyle.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: Text(
+              'Are you sure you want to delete the conversation with ${message.name}?',
+              style: AppTheme.greyTextStyle,
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
+                child: Text(
+                  'Cancel',
+                  style: AppTheme.greyTextStyle,
+                ),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: const Text('Delete',
-                    style: TextStyle(color: AppColors.red)),
+                child: Text(
+                  'Delete',
+                  style: TextStyle(
+                    color: AppColors.redColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ],
           ),
@@ -369,8 +465,25 @@ class _InboxPageState extends State<InboxPage> {
       onDismissed: (direction) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Conversation with ${message.name} deleted'),
+            content: Row(
+              children: [
+                const Icon(Icons.delete_outline_rounded, 
+                  color: AppColors.white, 
+                  size: 18,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Conversation with ${message.name} deleted',
+                  style: TextStyle(color: AppColors.text),
+                ),
+              ],
+            ),
             backgroundColor: AppColors.card,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
           ),
         );
       },
@@ -396,22 +509,32 @@ class _InboxPageState extends State<InboxPage> {
           }
         },
         child: Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          padding: const EdgeInsets.all(10),
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: message.isUnread
-                ? AppColors.primary.withOpacity(0.05)
-                : AppColors.transparent,
-            borderRadius: BorderRadius.circular(16),
-            border: message.isUnread
-                ? Border.all(
-                    color: AppColors.primary.withOpacity(0.15),
-                    width: 1,
-                  )
-                : null,
+                ? AppColors.primary.withOpacity(0.04)
+                : AppColors.card,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: message.isUnread
+                  ? AppColors.primary.withOpacity(0.12)
+                  : Colors.transparent,
+              width: 1,
+            ),
+            boxShadow: message.isUnread
+                ? [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.06),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : [],
           ),
           child: Row(
             children: [
+              // Avatar
               Stack(
                 children: [
                   Container(
@@ -421,10 +544,18 @@ class _InboxPageState extends State<InboxPage> {
                       shape: BoxShape.circle,
                       border: Border.all(
                         color: message.isUnread
-                            ? AppColors.primary
-                            : AppColors.greyColor.withOpacity(0.3),
+                            ? AppColors.primary.withOpacity(0.3)
+                            : Colors.transparent,
                         width: 2,
                       ),
+                      boxShadow: [
+                        if (message.isUnread)
+                          BoxShadow(
+                            color: AppColors.primary.withOpacity(0.15),
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                          ),
+                      ],
                     ),
                     child: ClipOval(
                       child: _buildAvatar(message, firstLetter),
@@ -441,109 +572,142 @@ class _InboxPageState extends State<InboxPage> {
                           shape: BoxShape.circle,
                           color: AppColors.greenColor,
                           border: Border.all(
-                            color: AppColors.white,
-                            width: 2,
+                            color: AppColors.card,
+                            width: 2.5,
                           ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.greenColor.withOpacity(0.3),
+                              blurRadius: 4,
+                            ),
+                          ],
                         ),
                       ),
                     ),
                 ],
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
+              
+              // Content
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Text(
-                          message.name,
-                          style: AppTheme.blackTextStyle.copyWith(
-                            fontWeight: message.isUnread
-                                ? FontWeight.w700
-                                : FontWeight.w600,
-                            fontSize: 16,
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  message.name,
+                                  style: AppTheme.blackTextStyle.copyWith(
+                                    fontWeight: message.isUnread
+                                        ? FontWeight.w800
+                                        : FontWeight.w600,
+                                    fontSize: 15,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (isBot) ...[
+                                const SizedBox(width: 4),
+                                Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.secondary,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Icon(
+                                    Icons.check_rounded,
+                                    size: 10,
+                                    color: AppColors.white,
+                                  ),
+                                ),
+                              ],
+                              if (message.isPinned) ...[
+                                const SizedBox(width: 6),
+                                Icon(
+                                  Icons.push_pin_rounded,
+                                  size: 14,
+                                  color: AppColors.primary.withOpacity(0.7),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
-                        if (isBot) ...[
-                          const SizedBox(width: 5),
-                          Icon(
-                            Icons.verified,
-                            size: 15,
-                            opticalSize: 4,
-                            color: AppColors.secondary,
-                          ),
-                        ],
-                        const Spacer(),
+                        const SizedBox(width: 8),
                         Text(
                           message.time,
-                          style: AppTheme.blackTextStyle.copyWith(
+                          style: TextStyle(
                             fontSize: 11,
+                            fontWeight: FontWeight.w600,
                             color: message.isUnread
                                 ? AppColors.primary
-                                : AppColors.greyColor,
-                            fontWeight: message.isUnread
-                                ? FontWeight.w500
-                                : FontWeight.w400,
+                                : AppColors.textSecondary,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 5),
                     Row(
                       children: [
                         if (message.isMuted)
                           Padding(
                             padding: const EdgeInsets.only(right: 4),
                             child: Icon(
-                              Icons.notifications_off,
+                              Icons.notifications_off_rounded,
                               size: 14,
-                              color: AppColors.greyColor,
-                            ),
-                          ),
-                        if (message.isPinned)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 4),
-                            child: Icon(
-                              Icons.push_pin,
-                              size: 14,
-                              color: AppColors.primary,
+                              color: AppColors.textSecondary.withOpacity(0.6),
                             ),
                           ),
                         Expanded(
                           child: Text(
                             message.message,
-                            style: AppTheme.blackTextStyle.copyWith(
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              height: 1.3,
+                              color: message.isUnread
+                                  ? AppColors.text
+                                  : AppColors.textSecondary,
                               fontWeight: message.isUnread
                                   ? FontWeight.w500
                                   : FontWeight.w400,
-                              fontSize: 14,
-                              color: message.isUnread
-                                  ? AppColors.blackColor
-                                  : AppColors.greyColor,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if (message.unreadCount > 0)
+                        if (message.unreadCount > 0) ...[
+                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
+                              horizontal: 7,
+                              vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(8),
                               color: AppColors.primary,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primary.withOpacity(0.3),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
                             child: Text(
-                              '${message.unreadCount}',
+                              message.unreadCount > 99
+                                  ? '99+'
+                                  : '${message.unreadCount}',
                               style: AppTheme.whiteTextStyle.copyWith(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ),
+                        ],
                       ],
                     ),
                   ],
@@ -557,33 +721,46 @@ class _InboxPageState extends State<InboxPage> {
   }
 
   Widget _buildAvatar(_ChatMessage message, String firstLetter) {
-    if (message.name.toLowerCase() == 'Clique') {
+    if (message.name.toLowerCase() == 'clique') {
       return Container(
-        width: 56,
-        height: 56,
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [AppColors.primary, AppColors.secondary],
+            colors: [
+              AppColors.primary,
+              AppColors.secondary,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
         ),
         child: Center(
           child: Text(
             'C',
             style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
               color: AppColors.white,
+              letterSpacing: -0.5,
             ),
           ),
         ),
       );
     }
 
-    if (message.avatar.isNotEmpty) {
+    if (message.avatar.isNotEmpty && message.avatar.startsWith('http')) {
       return CachedNetworkImage(
         imageUrl: message.avatar,
         fit: BoxFit.cover,
         errorWidget: (_, __, ___) => _avatarFallback(firstLetter),
+        placeholder: (_, __) => Container(
+          color: AppColors.primary.withOpacity(0.05),
+          child: Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppColors.primary.withOpacity(0.3),
+            ),
+          ),
+        ),
       );
     }
 
@@ -592,19 +769,24 @@ class _InboxPageState extends State<InboxPage> {
 
   Widget _avatarFallback(String text) {
     return Container(
-      width: 56,
-      height: 56,
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: AppColors.primary.withOpacity(0.1),
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary.withOpacity(0.12),
+            AppColors.primary.withOpacity(0.06),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
       child: Center(
         child: Text(
           text,
           style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
             color: AppColors.primary,
+            letterSpacing: -0.2,
           ),
         ),
       ),
