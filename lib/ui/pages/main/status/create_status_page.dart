@@ -634,12 +634,11 @@ class _CreateStatusPageState extends State<CreateStatusPage>
                   icon: Icons.photo_library_rounded,
                   title: 'Choose from Gallery',
                   subtitle: 'Select photos or videos',
-                  onTap: () =>
-                      _pickMedia(ImageSource.gallery, mediaType: 'image'),
+                  onTap: _showGalleryMediaTypePicker,
                 ),
                 _MediaPickerOption(
                   icon: Icons.videocam_rounded,
-                  title: 'Record Video',
+                  title: 'Choose Video',
                   subtitle: 'Capture a video clip',
                   onTap: () =>
                       _pickMedia(ImageSource.gallery, mediaType: 'video'),
@@ -660,9 +659,50 @@ class _CreateStatusPageState extends State<CreateStatusPage>
     );
   }
 
-  Future<void> _pickMedia(ImageSource source,
-      {required String mediaType}) async {
+  void _showGalleryMediaTypePicker() {
     Navigator.pop(context);
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.image_outlined),
+                  title: const Text('Photo'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickMedia(ImageSource.gallery,
+                        mediaType: 'image', closeSheet: false);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.videocam_outlined),
+                  title: const Text('Video'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickMedia(ImageSource.gallery,
+                        mediaType: 'video', closeSheet: false);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickMedia(ImageSource source,
+      {required String mediaType, bool closeSheet = true}) async {
+    if (closeSheet) Navigator.pop(context);
 
     try {
       final XFile? pickedFile = mediaType == 'video'

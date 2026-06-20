@@ -146,6 +146,8 @@ class AppTheme {
       elevation: 0,
     ),
     snackBarTheme: SnackBarThemeData(
+      backgroundColor: AppColors.card,
+      behavior: SnackBarBehavior.floating,
       contentTextStyle: GoogleFonts.poppins(
         color: AppColors.text,
         fontSize: 14,
@@ -279,6 +281,8 @@ class AppTheme {
       elevation: 0,
     ),
     snackBarTheme: SnackBarThemeData(
+      backgroundColor: AppColors.card,
+      behavior: SnackBarBehavior.floating,
       contentTextStyle: GoogleFonts.poppins(
         color: AppColors.text,
         fontSize: 14,

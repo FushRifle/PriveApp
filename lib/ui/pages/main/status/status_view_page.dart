@@ -9,6 +9,7 @@ import 'package:clique/bloc/status/stories_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/ui/widgets/common/effect_text.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:video_player/video_player.dart';
 
 class StatusViewPage extends StatefulWidget {
   final List<Story> stories;
@@ -180,7 +181,13 @@ class _StatusViewPageState extends State<StatusViewPage>
       ),
     );
 
+    final storiesBloc = _storiesBlocOrNull();
+    if (storiesBloc == null) {
+      return _buildViewer(_stories);
+    }
+
     return BlocListener<StoriesBloc, StoriesState>(
+      bloc: storiesBloc,
       listenWhen: (previous, current) {
         return previous.stories != current.stories;
       },
@@ -343,12 +350,16 @@ class _StatusViewPageState extends State<StatusViewPage>
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (mediaUrl != null)
+            if (mediaUrl != null && hasImage)
               Positioned.fill(
                 child: Image(
                   image: _getImageProvider(mediaUrl),
                   fit: BoxFit.contain,
                 ),
+              ),
+            if (mediaUrl != null && hasVideo)
+              Positioned.fill(
+                child: _StatusVideoPlayer(url: mediaUrl),
               ),
             Center(
               child: Padding(
@@ -825,6 +836,7 @@ class _StatusViewPageState extends State<StatusViewPage>
       await _statusService.replyToStory(
         storyId: story.id,
         content: trimmed,
+        receiverId: story.userId,
       );
       _replaceCurrentStory(
         story.copyWith(replyCount: story.replyCount + 1),
@@ -845,6 +857,7 @@ class _StatusViewPageState extends State<StatusViewPage>
             'Failed to send reply',
             style: TextStyle(color: AppColors.text),
           ),
+          backgroundColor: AppColors.card,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -1057,6 +1070,104 @@ class _StatusViewPageState extends State<StatusViewPage>
     } catch (_) {
       return null;
     }
+  }
+}
+
+class _StatusVideoPlayer extends StatefulWidget {
+  final String url;
+
+  const _StatusVideoPlayer({required this.url});
+
+  @override
+  State<_StatusVideoPlayer> createState() => _StatusVideoPlayerState();
+}
+
+class _StatusVideoPlayerState extends State<_StatusVideoPlayer> {
+  VideoPlayerController? _controller;
+  bool _isReady = false;
+  bool _hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initialize();
+  }
+
+  @override
+  void didUpdateWidget(covariant _StatusVideoPlayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url) {
+      _disposeController();
+      _initialize();
+    }
+  }
+
+  @override
+  void dispose() {
+    _disposeController();
+    super.dispose();
+  }
+
+  Future<void> _initialize() async {
+    if (widget.url.trim().isEmpty) return;
+
+    final controller = widget.url.startsWith('http')
+        ? VideoPlayerController.networkUrl(Uri.parse(widget.url))
+        : VideoPlayerController.asset(widget.url);
+    _controller = controller;
+
+    try {
+      await controller.initialize();
+      await controller.setLooping(true);
+      await controller.setVolume(0);
+      await controller.play();
+      if (!mounted || _controller != controller) {
+        await controller.dispose();
+        return;
+      }
+      setState(() {
+        _isReady = true;
+        _hasError = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _hasError = true);
+    }
+  }
+
+  Future<void> _disposeController() async {
+    final controller = _controller;
+    _controller = null;
+    _isReady = false;
+    await controller?.pause();
+    await controller?.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = _controller;
+    if (_hasError) {
+      return const Center(
+        child: Icon(Icons.videocam_off_outlined, color: AppColors.white),
+      );
+    }
+    if (!_isReady || controller == null) {
+      return const Center(
+        child: CircularProgressIndicator(
+          color: AppColors.white,
+          strokeWidth: 2,
+        ),
+      );
+    }
+
+    return FittedBox(
+      fit: BoxFit.contain,
+      child: SizedBox(
+        width: controller.value.size.width,
+        height: controller.value.size.height,
+        child: VideoPlayer(controller),
+      ),
+    );
   }
 }
 

@@ -101,14 +101,16 @@ class UnlikeStoryEvent extends StoriesEvent {
 class ReplyToStoryEvent extends StoriesEvent {
   final String storyId;
   final String content;
+  final int? receiverId;
 
   const ReplyToStoryEvent({
     required this.storyId,
     required this.content,
+    this.receiverId,
   });
 
   @override
-  List<Object?> get props => [storyId, content];
+  List<Object?> get props => [storyId, content, receiverId];
 }
 
 class ReshareStoryEvent extends StoriesEvent {

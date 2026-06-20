@@ -271,6 +271,9 @@ class _SecurityGateState extends State<_SecurityGate>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      if (mounted) {
+        setState(() => _isUnlocked = false);
+      }
       _bootstrap(forcePrompt: true);
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
@@ -390,12 +393,10 @@ class _SecurityGateState extends State<_SecurityGate>
           });
         }
       },
-      child: _isLoading && !_isUnlocked
-          ? Scaffold(
-              backgroundColor: AppColors.backgroundColor,
-              body: const Center(
-                child: CircularProgressIndicator(),
-              ),
+      child: _isLoading || !_isUnlocked
+          ? _LockedAppPlaceholder(
+              isLoading: _isLoading,
+              onUnlock: () => _bootstrap(forcePrompt: true),
             )
           : widget.child,
     );
@@ -407,6 +408,32 @@ class _SecurityGateState extends State<_SecurityGate>
     if (raw is int) return raw;
     if (raw is num) return raw.toInt();
     return int.tryParse(raw?.toString() ?? '');
+  }
+}
+
+class _LockedAppPlaceholder extends StatelessWidget {
+  final bool isLoading;
+  final VoidCallback onUnlock;
+
+  const _LockedAppPlaceholder({
+    required this.isLoading,
+    required this.onUnlock,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.backgroundColor,
+      body: Center(
+        child: isLoading
+            ? const CircularProgressIndicator()
+            : FilledButton.icon(
+                onPressed: onUnlock,
+                icon: const Icon(Icons.lock_outline),
+                label: const Text('Unlock'),
+              ),
+      ),
+    );
   }
 }
 

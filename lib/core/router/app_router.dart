@@ -12,6 +12,7 @@ import 'package:clique/bloc/reels/reel_bloc.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
 import 'package:clique/bloc/community/community_bloc.dart';
 import 'package:clique/bloc/event/event_bloc.dart';
+import 'package:clique/bloc/feedback/feedback_bloc.dart';
 import 'package:clique/bloc/settings/settings_bloc.dart';
 
 import 'package:clique/ui/pages/auth/demographic_page.dart';
@@ -52,6 +53,7 @@ import 'package:clique/ui/pages/main/status/edit_status_page.dart';
 import 'package:clique/ui/pages/main/status/status_page.dart';
 
 import 'package:clique/ui/pages/settings/settings_page.dart';
+import 'package:clique/ui/pages/settings/feedback_page.dart';
 import 'package:clique/ui/pages/settings/subscribe_page.dart';
 
 import 'package:clique/ui/pages/Clique/about_page.dart';
@@ -328,6 +330,14 @@ class AppRouter {
           BlocProvider(
             create: (_) => SettingsBloc(),
             child: const SettingsPage(),
+          ),
+        );
+
+      case NamedRoutes.feedbackScreen:
+        return _page(
+          BlocProvider(
+            create: (_) => FeedbackBloc(),
+            child: const FeedbackPage(),
           ),
         );
 

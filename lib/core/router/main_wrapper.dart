@@ -115,8 +115,10 @@ class _MainWrapperState extends State<MainWrapper>
         _pulseController.forward().then((_) => _pulseController.reverse()));
 
     try {
+      if (!mounted) return;
       final created = await Navigator.of(context).push<bool>(
         MaterialPageRoute(
+          settings: const RouteSettings(name: 'create_post_from_main_wrapper'),
           builder: (_) => BlocProvider.value(
             value: _feedBloc,
             child: const CreatePostPage(),
@@ -449,47 +451,53 @@ class _CreateButton extends StatelessWidget {
       builder: (context, child) {
         return Transform.scale(
           scale: pulseAnimation.value,
-          child: Material(
-            color: Colors.transparent,
-            shape: const CircleBorder(),
-            child: InkResponse(
-              onTap: onTap,
-              radius: 36,
-              containedInkWell: true,
-              customBorder: const CircleBorder(),
-              child: Container(
-                width: 58,
-                height: 58,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.primary,
-                      AppColors.primary.withOpacity(0.8),
-                    ],
-                  ),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withOpacity(0.4),
-                      blurRadius: 12,
-                      spreadRadius: 2,
-                      offset: const Offset(0, 4),
+          child: SizedBox(
+            width: 74,
+            height: 74,
+            child: Center(
+              child: Material(
+                color: Colors.transparent,
+                shape: const CircleBorder(),
+                child: InkResponse(
+                  onTap: onTap,
+                  radius: 42,
+                  containedInkWell: true,
+                  customBorder: const CircleBorder(),
+                  child: Container(
+                    width: 58,
+                    height: 58,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppColors.primary,
+                          AppColors.primary.withOpacity(0.8),
+                        ],
+                      ),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.4),
+                          blurRadius: 12,
+                          spreadRadius: 2,
+                          offset: const Offset(0, 4),
+                        ),
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.2),
+                          blurRadius: 20,
+                          spreadRadius: 1,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
-                    BoxShadow(
-                      color: AppColors.primary.withOpacity(0.2),
-                      blurRadius: 20,
-                      spreadRadius: 1,
-                      offset: const Offset(0, 8),
+                    child: const Center(
+                      child: Icon(
+                        Icons.add_rounded,
+                        size: 32,
+                        color: Colors.white,
+                      ),
                     ),
-                  ],
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.add_rounded,
-                    size: 32,
-                    color: Colors.white,
                   ),
                 ),
               ),

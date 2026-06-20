@@ -55,8 +55,7 @@ class MessageBubble extends StatelessWidget {
                 onLongPress: () => _showMessageOptions(context),
                 onHorizontalDragEnd: (details) {
                   final velocity = details.primaryVelocity ?? 0;
-                  final shouldReply =
-                      isMe ? velocity < -180 : velocity > 180;
+                  final shouldReply = isMe ? velocity < -180 : velocity > 180;
                   if (shouldReply) {
                     onReply?.call();
                   }
@@ -79,6 +78,10 @@ class MessageBubble extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (message.sourceType == 'story' ||
+                          message.sourceType == 'status' ||
+                          message.messageType == 'status_reply')
+                        _buildStatusReplyPreview(isMe),
                       if (message.replyToId != null) _buildReplyPreview(isMe),
                       _buildMessageContent(isMe, context, otherTextColor),
                       const SizedBox(height: 4),
@@ -90,6 +93,49 @@ class MessageBubble extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildStatusReplyPreview(bool isMe) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: isMe
+            ? AppColors.white.withOpacity(0.14)
+            : AppColors.primary.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isMe
+              ? AppColors.white.withOpacity(0.22)
+              : AppColors.primary.withOpacity(0.25),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.bolt_rounded,
+            size: 14,
+            color: isMe ? AppColors.white : AppColors.primary,
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              message.sourcePreview?.trim().isNotEmpty == true
+                  ? 'Replied to status: ${message.sourcePreview}'
+                  : 'Replied to status',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: isMe ? AppColors.white : AppColors.primary,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

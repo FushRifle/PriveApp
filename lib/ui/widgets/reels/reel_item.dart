@@ -465,7 +465,13 @@ class _ReelItemState extends State<ReelItem>
 
     if (_isReposted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Already reposted')),
+        SnackBar(
+          content: Text(
+            'Already reposted',
+            style: TextStyle(color: AppColors.text),
+          ),
+          backgroundColor: AppColors.card,
+        ),
       );
       return;
     }
@@ -587,6 +593,7 @@ class _ReelItemState extends State<ReelItem>
           content.isEmpty ? 'Reel reposted' : 'Reel reposted with caption',
           style: TextStyle(color: AppColors.text),
         ),
+        backgroundColor: AppColors.card,
       ),
     );
   }
@@ -602,25 +609,22 @@ class _ReelItemState extends State<ReelItem>
     });
 
     try {
-      try {
-        final friendsBloc = context.read<FriendsBloc>();
-        if (nextFollowing) {
-          friendsBloc.add(FollowUser(userId: _userId));
-        } else {
-          friendsBloc.add(UnfollowUser(userId: _userId));
-        }
-      } catch (_) {
-        if (nextFollowing) {
-          await FriendsService().followUser(_userId);
-        } else {
-          await FriendsService().unfollowUser(_userId);
-        }
+      if (nextFollowing) {
+        await FriendsService().followUser(_userId);
+      } else {
+        await FriendsService().unfollowUser(_userId);
       }
+      if (!mounted) return;
+      try {
+        context.read<FriendsBloc>().add(LoadFollowStats());
+      } catch (_) {}
     } catch (error) {
       if (!mounted) return;
       final message = error.toString().toLowerCase();
       if (nextFollowing &&
-          (message.contains('already') || message.contains('exists'))) {
+          (message.contains('already') ||
+              message.contains('exists') ||
+              message.contains('following'))) {
         setState(() => _isFollowing = true);
         return;
       }
@@ -633,7 +637,7 @@ class _ReelItemState extends State<ReelItem>
             error.toString(),
             style: TextStyle(color: AppColors.text),
           ),
-          backgroundColor: AppColors.red,
+          backgroundColor: AppColors.card,
         ),
       );
     } finally {
@@ -776,7 +780,7 @@ class _ReelItemState extends State<ReelItem>
           message,
           style: TextStyle(color: AppColors.text),
         ),
-        backgroundColor: isError ? AppColors.red : null,
+        backgroundColor: AppColors.card,
         behavior: SnackBarBehavior.floating,
       ),
     );

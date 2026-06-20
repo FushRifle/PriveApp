@@ -115,11 +115,19 @@ class StatusService {
   Future<Map<String, dynamic>?> replyToStory({
     required String storyId,
     required String content,
+    int? receiverId,
   }) async {
     try {
       final response = await _api.post(
         '/api/stories/$storyId/replies',
-        data: {'content': content},
+        data: {
+          'content': content,
+          'message': content,
+          'messageType': 'text',
+          'sourceType': 'story',
+          'storyId': storyId,
+          if (receiverId != null && receiverId > 0) 'receiverId': receiverId,
+        },
       );
       if (response.data is Map<String, dynamic>) {
         return Map<String, dynamic>.from(response.data);

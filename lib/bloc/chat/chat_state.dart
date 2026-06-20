@@ -136,6 +136,9 @@ class MessageModel {
   final int? replyToId;
   final String? replyToMessage;
   final String? replyToSender;
+  final String? sourceType;
+  final String? sourceId;
+  final String? sourcePreview;
   final bool isRead;
   final bool isOwn;
   final DateTime createdAt;
@@ -152,6 +155,9 @@ class MessageModel {
     this.replyToId,
     this.replyToMessage,
     this.replyToSender,
+    this.sourceType,
+    this.sourceId,
+    this.sourcePreview,
     required this.isRead,
     required this.isOwn,
     required this.createdAt,
@@ -161,8 +167,9 @@ class MessageModel {
     return MessageModel(
       id: json['id'] ?? 0,
       conversationId: json['conversationId'] ?? json['conversation_id'] ?? 0,
-      streamMessageId:
-          json['streamMessageId'] ?? json['stream_message_id'] ?? json['streamId'],
+      streamMessageId: json['streamMessageId'] ??
+          json['stream_message_id'] ??
+          json['streamId'],
       senderId: json['senderId'] ?? json['sender_id'] ?? 0,
       receiverId: json['receiverId'] ?? json['receiver_id'] ?? 0,
       message: json['message'] ?? '',
@@ -171,6 +178,9 @@ class MessageModel {
       replyToId: json['replyToId'] ?? json['reply_to_id'],
       replyToMessage: json['replyToMessage'] ?? json['reply_to_message'],
       replyToSender: json['replyToSender'] ?? json['reply_to_sender'],
+      sourceType: json['sourceType'] ?? json['source_type'],
+      sourceId: (json['sourceId'] ?? json['source_id'])?.toString(),
+      sourcePreview: json['sourcePreview'] ?? json['source_preview'],
       isRead: json['isRead'] ?? json['is_read'] ?? false,
       isOwn: json['isOwn'] ?? false,
       createdAt: DateTime.parse(json['createdAt'] ?? json['created_at']),
@@ -190,6 +200,9 @@ class MessageModel {
       'replyToId': replyToId,
       'replyToMessage': replyToMessage,
       'replyToSender': replyToSender,
+      'sourceType': sourceType,
+      'sourceId': sourceId,
+      'sourcePreview': sourcePreview,
       'isRead': isRead,
       'isOwn': isOwn,
       'createdAt': createdAt.toIso8601String(),
@@ -208,6 +221,9 @@ class MessageModel {
     int? replyToId,
     String? replyToMessage,
     String? replyToSender,
+    String? sourceType,
+    String? sourceId,
+    String? sourcePreview,
     bool? isRead,
     bool? isOwn,
     DateTime? createdAt,
@@ -224,6 +240,9 @@ class MessageModel {
       replyToId: replyToId ?? this.replyToId,
       replyToMessage: replyToMessage ?? this.replyToMessage,
       replyToSender: replyToSender ?? this.replyToSender,
+      sourceType: sourceType ?? this.sourceType,
+      sourceId: sourceId ?? this.sourceId,
+      sourcePreview: sourcePreview ?? this.sourcePreview,
       isRead: isRead ?? this.isRead,
       isOwn: isOwn ?? this.isOwn,
       createdAt: createdAt ?? this.createdAt,

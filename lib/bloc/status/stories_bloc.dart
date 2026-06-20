@@ -260,10 +260,12 @@ class StoriesBloc extends Bloc<StoriesEvent, StoriesState> {
     ));
 
     try {
-      await _statusService.replyToStory(
+      final reply = await _statusService.replyToStory(
         storyId: event.storyId,
         content: event.content,
+        receiverId: event.receiverId,
       );
+      emit(state.copyWith(lastReply: reply, clearError: true));
     } catch (e) {
       emit(state.copyWith(stories: previousStories, error: e.toString()));
     }

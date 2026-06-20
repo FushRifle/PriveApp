@@ -78,17 +78,23 @@ class _NotificationItemState extends State<NotificationItem> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Notification deleted'),
-          backgroundColor: AppColors.green,
+        SnackBar(
+          content: Text(
+            'Notification deleted',
+            style: TextStyle(color: AppColors.text),
+          ),
+          backgroundColor: AppColors.card,
           duration: Duration(seconds: 2),
         ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to delete: $e'),
-          backgroundColor: AppColors.red,
+          content: Text(
+            'Failed to delete: $e',
+            style: TextStyle(color: AppColors.text),
+          ),
+          backgroundColor: AppColors.card,
         ),
       );
     }
@@ -102,17 +108,23 @@ class _NotificationItemState extends State<NotificationItem> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Group notifications deleted'),
-          backgroundColor: AppColors.green,
+        SnackBar(
+          content: Text(
+            'Group notifications deleted',
+            style: TextStyle(color: AppColors.text),
+          ),
+          backgroundColor: AppColors.card,
           duration: Duration(seconds: 2),
         ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to delete group: $e'),
-          backgroundColor: AppColors.red,
+          content: Text(
+            'Failed to delete group: $e',
+            style: TextStyle(color: AppColors.text),
+          ),
+          backgroundColor: AppColors.card,
         ),
       );
     }
@@ -309,7 +321,7 @@ class _NotificationItemState extends State<NotificationItem> {
           message,
           style: TextStyle(color: AppColors.text),
         ),
-        backgroundColor: isError ? AppColors.red : AppColors.green,
+        backgroundColor: AppColors.card,
         behavior: SnackBarBehavior.floating,
       ),
     );

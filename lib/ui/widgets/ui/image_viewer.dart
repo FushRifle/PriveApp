@@ -217,7 +217,11 @@ class _ImageViewerState extends State<ImageViewer> {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text(message),
+          content: Text(
+            message,
+            style: TextStyle(color: AppColors.text),
+          ),
+          backgroundColor: AppColors.card,
           behavior: SnackBarBehavior.floating,
         ),
       );

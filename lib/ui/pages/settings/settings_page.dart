@@ -340,6 +340,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           _divider(isDark),
                           _tile(
                             isDark: isDark,
+                            icon: Icons.feedback_outlined,
+                            title: 'Feedback',
+                            subtitle: 'Report bugs or share ideas',
+                            onTap: () {
+                              Navigator.pushNamed(
+                                context,
+                                NamedRoutes.feedbackScreen,
+                              );
+                            },
+                          ),
+                          _divider(isDark),
+                          _tile(
+                            isDark: isDark,
                             icon: Icons.description_outlined,
                             title: 'Terms of Service',
                             subtitle: 'Read our policies',

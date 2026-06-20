@@ -44,6 +44,7 @@ class NamedRoutes {
 
   // Settings routes
   static const settingsScreen = '/settings-screen';
+  static const feedbackScreen = '/feedback-screen';
   static const subscribeScreen = '/subscribe-screen';
   static const notificationScreen = '/notification-screen';
   static const String aboutScreen = '/about';
