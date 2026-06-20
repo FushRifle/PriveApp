@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'package:clique/app/configs/colors.dart';
+
 enum ComposerTokenType {
   mention,
   hashtag,
@@ -21,6 +23,45 @@ class ComposerTokenSuggestion {
 
 typedef ComposerTokenSuggestionsBuilder = Future<List<ComposerTokenSuggestion>>
     Function(ComposerTokenType type, String query);
+
+class HighlightTokenTextEditingController extends TextEditingController {
+  HighlightTokenTextEditingController({super.text});
+
+  static final RegExp _tokenPattern = RegExp(r'([#@][A-Za-z0-9_]+)');
+
+  @override
+  TextSpan buildTextSpan({
+    required BuildContext context,
+    TextStyle? style,
+    required bool withComposing,
+  }) {
+    final children = <TextSpan>[];
+    var lastIndex = 0;
+
+    for (final match in _tokenPattern.allMatches(text)) {
+      if (match.start > lastIndex) {
+        children.add(
+          TextSpan(text: text.substring(lastIndex, match.start), style: style),
+        );
+      }
+
+      children.add(
+        TextSpan(
+          text: match.group(0),
+          style: style?.copyWith(color: AppColors.primary) ??
+              TextStyle(color: AppColors.primary),
+        ),
+      );
+      lastIndex = match.end;
+    }
+
+    if (lastIndex < text.length) {
+      children.add(TextSpan(text: text.substring(lastIndex), style: style));
+    }
+
+    return TextSpan(style: style, children: children);
+  }
+}
 
 class TokenSuggestionField extends StatefulWidget {
   final TextEditingController controller;
@@ -122,7 +163,8 @@ class _TokenSuggestionFieldState extends State<TokenSuggestionField> {
     final cursor = selection.start.clamp(0, text.length);
     final beforeCursor = text.substring(0, cursor);
 
-    final match = RegExp(r'(^|\s)([@#])([A-Za-z0-9_]*)$').firstMatch(beforeCursor);
+    final match =
+        RegExp(r'(^|\s)([@#])([A-Za-z0-9_]*)$').firstMatch(beforeCursor);
     if (match == null) {
       _clearSuggestions();
       return;
@@ -130,9 +172,8 @@ class _TokenSuggestionFieldState extends State<TokenSuggestionField> {
 
     final token = match.group(2);
     final query = match.group(3) ?? '';
-    final type = token == '@'
-        ? ComposerTokenType.mention
-        : ComposerTokenType.hashtag;
+    final type =
+        token == '@' ? ComposerTokenType.mention : ComposerTokenType.hashtag;
 
     if (!widget.supportedTokenTypes.contains(type)) {
       _clearSuggestions();
@@ -155,7 +196,9 @@ class _TokenSuggestionFieldState extends State<TokenSuggestionField> {
             await widget.suggestionsBuilder(currentType, _activeQuery);
 
         if (!mounted) return;
-        if (widget.controller.text.substring(0, widget.controller.selection.start).isEmpty &&
+        if (widget.controller.text
+                .substring(0, widget.controller.selection.start)
+                .isEmpty &&
             suggestions.isEmpty) {
           return;
         }
@@ -197,7 +240,8 @@ class _TokenSuggestionFieldState extends State<TokenSuggestionField> {
     final updatedText = text.replaceRange(safeStart, safeEnd, replacement);
     widget.controller.value = TextEditingValue(
       text: updatedText,
-      selection: TextSelection.collapsed(offset: safeStart + replacement.length),
+      selection:
+          TextSelection.collapsed(offset: safeStart + replacement.length),
     );
 
     _clearSuggestions();

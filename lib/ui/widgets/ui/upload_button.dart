@@ -32,7 +32,7 @@ class CloudinaryUploadButton extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('${_getTypeName()} uploaded successfully!'),
-              backgroundColor: AppColors.green,
+              backgroundColor: AppColors.card,
             ),
           );
         } else if (state.status == UploadStatus.error) {
@@ -40,7 +40,7 @@ class CloudinaryUploadButton extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.errorMessage ?? 'Upload failed'),
-              backgroundColor: AppColors.red,
+              backgroundColor: AppColors.card,
             ),
           );
         }

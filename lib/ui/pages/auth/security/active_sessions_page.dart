@@ -59,9 +59,9 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
               });
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Session logged out'),
-                  backgroundColor: AppColors.green,
+                SnackBar(
+                  content: const Text('Session logged out'),
+                  backgroundColor: AppColors.card,
                 ),
               );
             },
@@ -92,9 +92,9 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
               });
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Logged out from all other devices'),
-                  backgroundColor: AppColors.green,
+                SnackBar(
+                  content: const Text('Logged out from all other devices'),
+                  backgroundColor: AppColors.card,
                 ),
               );
             },

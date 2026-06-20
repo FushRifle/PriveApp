@@ -108,7 +108,7 @@ class _ChatPageState extends State<ChatPage>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? AppColors.red : AppColors.green,
+        backgroundColor: AppColors.card,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -344,17 +344,17 @@ class _ChatPageState extends State<ChatPage>
     }
 
     context.read<ChatBloc>().add(
-            SendMessage(
-              conversationId: widget.conversationId,
-              receiverId: widget.userId,
-              message: text.trim(),
-              messageType: 'text',
-              replyToId: _replyingTo?.id,
-              replyToMessage: _replyingTo?.message,
-              replyToSender: _replyingTo?.isOwn == true ? 'You' : widget.userName,
-              replyToStreamMessageId:
-                  _replyingTo?.streamMessageId ?? _replyingTo?.id.toString(),
-            ),
+          SendMessage(
+            conversationId: widget.conversationId,
+            receiverId: widget.userId,
+            message: text.trim(),
+            messageType: 'text',
+            replyToId: _replyingTo?.id,
+            replyToMessage: _replyingTo?.message,
+            replyToSender: _replyingTo?.isOwn == true ? 'You' : widget.userName,
+            replyToStreamMessageId:
+                _replyingTo?.streamMessageId ?? _replyingTo?.id.toString(),
+          ),
         );
 
     setState(() {
@@ -427,14 +427,14 @@ class _ChatPageState extends State<ChatPage>
                 default:
                   messageText = 'Sent a file';
               }
-                context.read<ChatBloc>().add(SendMessage(
+              context.read<ChatBloc>().add(SendMessage(
                     conversationId: widget.conversationId,
                     receiverId: widget.userId,
                     message: messageText,
                     messageType: state.uploadType!.name,
                     mediaUrl: state.uploadedUrl,
-                    replyToStreamMessageId:
-                        _replyingTo?.streamMessageId ?? _replyingTo?.id.toString(),
+                    replyToStreamMessageId: _replyingTo?.streamMessageId ??
+                        _replyingTo?.id.toString(),
                   ));
               _scrollToBottom();
             },
@@ -529,8 +529,7 @@ class _ChatPageState extends State<ChatPage>
                   if (isUploading) _buildUploadProgress(),
                   if (_buildTypingIndicator(state))
                     _buildTypingIndicatorWidget(),
-                  if (_hasMessageLimit)
-                    _buildMessageLimitBanner(messages),
+                  if (_hasMessageLimit) _buildMessageLimitBanner(messages),
                   if (_showDraftSaved &&
                       _messageController.text.trim().isNotEmpty)
                     _buildDraftSavedIndicator(),
@@ -544,9 +543,9 @@ class _ChatPageState extends State<ChatPage>
                     onPickImage: () => _pickImage(ImageSource.gallery),
                     onPickCamera: () => _pickImage(ImageSource.camera),
                     onPickVideo: _pickVideo,
-                  onPickDocument: _pickDocument,
-                  onSendVoice: (file) => _sendMedia(file, UploadType.audio),
-                ),
+                    onPickDocument: _pickDocument,
+                    onSendVoice: (file) => _sendMedia(file, UploadType.audio),
+                  ),
                 ],
               ),
             );
@@ -995,5 +994,5 @@ class _ChatPageState extends State<ChatPage>
     return isDark
         ? 'assets/wallpapers/galaxy.png'
         : 'assets/wallpapers/modern.png';
-}
+  }
 }

@@ -55,7 +55,7 @@ class _InsightsPageState extends State<InsightsPage>
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(state.error!),
-                      backgroundColor: AppColors.red,
+                      backgroundColor: AppColors.card,
                     ),
                   );
                   context.read<InsightsBloc>().add(ClearInsightsError());

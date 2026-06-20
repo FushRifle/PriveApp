@@ -104,7 +104,7 @@ class _FriendsListPageState extends State<FriendsListPage>
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.error!),
-                backgroundColor: AppColors.red,
+                backgroundColor: AppColors.card,
               ),
             );
             context.read<FriendsBloc>().add(ClearFriendsError());

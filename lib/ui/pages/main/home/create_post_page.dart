@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
@@ -5,6 +6,7 @@ import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/core/clients/cloudinary_service.dart';
 import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/core/services/media_service.dart';
+import 'package:clique/core/services/tagging/tagging_service.dart';
 import 'package:clique/core/services/user/user_service.dart';
 import 'package:clique/core/models/create_post_models.dart';
 import 'package:clique/core/router/named_routes.dart';
@@ -30,8 +32,10 @@ class CreatePostPage extends StatefulWidget {
 }
 
 class _CreatePostPageState extends State<CreatePostPage> {
-  final TextEditingController _textController = TextEditingController();
-  final TextEditingController _hashtagController = TextEditingController();
+  final TextEditingController _textController =
+      HighlightTokenTextEditingController();
+  final TextEditingController _hashtagController =
+      HighlightTokenTextEditingController();
   final List<TextEditingController> _pollOptionControllers = [
     TextEditingController(),
     TextEditingController(),
@@ -41,6 +45,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
   final CloudinaryService _cloudinaryService = CloudinaryService();
   final MediaService _mediaService = MediaService();
   final UserService _userService = UserService();
+  final TaggingService _taggingService = TaggingService();
 
   final List<MediaItem> _mediaItems = [];
   final List<String> _hashtags = [];
@@ -709,18 +714,20 @@ class _CreatePostPageState extends State<CreatePostPage> {
         ),
       );
 
-      final created = await _waitForPostCreation(
+      final createdPost = await _waitForPostCreation(
         feedBloc,
         initialPostIds,
       );
 
-      if (!created) {
+      if (createdPost == null) {
         if (!mounted) return;
         setState(() {
           _isSubmitting = false;
         });
         return;
       }
+
+      unawaited(_syncUserTags('post', createdPost.id, content));
 
       _showSnackBar('Post created successfully');
 
@@ -797,12 +804,12 @@ class _CreatePostPageState extends State<CreatePostPage> {
         ),
       );
 
-      final created = await _waitForPostCreation(
+      final createdPost = await _waitForPostCreation(
         feedBloc,
         initialPostIds,
       );
 
-      if (!created) {
+      if (createdPost == null) {
         if (!mounted) return;
         setState(() {
           _isSubmitting = false;
@@ -810,6 +817,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
         });
         return;
       }
+
+      unawaited(_syncUserTags('post', createdPost.id, content));
 
       _showSnackBar('Post created successfully');
 
@@ -870,7 +879,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
     });
   }
 
-  Future<bool> _waitForPostCreation(
+  Future<FeedPost?> _waitForPostCreation(
     FeedBloc feedBloc,
     Set<int> initialPostIds,
   ) async {
@@ -878,29 +887,57 @@ class _CreatePostPageState extends State<CreatePostPage> {
       (state) => !state.isCreatingPost,
     );
 
-    if (!mounted) return false;
+    if (!mounted) return null;
 
     if (completedState.generalError != null) {
       _showSnackBar(
         completedState.generalError!,
         isError: true,
       );
-      return false;
+      return null;
     }
 
-    final hasNewPost = completedState.posts.any(
-      (post) => !initialPostIds.contains(post.id),
-    );
+    final newPosts = completedState.posts
+        .where((post) => !initialPostIds.contains(post.id))
+        .toList();
 
-    if (!hasNewPost) {
+    if (newPosts.isEmpty) {
       _showSnackBar(
         'Post created, but the feed did not update.',
         isError: true,
       );
-      return false;
+      return null;
     }
 
-    return true;
+    return newPosts.first;
+  }
+
+  Future<void> _syncUserTags(
+    String contentType,
+    int contentId,
+    String content,
+  ) async {
+    final usernames = _extractMentions(content);
+    if (usernames.isEmpty) return;
+
+    try {
+      await _taggingService.syncUserTags(
+        contentType: contentType,
+        contentId: contentId,
+        usernames: usernames,
+      );
+    } catch (e) {
+      debugPrint('User tag sync skipped: $e');
+    }
+  }
+
+  List<String> _extractMentions(String rawValue) {
+    final seen = <String>{};
+    return RegExp(r'@([A-Za-z0-9_]+)')
+        .allMatches(rawValue)
+        .map((match) => match.group(1)?.toLowerCase() ?? '')
+        .where((username) => username.isNotEmpty && seen.add(username))
+        .toList();
   }
 
   void _showSnackBar(
@@ -914,7 +951,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? AppColors.red : AppColors.green,
+        backgroundColor: AppColors.card,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),

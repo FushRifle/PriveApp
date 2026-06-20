@@ -7,7 +7,6 @@ import 'package:clique/ui/widgets/common/app_page_header.dart';
 import 'package:clique/ui/widgets/notification/notification_utils.dart';
 import 'package:clique/ui/widgets/notification/notification_list.dart';
 
-
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
 
@@ -34,12 +33,12 @@ class _NotificationPageState extends State<NotificationPage> {
         page: 1,
         pageSize: 20,
       );
-      
+
       if (!mounted) return;
-      
+
       final notifications = (response['notifications'] as List? ?? [])
           .cast<Map<String, dynamic>>();
-      
+
       setState(() {
         _notifications = notifications;
         _groupedNotifications = _groupNotifications(notifications);
@@ -116,26 +115,26 @@ class _NotificationPageState extends State<NotificationPage> {
     try {
       await _notificationService.markAllAsRead();
       if (!mounted) return;
-      
+
       setState(() {
         for (var notification in _notifications) {
           notification['isUnread'] = false;
         }
         _groupedNotifications = _groupNotifications(_notifications);
       });
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('All notifications marked as read'),
-          backgroundColor: AppColors.green,
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: const Text('All notifications marked as read'),
+          backgroundColor: AppColors.card,
+          duration: const Duration(seconds: 2),
         ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to mark all as read: $e'),
-          backgroundColor: AppColors.red,
+          backgroundColor: AppColors.card,
         ),
       );
     }

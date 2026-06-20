@@ -13,7 +13,6 @@ import 'package:clique/bloc/status/stories_bloc.dart';
 import 'package:clique/bloc/community/community_bloc.dart';
 import 'package:clique/bloc/event/event_bloc.dart';
 import 'package:clique/bloc/feedback/feedback_bloc.dart';
-import 'package:clique/bloc/settings/settings_bloc.dart';
 
 import 'package:clique/ui/pages/auth/demographic_page.dart';
 import 'package:clique/ui/pages/auth/onboarding_page.dart';
@@ -53,7 +52,7 @@ import 'package:clique/ui/pages/main/status/edit_status_page.dart';
 import 'package:clique/ui/pages/main/status/status_page.dart';
 
 import 'package:clique/ui/pages/settings/settings_page.dart';
-import 'package:clique/ui/pages/settings/feedback_page.dart';
+import 'package:clique/ui/pages/clique/feedback_page.dart';
 import 'package:clique/ui/pages/settings/subscribe_page.dart';
 
 import 'package:clique/ui/pages/Clique/about_page.dart';
@@ -327,10 +326,7 @@ class AppRouter {
 
       case NamedRoutes.settingsScreen:
         return _page(
-          BlocProvider(
-            create: (_) => SettingsBloc(),
-            child: const SettingsPage(),
-          ),
+          const SettingsPage(),
         );
 
       case NamedRoutes.feedbackScreen:
@@ -393,7 +389,7 @@ class AppRouter {
             ? _readInt(args['userId'])
             : _readInt(settings.arguments);
         final verifyOnly = args is Map && args['verifyOnly'] == true;
-        return _page(
+        return _page<bool?>(
           LockScreenPage(
             userId: userId > 0 ? userId : null,
             verifyOnly: verifyOnly,
@@ -429,10 +425,10 @@ class AppRouter {
     }
   }
 
-  static PageRoute _page(
+  static PageRoute<T> _page<T>(
     Widget child,
   ) {
-    return MaterialPageRoute(
+    return MaterialPageRoute<T>(
       builder: (_) => child,
     );
   }

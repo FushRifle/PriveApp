@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -11,6 +12,8 @@ import 'package:video_player/video_player.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/reels/reel_bloc.dart';
 import 'package:clique/core/clients/cloudinary_service.dart';
+import 'package:clique/core/services/tagging/tagging_service.dart';
+import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
 
 class CreateReelPage extends StatefulWidget {
   const CreateReelPage({
@@ -22,12 +25,14 @@ class CreateReelPage extends StatefulWidget {
 }
 
 class _CreateReelPageState extends State<CreateReelPage> {
-  final TextEditingController _captionController = TextEditingController();
+  final TextEditingController _captionController =
+      HighlightTokenTextEditingController();
   final TextEditingController _musicController = TextEditingController();
 
   final ImagePicker _imagePicker = ImagePicker();
 
   final CloudinaryService _cloudinaryService = CloudinaryService();
+  final TaggingService _taggingService = TaggingService();
 
   File? _selectedVideoFile;
 
@@ -84,6 +89,18 @@ class _CreateReelPageState extends State<CreateReelPage> {
           },
           listener: (context, state) {
             if (state.status == ReelStatus.created) {
+              final createdReel =
+                  state.reels.isNotEmpty ? state.reels.first : null;
+              final reelId = _readId(createdReel);
+              if (reelId != null) {
+                unawaited(
+                  _syncUserTags(
+                    'reel',
+                    reelId,
+                    _captionController.text,
+                  ),
+                );
+              }
               _showSnackBar('Reel uploaded successfully');
 
               if (!mounted) return;
@@ -690,11 +707,49 @@ class _CreateReelPageState extends State<CreateReelPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? AppColors.red : AppColors.green,
+        backgroundColor: AppColors.card,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),
     );
+  }
+
+  int? _readId(dynamic value) {
+    if (value is Map) {
+      final raw = value['id'] ?? value['_id'];
+      if (raw is int) return raw;
+      if (raw is num) return raw.toInt();
+      return int.tryParse(raw?.toString() ?? '');
+    }
+    return null;
+  }
+
+  Future<void> _syncUserTags(
+    String contentType,
+    int contentId,
+    String content,
+  ) async {
+    final usernames = _extractMentions(content);
+    if (usernames.isEmpty) return;
+
+    try {
+      await _taggingService.syncUserTags(
+        contentType: contentType,
+        contentId: contentId,
+        usernames: usernames,
+      );
+    } catch (e) {
+      debugPrint('Reel user tag sync skipped: $e');
+    }
+  }
+
+  List<String> _extractMentions(String rawValue) {
+    final seen = <String>{};
+    return RegExp(r'@([A-Za-z0-9_]+)')
+        .allMatches(rawValue)
+        .map((match) => match.group(1)?.toLowerCase() ?? '')
+        .where((username) => username.isNotEmpty && seen.add(username))
+        .toList();
   }
 }
 

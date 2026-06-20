@@ -540,7 +540,7 @@ class _RegisterPageState extends State<RegisterPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? AppColors.redColor : AppColors.greenColor,
+        backgroundColor: AppColors.card,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),

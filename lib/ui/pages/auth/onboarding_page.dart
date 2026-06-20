@@ -1,10 +1,11 @@
-import 'package:clique/app/configs/colors.dart';
-import 'package:clique/app/configs/theme.dart';
-import 'package:clique/core/router/named_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:introduction_screen/introduction_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/configs/theme.dart';
+import 'package:clique/core/router/named_routes.dart';
 
 class OnboardingPage extends StatefulWidget {
   final String completionRoute;
@@ -26,7 +27,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   late final List<PageViewModel> _pages = [
     PageViewModel(
       titleWidget: const _IntroTitle(
-        title: 'Share what actually feels real',
+        title: 'Share what actually\nfeels real',
       ),
       bodyWidget: const _IntroBody(
         text:
@@ -39,15 +40,15 @@ class _OnboardingPageState extends State<OnboardingPage> {
       ),
       decoration: const PageDecoration(
         pageColor: Color(0xFF0F1119),
-        imagePadding: EdgeInsets.only(top: 24),
-        titlePadding: EdgeInsets.only(top: 16, bottom: 12),
-        bodyPadding: EdgeInsets.symmetric(horizontal: 24),
+        imagePadding: EdgeInsets.only(top: 20),
+        titlePadding: EdgeInsets.only(top: 20, bottom: 14),
+        bodyPadding: EdgeInsets.symmetric(horizontal: 32),
         pageMargin: EdgeInsets.zero,
       ),
     ),
     PageViewModel(
       titleWidget: const _IntroTitle(
-        title: 'Find your people faster',
+        title: 'Find your people\nfaster',
       ),
       bodyWidget: const _IntroBody(
         text:
@@ -60,15 +61,15 @@ class _OnboardingPageState extends State<OnboardingPage> {
       ),
       decoration: const PageDecoration(
         pageColor: Color(0xFF101827),
-        imagePadding: EdgeInsets.only(top: 24),
-        titlePadding: EdgeInsets.only(top: 16, bottom: 12),
-        bodyPadding: EdgeInsets.symmetric(horizontal: 24),
+        imagePadding: EdgeInsets.only(top: 20),
+        titlePadding: EdgeInsets.only(top: 20, bottom: 14),
+        bodyPadding: EdgeInsets.symmetric(horizontal: 32),
         pageMargin: EdgeInsets.zero,
       ),
     ),
     PageViewModel(
       titleWidget: const _IntroTitle(
-        title: 'Keep the vibe moving',
+        title: 'Keep the vibe\nmoving',
       ),
       bodyWidget: const _IntroBody(
         text:
@@ -81,9 +82,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
       ),
       decoration: const PageDecoration(
         pageColor: Color(0xFF12111A),
-        imagePadding: EdgeInsets.only(top: 24),
-        titlePadding: EdgeInsets.only(top: 16, bottom: 12),
-        bodyPadding: EdgeInsets.symmetric(horizontal: 24),
+        imagePadding: EdgeInsets.only(top: 20),
+        titlePadding: EdgeInsets.only(top: 20, bottom: 14),
+        bodyPadding: EdgeInsets.symmetric(horizontal: 32),
         pageMargin: EdgeInsets.zero,
       ),
     ),
@@ -105,7 +106,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     if (_isNavigating) return;
     _isNavigating = true;
 
-    HapticFeedback.lightImpact();
+    HapticFeedback.mediumImpact();
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_onboardingKey, true);
@@ -131,38 +132,76 @@ class _OnboardingPageState extends State<OnboardingPage> {
         showBackButton: false,
         showNextButton: true,
         showDoneButton: true,
-        skip: Text(
-          'Skip',
-          style: AppTheme.whiteTextStyle.copyWith(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
+        skip: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            'Skip',
+            style: AppTheme.whiteTextStyle.copyWith(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.white.withOpacity(0.8),
+            ),
           ),
         ),
-        next: const Icon(
-          Icons.arrow_forward_rounded,
-          color: Colors.white,
+        next: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.arrow_forward_rounded,
+            color: Colors.white,
+            size: 22,
+          ),
         ),
-        done: Text(
-          'Get started',
-          style: AppTheme.whiteTextStyle.copyWith(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
+        done: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.3),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Text(
+            'Get started',
+            style: AppTheme.whiteTextStyle.copyWith(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
+            ),
           ),
         ),
         onDone: _completeOnboarding,
         onSkip: _skipToEnd,
         curve: Curves.easeOutCubic,
         dotsDecorator: DotsDecorator(
-          size: const Size.square(7),
-          activeSize: const Size(22, 7),
+          size: const Size.square(6),
+          activeSize: const Size(24, 6),
           activeColor: AppColors.primary,
-          color: Colors.white.withOpacity(0.18),
-          spacing: const EdgeInsets.symmetric(horizontal: 3),
+          color: Colors.white.withOpacity(0.15),
+          spacing: const EdgeInsets.symmetric(horizontal: 4),
           activeShape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(99),
           ),
         ),
-        controlsPadding: const EdgeInsets.fromLTRB(24, 14, 24, 28),
+        controlsPadding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
         nextFlex: 0,
       ),
     );
@@ -178,14 +217,17 @@ class _IntroTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      title,
-      textAlign: TextAlign.center,
-      style: AppTheme.whiteTextStyle.copyWith(
-        fontSize: 28,
-        fontWeight: FontWeight.w800,
-        letterSpacing: -0.4,
-        height: 1.1,
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Text(
+        title,
+        textAlign: TextAlign.center,
+        style: AppTheme.whiteTextStyle.copyWith(
+          fontSize: 32,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.5,
+          height: 1.15,
+        ),
       ),
     );
   }
@@ -200,13 +242,17 @@ class _IntroBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      textAlign: TextAlign.center,
-      style: AppTheme.greyTextStyle.copyWith(
-        color: Colors.white.withOpacity(0.72),
-        fontSize: 15,
-        height: 1.55,
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: AppTheme.greyTextStyle.copyWith(
+          color: Colors.white.withOpacity(0.65),
+          fontSize: 16,
+          height: 1.6,
+          letterSpacing: 0.1,
+        ),
       ),
     );
   }
@@ -226,22 +272,27 @@ class _IntroArtwork extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: AspectRatio(
-        aspectRatio: 0.92,
+        aspectRatio: 0.88,
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(32),
+            borderRadius: BorderRadius.circular(28),
             boxShadow: [
               BoxShadow(
-                color: accent.withOpacity(0.26),
-                blurRadius: 28,
-                offset: const Offset(0, 14),
+                color: accent.withOpacity(0.2),
+                blurRadius: 32,
+                offset: const Offset(0, 16),
+              ),
+              BoxShadow(
+                color: accent.withOpacity(0.1),
+                blurRadius: 48,
+                offset: const Offset(0, 24),
               ),
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(32),
+            borderRadius: BorderRadius.circular(28),
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -249,6 +300,7 @@ class _IntroArtwork extends StatelessWidget {
                   imagePath,
                   fit: BoxFit.cover,
                 ),
+                // Gradient overlay
                 DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -256,58 +308,114 @@ class _IntroArtwork extends StatelessWidget {
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.transparent,
-                        Colors.black.withOpacity(0.15),
-                        Colors.black.withOpacity(0.55),
+                        Colors.black.withOpacity(0.08),
+                        Colors.black.withOpacity(0.45),
+                        Colors.black.withOpacity(0.7),
+                      ],
+                      stops: const [0.0, 0.4, 0.75, 1.0],
+                    ),
+                  ),
+                ),
+                // Badge chip
+                Positioned(
+                  top: 16,
+                  left: 16,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.15),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: accent,
+                            boxShadow: [
+                              BoxShadow(
+                                color: accent.withOpacity(0.6),
+                                blurRadius: 6,
+                                spreadRadius: 1,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          badge,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
                       ],
                     ),
                   ),
                 ),
+                // Info card at bottom
                 Positioned(
-                  top: 18,
-                  left: 18,
+                  left: 14,
+                  right: 14,
+                  bottom: 14,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 7,
-                    ),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.36),
-                      borderRadius: BorderRadius.circular(999),
+                      color: Colors.black.withOpacity(0.45),
+                      borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.12),
+                        color: Colors.white.withOpacity(0.08),
+                        width: 1,
                       ),
-                    ),
-                    child: Text(
-                      badge,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 18,
-                  right: 18,
-                  bottom: 18,
-                  child: Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.36),
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.1),
-                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.15),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Row(
                       children: [
                         Container(
-                          width: 42,
-                          height: 42,
+                          width: 44,
+                          height: 44,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: accent.withOpacity(0.9),
+                            gradient: LinearGradient(
+                              colors: [
+                                accent.withOpacity(0.9),
+                                accent.withOpacity(0.7),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: accent.withOpacity(0.3),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
                           ),
                           child: const Icon(
                             Icons.auto_awesome_rounded,
@@ -315,14 +423,15 @@ class _IntroArtwork extends StatelessWidget {
                             size: 20,
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 14),
                         Expanded(
                           child: Text(
                             'Built for quick posts, story moments, and real conversation.',
                             style: AppTheme.whiteTextStyle.copyWith(
                               fontSize: 12,
-                              height: 1.35,
-                              fontWeight: FontWeight.w600,
+                              height: 1.4,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white.withOpacity(0.9),
                             ),
                           ),
                         ),

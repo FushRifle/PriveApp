@@ -17,7 +17,6 @@ import 'package:cloudinary_url_gen/cloudinary.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/router/auth_guard.dart';
-import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/app/configs/api_config.dart';
 import 'package:clique/core/services/security/app_lock_service.dart';
@@ -25,11 +24,13 @@ import 'package:clique/core/services/security/app_lock_service.dart';
 import 'package:clique/core/providers/theme_provider.dart';
 import 'package:clique/bloc/cloudinary/cloudinary_cubit.dart';
 import 'package:clique/bloc/profile/profile_bloc.dart';
+import 'package:clique/bloc/settings/settings_bloc.dart';
 import 'package:clique/bloc/subscription/feature_access_cubit.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/core/local_cache/local_cache_service.dart';
 import 'package:clique/core/services/notification/push_notification_service.dart';
 import 'package:clique/firebase_options.dart';
+import 'package:clique/ui/pages/auth/security/unlock_page.dart';
 
 import 'package:clique/core/router/app_router.dart';
 
@@ -175,6 +176,9 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
         BlocProvider(
           create: (_) => FeatureAccessCubit(),
         ),
+        BlocProvider(
+          create: (_) => SettingsBloc(),
+        ),
       ],
       child: Builder(
         builder: (context) {
@@ -193,6 +197,10 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
                 unawaited(
                     StreamChatService.instance.connect().catchError((_) {}));
                 final userID = state.user?['id']?.toString() ?? '';
+                final userId = int.tryParse(userID);
+                context.read<SettingsBloc>().add(
+                      LoadSettings(userId: userId, silent: true),
+                    );
                 context.read<FeatureAccessCubit>()
                   ..load()
                   ..configureRevenueCat(userID);
@@ -252,6 +260,8 @@ class _SecurityGateState extends State<_SecurityGate>
   bool _isLoading = true;
   bool _isUnlocked = false;
   bool _isPrompting = false;
+  int? _lockUserId;
+  AppLockSettings? _lockSettings;
 
   @override
   void initState() {
@@ -302,7 +312,11 @@ class _SecurityGateState extends State<_SecurityGate>
       }
 
       final userId = _currentUserId();
-      final settings = await _resolveAppLockSettings(userId);
+      final settingsBloc = context.read<SettingsBloc>();
+      settingsBloc.add(LoadSettings(userId: userId, silent: true));
+      final settingsState = settingsBloc.state;
+
+      final settings = await _resolveAppLockSettings(userId, settingsState);
       if (!mounted) return;
 
       if (_isLoading) {
@@ -312,6 +326,8 @@ class _SecurityGateState extends State<_SecurityGate>
       if (!settings.enabled) {
         setState(() {
           _isUnlocked = true;
+          _lockUserId = userId;
+          _lockSettings = settings;
         });
 
         unawaited(
@@ -334,17 +350,12 @@ class _SecurityGateState extends State<_SecurityGate>
       }
 
       _isPrompting = true;
-      final unlocked = await Navigator.of(context).pushNamed<bool>(
-        NamedRoutes.lockScreenScreen,
-        arguments: {
-          'userId': userId,
-          'verifyOnly': true,
-        },
-      );
       if (!mounted) return;
 
       setState(() {
-        _isUnlocked = unlocked == true;
+        _lockUserId = userId;
+        _lockSettings = settings;
+        _isUnlocked = false;
       });
 
       unawaited(
@@ -358,47 +369,113 @@ class _SecurityGateState extends State<_SecurityGate>
     }
   }
 
-  Future<AppLockSettings> _resolveAppLockSettings(int? userId) async {
+  Future<AppLockSettings> _resolveAppLockSettings(
+    int? userId,
+    SettingsState settingsState,
+  ) async {
     final cached = await widget.appLockService.loadCached(userId: userId);
+    final mergedCached = _mergeSettingsLock(settingsState, cached);
 
-    if (cached.enabled) {
+    if (mergedCached.enabled) {
       unawaited(
-        widget.appLockService.load(userId: userId).catchError((_) => cached),
+        widget.appLockService
+            .load(userId: userId)
+            .catchError((_) => mergedCached),
       );
-      return cached;
+      return mergedCached;
     }
 
     try {
-      return await widget.appLockService.load(userId: userId);
+      final remoteOrCached = await widget.appLockService.load(userId: userId);
+      return _mergeSettingsLock(settingsState, remoteOrCached);
     } catch (_) {
-      return cached;
+      return mergedCached;
     }
+  }
+
+  AppLockSettings _mergeSettingsLock(
+    SettingsState settingsState,
+    AppLockSettings cached,
+  ) {
+    return AppLockSettings(
+      enabled: settingsState.appLockEnabled ?? cached.enabled,
+      biometricEnabled:
+          settingsState.appLockBiometricEnabled ?? cached.biometricEnabled,
+      pinEnabled: settingsState.appLockPinEnabled ?? cached.pinEnabled,
+      timeoutSeconds:
+          settingsState.appLockTimeoutSeconds ?? cached.timeoutSeconds,
+      pin: cached.pin,
+    );
+  }
+
+  Future<void> _applySettingsState(SettingsState settingsState) async {
+    final authState = context.read<AuthBloc>().state;
+    if (!authState.isAuthenticated || authState.token == null) return;
+    if (settingsState.appLockEnabled == null) return;
+
+    final userId = _currentUserId();
+    final cached = await widget.appLockService.loadCached(userId: userId);
+    if (!mounted) return;
+
+    final settings = _mergeSettingsLock(settingsState, cached);
+    setState(() {
+      _isLoading = false;
+      _isUnlocked = !settings.enabled;
+      _lockUserId = userId;
+      _lockSettings = settings;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
-      listenWhen: (previous, current) {
-        return previous.status != current.status ||
-            previous.token != current.token ||
-            previous.user != current.user;
-      },
-      listener: (context, state) {
-        if (state.status == AuthStatus.authenticated) {
-          _bootstrap(forcePrompt: true);
-        } else if (state.status == AuthStatus.unauthenticated) {
-          setState(() {
-            _isLoading = false;
-            _isUnlocked = true;
-          });
-        }
-      },
-      child: _isLoading || !_isUnlocked
-          ? _LockedAppPlaceholder(
-              isLoading: _isLoading,
-              onUnlock: () => _bootstrap(forcePrompt: true),
-            )
-          : widget.child,
+    final shouldShowUnlockPage = !_isUnlocked && _lockSettings?.enabled == true;
+
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<AuthBloc, AuthState>(
+          listenWhen: (previous, current) {
+            return previous.status != current.status ||
+                previous.token != current.token ||
+                previous.user != current.user;
+          },
+          listener: (context, state) {
+            if (state.status == AuthStatus.authenticated) {
+              _bootstrap(forcePrompt: true);
+            } else if (state.status == AuthStatus.unauthenticated) {
+              setState(() {
+                _isLoading = false;
+                _isUnlocked = true;
+              });
+            }
+          },
+        ),
+        BlocListener<SettingsBloc, SettingsState>(
+          listenWhen: (previous, current) {
+            return previous.appLockEnabled != current.appLockEnabled ||
+                previous.appLockBiometricEnabled !=
+                    current.appLockBiometricEnabled ||
+                previous.appLockPinEnabled != current.appLockPinEnabled ||
+                previous.appLockTimeoutSeconds != current.appLockTimeoutSeconds;
+          },
+          listener: (context, state) {
+            unawaited(_applySettingsState(state));
+          },
+        ),
+      ],
+      child: _isLoading
+          ? const _SecurityLoadingPlaceholder()
+          : shouldShowUnlockPage
+              ? AppUnlockPage(
+                  isLoading: _isLoading,
+                  userId: _lockUserId,
+                  settings: _lockSettings,
+                  appLockService: widget.appLockService,
+                  onUnlocked: () {
+                    if (!mounted) return;
+                    setState(() => _isUnlocked = true);
+                  },
+                )
+              : widget.child,
     );
   }
 
@@ -411,27 +488,17 @@ class _SecurityGateState extends State<_SecurityGate>
   }
 }
 
-class _LockedAppPlaceholder extends StatelessWidget {
-  final bool isLoading;
-  final VoidCallback onUnlock;
-
-  const _LockedAppPlaceholder({
-    required this.isLoading,
-    required this.onUnlock,
-  });
+class _SecurityLoadingPlaceholder extends StatelessWidget {
+  const _SecurityLoadingPlaceholder();
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: AppColors.backgroundColor,
-      body: Center(
-        child: isLoading
-            ? const CircularProgressIndicator()
-            : FilledButton.icon(
-                onPressed: onUnlock,
-                icon: const Icon(Icons.lock_outline),
-                label: const Text('Unlock'),
-              ),
+      backgroundColor: isDark ? AppColors.darkBackground : AppColors.background,
+      body: const Center(
+        child: CircularProgressIndicator(),
       ),
     );
   }

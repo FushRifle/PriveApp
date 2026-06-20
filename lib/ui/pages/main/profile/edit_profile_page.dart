@@ -464,8 +464,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? AppColors.red : AppColors.green,
+        content: Text(
+          message,
+          style: TextStyle(color: AppColors.text),
+        ),
+        backgroundColor: AppColors.card,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),

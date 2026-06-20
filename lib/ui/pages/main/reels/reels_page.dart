@@ -62,7 +62,7 @@ class _ReelsPageState extends State<ReelsPage> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.error!),
-                backgroundColor: AppColors.red,
+                backgroundColor: AppColors.card,
               ),
             );
             context.read<ReelBloc>().add(ClearReelError());

@@ -206,7 +206,7 @@ class _StoryViewerState extends State<StoryViewer>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Reply sent to ${_currentStory.user.name}'),
-        backgroundColor: AppColors.primary,
+        backgroundColor: AppColors.card,
         duration: const Duration(seconds: 1),
       ),
     );
@@ -252,7 +252,7 @@ class _StoryViewerState extends State<StoryViewer>
               ? 'Liked ${story.user.name}\'s story'
               : 'Removed like from ${story.user.name}\'s story',
         ),
-        backgroundColor: AppColors.primary,
+        backgroundColor: AppColors.card,
         duration: const Duration(seconds: 1),
       ),
     );
@@ -276,7 +276,7 @@ class _StoryViewerState extends State<StoryViewer>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Reshared ${story.user.name}\'s story'),
-        backgroundColor: AppColors.primary,
+        backgroundColor: AppColors.card,
         duration: const Duration(seconds: 1),
       ),
     );

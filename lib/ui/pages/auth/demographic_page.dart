@@ -190,7 +190,7 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
     );
 
     return Scaffold(
-      backgroundColor: AppColors.white,
+      backgroundColor: AppColors.background,
       body: BlocConsumer<ProfileBloc, ProfileState>(
         listener: (context, state) {
           if (_isSavingDemographics && state.status == ProfileStatus.success) {
@@ -289,9 +289,8 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
           height: 8,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(4),
-            color: _currentPage == index
-                ? AppColors.primary
-                : AppColors.grey.shade300,
+            color:
+                _currentPage == index ? AppColors.primary : AppColors.secondary,
           ),
         );
       }),
@@ -343,7 +342,7 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
   Widget _buildAvatarSection() {
     return _buildFormCard(
       icon: Icons.face,
-      iconColors: [AppColors.purple, AppColors.pink],
+      iconColors: [AppColors.secondary, AppColors.primary],
       title: 'Profile Picture',
       child: Column(
         children: [
@@ -385,7 +384,7 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
   Widget _buildCoverSection() {
     return _buildFormCard(
       icon: Icons.photo,
-      iconColors: [AppColors.blue, AppColors.cyan],
+      iconColors: [AppColors.secondary, AppColors.primary],
       title: 'Cover Photo',
       child: GestureDetector(
         onTap: _showCoverPicker,
@@ -394,7 +393,7 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
           width: double.infinity,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.grey.shade200),
+            border: Border.all(color: AppColors.border),
             image: _selectedCoverUrl != null
                 ? DecorationImage(
                     image: CachedNetworkImageProvider(_selectedCoverUrl!),
@@ -1134,11 +1133,12 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
       lastDate: DateTime.now().subtract(const Duration(days: 365 * 18)),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.light(
-            primary: AppColors.primary,
-            onPrimary: AppColors.white,
-            surface: AppColors.white,
-          ),
+          colorScheme: Theme.of(context).colorScheme.copyWith(
+                primary: AppColors.primary,
+                onPrimary: AppColors.white,
+                surface: AppColors.card,
+                onSurface: AppColors.text,
+              ),
         ),
         child: child!,
       ),
@@ -1240,7 +1240,7 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: AppColors.redColor,
+        backgroundColor: AppColors.card,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),

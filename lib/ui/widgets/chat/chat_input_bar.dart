@@ -173,7 +173,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(error.toString()),
-          backgroundColor: AppColors.red,
+          backgroundColor: AppColors.card,
         ),
       );
     }

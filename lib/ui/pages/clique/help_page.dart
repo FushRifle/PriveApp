@@ -370,10 +370,10 @@ class HelpPage extends StatelessWidget {
               if (controller.text.isNotEmpty) {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
+                  SnackBar(
+                    content: const Text(
                         'Thank you for your report! We\'ll review it shortly.'),
-                    backgroundColor: AppColors.green,
+                    backgroundColor: AppColors.card,
                   ),
                 );
               }

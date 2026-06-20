@@ -1,4 +1,10 @@
+import 'dart:io';
+
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:photo_manager/photo_manager.dart';
 import 'package:video_player/video_player.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
@@ -20,10 +26,12 @@ class VideoViewer extends StatefulWidget {
 }
 
 class _VideoViewerState extends State<VideoViewer> {
+  final Dio _dio = Dio();
   late VideoPlayerController _controller;
   bool _isInitialized = false;
   bool _isPlaying = true;
   bool _hasError = false;
+  bool _isSaving = false;
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
 
@@ -162,6 +170,35 @@ class _VideoViewerState extends State<VideoViewer> {
               ),
             ),
 
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 16,
+              right: 16,
+              child: GestureDetector(
+                onTap: _isSaving ? null : _saveVideo,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.black.withOpacity(0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.white,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.download_rounded,
+                          color: AppColors.white,
+                          size: 24,
+                        ),
+                ),
+              ),
+            ),
+
             // Play/Pause Overlay Button
             if (_isInitialized && !_isPlaying)
               Positioned.fill(
@@ -289,5 +326,71 @@ class _VideoViewerState extends State<VideoViewer> {
         ),
       ),
     );
+  }
+
+  Future<void> _saveVideo() async {
+    if (_isSaving) return;
+
+    setState(() => _isSaving = true);
+
+    try {
+      if (kIsWeb) {
+        _showSnackBar('Saving videos is not supported on web');
+        return;
+      }
+
+      final permission = await PhotoManager.requestPermissionExtend(
+        requestOption: const PermissionRequestOption(
+          iosAccessLevel: IosAccessLevel.addOnly,
+        ),
+      );
+      if (!permission.isAuth) {
+        _showSnackBar('Photo access is required to save videos');
+        return;
+      }
+
+      final file = await _downloadVideo();
+      await PhotoManager.editor.saveVideo(
+        file,
+        title: file.uri.pathSegments.last,
+      );
+      _showSnackBar('Saved to gallery');
+    } catch (_) {
+      _showSnackBar('Unable to save video');
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  Future<File> _downloadVideo() async {
+    final tempDir = await getTemporaryDirectory();
+    final file = File(
+      '${tempDir.path}/clique_${DateTime.now().microsecondsSinceEpoch}.mp4',
+    );
+
+    await _dio.downloadUri(Uri.parse(widget.videoUrl), file.path);
+    if (!await file.exists() || await file.length() == 0) {
+      throw StateError('Video download failed');
+    }
+    return file;
+  }
+
+  void _showSnackBar(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            message,
+            style: TextStyle(color: AppColors.text),
+          ),
+          backgroundColor: AppColors.card,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
   }
 }

@@ -333,7 +333,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
             Expanded(child: Text(message)),
           ],
         ),
-        backgroundColor: isError ? AppColors.red : AppColors.green,
+        backgroundColor: AppColors.card,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         duration: const Duration(seconds: 2),
@@ -957,11 +957,11 @@ class _ModernPinSetupSheetState extends State<ModernPinSetupSheet> {
 
   void _showMismatchError() {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('PINs do not match. Please try again.'),
-        backgroundColor: Colors.red,
+      SnackBar(
+        content: const Text('PINs do not match. Please try again.'),
+        backgroundColor: AppColors.card,
         behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 2),
+        duration: const Duration(seconds: 2),
       ),
     );
     setState(() {

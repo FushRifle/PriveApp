@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -10,6 +11,8 @@ import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/event/event_bloc.dart';
 import 'package:clique/core/clients/cloudinary_service.dart';
 import 'package:clique/core/models/event_model.dart';
+import 'package:clique/core/services/tagging/tagging_service.dart';
+import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
 
 class CreateEventPage extends StatefulWidget {
   final EventModel? event;
@@ -25,12 +28,13 @@ class CreateEventPage extends StatefulWidget {
 
 class _CreateEventPageState extends State<CreateEventPage> {
   final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
+  final _titleController = HighlightTokenTextEditingController();
+  final _descriptionController = HighlightTokenTextEditingController();
   final _locationController = TextEditingController();
   final _imageController = TextEditingController();
   final _imagePicker = ImagePicker();
   final _cloudinaryService = CloudinaryService();
+  final _taggingService = TaggingService();
 
   static const _categories = [
     'Music',
@@ -315,13 +319,31 @@ class _CreateEventPageState extends State<CreateEventPage> {
   void _handleStateChange(BuildContext context, EventState state) {
     if (state.error != null && state.error!.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(state.error!)),
+        SnackBar(
+          content: Text(
+            state.error!,
+            style: TextStyle(color: AppColors.text),
+          ),
+          backgroundColor: AppColors.card,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       context.read<EventBloc>().add(const ClearEventError());
       return;
     }
 
     if (_submitted && state.actionStatus == EventActionStatus.success) {
+      _submitted = false;
+      if (!_isEditing && state.events.isNotEmpty) {
+        final created = state.events.first;
+        unawaited(
+          _syncUserTags(
+            'event',
+            created.id,
+            '${_titleController.text} ${_descriptionController.text}',
+          ),
+        );
+      }
       Navigator.pop(context);
     }
   }
@@ -329,7 +351,14 @@ class _CreateEventPageState extends State<CreateEventPage> {
   void _submit() {
     if (_startsAt == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pick a start time')),
+        SnackBar(
+          content: Text(
+            'Pick a start time',
+            style: TextStyle(color: AppColors.text),
+          ),
+          backgroundColor: AppColors.card,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
@@ -372,6 +401,34 @@ class _CreateEventPageState extends State<CreateEventPage> {
             isPrivate: _isPrivate,
           ),
         );
+  }
+
+  Future<void> _syncUserTags(
+    String contentType,
+    int contentId,
+    String content,
+  ) async {
+    final usernames = _extractMentions(content);
+    if (usernames.isEmpty) return;
+
+    try {
+      await _taggingService.syncUserTags(
+        contentType: contentType,
+        contentId: contentId,
+        usernames: usernames,
+      );
+    } catch (e) {
+      debugPrint('Event user tag sync skipped: $e');
+    }
+  }
+
+  List<String> _extractMentions(String rawValue) {
+    final seen = <String>{};
+    return RegExp(r'@([A-Za-z0-9_]+)')
+        .allMatches(rawValue)
+        .map((match) => match.group(1)?.toLowerCase() ?? '')
+        .where((username) => username.isNotEmpty && seen.add(username))
+        .toList();
   }
 
   Future<void> _pickStartsAt() async {
@@ -447,7 +504,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to upload cover image: $error'),
-          backgroundColor: AppColors.red,
+          backgroundColor: AppColors.card,
         ),
       );
     } finally {
@@ -637,7 +694,10 @@ class _CoverImageCard extends StatelessWidget {
                           color: AppColors.white,
                         ),
                       ),
-                      const SizedBox(width: 12, height: 20,),
+                      const SizedBox(
+                        width: 12,
+                        height: 20,
+                      ),
                       Expanded(
                         child: Text(
                           isUploading
@@ -679,7 +739,9 @@ class _EmptyCoverState extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            isUploading ? Icons.cloud_upload_outlined : Icons.add_a_photo_outlined,
+            isUploading
+                ? Icons.cloud_upload_outlined
+                : Icons.add_a_photo_outlined,
             size: 40,
             color: AppColors.primary,
           ),

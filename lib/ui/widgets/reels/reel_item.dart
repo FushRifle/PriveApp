@@ -1572,7 +1572,7 @@ class _ReelCommentsSheetState extends State<_ReelCommentsSheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(error.toString()),
-          backgroundColor: AppColors.red,
+          backgroundColor: AppColors.card,
         ),
       );
     }
@@ -2054,7 +2054,7 @@ class _ReelShareSheetState extends State<_ReelShareSheet> {
         messenger.showSnackBar(
           SnackBar(
             content: Text('Reel sent to ${friend.name}'),
-            backgroundColor: AppColors.green,
+            backgroundColor: AppColors.card,
           ),
         );
       }
@@ -2064,7 +2064,7 @@ class _ReelShareSheetState extends State<_ReelShareSheet> {
       messenger.showSnackBar(
         SnackBar(
           content: Text(error.toString()),
-          backgroundColor: AppColors.red,
+          backgroundColor: AppColors.card,
         ),
       );
     } finally {

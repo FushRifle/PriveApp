@@ -61,7 +61,7 @@ class _RepostPageState extends State<RepostPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(error),
-          backgroundColor: AppColors.redColor,
+          backgroundColor: AppColors.card,
         ),
       );
       context.read<FeedBloc>().add(ClearFeedError());
@@ -88,9 +88,8 @@ class _RepostPageState extends State<RepostPage> {
       listener: _handleStateChange,
       builder: (context, state) {
         final isBusy = _isSubmitting || state.isReposting;
-        final hasPreferences = source.isPoll ||
-            source.isQuestion ||
-            source.isAnonymousPost;
+        final hasPreferences =
+            source.isPoll || source.isQuestion || source.isAnonymousPost;
 
         return Scaffold(
           backgroundColor: AppColors.backgroundColor,
@@ -234,9 +233,10 @@ class _PreferenceSummary extends StatelessWidget {
     final badges = <Widget>[
       _Chip(label: post.contentTypeLabel),
       if (post.isAnonymousPost && post.anonymousCategory != null)
-        _Chip(label: post.anonymousCategory!.trim().isEmpty
-            ? 'Anonymous'
-            : post.anonymousCategory!.trim()),
+        _Chip(
+            label: post.anonymousCategory!.trim().isEmpty
+                ? 'Anonymous'
+                : post.anonymousCategory!.trim()),
       if (post.isPoll && post.pollOptions.isNotEmpty)
         _Chip(label: '${post.pollOptions.length} poll options'),
       if (post.pollExpirationHours != null)

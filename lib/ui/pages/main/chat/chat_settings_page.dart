@@ -125,10 +125,10 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
 
     if (showSnackbar) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Settings updated'),
-            backgroundColor: AppColors.green,
-            duration: Duration(seconds: 1)),
+        SnackBar(
+            content: const Text('Settings updated'),
+            backgroundColor: AppColors.card,
+            duration: const Duration(seconds: 1)),
       );
     }
   }
@@ -151,9 +151,13 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
                   .read<ChatBloc>()
                   .add(ClearChat(conversationId: _conversationId));
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text('Chat cleared'),
-                    backgroundColor: AppColors.green),
+                SnackBar(
+                  content: Text(
+                    'Chat cleared',
+                    style: TextStyle(color: AppColors.text),
+                  ),
+                  backgroundColor: AppColors.card,
+                ),
               );
               Navigator.pop(context);
             },
@@ -181,9 +185,13 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
               Navigator.pop(context);
               context.read<ChatBloc>().add(BlockUser(userId: widget.userId));
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text('User blocked'),
-                    backgroundColor: AppColors.red),
+                SnackBar(
+                  content: Text(
+                    'User blocked',
+                    style: TextStyle(color: AppColors.text),
+                  ),
+                  backgroundColor: AppColors.card,
+                ),
               );
               Navigator.pop(context);
             },
@@ -439,8 +447,13 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
       trailing: Icon(Icons.chevron_right, color: _mutedText, size: 20),
       onTap: () {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Chat archived'), backgroundColor: AppColors.green),
+          SnackBar(
+            content: Text(
+              'Chat archived',
+              style: TextStyle(color: AppColors.text),
+            ),
+            backgroundColor: AppColors.card,
+          ),
         );
         Navigator.pop(context);
       },

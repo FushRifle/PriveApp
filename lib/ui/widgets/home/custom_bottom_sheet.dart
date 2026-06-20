@@ -132,7 +132,7 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(error.toString()),
-          backgroundColor: AppColors.red,
+          backgroundColor: AppColors.card,
         ),
       );
     }
@@ -230,7 +230,7 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to send voice note: $error'),
-          backgroundColor: AppColors.red,
+          backgroundColor: AppColors.card,
         ),
       );
     } finally {
@@ -387,7 +387,7 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.generalError!),
-              backgroundColor: AppColors.red,
+              backgroundColor: AppColors.card,
             ),
           );
           if (mounted) {

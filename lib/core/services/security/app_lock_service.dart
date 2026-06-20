@@ -78,13 +78,12 @@ class AppLockService {
 
   Future<AppLockSettings> loadCached({int? userId}) async {
     final prefs = await SharedPreferences.getInstance();
-    final enabled = prefs.getBool(_scopedKey(_enabledKey, userId)) ?? false;
+    final enabled = _readCachedBool(prefs, _enabledKey, userId) ?? false;
     final biometricEnabled =
-        prefs.getBool(_scopedKey(_biometricKey, userId)) ?? false;
-    final pinEnabled =
-        prefs.getBool(_scopedKey(_pinEnabledKey, userId)) ?? false;
-    final timeoutSeconds = prefs.getInt(_scopedKey(_timeoutKey, userId)) ?? 0;
-    final pin = await _storage.read(key: _scopedKey(_pinKey, userId));
+        _readCachedBool(prefs, _biometricKey, userId) ?? false;
+    final pinEnabled = _readCachedBool(prefs, _pinEnabledKey, userId) ?? false;
+    final timeoutSeconds = _readCachedInt(prefs, _timeoutKey, userId) ?? 0;
+    final pin = await getPin(userId: userId);
 
     return AppLockSettings(
       enabled: enabled,
@@ -171,7 +170,11 @@ class AppLockService {
   }
 
   Future<String?> getPin({int? userId}) async {
-    return _storage.read(key: _scopedKey(_pinKey, userId));
+    final scopedPin = await _storage.read(key: _scopedKey(_pinKey, userId));
+    if ((scopedPin ?? '').isNotEmpty || userId == null) {
+      return scopedPin;
+    }
+    return _storage.read(key: _scopedKey(_pinKey, null));
   }
 
   Future<void> _cacheLocal({
@@ -192,8 +195,14 @@ class AppLockService {
 
     if (pin != null) {
       await _storage.write(key: _scopedKey(_pinKey, userId), value: pin);
+      if (userId != null) {
+        await _storage.write(key: _scopedKey(_pinKey, null), value: pin);
+      }
     } else if (!pinEnabled) {
       await _storage.delete(key: _scopedKey(_pinKey, userId));
+      if (userId != null) {
+        await _storage.delete(key: _scopedKey(_pinKey, null));
+      }
     }
   }
 
@@ -201,6 +210,18 @@ class AppLockService {
     final suffix =
         (userId != null && userId > 0) ? userId.toString() : 'global';
     return '${base}_$suffix';
+  }
+
+  bool? _readCachedBool(SharedPreferences prefs, String key, int? userId) {
+    final scoped = prefs.getBool(_scopedKey(key, userId));
+    if (scoped != null || userId == null) return scoped;
+    return prefs.getBool(_scopedKey(key, null));
+  }
+
+  int? _readCachedInt(SharedPreferences prefs, String key, int? userId) {
+    final scoped = prefs.getInt(_scopedKey(key, userId));
+    if (scoped != null || userId == null) return scoped;
+    return prefs.getInt(_scopedKey(key, null));
   }
 
   bool? _readBool(dynamic value) {

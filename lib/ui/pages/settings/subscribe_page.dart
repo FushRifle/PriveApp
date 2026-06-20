@@ -54,7 +54,7 @@ class _SubscribePageState extends State<SubscribePage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.error!),
-              backgroundColor: AppColors.red,
+              backgroundColor: AppColors.card,
             ),
           );
         }
@@ -70,10 +70,11 @@ class _SubscribePageState extends State<SubscribePage> {
           backgroundColor: AppColors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary),
+            icon:
+                const Icon(Icons.arrow_back_ios_new, color: AppColors.primary),
             onPressed: () => Navigator.pop(context),
           ),
-                 ),
+        ),
         body: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -275,7 +276,7 @@ class _SubscribePageState extends State<SubscribePage> {
                   description: 'Upload high-quality videos and photos',
                   color: AppColors.primary,
                 ),
-               
+
                 const SizedBox(height: 20),
                 _buildFeatureItem(
                   icon: Icons.headphones,
@@ -283,7 +284,7 @@ class _SubscribePageState extends State<SubscribePage> {
                   description: '24/7 dedicated customer support',
                   color: AppColors.teal,
                 ),
-                
+
                 const SizedBox(height: 20),
                 _buildFeatureItem(
                   icon: Icons.schedule_send,
@@ -291,7 +292,7 @@ class _SubscribePageState extends State<SubscribePage> {
                   description: 'Plan posts ahead and publish at the right time',
                   color: AppColors.cyan,
                 ),
-               
+
                 const SizedBox(height: 20),
                 _buildFeatureItem(
                   icon: Icons.video_collection,
@@ -463,9 +464,9 @@ class _SubscribePageState extends State<SubscribePage> {
 
     if (!state.isRevenueCatConfigured) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Purchases are not configured for this build.'),
-          backgroundColor: AppColors.red,
+        SnackBar(
+          content: const Text('Purchases are not configured for this build.'),
+          backgroundColor: AppColors.card,
         ),
       );
       return;
@@ -479,9 +480,10 @@ class _SubscribePageState extends State<SubscribePage> {
     if (selectedPackage == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No subscription package is available right now.'),
-          backgroundColor: AppColors.red,
+        SnackBar(
+          content:
+              const Text('No subscription package is available right now.'),
+          backgroundColor: AppColors.card,
         ),
       );
       return;

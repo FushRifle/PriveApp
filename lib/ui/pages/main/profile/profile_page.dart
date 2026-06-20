@@ -158,6 +158,7 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   String? _mediaType(ProfileGalleryTabType type) {
+    if (type == ProfileGalleryTabType.media) return 'media';
     return null;
   }
 

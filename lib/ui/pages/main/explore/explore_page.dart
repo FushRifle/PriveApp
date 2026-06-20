@@ -584,7 +584,7 @@ class _DiscoverPageState extends State<DiscoverPage>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Could not send message: $e'),
-          backgroundColor: AppColors.red,
+          backgroundColor: AppColors.card,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -639,7 +639,7 @@ class _DiscoverPageState extends State<DiscoverPage>
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error: $error'),
-              backgroundColor: AppColors.red,
+              backgroundColor: AppColors.card,
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -1073,7 +1073,8 @@ class _ProfileDetailSheet extends StatelessWidget {
                       label: const Text('Profile'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.text,
-                        side: const BorderSide(color: AppColors.lightBorderColor),
+                        side:
+                            const BorderSide(color: AppColors.lightBorderColor),
                         minimumSize: const Size.fromHeight(48),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),

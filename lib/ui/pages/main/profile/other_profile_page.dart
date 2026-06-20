@@ -146,6 +146,7 @@ class _OtherProfilePageState extends State<OtherProfilePage>
   }
 
   String? _mediaType(ProfileGalleryTabType type) {
+    if (type == ProfileGalleryTabType.media) return 'media';
     return null;
   }
 
@@ -203,7 +204,7 @@ class _OtherProfilePageState extends State<OtherProfilePage>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.toString()),
-          backgroundColor: AppColors.red,
+          backgroundColor: AppColors.card,
         ),
       );
     } finally {
@@ -251,7 +252,7 @@ class _OtherProfilePageState extends State<OtherProfilePage>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.toString()),
-          backgroundColor: AppColors.red,
+          backgroundColor: AppColors.card,
         ),
       );
     }

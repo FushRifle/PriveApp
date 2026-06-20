@@ -623,6 +623,8 @@ class _HashtagInput extends StatelessWidget {
             enabled: enabled,
             suggestionsBuilder: suggestionsBuilder,
             supportedTokenTypes: const [ComposerTokenType.hashtag],
+            textInputAction: TextInputAction.done,
+            onSubmitted: onAddHashtag,
             style: AppTheme.blackTextStyle.copyWith(
               fontSize: 15,
             ),

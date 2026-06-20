@@ -71,7 +71,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
       SnackBar(
         content:
             Text(nextMuted ? 'Notifications muted' : 'Notifications unmuted'),
-        backgroundColor: AppColors.greenColor,
+        backgroundColor: AppColors.card,
         duration: const Duration(seconds: 1),
       ),
     );
@@ -80,8 +80,13 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
   void _blockUser() async {
     context.read<ChatBloc>().add(BlockUser(userId: widget.userId));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-          content: Text('User blocked'), backgroundColor: AppColors.red),
+      SnackBar(
+        content: Text(
+          'User blocked',
+          style: TextStyle(color: AppColors.text),
+        ),
+        backgroundColor: AppColors.card,
+      ),
     );
     Navigator.pop(context);
   }
@@ -225,7 +230,10 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                   color: isOnline ? AppColors.greenColor : _mutedText,
                 ),
               ),
-              const SizedBox(width: 6, height: 6,),
+              const SizedBox(
+                width: 6,
+                height: 6,
+              ),
               Text(
                 isOnline ? 'Active now' : 'Offline',
                 style: AppTheme.greyTextStyle.copyWith(
@@ -292,7 +300,10 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                       Icons.history_rounded,
                       color: AppColors.primary,
                     ),
-                    const SizedBox(width: 12, height: 3,),
+                    const SizedBox(
+                      width: 12,
+                      height: 3,
+                    ),
                     Expanded(
                       child: Text(
                         'Call History',

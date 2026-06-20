@@ -370,7 +370,7 @@ class _InboxPageState extends State<InboxPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Conversation with ${message.name} deleted'),
-            backgroundColor: AppColors.red,
+            backgroundColor: AppColors.card,
           ),
         );
       },

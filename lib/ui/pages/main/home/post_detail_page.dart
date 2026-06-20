@@ -159,7 +159,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(error.toString()),
-          backgroundColor: AppColors.red,
+          backgroundColor: AppColors.card,
         ),
       );
     }
@@ -259,7 +259,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to send voice note: $error'),
-          backgroundColor: AppColors.red,
+          backgroundColor: AppColors.card,
         ),
       );
     } finally {
@@ -743,10 +743,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
     Navigator.pop(context, true);
   }
 
-  void _showSnackBar(
-    String message, {
-    bool isError = false,
-  }) {
+  void _showSnackBar(String message) {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -754,7 +751,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? AppColors.red : AppColors.green,
+        backgroundColor: AppColors.card,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),

@@ -428,9 +428,13 @@ class MessageBubble extends StatelessWidget {
             onPressed: () {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text('Message deleted'),
-                    backgroundColor: AppColors.green),
+                SnackBar(
+                  content: Text(
+                    'Message deleted',
+                    style: TextStyle(color: AppColors.text),
+                  ),
+                  backgroundColor: AppColors.card,
+                ),
               );
             },
             child: const Text('Delete', style: TextStyle(color: AppColors.red)),
@@ -481,9 +485,13 @@ class MessageBubble extends StatelessWidget {
               if (selectedReason != null) {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Message reported'),
-                      backgroundColor: AppColors.red),
+                  SnackBar(
+                    content: Text(
+                      'Message reported',
+                      style: TextStyle(color: AppColors.text),
+                    ),
+                    backgroundColor: AppColors.card,
+                  ),
                 );
               }
             },
@@ -497,9 +505,13 @@ class MessageBubble extends StatelessWidget {
   void _copyToClipboard(BuildContext context) {
     Clipboard.setData(ClipboardData(text: message.message));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-          content: Text('Copied to clipboard'),
-          backgroundColor: AppColors.green),
+      SnackBar(
+        content: Text(
+          'Copied to clipboard',
+          style: TextStyle(color: AppColors.text),
+        ),
+        backgroundColor: AppColors.card,
+      ),
     );
   }
 

@@ -81,7 +81,7 @@ class _EditPostPageState extends State<EditPostPage> {
       SnackBar(
         content: Text(message),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: isError ? AppColors.redColor : AppColors.greenColor,
+        backgroundColor: AppColors.card,
       ),
     );
   }
@@ -113,9 +113,9 @@ class _EditPostPageState extends State<EditPostPage> {
     final canEdit = _canEdit;
     final draftText = _controller.text.trim();
     final remaining = widget.createdAt
-        .add(const Duration(hours: 2))
-        .difference(DateTime.now())
-        .isNegative
+            .add(const Duration(hours: 2))
+            .difference(DateTime.now())
+            .isNegative
         ? Duration.zero
         : widget.createdAt.add(const Duration(hours: 2)).difference(
               DateTime.now(),
@@ -171,7 +171,8 @@ class _EditPostPageState extends State<EditPostPage> {
                   ),
                   const SizedBox(height: 14),
                   _PostPreviewCard(
-                    content: draftText.isEmpty ? widget.initialContent : draftText,
+                    content:
+                        draftText.isEmpty ? widget.initialContent : draftText,
                     createdAt: widget.createdAt,
                   ),
                   const SizedBox(height: 14),
@@ -296,7 +297,8 @@ class _TopSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final remainingLabel = canEdit ? _formatRemaining(remaining) : 'Editing closed';
+    final remainingLabel =
+        canEdit ? _formatRemaining(remaining) : 'Editing closed';
 
     return Container(
       padding: const EdgeInsets.all(16),

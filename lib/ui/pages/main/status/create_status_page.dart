@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
@@ -5,6 +6,7 @@ import 'package:clique/bloc/status/stories_bloc.dart';
 import 'package:clique/core/clients/cloudinary_service.dart';
 import 'package:clique/core/models/status_model.dart';
 import 'package:clique/core/services/status/status_services.dart';
+import 'package:clique/core/services/tagging/tagging_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -19,6 +21,7 @@ import 'package:clique/ui/widgets/status/create/icon_button_circle.dart';
 import 'package:clique/ui/widgets/status/create/loading_overlay.dart';
 import 'package:clique/ui/widgets/status/create/media_preview.dart';
 import 'package:clique/ui/widgets/status/create/style_controls.dart';
+import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
 
 class CreateStatusPage extends StatefulWidget {
   const CreateStatusPage({super.key});
@@ -29,10 +32,13 @@ class CreateStatusPage extends StatefulWidget {
 
 class _CreateStatusPageState extends State<CreateStatusPage>
     with TickerProviderStateMixin {
-  final TextEditingController _textController = TextEditingController();
-  final TextEditingController _hashtagController = TextEditingController();
+  final TextEditingController _textController =
+      HighlightTokenTextEditingController();
+  final TextEditingController _hashtagController =
+      HighlightTokenTextEditingController();
   final CloudinaryService _cloudinaryService = CloudinaryService();
   final StatusService _statusService = StatusService();
+  final TaggingService _taggingService = TaggingService();
   final ImagePicker _imagePicker = ImagePicker();
 
   File? _selectedMediaFile;
@@ -992,6 +998,14 @@ class _CreateStatusPageState extends State<CreateStatusPage>
         throw Exception('Failed to share story');
       }
 
+      unawaited(
+        _syncUserTags(
+          'status',
+          createdStory.id as int,
+          _storyContentWithHashtags(),
+        ),
+      );
+
       storiesBloc.add(const GetStories(refresh: true, silent: true));
 
       if (!mounted) return;
@@ -1158,6 +1172,34 @@ class _CreateStatusPageState extends State<CreateStatusPage>
 
   String _colorToHex(Color color) {
     return '#${color.value.toRadixString(16).substring(2)}';
+  }
+
+  Future<void> _syncUserTags(
+    String contentType,
+    int contentId,
+    String content,
+  ) async {
+    final usernames = _extractMentions(content);
+    if (usernames.isEmpty) return;
+
+    try {
+      await _taggingService.syncUserTags(
+        contentType: contentType,
+        contentId: contentId,
+        usernames: usernames,
+      );
+    } catch (e) {
+      debugPrint('Status user tag sync skipped: $e');
+    }
+  }
+
+  List<String> _extractMentions(String rawValue) {
+    final seen = <String>{};
+    return RegExp(r'@([A-Za-z0-9_]+)')
+        .allMatches(rawValue)
+        .map((match) => match.group(1)?.toLowerCase() ?? '')
+        .where((username) => username.isNotEmpty && seen.add(username))
+        .toList();
   }
 }
 
