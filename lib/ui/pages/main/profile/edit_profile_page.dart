@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'package:clique/app/configs/colors.dart';
@@ -162,6 +161,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
       final croppedFile = await _mediaService.cropImage(
         pickedFile,
+        context: context,
         aspectRatio: isAvatar
             ? const CropAspectRatio(ratioX: 1, ratioY: 1)
             : const CropAspectRatio(ratioX: 16, ratioY: 9),

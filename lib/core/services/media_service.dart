@@ -1,12 +1,26 @@
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:clique/ui/pages/common/crop_photo_page.dart';
 import 'package:flutter/material.dart';
-import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:clique/app/configs/colors.dart';
+import 'package:path_provider/path_provider.dart';
+
+class CropAspectRatio {
+  final double ratioX;
+  final double ratioY;
+
+  const CropAspectRatio({
+    required this.ratioX,
+    required this.ratioY,
+  });
+
+  double get value => ratioX / ratioY;
+}
 
 class MediaService {
   final ImagePicker _picker = ImagePicker();
 
-  // Pick single image
   Future<XFile?> pickImage({
     ImageSource source = ImageSource.gallery,
     double? maxWidth,
@@ -28,56 +42,40 @@ class MediaService {
 
   Future<XFile?> cropImage(
     XFile file, {
+    BuildContext? context,
     CropAspectRatio? aspectRatio,
   }) async {
-    try {
-      final window = WidgetsBinding.instance.platformDispatcher.views.isNotEmpty
-          ? WidgetsBinding.instance.platformDispatcher.views.first
-          : null;
-      final logicalSize = window == null
-          ? const Size(0, 0)
-          : window.physicalSize / window.devicePixelRatio;
-      final isCompactCropper =
-          logicalSize.width < 390 || logicalSize.height < 720;
+    if (context == null) return file;
 
-      final cropped = await ImageCropper().cropImage(
-        sourcePath: file.path,
-        compressQuality: 92,
-        aspectRatio: aspectRatio,
-        uiSettings: [
-          AndroidUiSettings(
-            toolbarTitle: isCompactCropper ? 'Crop' : 'Crop photo',
-            toolbarColor: Colors.black,
-            toolbarWidgetColor: Colors.white,
-            statusBarColor: Colors.black,
-            backgroundColor: Colors.black,
-            activeControlsWidgetColor: AppColors.primary,
-            cropFrameColor: Colors.white,
-            cropGridColor: Colors.white24,
-            showCropGrid: true,
-            hideBottomControls: isCompactCropper,
-            initAspectRatio: CropAspectRatioPreset.original,
-            lockAspectRatio: aspectRatio != null,
+    try {
+      final bytes = await file.readAsBytes();
+      if (!context.mounted) return file;
+
+      final croppedBytes = await Navigator.of(context).push<Uint8List>(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => CropPhotoPage(
+            imageBytes: bytes,
+            aspectRatio: aspectRatio?.value,
           ),
-          IOSUiSettings(
-            title: isCompactCropper ? 'Crop' : 'Crop photo',
-            doneButtonTitle: 'Done',
-            cancelButtonTitle: 'Cancel',
-            aspectRatioLockEnabled: aspectRatio != null,
-            resetAspectRatioEnabled: true,
-          ),
-        ],
+        ),
       );
 
-      if (cropped == null) return file;
-      return XFile(cropped.path, name: file.name, mimeType: file.mimeType);
+      if (croppedBytes == null || croppedBytes.isEmpty) return file;
+
+      final directory = await getTemporaryDirectory();
+      final extension = _extensionFor(file.name);
+      final path =
+          '${directory.path}/cropped_${DateTime.now().microsecondsSinceEpoch}$extension';
+      final output = File(path);
+      await output.writeAsBytes(croppedBytes, flush: true);
+      return XFile(output.path, name: file.name, mimeType: file.mimeType);
     } catch (e) {
       debugPrint('Error cropping image: $e');
       return file;
     }
   }
 
-  // Pick multiple images
   Future<List<XFile>> pickMultipleImages({
     int? imageQuality,
     double? maxWidth,
@@ -93,7 +91,6 @@ class MediaService {
     }
   }
 
-  // Pick video
   Future<XFile?> pickVideo({
     ImageSource source = ImageSource.gallery,
     Duration? maxDuration,
@@ -109,15 +106,19 @@ class MediaService {
     }
   }
 
-  // Get file size in MB
   Future<double> getFileSize(XFile file) async {
     final bytes = await file.length();
-    return bytes / (1024 * 1024); // Convert to MB
+    return bytes / (1024 * 1024);
   }
 
-  // Validate file size
   Future<bool> isValidSize(XFile file, {double maxSizeMB = 10}) async {
     final size = await getFileSize(file);
     return size <= maxSizeMB;
+  }
+
+  String _extensionFor(String name) {
+    final dot = name.lastIndexOf('.');
+    if (dot == -1 || dot == name.length - 1) return '.jpg';
+    return name.substring(dot);
   }
 }

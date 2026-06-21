@@ -147,6 +147,32 @@ class UserService {
     }
   }
 
+  Future<Map<String, dynamic>> createProfile({
+    required String name,
+    required String username,
+    required String profileType,
+    String? bio,
+    String? avatar,
+    String? coverImage,
+  }) async {
+    try {
+      final response = await _api.post(
+        '/api/users/profiles',
+        data: {
+          'name': name,
+          'username': username,
+          'profileType': profileType,
+          if (bio != null) 'bio': bio,
+          if (avatar != null) 'avatar': avatar,
+          if (coverImage != null) 'coverImage': coverImage,
+        },
+      );
+      return _asMap(response.data);
+    } on DioException catch (e) {
+      throw _handleError(e, 'Failed to create profile');
+    }
+  }
+
   Future<Map<String, dynamic>> linkProfile(int profileUserId) async {
     try {
       final response = await _api.post(
@@ -181,6 +207,17 @@ class UserService {
       return _asMap(response.data);
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to unlink profile');
+    }
+  }
+
+  Future<Map<String, dynamic>> deleteProfile(int profileUserId) async {
+    try {
+      final response = await _api.delete(
+        '/api/users/profiles/$profileUserId/delete',
+      );
+      return _asMap(response.data);
+    } on DioException catch (e) {
+      throw _handleError(e, 'Failed to delete profile');
     }
   }
 

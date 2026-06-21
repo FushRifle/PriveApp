@@ -121,6 +121,83 @@ class _AccountSwitchPageState extends State<AccountSwitchPage> {
     await _switchProfile(profileUserId);
   }
 
+  Future<void> _createProfile() async {
+    final result = await showModalBottomSheet<_CreateProfileData>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const _CreateProfileSheet(),
+    );
+    if (result == null) return;
+
+    setState(() => _isSwitching = true);
+    try {
+      await _userService.createProfile(
+        name: result.name,
+        username: result.username,
+        profileType: result.profileType,
+      );
+      await LocalCacheService.clearAll();
+      if (!mounted) return;
+      context.read<UserBloc>().add(RefreshCurrentUser());
+      context.read<ProfileBloc>().add(RefreshMyProfile());
+      await _loadProfiles();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSwitching = false);
+    }
+  }
+
+  Future<void> _deleteProfile(Map<String, dynamic> profile) async {
+    final profileUserId = _readInt(profile['id']);
+    if (profileUserId <= 0 || profile['isActive'] == true) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete profile?'),
+        content: Text(
+          'This removes ${profile['name'] ?? 'this profile'} and its linked profile record.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _isSwitching = true);
+    try {
+      await _userService.deleteProfile(profileUserId);
+      await LocalCacheService.clearAll();
+      await _loadProfiles();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSwitching = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -165,6 +242,7 @@ class _AccountSwitchPageState extends State<AccountSwitchPage> {
               _Header(
                 count: _profiles.length,
                 isDark: isDark,
+                onCreate: _createProfile,
               ),
               const SizedBox(height: 18),
               Expanded(
@@ -194,6 +272,7 @@ class _AccountSwitchPageState extends State<AccountSwitchPage> {
                                     isDark: isDark,
                                     isSwitching: _isSwitching,
                                     onTap: () => _openLinkedProfile(profile),
+                                    onDelete: () => _deleteProfile(profile),
                                   );
                                 },
                               ),
@@ -215,10 +294,12 @@ class _AccountSwitchPageState extends State<AccountSwitchPage> {
 class _Header extends StatelessWidget {
   final int count;
   final bool isDark;
+  final VoidCallback onCreate;
 
   const _Header({
     required this.count,
     required this.isDark,
+    required this.onCreate,
   });
 
   @override
@@ -271,6 +352,10 @@ class _Header extends StatelessWidget {
               ],
             ),
           ),
+          IconButton.filled(
+            onPressed: onCreate,
+            icon: const Icon(Icons.add_rounded),
+          ),
         ],
       ),
     );
@@ -283,6 +368,7 @@ class _ProfileCard extends StatelessWidget {
   final bool isDark;
   final bool isSwitching;
   final VoidCallback onTap;
+  final VoidCallback onDelete;
 
   const _ProfileCard({
     required this.profile,
@@ -290,6 +376,7 @@ class _ProfileCard extends StatelessWidget {
     required this.isDark,
     required this.isSwitching,
     required this.onTap,
+    required this.onDelete,
   });
 
   @override
@@ -300,6 +387,7 @@ class _ProfileCard extends StatelessWidget {
         _readString(profile['email']) ??
         '@user';
     final avatar = _readString(profile['avatar']) ?? '';
+    final profileType = _readString(profile['profileType']) ?? 'personal';
 
     return InkWell(
       onTap: isActive || isSwitching ? null : onTap,
@@ -353,6 +441,14 @@ class _ProfileCard extends StatelessWidget {
                     username,
                     style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
                   ),
+                  const SizedBox(height: 6),
+                  Text(
+                    profileType[0].toUpperCase() + profileType.substring(1),
+                    style: AppTheme.greyTextStyle.copyWith(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -382,9 +478,20 @@ class _ProfileCard extends StatelessWidget {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             else
-              Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.greyColor,
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'delete') onDelete();
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Text('Delete profile'),
+                  ),
+                ],
+                icon: Icon(
+                  Icons.more_vert_rounded,
+                  color: AppColors.greyColor,
+                ),
               ),
           ],
         ),
@@ -482,6 +589,133 @@ class _ErrorState extends StatelessWidget {
             child: const Text('Retry'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CreateProfileData {
+  final String name;
+  final String username;
+  final String profileType;
+
+  const _CreateProfileData({
+    required this.name,
+    required this.username,
+    required this.profileType,
+  });
+}
+
+class _CreateProfileSheet extends StatefulWidget {
+  const _CreateProfileSheet();
+
+  @override
+  State<_CreateProfileSheet> createState() => _CreateProfileSheetState();
+}
+
+class _CreateProfileSheetState extends State<_CreateProfileSheet> {
+  final _nameController = TextEditingController();
+  final _usernameController = TextEditingController();
+  String _profileType = 'personal';
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _usernameController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Create profile',
+                style: AppTheme.blackTextStyle.copyWith(
+                  fontSize: 20,
+                  fontWeight: AppTheme.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _nameController,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'Profile name',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _usernameController,
+                textInputAction: TextInputAction.done,
+                decoration: const InputDecoration(
+                  labelText: 'Username',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 14),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(
+                    value: 'personal',
+                    label: Text('Personal'),
+                    icon: Icon(Icons.person_outline_rounded),
+                  ),
+                  ButtonSegment(
+                    value: 'business',
+                    label: Text('Business'),
+                    icon: Icon(Icons.storefront_outlined),
+                  ),
+                  ButtonSegment(
+                    value: 'creator',
+                    label: Text('Creator'),
+                    icon: Icon(Icons.auto_awesome_outlined),
+                  ),
+                ],
+                selected: {_profileType},
+                onSelectionChanged: (selection) {
+                  setState(() => _profileType = selection.first);
+                },
+              ),
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _submit,
+                  child: const Text('Create and switch'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _submit() {
+    final name = _nameController.text.trim();
+    final username = _usernameController.text.trim();
+    if (name.isEmpty || username.isEmpty) return;
+
+    Navigator.pop(
+      context,
+      _CreateProfileData(
+        name: name,
+        username: username,
+        profileType: _profileType,
       ),
     );
   }

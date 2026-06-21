@@ -577,7 +577,10 @@ class _CreatePostPageState extends State<CreatePostPage> {
           final items = <MediaItem>[];
 
           for (final pickedFile in selectedFiles) {
-            final croppedFile = await _mediaService.cropImage(pickedFile);
+            final croppedFile = await _mediaService.cropImage(
+              pickedFile,
+              context: context,
+            );
             if (croppedFile == null) continue;
 
             final bytes = kIsWeb ? await croppedFile.readAsBytes() : null;
@@ -610,7 +613,10 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
         if (pickedFile == null) return;
 
-        final croppedFile = await _mediaService.cropImage(pickedFile);
+        final croppedFile = await _mediaService.cropImage(
+          pickedFile,
+          context: context,
+        );
         if (croppedFile == null) return;
 
         final bytes = kIsWeb ? await croppedFile.readAsBytes() : null;

@@ -12,6 +12,7 @@ import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
 import 'package:clique/bloc/chat/gallery/chat_gallery_cubit.dart';
 import 'package:clique/bloc/cloudinary/cloudinary_cubit.dart';
+import 'package:clique/core/models/chat_wallpaper.dart';
 import 'package:clique/core/services/chat/chat_service.dart';
 import 'package:clique/core/services/media_service.dart';
 import 'package:clique/ui/pages/main/chat/chat_info_page.dart';
@@ -902,7 +903,7 @@ class _ChatPageState extends State<ChatPage>
     final image = await _imagePicker.pickImage(source: source);
     if (image == null) return;
 
-    final cropped = await _mediaService.cropImage(image);
+    final cropped = await _mediaService.cropImage(image, context: context);
     if (cropped != null) _sendMedia(File(cropped.path), UploadType.image);
   }
 
@@ -956,6 +957,11 @@ class _ChatPageState extends State<ChatPage>
   BoxDecoration _buildChatBackground() {
     final wallpaperAsset = _wallpaperAsset(_wallpaper);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final wallpaperColor = ChatWallpapers.colorFor(_wallpaper);
+
+    if (wallpaperColor != null) {
+      return BoxDecoration(color: wallpaperColor);
+    }
 
     if (wallpaperAsset == null) {
       return BoxDecoration(color: AppColors.backgroundColor);
@@ -976,17 +982,8 @@ class _ChatPageState extends State<ChatPage>
   }
 
   String? _wallpaperAsset(String wallpaper) {
-    switch (wallpaper) {
-      case 'palms':
-      case 'modern':
-      case 'sunset':
-      case 'sky':
-      case 'galaxy':
-        return 'assets/wallpapers/$wallpaper.png';
-      case 'default':
-      default:
-        return _defaultWallpaperAsset();
-    }
+    if (wallpaper == 'default') return _defaultWallpaperAsset();
+    return ChatWallpapers.assetFor(wallpaper);
   }
 
   String _defaultWallpaperAsset() {

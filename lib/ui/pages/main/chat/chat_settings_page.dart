@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
+import 'package:clique/core/models/chat_wallpaper.dart';
 import 'package:clique/core/services/chat/chat_service.dart';
 
 class ChatSettingsPage extends StatefulWidget {
@@ -38,36 +39,6 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
   Color get _text => AppColors.getTextColor(_isDark);
   Color get _mutedText => AppColors.getTextSecondaryColor(_isDark);
   Color get _divider => AppColors.getDividerColor(_isDark);
-
-  // Wallpaper assets
-  final List<WallpaperItem> _wallpapers = [
-    WallpaperItem(id: 'default', name: 'Default', asset: null, color: null),
-    WallpaperItem(
-        id: 'palms',
-        name: 'Palms',
-        asset: 'assets/wallpapers/palms.png',
-        color: null),
-    WallpaperItem(
-        id: 'modern',
-        name: 'Modern',
-        asset: 'assets/wallpapers/modern.png',
-        color: null),
-    WallpaperItem(
-        id: 'sunset',
-        name: 'Sunset',
-        asset: 'assets/wallpapers/sunset.png',
-        color: null),
-    WallpaperItem(
-        id: 'sky',
-        name: 'Sky',
-        asset: 'assets/wallpapers/sky.png',
-        color: null),
-    WallpaperItem(
-        id: 'galaxy',
-        name: 'Galaxy',
-        asset: 'assets/wallpapers/galaxy.png',
-        color: null),
-  ];
 
   // Color options
   final List<ColorOption> _colorOptions = [
@@ -314,8 +285,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
   }
 
   Widget _buildWallpaperTile() {
-    final currentWallpaper = _wallpapers.firstWhere((w) => w.id == _wallpaper,
-        orElse: () => _wallpapers.first);
+    final currentWallpaper = ChatWallpapers.byId(_wallpaper);
 
     return ListTile(
       leading: Container(
@@ -337,7 +307,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
       title: Text('Wallpaper',
           style: AppTheme.blackTextStyle
               .copyWith(fontWeight: FontWeight.w500, fontSize: 15)),
-      subtitle: Text(_capitalize(_wallpaper),
+      subtitle: Text(currentWallpaper.name,
           style: AppTheme.greyTextStyle.copyWith(fontSize: 12)),
       trailing: Icon(Icons.chevron_right, color: _mutedText, size: 20),
       onTap: () => _showWallpaperPicker(),
@@ -555,138 +525,66 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => StatefulBuilder(
-        builder: (context, setStateModal) => Container(
-          height: MediaQuery.of(context).size.height * 0.8,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                      color: AppColors.greyColor.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(2))),
-              Text('Choose Wallpaper',
-                  style: AppTheme.blackTextStyle
-                      .copyWith(fontWeight: FontWeight.bold, fontSize: 18)),
-              const SizedBox(height: 16),
-              Expanded(
-                child: GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 1.2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                  ),
-                  itemCount: _wallpapers.length,
-                  itemBuilder: (context, index) {
-                    final wallpaper = _wallpapers[index];
-                    final isSelected = _wallpaper == wallpaper.id;
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() => _wallpaper = wallpaper.id);
-                        _updateSettings(showSnackbar: true);
-                        Navigator.pop(context);
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                              color: isSelected
-                                  ? AppColors.primary
-                                  : AppColors.transparent,
-                              width: 3),
-                          boxShadow: [
-                            BoxShadow(
-                                color: AppColors.black.withOpacity(0.1),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2))
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(13),
-                          child: wallpaper.asset != null
-                              ? Stack(
-                                  children: [
-                                    Image.asset(wallpaper.asset!,
-                                        fit: BoxFit.cover,
-                                        width: double.infinity,
-                                        height: double.infinity),
-                                    if (isSelected)
-                                      Container(
-                                        decoration: BoxDecoration(
-                                            color: AppColors.primary
-                                                .withOpacity(0.3)),
-                                        child: const Center(
-                                            child: Icon(Icons.check_circle,
-                                                color: AppColors.white,
-                                                size: 32)),
-                                      ),
-                                    Positioned(
-                                      bottom: 8,
-                                      left: 8,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                            color: AppColors.black
-                                                .withOpacity(0.6),
-                                            borderRadius:
-                                                BorderRadius.circular(8)),
-                                        child: Text(wallpaper.name,
-                                            style: const TextStyle(
-                                                color: AppColors.white,
-                                                fontSize: 10)),
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : Container(
-                                  color: AppColors.primary.withOpacity(0.08),
-                                  child: Stack(
-                                    children: [
-                                      const Center(
-                                          child: Icon(Icons.wallpaper,
-                                              size: 40,
-                                              color: AppColors.primary)),
-                                      if (isSelected)
-                                        Container(
-                                          decoration: BoxDecoration(
-                                              color: AppColors.primary
-                                                  .withOpacity(0.3)),
-                                          child: const Center(
-                                              child: Icon(Icons.check_circle,
-                                                  color: AppColors.white,
-                                                  size: 32)),
-                                        ),
-                                      Positioned(
-                                        bottom: 8,
-                                        left: 8,
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                              color: AppColors.black
-                                                  .withOpacity(0.6),
-                                              borderRadius:
-                                                  BorderRadius.circular(8)),
-                                          child: Text(wallpaper.name,
-                                              style: const TextStyle(
-                                                  color: AppColors.white,
-                                                  fontSize: 10)),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                        ),
-                      ),
-                    );
-                  },
+        builder: (context, setStateModal) => DefaultTabController(
+          length: ChatWallpapers.categories.length,
+          child: Container(
+            height: MediaQuery.of(context).size.height * 0.8,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                        color: AppColors.greyColor.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(2))),
+                Text('Choose Wallpaper',
+                    style: AppTheme.blackTextStyle
+                        .copyWith(fontWeight: FontWeight.bold, fontSize: 18)),
+                const SizedBox(height: 16),
+                TabBar(
+                  isScrollable: true,
+                  labelColor: AppColors.primary,
+                  unselectedLabelColor: _mutedText,
+                  indicatorColor: AppColors.primary,
+                  tabs: ChatWallpapers.categories.keys
+                      .map((category) => Tab(text: category))
+                      .toList(),
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                Expanded(
+                  child: TabBarView(
+                    children:
+                        ChatWallpapers.categories.values.map((wallpapers) {
+                      return GridView.builder(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 1.2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                        ),
+                        itemCount: wallpapers.length,
+                        itemBuilder: (context, index) {
+                          final wallpaper = wallpapers[index];
+                          final isSelected = _wallpaper == wallpaper.id;
+                          return _WallpaperOptionCard(
+                            wallpaper: wallpaper,
+                            isSelected: isSelected,
+                            onTap: () {
+                              setState(() => _wallpaper = wallpaper.id);
+                              _updateSettings(showSnackbar: true);
+                              Navigator.pop(context);
+                            },
+                          );
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -846,13 +744,108 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
   }
 }
 
-class WallpaperItem {
-  final String id;
-  final String name;
-  final String? asset;
-  final Color? color;
+class _WallpaperOptionCard extends StatelessWidget {
+  final ChatWallpaper wallpaper;
+  final bool isSelected;
+  final VoidCallback onTap;
 
-  WallpaperItem({required this.id, required this.name, this.asset, this.color});
+  const _WallpaperOptionCard({
+    required this.wallpaper,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.transparent,
+            width: 3,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(13),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              _preview(),
+              if (isSelected)
+                Container(
+                  color: AppColors.primary.withOpacity(0.3),
+                  child: const Center(
+                    child: Icon(
+                      Icons.check_circle,
+                      color: AppColors.white,
+                      size: 32,
+                    ),
+                  ),
+                ),
+              Positioned(
+                bottom: 8,
+                left: 8,
+                right: 8,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.black.withOpacity(0.62),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    wallpaper.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _preview() {
+    if (wallpaper.asset != null) {
+      return Image.asset(
+        wallpaper.asset!,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+      );
+    }
+
+    if (wallpaper.color != null) {
+      return ColoredBox(color: wallpaper.color!);
+    }
+
+    return Container(
+      color: AppColors.primary.withOpacity(0.08),
+      child: const Center(
+        child: Icon(
+          Icons.wallpaper,
+          size: 40,
+          color: AppColors.primary,
+        ),
+      ),
+    );
+  }
 }
 
 class ColorOption {
