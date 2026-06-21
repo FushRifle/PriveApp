@@ -572,11 +572,14 @@ class _CreatePostPageState extends State<CreatePostPage> {
           );
 
           if (pickedFiles.isEmpty) return;
+          if (!mounted) return;
 
           final selectedFiles = pickedFiles.take(4).toList();
           final items = <MediaItem>[];
 
           for (final pickedFile in selectedFiles) {
+            if (!mounted) return;
+
             final croppedFile = await _mediaService.cropImage(
               pickedFile,
               context: context,
@@ -612,6 +615,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
             source: source, imageQuality: 85, maxWidth: 1800);
 
         if (pickedFile == null) return;
+        if (!mounted) return;
 
         final croppedFile = await _mediaService.cropImage(
           pickedFile,

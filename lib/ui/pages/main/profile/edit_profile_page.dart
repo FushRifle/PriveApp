@@ -158,6 +158,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       );
 
       if (pickedFile == null) return;
+      if (!mounted) return;
 
       final croppedFile = await _mediaService.cropImage(
         pickedFile,

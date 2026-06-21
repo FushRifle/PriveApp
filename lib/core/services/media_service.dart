@@ -1,10 +1,6 @@
-import 'dart:io';
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
-import 'package:clique/ui/pages/common/crop_photo_page.dart';
+import 'package:image_cropper/image_cropper.dart' as cropper;
 import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
 
 class CropAspectRatio {
   final double ratioX;
@@ -45,31 +41,35 @@ class MediaService {
     BuildContext? context,
     CropAspectRatio? aspectRatio,
   }) async {
-    if (context == null) return file;
-
     try {
-      final bytes = await file.readAsBytes();
-      if (!context.mounted) return file;
-
-      final croppedBytes = await Navigator.of(context).push<Uint8List>(
-        MaterialPageRoute(
-          fullscreenDialog: true,
-          builder: (_) => CropPhotoPage(
-            imageBytes: bytes,
-            aspectRatio: aspectRatio?.value,
+      final croppedFile = await cropper.ImageCropper().cropImage(
+        sourcePath: file.path,
+        aspectRatio: aspectRatio == null
+            ? null
+            : cropper.CropAspectRatio(
+                ratioX: aspectRatio.ratioX,
+                ratioY: aspectRatio.ratioY,
+              ),
+        uiSettings: [
+          cropper.AndroidUiSettings(
+            toolbarTitle: 'Crop photo',
+            toolbarColor: Colors.black,
+            toolbarWidgetColor: Colors.white,
+            lockAspectRatio: aspectRatio != null,
           ),
-        ),
+          cropper.IOSUiSettings(
+            title: 'Crop photo',
+            aspectRatioLockEnabled: aspectRatio != null,
+          ),
+          if (context != null)
+            cropper.WebUiSettings(
+              context: context,
+            ),
+        ],
       );
 
-      if (croppedBytes == null || croppedBytes.isEmpty) return file;
-
-      final directory = await getTemporaryDirectory();
-      final extension = _extensionFor(file.name);
-      final path =
-          '${directory.path}/cropped_${DateTime.now().microsecondsSinceEpoch}$extension';
-      final output = File(path);
-      await output.writeAsBytes(croppedBytes, flush: true);
-      return XFile(output.path, name: file.name, mimeType: file.mimeType);
+      if (croppedFile == null) return file;
+      return XFile(croppedFile.path, name: file.name, mimeType: file.mimeType);
     } catch (e) {
       debugPrint('Error cropping image: $e');
       return file;
@@ -115,11 +115,4 @@ class MediaService {
     final size = await getFileSize(file);
     return size <= maxSizeMB;
   }
-
-  String _extensionFor(String name) {
-    final dot = name.lastIndexOf('.');
-    if (dot == -1 || dot == name.length - 1) return '.jpg';
-    return name.substring(dot);
-  }
-
 }

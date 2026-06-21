@@ -902,6 +902,7 @@ class _ChatPageState extends State<ChatPage>
   Future<void> _pickImage(ImageSource source) async {
     final image = await _imagePicker.pickImage(source: source);
     if (image == null) return;
+    if (!mounted) return;
 
     final cropped = await _mediaService.cropImage(image, context: context);
     if (cropped != null) _sendMedia(File(cropped.path), UploadType.image);
