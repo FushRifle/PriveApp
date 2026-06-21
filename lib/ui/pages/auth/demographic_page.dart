@@ -310,6 +310,7 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
             _pageTitles[0],
             style: AppTheme.blackTextStyle.copyWith(
               fontSize: 32,
+              color: AppColors.text,
               fontWeight: FontWeight.bold,
               height: 1.2,
             ),
@@ -362,11 +363,11 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
                           fit: BoxFit.cover,
                         )
                       : null,
-                  color: AppColors.grey.shade100,
+                  color: AppColors.card,
                 ),
                 child: _selectedAvatarUrl == null
                     ? Icon(Icons.add_a_photo,
-                        color: AppColors.grey.shade400, size: 32)
+                        color: AppColors.primary, size: 32)
                     : null,
               ),
             ),
@@ -400,7 +401,7 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
                     fit: BoxFit.cover,
                   )
                 : null,
-            color: AppColors.grey.shade50,
+            color: AppColors.card,
           ),
           child: _selectedCoverUrl == null
               ? Center(
@@ -408,7 +409,7 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.add_photo_alternate,
-                          color: AppColors.grey.shade400, size: 28),
+                          color: AppColors.primary, size: 28),
                       const SizedBox(height: 4),
                       Text('Add cover photo',
                           style: AppTheme.greyTextStyle.copyWith(fontSize: 12)),
