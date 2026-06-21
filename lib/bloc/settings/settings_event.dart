@@ -23,6 +23,7 @@ class LoadSettings extends SettingsEvent {
 
 // Update settings
 class UpdateSettings extends SettingsEvent {
+  final int? userId;
   final bool? notificationsEnabled;
   final bool? privateAccount;
   final bool? twoFactorAuth;
@@ -39,6 +40,7 @@ class UpdateSettings extends SettingsEvent {
   final bool? allowTagging;
 
   const UpdateSettings({
+    this.userId,
     this.notificationsEnabled,
     this.privateAccount,
     this.twoFactorAuth,
@@ -57,6 +59,7 @@ class UpdateSettings extends SettingsEvent {
 
   @override
   List<Object?> get props => [
+        userId,
         notificationsEnabled,
         privateAccount,
         twoFactorAuth,

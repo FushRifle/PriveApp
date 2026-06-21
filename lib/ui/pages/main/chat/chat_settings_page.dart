@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
+import 'package:clique/core/services/chat/chat_service.dart';
 
 class ChatSettingsPage extends StatefulWidget {
   final String userName;
@@ -29,6 +30,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
   String _chatColor = 'default';
   String _notificationSound = 'default';
   String _muteDuration = '8 hours';
+  final ChatService _chatService = ChatService();
 
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
   Color get _surface => AppColors.getCardColor(_isDark);
@@ -445,7 +447,9 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
       subtitle: Text('Move chat to archive',
           style: AppTheme.greyTextStyle.copyWith(fontSize: 12)),
       trailing: Icon(Icons.chevron_right, color: _mutedText, size: 20),
-      onTap: () {
+      onTap: () async {
+        await _chatService.archiveConversation(widget.conversationId);
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(

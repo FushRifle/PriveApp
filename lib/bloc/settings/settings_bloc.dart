@@ -1,5 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'dart:async';
+
 import 'package:clique/core/services/security/app_lock_service.dart';
 import 'package:clique/core/services/settings/settings_service.dart';
 
@@ -65,13 +67,10 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         notificationsEnabled: settings['notificationsEnabled'] ?? true,
         privateAccount: settings['privateAccount'] ?? false,
         twoFactorAuth: settings['twoFactorAuth'] ?? false,
-        appLockEnabled: settings['appLockEnabled'] ?? cachedLock.enabled,
-        appLockBiometricEnabled:
-            settings['appLockBiometricEnabled'] ?? cachedLock.biometricEnabled,
-        appLockPinEnabled:
-            settings['appLockPinEnabled'] ?? cachedLock.pinEnabled,
-        appLockTimeoutSeconds:
-            settings['appLockTimeoutSeconds'] ?? cachedLock.timeoutSeconds,
+        appLockEnabled: cachedLock.enabled,
+        appLockBiometricEnabled: cachedLock.biometricEnabled,
+        appLockPinEnabled: cachedLock.pinEnabled,
+        appLockTimeoutSeconds: cachedLock.timeoutSeconds,
         language: settings['language']?.toString() ?? 'en',
         videoQuality: settings['videoQuality']?.toString() ?? 'auto',
         theme: settings['theme']?.toString() ?? 'system',
@@ -105,49 +104,53 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       clearError: true,
     ));
 
-    try {
-      // Optimistically update local state
-      final updatedState = state.copyWith(
-        notificationsEnabled:
-            event.notificationsEnabled ?? state.notificationsEnabled,
-        privateAccount: event.privateAccount ?? state.privateAccount,
-        twoFactorAuth: event.twoFactorAuth ?? state.twoFactorAuth,
-        appLockEnabled: event.appLockEnabled ?? state.appLockEnabled,
-        appLockBiometricEnabled:
-            event.appLockBiometricEnabled ?? state.appLockBiometricEnabled,
-        appLockPinEnabled: event.appLockPinEnabled ?? state.appLockPinEnabled,
-        appLockTimeoutSeconds:
-            event.appLockTimeoutSeconds ?? state.appLockTimeoutSeconds,
-        language: event.language ?? state.language,
-        videoQuality: event.videoQuality ?? state.videoQuality,
-        theme: event.theme ?? state.theme,
-        autoPlayVideos: event.autoPlayVideos ?? state.autoPlayVideos,
-        saveOriginalPhotos:
-            event.saveOriginalPhotos ?? state.saveOriginalPhotos,
-        showActivityStatus:
-            event.showActivityStatus ?? state.showActivityStatus,
-        allowTagging: event.allowTagging ?? state.allowTagging,
-        lastUpdated: DateTime.now(),
-      );
+    final updatedState = state.copyWith(
+      notificationsEnabled:
+          event.notificationsEnabled ?? state.notificationsEnabled,
+      privateAccount: event.privateAccount ?? state.privateAccount,
+      twoFactorAuth: event.twoFactorAuth ?? state.twoFactorAuth,
+      appLockEnabled: event.appLockEnabled ?? state.appLockEnabled,
+      appLockBiometricEnabled:
+          event.appLockBiometricEnabled ?? state.appLockBiometricEnabled,
+      appLockPinEnabled: event.appLockPinEnabled ?? state.appLockPinEnabled,
+      appLockTimeoutSeconds:
+          event.appLockTimeoutSeconds ?? state.appLockTimeoutSeconds,
+      language: event.language ?? state.language,
+      videoQuality: event.videoQuality ?? state.videoQuality,
+      theme: event.theme ?? state.theme,
+      autoPlayVideos: event.autoPlayVideos ?? state.autoPlayVideos,
+      saveOriginalPhotos: event.saveOriginalPhotos ?? state.saveOriginalPhotos,
+      showActivityStatus: event.showActivityStatus ?? state.showActivityStatus,
+      allowTagging: event.allowTagging ?? state.allowTagging,
+      lastUpdated: DateTime.now(),
+    );
 
+    try {
       emit(updatedState);
 
-      await _settingsService.updateSettings(
-        notificationsEnabled: event.notificationsEnabled,
-        privateAccount: event.privateAccount,
-        twoFactorAuth: event.twoFactorAuth,
-        appLockEnabled: event.appLockEnabled,
-        appLockBiometricEnabled: event.appLockBiometricEnabled,
-        appLockPinEnabled: event.appLockPinEnabled,
-        appLockTimeoutSeconds: event.appLockTimeoutSeconds,
-        language: event.language,
-        videoQuality: event.videoQuality,
-        theme: event.theme,
-        autoPlayVideos: event.autoPlayVideos,
-        saveOriginalPhotos: event.saveOriginalPhotos,
-        showActivityStatus: event.showActivityStatus,
-        allowTagging: event.allowTagging,
-      );
+      if (_hasAppLockChanges(event)) {
+        await _appLockService.save(
+          userId: event.userId,
+          biometricEnabled: updatedState.getAppLockBiometricEnabled,
+          pinEnabled: updatedState.getAppLockPinEnabled,
+          timeoutSeconds: updatedState.getAppLockTimeoutSeconds,
+        );
+      }
+
+      if (_hasBackendSettingsChanges(event)) {
+        await _settingsService.updateSettings(
+          notificationsEnabled: event.notificationsEnabled,
+          privateAccount: event.privateAccount,
+          twoFactorAuth: event.twoFactorAuth,
+          language: event.language,
+          videoQuality: event.videoQuality,
+          theme: event.theme,
+          autoPlayVideos: event.autoPlayVideos,
+          saveOriginalPhotos: event.saveOriginalPhotos,
+          showActivityStatus: event.showActivityStatus,
+          allowTagging: event.allowTagging,
+        );
+      }
 
       emit(updatedState.copyWith(
         status: SettingsStatus.success,
@@ -155,12 +158,14 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         clearError: true,
       ));
     } catch (e) {
-      // Reload settings to revert optimistic update
-      if (event.appLockEnabled != null ||
-          event.appLockBiometricEnabled != null ||
-          event.appLockPinEnabled != null ||
-          event.appLockTimeoutSeconds != null) {
-        add(const LoadSettings());
+      if (_hasAppLockChanges(event) && !_hasBackendSettingsChanges(event)) {
+        unawaited(_appLockService.syncPending(userId: event.userId));
+        emit(updatedState.copyWith(
+          status: SettingsStatus.success,
+          isSaving: false,
+          clearError: true,
+        ));
+        return;
       }
       emit(previousState.copyWith(
         status: SettingsStatus.error,
@@ -168,6 +173,26 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         error: e.toString(),
       ));
     }
+  }
+
+  bool _hasAppLockChanges(UpdateSettings event) {
+    return event.appLockEnabled != null ||
+        event.appLockBiometricEnabled != null ||
+        event.appLockPinEnabled != null ||
+        event.appLockTimeoutSeconds != null;
+  }
+
+  bool _hasBackendSettingsChanges(UpdateSettings event) {
+    return event.notificationsEnabled != null ||
+        event.privateAccount != null ||
+        event.twoFactorAuth != null ||
+        event.language != null ||
+        event.videoQuality != null ||
+        event.theme != null ||
+        event.autoPlayVideos != null ||
+        event.saveOriginalPhotos != null ||
+        event.showActivityStatus != null ||
+        event.allowTagging != null;
   }
 
   Future<void> _onToggleNotifications(

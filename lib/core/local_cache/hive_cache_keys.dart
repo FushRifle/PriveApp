@@ -5,6 +5,7 @@ class HiveCacheKeys {
   static const metaBox = 'cache_meta';
   static const chatBox = 'chat_cache';
   static const notificationBox = 'notification_cache';
+  static const appLockBox = 'app_lock_cache';
 
   static const latestFeed = 'latest_feed';
   static const latestFeedMeta = 'latest_feed_meta';
@@ -14,6 +15,7 @@ class HiveCacheKeys {
   static const chatConversationsPrefix = 'chat_conversations';
   static const chatMessagesPrefix = 'chat_messages';
   static const chatDraftPrefix = 'chat_draft';
+  static const archivedChatsPrefix = 'archived_chats';
   static const postCommentsPrefix = 'post_comments';
   static const userMediaPrefix = 'user_media';
 }

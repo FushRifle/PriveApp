@@ -7,6 +7,8 @@ import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/core/router/named_routes.dart';
+import 'package:clique/core/services/friends/friends_service.dart';
+import 'package:clique/core/services/user/user_service.dart';
 
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
@@ -214,40 +216,40 @@ class _HomePageState extends State<HomePage>
       child: Scaffold(
         backgroundColor: palette.background,
         floatingActionButton: AnimatedSlide(
-  duration: const Duration(milliseconds: 220),
-  curve: Curves.easeOut,
-  offset: _showJumpToTop ? Offset.zero : const Offset(0, 0.2),
-  child: AnimatedOpacity(
-    duration: const Duration(milliseconds: 180),
-    opacity: _showJumpToTop ? 1 : 0,
-    child: Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: _jumpToTop,
-        borderRadius: BorderRadius.circular(999),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.primary,
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withOpacity(0.28),
-                blurRadius: 18,
-                offset: const Offset(0, 10),
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOut,
+          offset: _showJumpToTop ? Offset.zero : const Offset(0, 0.2),
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 180),
+            opacity: _showJumpToTop ? 1 : 0,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _jumpToTop,
+                borderRadius: BorderRadius.circular(999),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.primary,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(0.28),
+                        blurRadius: 18,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.keyboard_double_arrow_up_rounded,
+                    size: 27,
+                    color: AppColors.white,
+                  ),
+                ),
               ),
-            ],
-          ),
-          child: const Icon(
-            Icons.keyboard_double_arrow_up_rounded,
-            size: 27,
-            color: AppColors.white,
+            ),
           ),
         ),
-      ),
-    ),
-  ),
-),
         body: SafeArea(
           top: false,
           child: RefreshIndicator(
@@ -326,11 +328,18 @@ class _HomePageState extends State<HomePage>
                         SliverPadding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           sliver: SliverList.separated(
-                            itemCount: posts.length,
+                            itemCount: posts.length + (posts.length ~/ 6),
                             separatorBuilder: (_, __) =>
                                 const SizedBox(height: 16),
                             itemBuilder: (context, index) {
-                              final post = posts[index];
+                              if ((index + 1) % 7 == 0) {
+                                return _PeopleYouMayKnowCard(
+                                  palette: palette,
+                                );
+                              }
+
+                              final postIndex = index - (index ~/ 7);
+                              final post = posts[postIndex];
 
                               return RepostCard(
                                 key: ValueKey('post_${post.id}'),
@@ -442,6 +451,333 @@ class _HomePageState extends State<HomePage>
   }
 }
 
+class _PeopleYouMayKnowCard extends StatefulWidget {
+  final _HomePalette palette;
+
+  const _PeopleYouMayKnowCard({
+    required this.palette,
+  });
+
+  @override
+  State<_PeopleYouMayKnowCard> createState() => _PeopleYouMayKnowCardState();
+}
+
+class _PeopleYouMayKnowCardState extends State<_PeopleYouMayKnowCard> {
+  final UserService _userService = UserService();
+  final FriendsService _friendsService = FriendsService();
+  late Future<List<_SuggestedUser>> _future;
+  final Set<int> _following = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _loadSuggestions();
+  }
+
+  Future<List<_SuggestedUser>> _loadSuggestions() async {
+    final currentUser = context.read<UserBloc>().state.currentUser;
+    final currentUserId = _readInt(currentUser?['id']);
+    final raw = await _userService.getUserSuggestions(limit: 12);
+
+    final suggestions = raw
+        .map(_SuggestedUser.fromJson)
+        .where((user) => user.id > 0)
+        .where((user) => user.id != currentUserId)
+        .where((user) => !user.isFollowing)
+        .take(10)
+        .toList();
+
+    return suggestions;
+  }
+
+  Future<void> _follow(_SuggestedUser user) async {
+    if (_following.contains(user.id)) return;
+    setState(() => _following.add(user.id));
+
+    try {
+      await _friendsService.followUser(user.id);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _following.remove(user.id));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString()),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  void _openProfile(int userId) {
+    Navigator.pushNamed(
+      context,
+      NamedRoutes.otherProfileScreen,
+      arguments: userId,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<_SuggestedUser>>(
+      future: _future,
+      builder: (context, snapshot) {
+        final suggestions = snapshot.data ?? const <_SuggestedUser>[];
+        if (suggestions.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Container(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+          decoration: BoxDecoration(
+            color: widget.palette.card,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: widget.palette.border),
+            boxShadow: [
+              BoxShadow(
+                color: widget.palette.shadow,
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'People you may know',
+                      style: TextStyle(
+                        color: widget.palette.text,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    Icons.person_add_alt_1_rounded,
+                    color: widget.palette.primary,
+                    size: 20,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 178,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: suggestions.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (context, index) {
+                    final user = suggestions[index];
+                    final followed = _following.contains(user.id);
+                    return _SuggestionTile(
+                      palette: widget.palette,
+                      user: user,
+                      followed: followed,
+                      onFollow: () => _follow(user),
+                      onOpenProfile: () => _openProfile(user.id),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  int _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+}
+
+class _SuggestionTile extends StatelessWidget {
+  final _HomePalette palette;
+  final _SuggestedUser user;
+  final bool followed;
+  final VoidCallback onFollow;
+  final VoidCallback onOpenProfile;
+
+  const _SuggestionTile({
+    required this.palette,
+    required this.user,
+    required this.followed,
+    required this.onFollow,
+    required this.onOpenProfile,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 142,
+      child: Material(
+        color: palette.elevatedCard,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onOpenProfile,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              children: [
+                _SuggestionAvatar(user: user),
+                const SizedBox(height: 10),
+                Text(
+                  user.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: palette.text,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
+                ),
+                Text(
+                  user.username.isEmpty ? 'View profile' : '@${user.username}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: palette.mutedText,
+                    fontSize: 11,
+                  ),
+                ),
+                const Spacer(),
+                if (user.mutualConnections > 0)
+                  Text(
+                    '${user.mutualConnections} mutual',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: palette.subtleText,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  height: 32,
+                  child: ElevatedButton(
+                    onPressed: followed ? null : onFollow,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: palette.primary,
+                      foregroundColor: AppColors.white,
+                      disabledBackgroundColor: palette.border,
+                      disabledForegroundColor: palette.mutedText,
+                      padding: EdgeInsets.zero,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Text(
+                      followed ? 'Following' : 'Follow',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SuggestionAvatar extends StatelessWidget {
+  final _SuggestedUser user;
+
+  const _SuggestionAvatar({required this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    final fallback =
+        user.name.trim().isNotEmpty ? user.name.trim()[0].toUpperCase() : 'U';
+
+    return ClipOval(
+      child: SizedBox(
+        width: 54,
+        height: 54,
+        child: user.avatar.isNotEmpty && user.avatar.startsWith('http')
+            ? CachedNetworkImage(
+                imageUrl: user.avatar,
+                fit: BoxFit.cover,
+                errorWidget: (_, __, ___) => _fallback(fallback),
+              )
+            : _fallback(fallback),
+      ),
+    );
+  }
+
+  Widget _fallback(String fallback) {
+    return ColoredBox(
+      color: AppColors.primary.withOpacity(0.14),
+      child: Center(
+        child: Text(
+          fallback,
+          style: const TextStyle(
+            color: AppColors.primary,
+            fontSize: 18,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SuggestedUser {
+  final int id;
+  final String name;
+  final String username;
+  final String avatar;
+  final bool isFollowing;
+  final int mutualConnections;
+
+  const _SuggestedUser({
+    required this.id,
+    required this.name,
+    required this.username,
+    required this.avatar,
+    required this.isFollowing,
+    required this.mutualConnections,
+  });
+
+  factory _SuggestedUser.fromJson(Map<String, dynamic> json) {
+    return _SuggestedUser(
+      id: _readInt(json['id'] ?? json['userId'] ?? json['user_id']),
+      name: (json['name'] ?? json['displayName'] ?? json['username'] ?? 'User')
+          .toString(),
+      username: (json['username'] ?? json['handle'] ?? '').toString(),
+      avatar: (json['avatar'] ?? json['avatarUrl'] ?? '').toString(),
+      isFollowing: json['isFollowing'] == true ||
+          json['following'] == true ||
+          json['is_following'] == true,
+      mutualConnections: _readInt(
+        json['mutualConnections'] ??
+            json['mutual_connections'] ??
+            json['mutualCount'],
+      ),
+    );
+  }
+
+  static int _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+}
+
 class _HomeAppBar extends StatefulWidget {
   static final NotificationService _notificationService = NotificationService();
 
@@ -503,7 +839,7 @@ class _HomeAppBarState extends State<_HomeAppBar> {
                   GestureDetector(
                     onTap: () {
                       HapticFeedback.lightImpact();
-                      Navigator.pushNamed(context, NamedRoutes.settingsScreen);
+                      Navigator.pushNamed(context, NamedRoutes.profileScreen);
                     },
                     child: _Avatar(
                       palette: widget.palette,

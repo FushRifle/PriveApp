@@ -171,6 +171,7 @@ class StoryUser extends Equatable {
   final String handle;
   final String avatar;
   final bool verified;
+  final bool? isFollowing;
 
   const StoryUser({
     required this.id,
@@ -179,6 +180,7 @@ class StoryUser extends Equatable {
     required this.handle,
     required this.avatar,
     this.verified = false,
+    this.isFollowing,
   });
 
   factory StoryUser.fromJson(Map<String, dynamic> json) {
@@ -189,6 +191,9 @@ class StoryUser extends Equatable {
       handle: json['handle'] ?? json['username'] ?? '',
       avatar: json['avatar'] ?? '',
       verified: json['verified'] ?? false,
+      isFollowing: _readNullableBool(
+        json['isFollowing'] ?? json['following'] ?? json['is_following'],
+      ),
     );
   }
 
@@ -200,6 +205,7 @@ class StoryUser extends Equatable {
       'handle': handle,
       'avatar': avatar,
       'verified': verified,
+      if (isFollowing != null) 'isFollowing': isFollowing,
     };
   }
 
@@ -210,6 +216,7 @@ class StoryUser extends Equatable {
     String? handle,
     String? avatar,
     bool? verified,
+    bool? isFollowing,
   }) {
     return StoryUser(
       id: id ?? this.id,
@@ -218,11 +225,31 @@ class StoryUser extends Equatable {
       handle: handle ?? this.handle,
       avatar: avatar ?? this.avatar,
       verified: verified ?? this.verified,
+      isFollowing: isFollowing ?? this.isFollowing,
     );
   }
 
   @override
-  List<Object?> get props => [id, name, username, handle, avatar, verified];
+  List<Object?> get props => [
+        id,
+        name,
+        username,
+        handle,
+        avatar,
+        verified,
+        isFollowing,
+      ];
+
+  static bool? _readNullableBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      final normalized = value.toLowerCase();
+      if (normalized == 'true') return true;
+      if (normalized == 'false') return false;
+    }
+    return null;
+  }
 }
 
 class Attachment extends Equatable {

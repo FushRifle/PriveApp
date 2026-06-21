@@ -102,6 +102,42 @@ class UserService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getUserSuggestions({
+    int limit = 10,
+  }) async {
+    final endpoints = <String>[
+      '/api/users/suggestions',
+      '/api/friends/suggestions',
+      '/api/users/recommended',
+    ];
+
+    DioException? lastError;
+    for (final endpoint in endpoints) {
+      try {
+        final response = await _api.get(
+          endpoint,
+          queryParameters: {'limit': limit},
+        );
+        final data =
+            response.data is Map ? response.data['data'] : response.data;
+        if (data is List) {
+          return data
+              .whereType<Map>()
+              .map((item) => Map<String, dynamic>.from(item))
+              .toList();
+        }
+      } on DioException catch (e) {
+        lastError = e;
+        if (e.response?.statusCode == 404) continue;
+      }
+    }
+
+    if (lastError != null && lastError.response?.statusCode != 404) {
+      throw _handleError(lastError, 'Failed to load suggestions');
+    }
+    return const [];
+  }
+
   Future<Map<String, dynamic>> getProfileSwitchState() async {
     try {
       final response = await _api.get('/api/users/profiles');

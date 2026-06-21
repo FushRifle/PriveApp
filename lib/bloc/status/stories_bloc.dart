@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
@@ -62,6 +63,9 @@ class StoriesBloc extends Bloc<StoriesEvent, StoriesState> {
         status: StoriesStatus.loaded,
         stories: stories,
       ));
+    } on SilentStatusFailure catch (e) {
+      emit(state.copyWith(status: StoriesStatus.loaded, clearError: true));
+      developer.log('Silent status load failure', error: e);
     } catch (e) {
       emit(state.copyWith(
         status: StoriesStatus.error,
@@ -103,6 +107,13 @@ class StoriesBloc extends Bloc<StoriesEvent, StoriesState> {
         clearError: true,
       ));
       add(const GetStories(refresh: true, silent: true));
+    } on SilentStatusFailure catch (e) {
+      emit(state.copyWith(
+        status: StoriesStatus.loaded,
+        isCreating: false,
+        clearError: true,
+      ));
+      developer.log('Silent status create failure', error: e);
     } catch (e) {
       emit(state.copyWith(
         status: StoriesStatus.error,

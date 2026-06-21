@@ -21,7 +21,7 @@ class PostImage extends StatelessWidget {
 
     if (imageUrl.trim().isEmpty) {
       return ColoredBox(
-        color: AppColors.backgroundColor,
+        color: AppColors.black,
         child: Center(
           child: Icon(
             Icons.broken_image_outlined,
@@ -51,13 +51,14 @@ class PostImage extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
+          const ColoredBox(color: AppColors.black),
           CachedNetworkImage(
             imageUrl: imageUrl,
             fit: BoxFit.contain,
             memCacheWidth: 1080,
             placeholder: (_, __) {
               return ColoredBox(
-                color: AppColors.background,
+                color: AppColors.black,
                 child: Center(
                   child: CircularProgressIndicator(
                     color: AppColors.primary,
@@ -68,7 +69,7 @@ class PostImage extends StatelessWidget {
             },
             errorWidget: (_, __, ___) {
               return ColoredBox(
-                color: AppColors.backgroundColor,
+                color: AppColors.black,
                 child: Center(
                   child: Icon(
                     Icons.broken_image_outlined,

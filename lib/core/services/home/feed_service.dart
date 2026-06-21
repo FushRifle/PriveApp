@@ -400,9 +400,7 @@ class FeedService {
         );
 
         if (response.data is List) {
-          final posts = (response.data as List)
-              .map((json) => FeedPost.fromJson(_readMap(json)))
-              .toList();
+          final posts = await _parseSavedPostsList(response.data as List);
           return PostsResponse(
             posts: posts,
             hasMore: posts.length >= 10,
@@ -411,9 +409,24 @@ class FeedService {
         }
 
         if (response.data is Map) {
-          final parsed = PostsResponse.fromJson(_readMap(response.data));
-          if (parsed.posts.isNotEmpty) {
-            return parsed;
+          final map = _readMap(response.data);
+          final items = map['posts'] ?? map['data'] ?? map['items'];
+          if (items is List) {
+            final posts = await _parseSavedPostsList(items);
+            return PostsResponse(
+              posts: posts,
+              hasMore: _readBool(map['hasMore'] ?? map['has_more']) ??
+                  posts.length >= 10,
+              page: _toInt(map['page']) == 0 ? page : _toInt(map['page']),
+            );
+          }
+
+          final postJson = _normalizeSavedPostJson(map);
+          if (postJson != null) {
+            final post = FeedPost.fromJson(postJson);
+            if (post.id > 0) {
+              return PostsResponse(posts: [post], hasMore: false, page: page);
+            }
           }
         }
       } on DioException catch (e) {
@@ -428,6 +441,75 @@ class FeedService {
       lastError?.response?.data,
       'Failed to get saved posts',
     );
+  }
+
+  Future<List<FeedPost>> _parseSavedPostsList(List<dynamic> items) async {
+    final posts = <FeedPost>[];
+    final brokenPostIds = <int>[];
+
+    for (final item in items) {
+      final map = _readMap(item);
+      final postJson = _normalizeSavedPostJson(map);
+      if (postJson == null) {
+        final postId = _readSavedPostId(map);
+        if (postId > 0) brokenPostIds.add(postId);
+        continue;
+      }
+
+      final post = FeedPost.fromJson(postJson);
+      if (post.id <= 0) {
+        final postId = _readSavedPostId(map);
+        if (postId > 0) brokenPostIds.add(postId);
+        continue;
+      }
+      posts.add(post.copyWith(isSaved: true));
+    }
+
+    for (final postId in brokenPostIds.toSet()) {
+      unawaited(
+        unsavePost(postId).catchError((error) {
+          debugPrint('Failed to remove broken bookmark $postId: $error');
+          return <String, dynamic>{};
+        }),
+      );
+    }
+
+    return posts;
+  }
+
+  Map<String, dynamic>? _normalizeSavedPostJson(Map<String, dynamic> map) {
+    final nested = map['post'] ??
+        map['savedPost'] ??
+        map['saved_post'] ??
+        map['feedPost'] ??
+        map['feed_post'];
+    if (nested is Map) {
+      return _readMap(nested);
+    }
+
+    if (map['deleted'] == true ||
+        map['isDeleted'] == true ||
+        map['postDeleted'] == true ||
+        map['post'] == null && _looksLikeBookmarkWrapper(map)) {
+      return null;
+    }
+
+    final id = _toInt(map['id'] ?? map['postId'] ?? map['post_id']);
+    if (id <= 0) return null;
+    return map;
+  }
+
+  bool _looksLikeBookmarkWrapper(Map<String, dynamic> map) {
+    return map.containsKey('postId') ||
+        map.containsKey('post_id') ||
+        map.containsKey('savedAt') ||
+        map.containsKey('saved_at') ||
+        map.containsKey('bookmarkId') ||
+        map.containsKey('bookmark_id');
+  }
+
+  int _readSavedPostId(Map<String, dynamic> map) {
+    return _toInt(map['postId'] ?? map['post_id'] ?? map['id']);
   }
 
   Future<Map<String, dynamic>> sharePost(int postId) async {
@@ -803,6 +885,24 @@ class FeedService {
     if (data is Map<String, dynamic>) return data;
     if (data is Map) return Map<String, dynamic>.from(data);
     return {};
+  }
+
+  int _toInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  bool? _readBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      final normalized = value.toLowerCase();
+      if (normalized == 'true') return true;
+      if (normalized == 'false') return false;
+    }
+    return null;
   }
 
   Map<String, dynamic> _readPostMap(dynamic data) {

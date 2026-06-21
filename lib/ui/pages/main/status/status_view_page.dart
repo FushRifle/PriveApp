@@ -327,57 +327,64 @@ class _StatusViewPageState extends State<StatusViewPage>
 
     final mediaUrl = hasImage || hasVideo ? story.attachments.first.url : null;
 
+    if (mediaUrl != null) {
+      return Container(
+        width: double.infinity,
+        height: double.infinity,
+        color: AppColors.black,
+        child: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: hasImage
+                    ? Image(
+                        image: _getImageProvider(mediaUrl),
+                        fit: BoxFit.contain,
+                        width: double.infinity,
+                      )
+                    : _StatusVideoPlayer(url: mediaUrl),
+              ),
+              if (hasText)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
+                  color: AppColors.black,
+                  child: _StoryHashtagText(
+                    text: story.content!,
+                    textAlign: TextAlign.left,
+                    style: _getTextStyle(story, hasMedia: true).copyWith(
+                      shadows: const [],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Container(
       width: double.infinity,
       height: double.infinity,
-      color: mediaUrl != null
-          ? AppColors.black
-          : _getBackgroundColor(story.backgroundColor),
-      child: Container(
-        decoration: mediaUrl != null
-            ? BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    AppColors.black.withOpacity(0.3),
-                    AppColors.transparent,
-                    AppColors.black.withOpacity(0.5),
-                  ],
-                ),
-              )
-            : null,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (mediaUrl != null && hasImage)
-              Positioned.fill(
-                child: Image(
-                  image: _getImageProvider(mediaUrl),
-                  fit: BoxFit.contain,
-                ),
-              ),
-            if (mediaUrl != null && hasVideo)
-              Positioned.fill(
-                child: _StatusVideoPlayer(url: mediaUrl),
-              ),
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: hasText
-                    ? SingleChildScrollView(
-                        child: _StoryHashtagText(
-                          text: story.content!,
-                          textAlign: _getTextAlign(story.textAlign),
-                          style:
-                              _getTextStyle(story, hasMedia: mediaUrl != null),
-                        ),
-                      )
-                    : const SizedBox.shrink(),
-              ),
+      color: _getBackgroundColor(story.backgroundColor),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: hasText
+                  ? SingleChildScrollView(
+                      child: _StoryHashtagText(
+                        text: story.content!,
+                        textAlign: _getTextAlign(story.textAlign),
+                        style: _getTextStyle(story, hasMedia: mediaUrl != null),
+                      ),
+                    )
+                  : const SizedBox.shrink(),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

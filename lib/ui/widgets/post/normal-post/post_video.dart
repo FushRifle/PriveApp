@@ -156,6 +156,7 @@ class _PostVideoState extends State<PostVideo>
       child: Stack(
         fit: StackFit.expand,
         children: [
+          const ColoredBox(color: AppColors.black),
           _buildVideoPreview(),
           const _VideoGradient(),
           const Center(
@@ -250,7 +251,7 @@ class _VideoFallback extends StatelessWidget {
 
   Widget _placeholder() {
     return Container(
-      color: AppColors.backgroundColor,
+      color: AppColors.black,
       child: Center(
         child: isLoading
             ? CircularProgressIndicator(

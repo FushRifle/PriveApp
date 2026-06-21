@@ -5,6 +5,7 @@ import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
+import 'package:clique/ui/pages/main/chat/archived_chat_page.dart';
 import 'package:clique/ui/pages/main/chat/chat_page.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/core/services/chat/chat_service.dart';
@@ -58,7 +59,17 @@ class _InboxPageState extends State<InboxPage> {
             actionIcon: Icons.archive_rounded,
             onActionTap: () {
               HapticFeedback.lightImpact();
-              debugPrint('Archive message tapped');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BlocProvider.value(
+                    value: context.read<ChatBloc>(),
+                    child: const ArchivedChatPage(),
+                  ),
+                ),
+              ).then((_) {
+                if (mounted) setState(() {});
+              });
             },
           ),
           Expanded(
@@ -210,6 +221,9 @@ class _InboxPageState extends State<InboxPage> {
     final cachedConversations = _chatService.readCachedConversations(
       cacheOwnerId: ownerId,
     );
+    final archivedIds = _chatService.readArchivedConversationIds(
+      cacheOwnerId: ownerId,
+    );
     final mergedSource = <ConversationModel>[];
     final byId = <int, ConversationModel>{};
 
@@ -234,6 +248,7 @@ class _InboxPageState extends State<InboxPage> {
     });
 
     for (final conv in sortedConversations) {
+      if (archivedIds.contains(conv.id)) continue;
       final isBot = conv.name.toLowerCase() == 'clique' ||
           conv.username.toLowerCase() == 'clique';
       final latestCachedMessage = _latestCachedMessage(
@@ -407,8 +422,8 @@ class _InboxPageState extends State<InboxPage> {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              AppColors.redColor.withOpacity(0.9),
-              AppColors.redColor,
+              AppColors.primary.withOpacity(0.9),
+              AppColors.primary,
             ],
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
@@ -418,62 +433,33 @@ class _InboxPageState extends State<InboxPage> {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 24),
         child: const Icon(
-          Icons.delete_outline_rounded, 
+          Icons.archive_rounded,
           color: AppColors.white,
           size: 24,
         ),
       ),
-      confirmDismiss: (direction) async {
-        return await showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            title: Text(
-              'Delete Conversation',
-              style: AppTheme.blackTextStyle.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            content: Text(
-              'Are you sure you want to delete the conversation with ${message.name}?',
-              style: AppTheme.greyTextStyle,
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text(
-                  'Cancel',
-                  style: AppTheme.greyTextStyle,
-                ),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: Text(
-                  'Delete',
-                  style: TextStyle(
-                    color: AppColors.redColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-      onDismissed: (direction) {
+      onDismissed: (direction) async {
+        final conversationId = int.tryParse(message.id);
+        if (conversationId != null) {
+          await _chatService.archiveConversation(
+            conversationId,
+            cacheOwnerId: _readCurrentUserId(),
+          );
+        }
+        if (!context.mounted) return;
+        setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.delete_outline_rounded, 
-                  color: AppColors.white, 
+                const Icon(
+                  Icons.archive_rounded,
+                  color: AppColors.white,
                   size: 18,
                 ),
                 const SizedBox(width: 10),
                 Text(
-                  'Conversation with ${message.name} deleted',
+                  'Conversation with ${message.name} archived',
                   style: TextStyle(color: AppColors.text),
                 ),
               ],
@@ -587,7 +573,7 @@ class _InboxPageState extends State<InboxPage> {
                 ],
               ),
               const SizedBox(width: 14),
-              
+
               // Content
               Expanded(
                 child: Column(

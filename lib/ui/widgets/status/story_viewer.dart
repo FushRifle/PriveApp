@@ -426,6 +426,39 @@ class _StoryContent extends StatelessWidget {
     final hasText = story.content != null && story.content!.trim().isNotEmpty;
     final type = attachment?.type.toLowerCase();
     final url = attachment?.url;
+    final hasMedia = attachment != null && url != null && url.isNotEmpty;
+
+    if (hasMedia) {
+      return ColoredBox(
+        color: Colors.black,
+        child: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: type == 'image'
+                    ? _StoryImage(url: url)
+                    : type == 'video'
+                        ? _StoryVideo(url: url, isActive: isActive)
+                        : const SizedBox.shrink(),
+              ),
+              if (hasText)
+                Container(
+                  width: double.infinity,
+                  color: Colors.black,
+                  padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
+                  child: _StoryHashtagText(
+                    text: story.content!,
+                    textAlign: TextAlign.left,
+                    style: _textStyle(story, hasMedia: true).copyWith(
+                      shadows: const [],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Stack(
       fit: StackFit.expand,

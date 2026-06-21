@@ -2,6 +2,16 @@ import 'package:dio/dio.dart';
 import '../../clients/api_service.dart';
 import '../../models/status_model.dart';
 
+class SilentStatusFailure implements Exception {
+  final int? statusCode;
+  final String operation;
+
+  const SilentStatusFailure(this.operation, this.statusCode);
+
+  @override
+  String toString() => '$operation failed with status $statusCode';
+}
+
 class StatusService {
   static final StatusService _instance = StatusService._internal();
   factory StatusService() => _instance;
@@ -30,12 +40,18 @@ class StatusService {
       final data = response.data;
 
       if (data is List) {
-        return data.map((json) => Story.fromJson(json)).toList();
+        return data
+            .map((json) => Story.fromJson(json))
+            .where(_isVisibleToViewer)
+            .toList();
       }
       if (data is Map) {
         final stories = data['data'] ?? data['stories'] ?? data['items'];
         if (stories is List) {
-          return stories.map((json) => Story.fromJson(json)).toList();
+          return stories
+              .map((json) => Story.fromJson(json))
+              .where(_isVisibleToViewer)
+              .toList();
         }
       }
       return [];
@@ -177,6 +193,11 @@ class StatusService {
   }
 
   String _handleError(DioException e, String fallback) {
+    final statusCode = e.response?.statusCode;
+    if (statusCode == 401 || statusCode == 500) {
+      throw SilentStatusFailure(fallback, statusCode);
+    }
+
     final data = e.response?.data;
     if (data is Map) {
       final message = data['message'] ?? data['error'];
@@ -192,5 +213,9 @@ class StatusService {
         .map((match) => match.group(1)!.toLowerCase())
         .where(seen.add)
         .toList();
+  }
+
+  bool _isVisibleToViewer(Story story) {
+    return story.isMe || story.user.isFollowing != false;
   }
 }

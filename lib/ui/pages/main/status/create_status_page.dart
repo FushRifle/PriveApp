@@ -1001,7 +1001,7 @@ class _CreateStatusPageState extends State<CreateStatusPage>
       unawaited(
         _syncUserTags(
           'status',
-          createdStory.id as int,
+          int.tryParse(createdStory.id) ?? 0,
           _storyContentWithHashtags(),
         ),
       );
@@ -1010,6 +1010,14 @@ class _CreateStatusPageState extends State<CreateStatusPage>
 
       if (!mounted) return;
       Navigator.pop(context, true);
+    } on SilentStatusFailure catch (e) {
+      debugPrint('Silent status upload failure: $e');
+      if (!mounted) return;
+      setState(() {
+        _isSubmitting = false;
+        _uploadProgress = 0.0;
+      });
+      _pulseController.stop();
     } catch (e) {
       debugPrint('Error sharing story: $e');
       if (!mounted) return;

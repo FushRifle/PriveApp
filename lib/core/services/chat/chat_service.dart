@@ -106,6 +106,54 @@ class ChatService {
     }
   }
 
+  Set<int> readArchivedConversationIds({int? cacheOwnerId}) {
+    final keysToCheck = <String>[
+      _archivedChatsKey(cacheOwnerId: cacheOwnerId),
+      if (cacheOwnerId != null) _archivedChatsKey(cacheOwnerId: null),
+    ];
+    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
+
+    for (final key in keysToCheck) {
+      final raw = box?.get(key);
+      if (raw is List) {
+        return raw
+            .map((value) => int.tryParse(value.toString()) ?? 0)
+            .where((value) => value > 0)
+            .toSet();
+      }
+    }
+
+    return <int>{};
+  }
+
+  Future<void> archiveConversation(
+    int conversationId, {
+    int? cacheOwnerId,
+  }) async {
+    if (conversationId <= 0) return;
+    final archived = readArchivedConversationIds(cacheOwnerId: cacheOwnerId)
+      ..add(conversationId);
+    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
+    await box?.put(
+      _archivedChatsKey(cacheOwnerId: cacheOwnerId),
+      archived.toList(),
+    );
+  }
+
+  Future<void> unarchiveConversation(
+    int conversationId, {
+    int? cacheOwnerId,
+  }) async {
+    if (conversationId <= 0) return;
+    final archived = readArchivedConversationIds(cacheOwnerId: cacheOwnerId)
+      ..remove(conversationId);
+    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
+    await box?.put(
+      _archivedChatsKey(cacheOwnerId: cacheOwnerId),
+      archived.toList(),
+    );
+  }
+
   List<Map<String, dynamic>> readCachedMessages(
     int conversationId, {
     int? cacheOwnerId,
@@ -1196,6 +1244,12 @@ class ChatService {
     return cacheOwnerId == null
         ? HiveCacheKeys.chatConversationsPrefix
         : '${HiveCacheKeys.chatConversationsPrefix}_$cacheOwnerId';
+  }
+
+  String _archivedChatsKey({int? cacheOwnerId}) {
+    return cacheOwnerId == null
+        ? HiveCacheKeys.archivedChatsPrefix
+        : '${HiveCacheKeys.archivedChatsPrefix}_$cacheOwnerId';
   }
 
   String _messagesKey(

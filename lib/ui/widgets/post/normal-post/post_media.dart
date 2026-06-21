@@ -1,4 +1,5 @@
 import 'package:clique/core/models/feeds_models.dart';
+import 'package:clique/app/configs/colors.dart';
 import 'package:clique/ui/widgets/post/normal-post/post_document.dart';
 import 'package:clique/ui/widgets/post/normal-post/post_image.dart';
 import 'package:clique/ui/widgets/post/normal-post/post_video.dart';
@@ -33,31 +34,34 @@ class PostMedia extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(28),
-        child: AspectRatio(
-          aspectRatio: aspectRatio,
-          child: imageAttachments.length > 1
-              ? _ImageCollage(
-                  post: post,
-                  attachments: imageAttachments,
-                )
-              : switch (type) {
-                  'image' => PostImage(
-                      post: post,
-                      attachment: attachment,
-                    ),
-                  'video' => PostVideo(
-                      post: post,
-                      attachment: attachment,
-                    ),
-                  'document' || 'file' || 'pdf' => PostDocument(
-                      post: post,
-                      attachment: attachment,
-                    ),
-                  _ => PostDocument(
-                      post: post,
-                      attachment: attachment,
-                    ),
-                },
+        child: ColoredBox(
+          color: AppColors.black,
+          child: AspectRatio(
+            aspectRatio: aspectRatio,
+            child: imageAttachments.length > 1
+                ? _ImageCollage(
+                    post: post,
+                    attachments: imageAttachments,
+                  )
+                : switch (type) {
+                    'image' => PostImage(
+                        post: post,
+                        attachment: attachment,
+                      ),
+                    'video' => PostVideo(
+                        post: post,
+                        attachment: attachment,
+                      ),
+                    'document' || 'file' || 'pdf' => PostDocument(
+                        post: post,
+                        attachment: attachment,
+                      ),
+                    _ => PostDocument(
+                        post: post,
+                        attachment: attachment,
+                      ),
+                  },
+          ),
         ),
       ),
     );
