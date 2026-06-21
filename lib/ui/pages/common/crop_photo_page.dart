@@ -45,7 +45,7 @@ class _CropPhotoPageState extends State<CropPhotoPage> {
           SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+              padding: const EdgeInsets.fromLTRB(16, 42, 16, 0),
               child: Row(
                 children: [
                   _ActionButton(

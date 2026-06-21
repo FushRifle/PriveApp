@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:clique/ui/pages/common/crop_photo_page.dart';
 import 'package:flutter/material.dart';
+import 'package:clique/ui/pages/common/crop_photo_page.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -121,4 +121,5 @@ class MediaService {
     if (dot == -1 || dot == name.length - 1) return '.jpg';
     return name.substring(dot);
   }
+
 }

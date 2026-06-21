@@ -77,15 +77,10 @@ class _Bootstrapper extends StatefulWidget {
 
 class _BootstrapperState extends State<_Bootstrapper> {
   bool _loading = true;
-
   bool _hasProfile = false;
-
   bool _hasUser = false;
-
   bool _isOnboarded = false;
-
   String? _error;
-
   Future<void>? _bootstrapFuture;
 
   @override
@@ -254,11 +249,11 @@ class _SplashScreen extends StatelessWidget {
               width: 116,
               height: 116,
               child: Lottie.asset(
-                'assets/animations/auth_guard_loader.json',
+                'assets/animations/loading.json',
                 repeat: true,
               ),
             ),
-            const SizedBox(height: 18),           
+            const SizedBox(height: 18),
           ],
         ),
       ),
@@ -268,9 +263,7 @@ class _SplashScreen extends StatelessWidget {
 
 class _ErrorScreen extends StatelessWidget {
   final String error;
-
   final VoidCallback onRetry;
-
   const _ErrorScreen({
     required this.error,
     required this.onRetry,
