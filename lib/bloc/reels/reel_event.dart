@@ -32,11 +32,16 @@ class CreateReel extends ReelEvent {
 class LikeReel extends ReelEvent {
   final String reelId;
   final int index;
+  final String reaction;
 
-  const LikeReel({required this.reelId, required this.index});
+  const LikeReel({
+    required this.reelId,
+    required this.index,
+    this.reaction = 'Like',
+  });
 
   @override
-  List<Object?> get props => [reelId, index];
+  List<Object?> get props => [reelId, index, reaction];
 }
 
 class UnlikeReel extends ReelEvent {

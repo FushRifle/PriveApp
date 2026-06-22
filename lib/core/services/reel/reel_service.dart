@@ -59,9 +59,18 @@ class ReelService {
   }
 
   // Like reel
-  Future<Map<String, dynamic>> likeReel(String reelId) async {
+  Future<Map<String, dynamic>> likeReel(
+    String reelId, {
+    String reaction = 'Like',
+  }) async {
     try {
-      final response = await _api.post('/api/reels/$reelId/like');
+      final response = await _api.post(
+        '/api/reels/$reelId/like',
+        data: {
+          'reaction': reaction,
+          'reactionType': reaction,
+        },
+      );
       _invalidateReelCaches(reelId);
       return _readMap(response.data);
     } on DioException catch (e) {
@@ -169,6 +178,39 @@ class ReelService {
       return _readMap(response.data);
     } on DioException catch (e) {
       throw _readErrorMessage(e, 'Failed to add comment');
+    }
+  }
+
+  Future<Map<String, dynamic>> likeReelComment({
+    required String reelId,
+    required String commentId,
+    String reaction = 'Like',
+  }) async {
+    try {
+      final response = await _api.post(
+        '/api/reels/$reelId/comments/$commentId/like',
+        data: {
+          'reaction': reaction,
+          'reactionType': reaction,
+        },
+      );
+      return _readMap(response.data);
+    } on DioException catch (e) {
+      throw _readErrorMessage(e, 'Failed to react to comment');
+    }
+  }
+
+  Future<Map<String, dynamic>> unlikeReelComment({
+    required String reelId,
+    required String commentId,
+  }) async {
+    try {
+      final response = await _api.delete(
+        '/api/reels/$reelId/comments/$commentId/like',
+      );
+      return _readMap(response.data);
+    } on DioException catch (e) {
+      throw _readErrorMessage(e, 'Failed to remove comment reaction');
     }
   }
 

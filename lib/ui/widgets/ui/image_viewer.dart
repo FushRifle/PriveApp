@@ -168,7 +168,7 @@ class _ImageViewerState extends State<ImageViewer> {
           iosAccessLevel: IosAccessLevel.addOnly,
         ),
       );
-      if (!permission.isAuth) {
+      if (!permission.hasAccess) {
         _showSnackBar('Photo access is required to save images');
         return;
       }

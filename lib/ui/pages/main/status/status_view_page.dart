@@ -8,6 +8,7 @@ import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/ui/widgets/common/effect_text.dart';
+import 'package:clique/ui/widgets/post/normal-post/post_reaction_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
 
@@ -40,6 +41,7 @@ class _StatusViewPageState extends State<StatusViewPage>
   bool _shouldResumeAfterInteraction = false;
   bool _isSendingReply = false;
   bool _showReplySent = false;
+  final Set<String> _expandedStoryTextIds = {};
 
   @override
   void initState() {
@@ -200,6 +202,7 @@ class _StatusViewPageState extends State<StatusViewPage>
                 item.id == story.id &&
                 item.isLiked == story.isLiked &&
                 item.isReshared == story.isReshared &&
+                item.reaction == story.reaction &&
                 item.likeCount == story.likeCount &&
                 item.reshareCount == story.reshareCount))) {
           return;
@@ -345,13 +348,13 @@ class _StatusViewPageState extends State<StatusViewPage>
                     : _StatusVideoPlayer(url: mediaUrl),
               ),
               if (hasText)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
-                  color: AppColors.black,
-                  child: _StoryHashtagText(
-                    text: story.content!,
-                    textAlign: TextAlign.left,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: _StoryTextBubble(
+                    story: story,
+                    expanded: _expandedStoryTextIds.contains(story.id),
+                    maxLines: 3,
+                    onToggle: () => _toggleStoryText(story.id),
                     style: _getTextStyle(story, hasMedia: true).copyWith(
                       shadows: const [],
                     ),
@@ -374,12 +377,13 @@ class _StatusViewPageState extends State<StatusViewPage>
             child: Padding(
               padding: const EdgeInsets.all(32),
               child: hasText
-                  ? SingleChildScrollView(
-                      child: _StoryHashtagText(
-                        text: story.content!,
-                        textAlign: _getTextAlign(story.textAlign),
-                        style: _getTextStyle(story, hasMedia: mediaUrl != null),
-                      ),
+                  ? _StoryTextBubble(
+                      story: story,
+                      expanded: _expandedStoryTextIds.contains(story.id),
+                      maxLines: 8,
+                      onToggle: () => _toggleStoryText(story.id),
+                      textAlign: _getTextAlign(story.textAlign),
+                      style: _getTextStyle(story, hasMedia: false),
                     )
                   : const SizedBox.shrink(),
             ),
@@ -387,6 +391,18 @@ class _StatusViewPageState extends State<StatusViewPage>
         ],
       ),
     );
+  }
+
+  void _toggleStoryText(String storyId) {
+    _pausePlaybackForInteraction();
+    setState(() {
+      if (!_expandedStoryTextIds.add(storyId)) {
+        _expandedStoryTextIds.remove(storyId);
+      }
+    });
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) _resumePlaybackAfterInteraction();
+    });
   }
 
   ImageProvider _getImageProvider(String imageUrl) {
@@ -751,6 +767,7 @@ class _StatusViewPageState extends State<StatusViewPage>
 
   Widget _buildLikeButton(Story story) {
     final liked = story.isLiked;
+    final reaction = _reactionForStory(story);
 
     return AnimatedScale(
       scale: liked ? 1.1 : 1.0,
@@ -773,6 +790,7 @@ class _StatusViewPageState extends State<StatusViewPage>
         ),
         child: IconButton(
           onPressed: () => _likeStory(story),
+          onLongPress: () => _showStoryReactionPicker(story),
           icon: AnimatedSwitcher(
             duration: const Duration(milliseconds: 220),
             transitionBuilder: (child, animation) {
@@ -782,9 +800,9 @@ class _StatusViewPageState extends State<StatusViewPage>
               );
             },
             child: Icon(
-              liked ? Icons.favorite : Icons.favorite_border,
+              liked ? reaction.icon : Icons.favorite_border,
               key: ValueKey<bool>(liked),
-              color: liked ? AppColors.redColor : AppColors.white,
+              color: liked ? reaction.color : AppColors.white,
               size: 22,
             ),
           ),
@@ -805,15 +823,31 @@ class _StatusViewPageState extends State<StatusViewPage>
   }
 
   void _likeStory(Story story) {
+    if (story.isLiked) {
+      _toggleStoryReaction(story, null);
+      return;
+    }
+    _toggleStoryReaction(story, postReactions.first);
+  }
+
+  void _showStoryReactionPicker(Story story) {
+    showPostReactionPicker(
+      context,
+      onSelected: (reaction) => _toggleStoryReaction(story, reaction),
+    );
+  }
+
+  void _toggleStoryReaction(Story story, PostReaction? reaction) {
     HapticFeedback.lightImpact();
     _pausePlaybackForInteraction();
 
-    final nextLiked = !story.isLiked;
+    final nextLiked = reaction != null;
     _replaceCurrentStory(
       story.copyWith(
         isLiked: nextLiked,
+        reaction: reaction?.label ?? '',
         likeCount: nextLiked
-            ? story.likeCount + 1
+            ? story.likeCount + (story.isLiked ? 0 : 1)
             : (story.likeCount - 1).clamp(0, 2147483647).toInt(),
       ),
     );
@@ -822,7 +856,7 @@ class _StatusViewPageState extends State<StatusViewPage>
     if (bloc != null) {
       bloc.add(
         nextLiked
-            ? LikeStoryEvent(storyId: story.id)
+            ? LikeStoryEvent(storyId: story.id, reaction: reaction.label)
             : UnlikeStoryEvent(storyId: story.id),
       );
     }
@@ -830,6 +864,17 @@ class _StatusViewPageState extends State<StatusViewPage>
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) _resumePlaybackAfterInteraction();
     });
+  }
+
+  PostReaction _reactionForStory(Story story) {
+    final label = story.reaction;
+    if (label == null || label.trim().isEmpty) {
+      return postReactions[1];
+    }
+    return postReactions.firstWhere(
+      (reaction) => reaction.label.toLowerCase() == label.toLowerCase(),
+      orElse: () => postReactions[1],
+    );
   }
 
   Future<void> _sendReply(String message, Story story) async {
@@ -1080,6 +1125,124 @@ class _StatusViewPageState extends State<StatusViewPage>
   }
 }
 
+class _StoryTextBubble extends StatelessWidget {
+  final Story story;
+  final bool expanded;
+  final int maxLines;
+  final VoidCallback onToggle;
+  final TextStyle style;
+  final TextAlign textAlign;
+
+  const _StoryTextBubble({
+    required this.story,
+    required this.expanded,
+    required this.maxLines,
+    required this.onToggle,
+    required this.style,
+    this.textAlign = TextAlign.left,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final text = story.content ?? '';
+    final shouldOfferMore = text.length > (maxLines <= 3 ? 120 : 260);
+    final lineLimit = expanded ? null : maxLines;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxHeight =
+            MediaQuery.sizeOf(context).height * (maxLines <= 3 ? 0.22 : 0.56);
+
+        return Align(
+          alignment: _alignmentFor(textAlign),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: constraints.maxWidth,
+              maxHeight: maxHeight,
+            ),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+              decoration: BoxDecoration(
+                color: AppColors.black.withOpacity(0.58),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: AppColors.white.withOpacity(0.10),
+                ),
+              ),
+              child: SingleChildScrollView(
+                physics: expanded
+                    ? const BouncingScrollPhysics()
+                    : const NeverScrollableScrollPhysics(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: _crossAxisFor(textAlign),
+                  children: [
+                    _StoryHashtagText(
+                      text: text,
+                      textAlign: textAlign,
+                      maxLines: lineLimit,
+                      overflow: expanded
+                          ? TextOverflow.visible
+                          : TextOverflow.ellipsis,
+                      style: style.copyWith(
+                        fontSize: style.fontSize?.clamp(15.0, 28.0),
+                        height: 1.35,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                    if (shouldOfferMore) ...[
+                      const SizedBox(height: 6),
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: onToggle,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Text(
+                            expanded ? 'see less' : 'see more',
+                            style: const TextStyle(
+                              color: AppColors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Alignment _alignmentFor(TextAlign align) {
+    switch (align) {
+      case TextAlign.right:
+        return Alignment.centerRight;
+      case TextAlign.left:
+      case TextAlign.start:
+        return Alignment.centerLeft;
+      default:
+        return Alignment.center;
+    }
+  }
+
+  CrossAxisAlignment _crossAxisFor(TextAlign align) {
+    switch (align) {
+      case TextAlign.right:
+        return CrossAxisAlignment.end;
+      case TextAlign.left:
+      case TextAlign.start:
+        return CrossAxisAlignment.start;
+      default:
+        return CrossAxisAlignment.center;
+    }
+  }
+}
+
 class _StatusVideoPlayer extends StatefulWidget {
   final String url;
 
@@ -1182,11 +1345,15 @@ class _StoryHashtagText extends StatelessWidget {
   final String text;
   final TextAlign textAlign;
   final TextStyle style;
+  final int? maxLines;
+  final TextOverflow overflow;
 
   const _StoryHashtagText({
     required this.text,
     required this.textAlign,
     required this.style,
+    this.maxLines,
+    this.overflow = TextOverflow.visible,
   });
 
   @override
@@ -1195,6 +1362,8 @@ class _StoryHashtagText extends StatelessWidget {
       text: text,
       textAlign: textAlign,
       style: style,
+      maxLines: maxLines,
+      overflow: overflow,
       hashtagColor: AppColors.storyYellow,
       mentionColor: AppColors.storyGreen,
       effectShadows: const [

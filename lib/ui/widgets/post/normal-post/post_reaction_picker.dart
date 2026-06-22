@@ -16,43 +16,45 @@ class PostReaction {
   });
 }
 
+final postReactions = [
+  const PostReaction(
+    label: 'Like',
+    icon: Icons.thumb_up_alt_rounded,
+    color: AppColors.primary,
+  ),
+  const PostReaction(
+    label: 'Love',
+    icon: Icons.favorite_rounded,
+    color: AppColors.redAccent,
+  ),
+  const PostReaction(
+    label: 'Care',
+    icon: Icons.sentiment_very_satisfied_rounded,
+    color: AppColors.orange,
+  ),
+  const PostReaction(
+    label: 'Haha',
+    icon: Icons.emoji_emotions_rounded,
+    color: AppColors.amber,
+  ),
+  const PostReaction(
+    label: 'Wow',
+    icon: Icons.auto_awesome_rounded,
+    color: AppColors.secondary,
+  ),
+  PostReaction(
+    label: 'Angry',
+    icon: Icons.sentiment_very_dissatisfied_rounded,
+    color: AppColors.redColor,
+  ),
+];
+
 Future<void> showPostReactionPicker(
   BuildContext context, {
   Rect? anchorRect,
   required ValueChanged<PostReaction> onSelected,
 }) async {
-  final reactions = [
-    const PostReaction(
-      label: 'Like',
-      icon: Icons.thumb_up_alt_rounded,
-      color: AppColors.primary,
-    ),
-    const PostReaction(
-      label: 'Love',
-      icon: Icons.favorite_rounded,
-      color: AppColors.redAccent,
-    ),
-    const PostReaction(
-      label: 'Care',
-      icon: Icons.sentiment_very_satisfied_rounded,
-      color: AppColors.orange,
-    ),
-    const PostReaction(
-      label: 'Haha',
-      icon: Icons.emoji_emotions_rounded,
-      color: AppColors.amber,
-    ),
-    const PostReaction(
-      label: 'Wow',
-      icon: Icons.auto_awesome_rounded,
-      color: AppColors.secondary,
-    ),
-    PostReaction(
-      label: 'Angry',
-      icon: Icons.sentiment_very_dissatisfied_rounded,
-      color: AppColors.redColor,
-    ),
-  ];
+  final reactions = postReactions;
 
   HapticFeedback.mediumImpact();
 

@@ -181,11 +181,12 @@ class _StatusBody extends StatelessWidget {
   }
 
   List<_StoryGroup> _groupStoriesByUser(List<Story> stories) {
-    final grouped = <int, List<Story>>{};
+    final grouped = <String, List<Story>>{};
 
     for (final story in stories) {
-      grouped.putIfAbsent(story.userId, () => []);
-      grouped[story.userId]!.add(story);
+      final key = _storyGroupKey(story);
+      grouped.putIfAbsent(key, () => []);
+      grouped[key]!.add(story);
     }
 
     final groups = grouped.entries.map((entry) {
@@ -212,6 +213,16 @@ class _StatusBody extends StatelessWidget {
     });
 
     return groups;
+  }
+
+  String _storyGroupKey(Story story) {
+    if (story.user.id > 0) return 'user:${story.user.id}';
+    if (story.userId > 0) return 'author:${story.userId}';
+    final handle = story.user.handle.trim().toLowerCase();
+    if (handle.isNotEmpty) return 'handle:$handle';
+    final username = story.user.username.trim().toLowerCase();
+    if (username.isNotEmpty) return 'username:$username';
+    return 'story:${story.id}';
   }
 }
 
@@ -644,7 +655,7 @@ Future<void> _openCreateStatus(BuildContext context) async {
 }
 
 class _StoryGroup {
-  final int userId;
+  final String userId;
   final StoryUser user;
   final List<Story> stories;
   final bool hasUnseen;

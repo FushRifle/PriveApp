@@ -232,13 +232,17 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     updatedReels[event.index] = {
       ...Map<String, dynamic>.from(oldReel),
       'isLiked': true,
+      'reaction': event.reaction,
       'likes': _readInt(oldReel['likes']) + 1,
     };
 
     emit(state.copyWith(reels: updatedReels));
 
     try {
-      await _reelService.likeReel(event.reelId);
+      await _reelService.likeReel(
+        event.reelId,
+        reaction: event.reaction,
+      );
     } catch (e) {
       // Rollback on error
       final rolledBackReels = List<dynamic>.from(state.reels);
@@ -264,6 +268,7 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     updatedReels[event.index] = {
       ...Map<String, dynamic>.from(oldReel),
       'isLiked': false,
+      'reaction': null,
       'likes': (_readInt(oldReel['likes']) - 1).clamp(0, 999999).toInt(),
     };
 

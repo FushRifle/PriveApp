@@ -3,6 +3,7 @@ import 'package:clique/app/configs/colors.dart';
 import 'package:clique/core/services/reel/reel_service.dart';
 import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
 import 'package:clique/ui/widgets/comments/comment_widgets.dart';
+import 'package:clique/ui/widgets/post/normal-post/post_reaction_picker.dart';
 import 'package:clique/ui/widgets/reels/helpers/reel_helpers.dart';
 import 'package:clique/ui/widgets/reels/helpers/reel_suggestions.dart';
 import 'package:clique/ui/widgets/reels/reel_actions.dart';
@@ -221,7 +222,10 @@ class _ReelCommentsSheetState extends State<ReelCommentsSheet> {
         itemCount: _comments.length,
         separatorBuilder: (_, __) => const SizedBox(height: 14),
         itemBuilder: (context, index) {
-          return CommentTile(comment: _comments[index]);
+          return CommentTile(
+            reelId: widget.reelId,
+            comment: _comments[index],
+          );
         },
       ),
     );
@@ -303,24 +307,48 @@ class _ReelCommentsSheetState extends State<ReelCommentsSheet> {
   }
 }
 
-class CommentTile extends StatelessWidget {
+class CommentTile extends StatefulWidget {
+  final String reelId;
   final dynamic comment;
 
   const CommentTile({
     super.key,
+    required this.reelId,
     required this.comment,
   });
 
   @override
+  State<CommentTile> createState() => _CommentTileState();
+}
+
+class _CommentTileState extends State<CommentTile> {
+  bool _expanded = false;
+  bool _isReacting = false;
+  String? _reactionLabel;
+  int _reactionDelta = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    final data = asMap(widget.comment);
+    _reactionLabel = data['reaction']?.toString() ??
+        data['myReaction']?.toString() ??
+        data['reactionType']?.toString();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final data = asMap(comment);
+    final data = asMap(widget.comment);
     final user = asMap(data['user']);
     final name = data['username']?.toString() ??
+        data['userName']?.toString() ??
         user['username']?.toString() ??
         user['name']?.toString() ??
         'User';
-    final avatar =
-        data['avatar']?.toString() ?? user['avatar']?.toString() ?? '';
+    final avatar = data['avatar']?.toString() ??
+        data['userAvatar']?.toString() ??
+        user['avatar']?.toString() ??
+        '';
     final text = data['content']?.toString() ??
         data['comment']?.toString() ??
         data['text']?.toString() ??
@@ -330,11 +358,14 @@ class CommentTile extends StatelessWidget {
         data['time']?.toString() ??
         '';
     final likes = readCommentInt(
-      data['likes'] ?? data['likesCount'] ?? data['_count']?['likes'],
-    );
+          data['likes'] ?? data['likesCount'] ?? data['_count']?['likes'],
+        ) +
+        _reactionDelta;
     final replies = readCommentInt(
       data['replyCount'] ?? data['repliesCount'] ?? data['_count']?['replies'],
     );
+    final selectedReaction = _selectedReaction;
+    final hasLongText = text.length > 180;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -384,38 +415,126 @@ class CommentTile extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  text,
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 14,
-                    height: 1.35,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      text,
+                      maxLines: _expanded ? null : 5,
+                      overflow: _expanded
+                          ? TextOverflow.visible
+                          : TextOverflow.ellipsis,
+                      softWrap: true,
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 14,
+                        height: 1.35,
+                      ),
+                    ),
+                    if (hasLongText)
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => setState(() => _expanded = !_expanded),
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            _expanded ? 'see less' : 'see more',
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                if (likes > 0 || replies > 0) ...[
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      if (likes > 0)
-                        MiniStat(
-                          icon: Icons.favorite_rounded,
-                          label: formatCommentCount(likes),
-                        ),
-                      if (replies > 0)
-                        MiniStat(
-                          icon: Icons.reply_rounded,
-                          label: formatCommentCount(replies),
-                        ),
-                    ],
-                  ),
-                ],
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    InkWell(
+                      borderRadius: BorderRadius.circular(999),
+                      onTap: _isReacting ? null : _showReactionPicker,
+                      child: MiniStat(
+                        icon: selectedReaction?.icon ??
+                            Icons.emoji_emotions_outlined,
+                        label: selectedReaction == null
+                            ? 'React'
+                            : '${selectedReaction.label}${likes > 0 ? ' ${formatCommentCount(likes)}' : ''}',
+                      ),
+                    ),
+                    if (replies > 0)
+                      MiniStat(
+                        icon: Icons.reply_rounded,
+                        label: formatCommentCount(replies),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  PostReaction? get _selectedReaction {
+    final label = _reactionLabel;
+    if (label == null || label.trim().isEmpty) return null;
+    return postReactions.firstWhere(
+      (reaction) => reaction.label.toLowerCase() == label.toLowerCase(),
+      orElse: () => postReactions.first,
+    );
+  }
+
+  void _showReactionPicker() {
+    showPostReactionPicker(
+      context,
+      onSelected: _applyReaction,
+    );
+  }
+
+  Future<void> _applyReaction(PostReaction reaction) async {
+    if (_isReacting) return;
+    final data = asMap(widget.comment);
+    final id = data['id']?.toString();
+    if (id == null || id.isEmpty) return;
+
+    final previousReaction = _reactionLabel;
+    setState(() {
+      _isReacting = true;
+      if (previousReaction == null || previousReaction.trim().isEmpty) {
+        _reactionDelta += 1;
+      }
+      _reactionLabel = reaction.label;
+    });
+
+    try {
+      await ReelService().likeReelComment(
+        reelId: widget.reelId,
+        commentId: id,
+        reaction: reaction.label,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _reactionLabel = previousReaction;
+        if (previousReaction == null || previousReaction.trim().isEmpty) {
+          _reactionDelta -= 1;
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString()),
+          backgroundColor: AppColors.card,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isReacting = false);
+      }
+    }
   }
 }

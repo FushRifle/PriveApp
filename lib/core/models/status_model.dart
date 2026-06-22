@@ -15,6 +15,7 @@ class Story extends Equatable {
   final int reshareCount;
   final bool isLiked;
   final bool isReshared;
+  final String? reaction;
   final String? backgroundColor;
   final String? textAlign;
   final double? fontSize;
@@ -36,6 +37,7 @@ class Story extends Equatable {
     this.reshareCount = 0,
     this.isLiked = false,
     this.isReshared = false,
+    this.reaction,
     this.backgroundColor,
     this.textAlign,
     this.fontSize,
@@ -62,6 +64,11 @@ class Story extends Equatable {
       reshareCount: json['reshareCount'] ?? 0,
       isLiked: json['isLiked'] ?? false,
       isReshared: json['isReshared'] ?? false,
+      reaction: (json['reaction'] ??
+              json['myReaction'] ??
+              json['reactionType'] ??
+              json['reaction_type'])
+          ?.toString(),
       backgroundColor: json['backgroundColor'],
       textAlign: json['textAlign'],
       fontSize: json['fontSize']?.toDouble(),
@@ -86,6 +93,7 @@ class Story extends Equatable {
       'reshareCount': reshareCount,
       'isLiked': isLiked,
       'isReshared': isReshared,
+      if (reaction != null) 'reaction': reaction,
       'backgroundColor': backgroundColor,
       'textAlign': textAlign,
       'fontSize': fontSize,
@@ -109,6 +117,7 @@ class Story extends Equatable {
     int? reshareCount,
     bool? isLiked,
     bool? isReshared,
+    String? reaction,
     String? backgroundColor,
     String? textAlign,
     double? fontSize,
@@ -130,6 +139,7 @@ class Story extends Equatable {
       reshareCount: reshareCount ?? this.reshareCount,
       isLiked: isLiked ?? this.isLiked,
       isReshared: isReshared ?? this.isReshared,
+      reaction: reaction ?? this.reaction,
       backgroundColor: backgroundColor ?? this.backgroundColor,
       textAlign: textAlign ?? this.textAlign,
       fontSize: fontSize ?? this.fontSize,
@@ -156,6 +166,7 @@ class Story extends Equatable {
         reshareCount,
         isLiked,
         isReshared,
+        reaction,
         backgroundColor,
         textAlign,
         fontSize,

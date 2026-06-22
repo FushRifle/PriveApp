@@ -10,6 +10,7 @@ import 'package:clique/core/services/reel/reel_service.dart';
 
 import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
 import 'package:clique/ui/widgets/common/effect_text.dart';
+import 'package:clique/ui/widgets/post/normal-post/post_reaction_picker.dart';
 import 'package:clique/ui/widgets/reels/helpers/reel_helpers.dart';
 import 'package:clique/ui/widgets/reels/helpers/reel_suggestions.dart';
 import 'package:clique/ui/widgets/reels/reel_actions.dart';
@@ -49,6 +50,8 @@ class _ReelItemState extends State<ReelItem>
   bool _isLiked = false;
   bool _isReposted = false;
   bool _isMuted = true;
+  IconData? _selectedReactionIcon;
+  Color? _selectedReactionColor;
 
   int _localLikeDelta = 0;
   int _localCommentDelta = 0;
@@ -116,6 +119,11 @@ class _ReelItemState extends State<ReelItem>
 
   void _syncLocalState() {
     _isLiked = readBool(widget.reel['isLiked']);
+    _setReactionFromLabel(
+      widget.reel['reaction']?.toString() ??
+          widget.reel['myReaction']?.toString() ??
+          widget.reel['reactionType']?.toString(),
+    );
     _isReposted = readBool(
       widget.reel['isReposted'] ?? widget.reel['is_reposted'],
     );
@@ -274,21 +282,46 @@ class _ReelItemState extends State<ReelItem>
     await prefs.setBool('reels_muted', nextMuted);
   }
 
-  void _handleLike() {
+  void _setReactionFromLabel(String? label) {
+    final normalized = label?.trim();
+    if (normalized == null || normalized.isEmpty) {
+      _selectedReactionIcon = null;
+      _selectedReactionColor = null;
+      return;
+    }
+
+    final reaction = postReactions.firstWhere(
+      (item) => item.label.toLowerCase() == normalized.toLowerCase(),
+      orElse: () => postReactions.first,
+    );
+    _selectedReactionIcon = reaction.icon;
+    _selectedReactionColor = reaction.color;
+  }
+
+  void _handleLike({PostReaction? reaction}) {
     final reelId = widget.reel['id']?.toString();
 
     if (reelId == null || reelId.isEmpty) return;
 
     final wasLiked = _isLiked;
+    final selectedReaction = reaction ?? postReactions.first;
 
     if (!mounted) return;
 
     setState(() {
-      _isLiked = !wasLiked;
-      _localLikeDelta += wasLiked ? -1 : 1;
+      if (wasLiked && reaction == null) {
+        _isLiked = false;
+        _setReactionFromLabel(null);
+        _localLikeDelta -= 1;
+      } else {
+        _isLiked = true;
+        _selectedReactionIcon = selectedReaction.icon;
+        _selectedReactionColor = selectedReaction.color;
+        if (!wasLiked) _localLikeDelta += 1;
+      }
     });
 
-    if (wasLiked) {
+    if (wasLiked && reaction == null) {
       context.read<ReelBloc>().add(
             UnlikeReel(
               reelId: reelId,
@@ -300,9 +333,17 @@ class _ReelItemState extends State<ReelItem>
             LikeReel(
               reelId: reelId,
               index: widget.index,
+              reaction: selectedReaction.label,
             ),
           );
     }
+  }
+
+  void _showReactionPicker() {
+    showPostReactionPicker(
+      context,
+      onSelected: (reaction) => _handleLike(reaction: reaction),
+    );
   }
 
   void _handleComment() {
@@ -850,10 +891,15 @@ class _ReelItemState extends State<ReelItem>
           mainAxisSize: MainAxisSize.min,
           children: [
             ActionButton(
-              icon: _isLiked ? Icons.favorite : Icons.favorite_border,
+              icon: _isLiked
+                  ? (_selectedReactionIcon ?? Icons.favorite)
+                  : Icons.favorite_border,
               label: formatCount(likeCount < 0 ? 0 : likeCount),
-              color: _isLiked ? AppColors.redColor : AppColors.white,
+              color: _isLiked
+                  ? (_selectedReactionColor ?? AppColors.redColor)
+                  : AppColors.white,
               onTap: _handleLike,
+              onLongPress: _showReactionPicker,
             ),
             const SizedBox(height: 20),
             ActionButton(

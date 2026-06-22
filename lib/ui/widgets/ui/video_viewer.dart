@@ -344,7 +344,7 @@ class _VideoViewerState extends State<VideoViewer> {
           iosAccessLevel: IosAccessLevel.addOnly,
         ),
       );
-      if (!permission.isAuth) {
+      if (!permission.hasAccess) {
         _showSnackBar('Photo access is required to save videos');
         return;
       }

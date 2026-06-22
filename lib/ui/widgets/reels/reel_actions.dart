@@ -7,6 +7,7 @@ class ActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
   final Color color;
 
   const ActionButton({
@@ -14,6 +15,7 @@ class ActionButton extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.onLongPress,
     this.color = Colors.white,
   });
 
@@ -24,6 +26,12 @@ class ActionButton extends StatelessWidget {
         HapticFeedback.mediumImpact();
         onTap();
       },
+      onLongPress: onLongPress == null
+          ? null
+          : () {
+              HapticFeedback.mediumImpact();
+              onLongPress!();
+            },
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

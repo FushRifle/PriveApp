@@ -82,11 +82,15 @@ class MarkStorySeen extends StoriesEvent {
 
 class LikeStoryEvent extends StoriesEvent {
   final String storyId;
+  final String reaction;
 
-  const LikeStoryEvent({required this.storyId});
+  const LikeStoryEvent({
+    required this.storyId,
+    this.reaction = 'Like',
+  });
 
   @override
-  List<Object?> get props => [storyId];
+  List<Object?> get props => [storyId, reaction];
 }
 
 class UnlikeStoryEvent extends StoriesEvent {

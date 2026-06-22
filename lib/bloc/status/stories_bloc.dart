@@ -221,6 +221,7 @@ class StoriesBloc extends Bloc<StoriesEvent, StoriesState> {
         if (story.isLiked) return story;
         return story.copyWith(
           isLiked: true,
+          reaction: event.reaction,
           likeCount: story.likeCount + 1,
         );
       }),
@@ -228,7 +229,7 @@ class StoriesBloc extends Bloc<StoriesEvent, StoriesState> {
     ));
 
     try {
-      await _statusService.likeStory(event.storyId);
+      await _statusService.likeStory(event.storyId, reaction: event.reaction);
     } catch (e) {
       emit(state.copyWith(stories: previousStories, error: e.toString()));
     }
@@ -244,6 +245,7 @@ class StoriesBloc extends Bloc<StoriesEvent, StoriesState> {
         if (!story.isLiked) return story;
         return story.copyWith(
           isLiked: false,
+          reaction: '',
           likeCount: (story.likeCount - 1).clamp(0, 2147483647).toInt(),
         );
       }),

@@ -112,9 +112,15 @@ class StatusService {
     }
   }
 
-  Future<void> likeStory(String storyId) async {
+  Future<void> likeStory(String storyId, {String reaction = 'Like'}) async {
     try {
-      await _api.post('/api/stories/$storyId/like');
+      await _api.post(
+        '/api/stories/$storyId/like',
+        data: {
+          'reaction': reaction,
+          'reactionType': reaction,
+        },
+      );
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to like story');
     }
