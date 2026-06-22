@@ -28,6 +28,9 @@ class StatusViewPage extends StatefulWidget {
 
 class _StatusViewPageState extends State<StatusViewPage>
     with TickerProviderStateMixin {
+  static const _defaultStoryDuration = Duration(seconds: 5);
+  static const _maximumVideoStoryDuration = Duration(minutes: 1);
+
   late AnimationController _progressController;
   late int currentIndex;
   late PageController _pageController;
@@ -54,13 +57,17 @@ class _StatusViewPageState extends State<StatusViewPage>
 
     _progressController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 5),
+      duration: _defaultStoryDuration,
     )..addListener(() {
         if (mounted) setState(() {});
       });
 
-    _progressController.forward();
     _setupAutoAdvance();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _stories.isEmpty) return;
+      _startStoryProgress(_stories[currentIndex]);
+      _markStoryAsSeen(_stories[currentIndex].id);
+    });
   }
 
   @override
@@ -81,6 +88,44 @@ class _StatusViewPageState extends State<StatusViewPage>
         _nextStatus();
       }
     });
+  }
+
+  bool _isVideoStory(Story story) {
+    return story.attachments.isNotEmpty &&
+        story.attachments.first.type.toLowerCase() == 'video';
+  }
+
+  void _startStoryProgress(Story story) {
+    _progressController.reset();
+
+    if (_isVideoStory(story)) {
+      // Wait for the player to report its real duration before starting.
+      _progressController.duration = _maximumVideoStoryDuration;
+      return;
+    }
+
+    _progressController.duration = _defaultStoryDuration;
+    if (!_isPaused) {
+      _progressController.forward();
+    }
+  }
+
+  void _handleVideoDuration(String storyId, Duration duration) {
+    if (!mounted || _stories.isEmpty) return;
+    final currentStory = _stories[_safeStoryIndex(_stories)];
+    if (currentStory.id != storyId || !_isVideoStory(currentStory)) return;
+
+    final reportedDuration =
+        duration > Duration.zero ? duration : _defaultStoryDuration;
+    final durationMs = reportedDuration.inMilliseconds
+        .clamp(1, _maximumVideoStoryDuration.inMilliseconds)
+        .toInt();
+    _progressController
+      ..duration = Duration(milliseconds: durationMs)
+      ..reset();
+    if (!_isPaused) {
+      _progressController.forward();
+    }
   }
 
   void _nextStatus() {
@@ -271,10 +316,7 @@ class _StatusViewPageState extends State<StatusViewPage>
                 setState(() {
                   currentIndex = index;
                 });
-                _progressController.reset();
-                if (!_isPaused) {
-                  _progressController.forward();
-                }
+                _startStoryProgress(stories[index]);
                 _markStoryAsSeen(stories[index].id);
               },
               itemBuilder: (context, index) {
@@ -345,7 +387,15 @@ class _StatusViewPageState extends State<StatusViewPage>
                         fit: BoxFit.contain,
                         width: double.infinity,
                       )
-                    : _StatusVideoPlayer(url: mediaUrl),
+                    : _StatusVideoPlayer(
+                        url: mediaUrl,
+                        isActive:
+                            story.id == _stories[_safeStoryIndex(_stories)].id,
+                        isPaused: _isPaused,
+                        onDurationReady: (duration) {
+                          _handleVideoDuration(story.id, duration);
+                        },
+                      ),
               ),
               if (hasText)
                 Padding(
@@ -1244,8 +1294,16 @@ class _StoryTextBubble extends StatelessWidget {
 
 class _StatusVideoPlayer extends StatefulWidget {
   final String url;
+  final bool isActive;
+  final bool isPaused;
+  final ValueChanged<Duration> onDurationReady;
 
-  const _StatusVideoPlayer({required this.url});
+  const _StatusVideoPlayer({
+    required this.url,
+    required this.isActive,
+    required this.isPaused,
+    required this.onDurationReady,
+  });
 
   @override
   State<_StatusVideoPlayer> createState() => _StatusVideoPlayerState();
@@ -1268,6 +1326,17 @@ class _StatusVideoPlayerState extends State<_StatusVideoPlayer> {
     if (oldWidget.url != widget.url) {
       _disposeController();
       _initialize();
+      return;
+    }
+    if (oldWidget.isActive != widget.isActive ||
+        oldWidget.isPaused != widget.isPaused) {
+      if (!oldWidget.isActive && widget.isActive) {
+        final duration = _controller?.value.duration;
+        if (duration != null && duration > Duration.zero) {
+          widget.onDurationReady(duration);
+        }
+      }
+      _syncPlayback();
     }
   }
 
@@ -1287,13 +1356,14 @@ class _StatusVideoPlayerState extends State<_StatusVideoPlayer> {
 
     try {
       await controller.initialize();
-      await controller.setLooping(true);
+      await controller.setLooping(false);
       await controller.setVolume(0);
-      await controller.play();
       if (!mounted || _controller != controller) {
         await controller.dispose();
         return;
       }
+      widget.onDurationReady(controller.value.duration);
+      await _syncPlayback();
       setState(() {
         _isReady = true;
         _hasError = false;
@@ -1301,6 +1371,19 @@ class _StatusVideoPlayerState extends State<_StatusVideoPlayer> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _hasError = true);
+    }
+  }
+
+  Future<void> _syncPlayback() async {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+    if (widget.isActive && !widget.isPaused) {
+      if (controller.value.position >= controller.value.duration) {
+        await controller.seekTo(Duration.zero);
+      }
+      await controller.play();
+    } else {
+      await controller.pause();
     }
   }
 

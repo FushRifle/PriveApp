@@ -14,7 +14,12 @@ import 'main_wrapper.dart';
 import 'named_routes.dart';
 
 class AuthGuard extends StatefulWidget {
-  const AuthGuard({super.key});
+  final VoidCallback? onBootstrapComplete;
+
+  const AuthGuard({
+    super.key,
+    this.onBootstrapComplete,
+  });
 
   @override
   State<AuthGuard> createState() => _AuthGuardState();
@@ -57,7 +62,9 @@ class _AuthGuardState extends State<AuthGuard> {
         }
 
         return _Bootstrapper(
+          key: ValueKey(authState.token),
           token: authState.token!,
+          onBootstrapComplete: widget.onBootstrapComplete,
         );
       },
     );
@@ -66,9 +73,12 @@ class _AuthGuardState extends State<AuthGuard> {
 
 class _Bootstrapper extends StatefulWidget {
   final String token;
+  final VoidCallback? onBootstrapComplete;
 
   const _Bootstrapper({
+    super.key,
     required this.token,
+    this.onBootstrapComplete,
   });
 
   @override
@@ -82,6 +92,7 @@ class _BootstrapperState extends State<_Bootstrapper> {
   bool _isOnboarded = false;
   String? _error;
   Future<void>? _bootstrapFuture;
+  bool _didNotifyBootstrapComplete = false;
 
   @override
   void initState() {
@@ -178,6 +189,7 @@ class _BootstrapperState extends State<_Bootstrapper> {
         _isOnboarded = _readOnboarded(userBloc.state.currentUser);
         _loading = false;
       });
+      _notifyBootstrapComplete();
     } catch (e) {
       if (!mounted) return;
 
@@ -186,6 +198,14 @@ class _BootstrapperState extends State<_Bootstrapper> {
         _error = e.toString();
       });
     }
+  }
+
+  void _notifyBootstrapComplete() {
+    if (_didNotifyBootstrapComplete) return;
+    _didNotifyBootstrapComplete = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onBootstrapComplete?.call();
+    });
   }
 
   @override

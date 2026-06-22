@@ -175,7 +175,7 @@ class _ProfileSavedPostsTabState extends State<ProfileSavedPostsTab> {
       color: AppColors.primary,
       onRefresh: () => _loadSavedPosts(refresh: true),
       child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 42),
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
         ),

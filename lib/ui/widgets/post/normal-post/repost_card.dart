@@ -24,7 +24,7 @@ class RepostCard extends StatelessWidget {
     }
 
     return Container(
-      margin: EdgeInsets.only(bottom: isDetailView ? 0 : 18),
+      margin: EdgeInsets.only(bottom: isDetailView ? 0 : 18, top: 10),
       decoration: BoxDecoration(
         color: AppColors.cardColor,
         borderRadius: BorderRadius.circular(30),

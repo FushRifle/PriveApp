@@ -229,7 +229,9 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
               scrollBehavior: const CustomScrollBehavior(),
               home: _SecurityGate(
                 appLockService: _appLockService,
-                child: const AuthGuard(),
+                childBuilder: (onBootstrapComplete) => AuthGuard(
+                  onBootstrapComplete: onBootstrapComplete,
+                ),
               ),
               onGenerateRoute: AppRouter.onGenerateRoute,
             ),
@@ -241,11 +243,11 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
 }
 
 class _SecurityGate extends StatefulWidget {
-  final Widget child;
+  final Widget Function(VoidCallback onBootstrapComplete) childBuilder;
   final AppLockService appLockService;
 
   const _SecurityGate({
-    required this.child,
+    required this.childBuilder,
     required this.appLockService,
   });
 
@@ -258,6 +260,7 @@ class _SecurityGateState extends State<_SecurityGate>
   bool _isLoading = true;
   bool _isUnlocked = false;
   bool _isPrompting = false;
+  bool _authGuardReady = false;
   int? _lockUserId;
   AppLockSettings? _lockSettings;
 
@@ -265,9 +268,6 @@ class _SecurityGateState extends State<_SecurityGate>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _bootstrap();
-    });
   }
 
   @override
@@ -282,7 +282,9 @@ class _SecurityGateState extends State<_SecurityGate>
       if (mounted) {
         setState(() => _isUnlocked = false);
       }
-      _bootstrap(forcePrompt: true);
+      if (_authGuardReady) {
+        _bootstrap(forcePrompt: true);
+      }
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
       _isUnlocked = false;
@@ -290,7 +292,7 @@ class _SecurityGateState extends State<_SecurityGate>
   }
 
   Future<void> _bootstrap({bool forcePrompt = false}) async {
-    if (_isPrompting) return;
+    if (_isPrompting || !_authGuardReady) return;
 
     try {
       final authState = context.read<AuthBloc>().state;
@@ -372,16 +374,17 @@ class _SecurityGateState extends State<_SecurityGate>
     SettingsState settingsState,
   ) async {
     final cached = await widget.appLockService.loadCached(userId: userId);
-    final mergedCached = _mergeSettingsLock(settingsState, cached);
 
-    if (mergedCached.enabled) {
+    // A locally enabled lock must win during cold start. SettingsBloc may
+    // still contain the unscoped/default state while AuthGuard bootstraps.
+    if (cached.enabled) {
       unawaited(
-        widget.appLockService
-            .load(userId: userId)
-            .catchError((_) => mergedCached),
+        widget.appLockService.load(userId: userId).catchError((_) => cached),
       );
-      return mergedCached;
+      return cached;
     }
+
+    final mergedCached = _mergeSettingsLock(settingsState, cached);
 
     try {
       final remoteOrCached = await widget.appLockService.load(userId: userId);
@@ -407,6 +410,7 @@ class _SecurityGateState extends State<_SecurityGate>
   }
 
   Future<void> _applySettingsState(SettingsState settingsState) async {
+    if (!_authGuardReady) return;
     final authState = context.read<AuthBloc>().state;
     if (!authState.isAuthenticated || authState.token == null) return;
     if (settingsState.appLockEnabled == null) return;
@@ -427,6 +431,7 @@ class _SecurityGateState extends State<_SecurityGate>
   @override
   Widget build(BuildContext context) {
     final shouldShowUnlockPage = !_isUnlocked && _lockSettings?.enabled == true;
+    final authGuard = widget.childBuilder(_handleAuthGuardReady);
 
     return MultiBlocListener(
       listeners: [
@@ -438,11 +443,17 @@ class _SecurityGateState extends State<_SecurityGate>
           },
           listener: (context, state) {
             if (state.status == AuthStatus.authenticated) {
-              _bootstrap(forcePrompt: true);
+              setState(() {
+                _authGuardReady = false;
+                _isLoading = true;
+                _isUnlocked = false;
+              });
             } else if (state.status == AuthStatus.unauthenticated) {
               setState(() {
+                _authGuardReady = false;
                 _isLoading = false;
                 _isUnlocked = true;
+                _lockSettings = null;
               });
             }
           },
@@ -460,26 +471,48 @@ class _SecurityGateState extends State<_SecurityGate>
           },
         ),
       ],
-      child: _isLoading
-          ? const _SecurityLoadingPlaceholder()
-          : shouldShowUnlockPage
-              ? AppUnlockPage(
-                  isLoading: _isLoading,
-                  userId: _lockUserId,
-                  settings: _lockSettings,
-                  appLockService: widget.appLockService,
-                  onUnlocked: () {
-                    if (!mounted) return;
-                    setState(() => _isUnlocked = true);
-                  },
-                )
-              : widget.child,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          authGuard,
+          if (_authGuardReady && _isLoading)
+            const _SecurityLoadingPlaceholder()
+          else if (_authGuardReady && shouldShowUnlockPage)
+            AppUnlockPage(
+              isLoading: _isLoading,
+              userId: _lockUserId,
+              settings: _lockSettings,
+              appLockService: widget.appLockService,
+              onUnlocked: () {
+                if (!mounted) return;
+                setState(() => _isUnlocked = true);
+              },
+            ),
+        ],
+      ),
     );
   }
 
+  void _handleAuthGuardReady() {
+    if (!mounted || _authGuardReady) return;
+    setState(() {
+      _authGuardReady = true;
+      _isLoading = true;
+      _isUnlocked = false;
+    });
+    unawaited(_bootstrap(forcePrompt: true));
+  }
+
   int? _currentUserId() {
-    final currentUser = context.read<AuthBloc>().state.user;
-    final raw = currentUser?['id'];
+    final backendUser = context.read<UserBloc>().state.currentUser;
+    final backendId = _readUserId(backendUser?['id']);
+    if (backendId != null) return backendId;
+
+    final authUser = context.read<AuthBloc>().state.user;
+    return _readUserId(authUser?['id']);
+  }
+
+  int? _readUserId(dynamic raw) {
     if (raw is int) return raw;
     if (raw is num) return raw.toInt();
     return int.tryParse(raw?.toString() ?? '');

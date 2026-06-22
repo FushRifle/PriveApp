@@ -32,6 +32,8 @@ class CreateStatusPage extends StatefulWidget {
 
 class _CreateStatusPageState extends State<CreateStatusPage>
     with TickerProviderStateMixin {
+  static const _maximumStoryVideoDuration = Duration(minutes: 1);
+
   final TextEditingController _textController =
       HighlightTokenTextEditingController();
   final TextEditingController _hashtagController =
@@ -134,6 +136,21 @@ class _CreateStatusPageState extends State<CreateStatusPage>
 
     try {
       await controller.initialize();
+      if (controller.value.duration > _maximumStoryVideoDuration) {
+        await controller.dispose();
+        if (!mounted || _previewVideoController != controller) return;
+        setState(() {
+          _previewVideoController = null;
+          _selectedMediaFile = null;
+          _selectedMediaType = null;
+          _isPreviewVideoReady = false;
+        });
+        _showSnackBar(
+          'Story videos can be up to 1 minute long',
+          isError: true,
+        );
+        return;
+      }
       await controller.setLooping(true);
       await controller.setVolume(0);
 
@@ -338,15 +355,6 @@ class _CreateStatusPageState extends State<CreateStatusPage>
                           ? Colors.white.withOpacity(0.2)
                           : Colors.white.withOpacity(0.1),
                     ),
-                    boxShadow: _hasContent
-                        ? [
-                            BoxShadow(
-                              color: AppColors.primary.withOpacity(0.3),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ]
-                        : null,
                   ),
                   child: _isSubmitting
                       ? const SizedBox(
@@ -714,7 +722,7 @@ class _CreateStatusPageState extends State<CreateStatusPage>
       final XFile? pickedFile = mediaType == 'video'
           ? await _imagePicker.pickVideo(
               source: source,
-              maxDuration: const Duration(seconds: 45),
+              maxDuration: _maximumStoryVideoDuration,
             )
           : await _imagePicker.pickImage(
               source: source,
