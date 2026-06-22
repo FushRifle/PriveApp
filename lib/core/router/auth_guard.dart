@@ -203,9 +203,7 @@ class _BootstrapperState extends State<_Bootstrapper> {
   void _notifyBootstrapComplete() {
     if (_didNotifyBootstrapComplete) return;
     _didNotifyBootstrapComplete = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) widget.onBootstrapComplete?.call();
-    });
+    if (mounted) widget.onBootstrapComplete?.call();
   }
 
   @override

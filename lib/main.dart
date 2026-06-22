@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:lottie/lottie.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import 'package:clique/core/services/calls/stream_call_service.dart';
 import 'package:clique/core/services/chat/stream_chat_service.dart';
@@ -438,8 +439,7 @@ class _SecurityGateState extends State<_SecurityGate>
         BlocListener<AuthBloc, AuthState>(
           listenWhen: (previous, current) {
             return previous.status != current.status ||
-                previous.token != current.token ||
-                previous.user != current.user;
+                previous.token != current.token;
           },
           listener: (context, state) {
             if (state.status == AuthStatus.authenticated) {
@@ -529,8 +529,24 @@ class _SecurityLoadingPlaceholder extends StatelessWidget {
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBackground : AppColors.background,
       body: const Center(
-        child: CircularProgressIndicator(),
+        child: SizedBox(
+          width: 116,
+          height: 116,
+          child: _SecurityLoadingAnimation(),
+        ),
       ),
+    );
+  }
+}
+
+class _SecurityLoadingAnimation extends StatelessWidget {
+  const _SecurityLoadingAnimation();
+
+  @override
+  Widget build(BuildContext context) {
+    return Lottie.asset(
+      'assets/animations/loading.json',
+      repeat: true,
     );
   }
 }

@@ -273,7 +273,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
             ],
           ),
           if (!_isBot) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             GestureDetector(
               onTap: () {
                 HapticFeedback.lightImpact();
