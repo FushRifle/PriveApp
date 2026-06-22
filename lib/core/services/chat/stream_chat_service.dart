@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:clique/app/configs/api_config.dart';
 import 'package:clique/core/clients/api_service.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:stream_chat/stream_chat.dart' as stream;
 
 class StreamChatService {
@@ -16,6 +17,10 @@ class StreamChatService {
   String? _connectedUserId;
   Future<void>? _connectFuture;
   String? _authToken;
+  DateTime? _lastConnectionFailureAt;
+
+  static const _defaultBaseUrl = 'https://chat.stream-io-api.com';
+  static const _connectionRetryDelay = Duration(seconds: 15);
 
   bool get isConnected => _client != null && _connectedUserId != null;
 
@@ -26,10 +31,12 @@ class StreamChatService {
     if (_authToken != null) {
       _api.setAuthToken(_authToken!);
     }
+    _lastConnectionFailureAt = null;
   }
 
   void clearAuthToken() {
     _authToken = null;
+    _lastConnectionFailureAt = null;
     _api.clearAuthToken();
   }
 
@@ -62,6 +69,14 @@ class StreamChatService {
   Future<void> ensureConnected() => connect();
 
   Future<void> _connectInternal() async {
+    final lastFailureAt = _lastConnectionFailureAt;
+    if (lastFailureAt != null &&
+        DateTime.now().difference(lastFailureAt) < _connectionRetryDelay) {
+      throw const StreamChatConnectionException(
+        'Stream Chat is temporarily unreachable',
+      );
+    }
+
     final auth = await _getStreamAuth();
     final userId = auth.user.id.toString();
 
@@ -75,6 +90,10 @@ class StreamChatService {
       throw StateError('Stream Chat auth is not configured');
     }
 
+    final baseUrl =
+        auth.baseUrl.trim().isEmpty ? _defaultBaseUrl : auth.baseUrl.trim();
+    await _probeStreamEndpoint(baseUrl);
+
     final user = stream.User(
       id: userId,
       name: auth.user.name.isEmpty ? auth.user.username : auth.user.name,
@@ -84,12 +103,58 @@ class StreamChatService {
     final client = stream.StreamChatClient(
       auth.apiKey,
       logLevel: stream.Level.WARNING,
+      baseURL: baseUrl,
+      baseWsUrl: baseUrl,
     );
 
-    await client.connectUser(user, auth.token);
-
     _client = client;
-    _connectedUserId = userId;
+    try {
+      await client.connectUser(user, auth.token);
+      _connectedUserId = userId;
+      _lastConnectionFailureAt = null;
+    } catch (error) {
+      if (identical(_client, client)) {
+        _client = null;
+        _connectedUserId = null;
+      }
+      _lastConnectionFailureAt = DateTime.now();
+      try {
+        await client.dispose();
+      } catch (_) {}
+      rethrow;
+    }
+  }
+
+  Future<void> _probeStreamEndpoint(String baseUrl) async {
+    final uri = Uri.tryParse(baseUrl);
+    if (uri == null ||
+        !uri.hasScheme ||
+        uri.host.isEmpty ||
+        (uri.scheme != 'https' && uri.scheme != 'http')) {
+      throw const StreamChatConnectionException(
+        'The Stream Chat endpoint is invalid',
+      );
+    }
+
+    // Browsers enforce CORS on this probe; the Stream SDK handles its own
+    // browser connection and surfaces any failure through connectUser.
+    if (kIsWeb) return;
+
+    try {
+      await Dio(
+        BaseOptions(
+          connectTimeout: const Duration(seconds: 5),
+          receiveTimeout: const Duration(seconds: 5),
+          validateStatus: (_) => true,
+        ),
+      ).head<void>(baseUrl);
+    } on DioException catch (error) {
+      _lastConnectionFailureAt = DateTime.now();
+      throw StreamChatConnectionException(
+        'Cannot reach Stream Chat at ${uri.host}',
+        cause: error,
+      );
+    }
   }
 
   Future<_StreamAuthResponse> _getStreamAuth() async {
@@ -211,22 +276,36 @@ class StreamChatService {
 class _StreamAuthResponse {
   final String apiKey;
   final String token;
+  final String baseUrl;
   final _StreamUser user;
 
   const _StreamAuthResponse({
     required this.apiKey,
     required this.token,
+    required this.baseUrl,
     required this.user,
   });
 
   factory _StreamAuthResponse.fromJson(Map<String, dynamic> json) {
     return _StreamAuthResponse(
       apiKey: json['apiKey']?.toString().trim() ?? '',
-      token: json['token'] as String,
+      token: json['token']?.toString().trim() ?? '',
+      baseUrl: json['baseUrl']?.toString().trim() ??
+          StreamChatService._defaultBaseUrl,
       user:
           _StreamUser.fromJson(Map<String, dynamic>.from(json['user'] as Map)),
     );
   }
+}
+
+class StreamChatConnectionException implements Exception {
+  final String message;
+  final Object? cause;
+
+  const StreamChatConnectionException(this.message, {this.cause});
+
+  @override
+  String toString() => message;
 }
 
 class _StreamUser {

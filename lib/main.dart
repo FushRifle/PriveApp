@@ -194,8 +194,6 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
                 StreamCallService.instance.setAuthToken(token);
                 StreamChatService.instance.setAuthToken(token);
                 unawaited(StreamCallService.instance.connect());
-                unawaited(
-                    StreamChatService.instance.connect().catchError((_) {}));
                 final userID = state.user?['id']?.toString() ?? '';
                 final userId = int.tryParse(userID);
                 context.read<SettingsBloc>().add(

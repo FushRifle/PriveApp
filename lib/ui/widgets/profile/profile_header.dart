@@ -34,8 +34,8 @@ class ProfileCoverHeader extends StatelessWidget {
         onPressed: () => Navigator.maybePop(context),
         icon: Icon(
           Icons.arrow_back_ios_new,
-          color: AppColors.white,
-          size: 24,
+          color: AppColors.primary,
+          size: 26,
         ),
       ),
       flexibleSpace: FlexibleSpaceBar(
@@ -339,7 +339,7 @@ class ProfileIdentityRow extends StatelessWidget {
             letterSpacing: -0.3,
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 5),
         GestureDetector(
           onTap: isOwnProfile && onOpenAccountSwitcher != null
               ? () {
@@ -353,7 +353,7 @@ class ProfileIdentityRow extends StatelessWidget {
               Text(
                 handle != null ? '@$handle' : profile.ageText,
                 style: AppTheme.greyTextStyle.copyWith(
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -406,7 +406,7 @@ class ProfileBioRow extends StatelessWidget {
       children: [
         if (hasBio)
           Padding(
-            padding: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.only(bottom: 15, top: 15),
             child: Text(
               bio,
               textAlign: TextAlign.center,

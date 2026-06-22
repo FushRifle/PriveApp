@@ -123,6 +123,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_new, color: _text),
+          color: AppColors.primary,
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -136,6 +137,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
         actions: [
           IconButton(
             icon: Icon(Icons.settings_outlined, color: _text),
+            color: AppColors.primary,
             onPressed: () {
               HapticFeedback.lightImpact();
               Navigator.push(
@@ -219,6 +221,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
       child: Column(
         children: [
           _buildAvatar(firstLetter),
+          const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -239,7 +242,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                 style: AppTheme.greyTextStyle.copyWith(
                   fontSize: 13,
                   color: isOnline ? AppColors.greenColor : _mutedText,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],

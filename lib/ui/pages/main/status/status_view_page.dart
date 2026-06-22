@@ -1163,7 +1163,6 @@ class _StoryTextBubble extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
               decoration: BoxDecoration(
-                color: AppColors.black.withOpacity(0.58),
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
                   color: AppColors.white.withOpacity(0.10),
@@ -1191,18 +1190,18 @@ class _StoryTextBubble extends StatelessWidget {
                       ),
                     ),
                     if (shouldOfferMore) ...[
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       GestureDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: onToggle,
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          padding: const EdgeInsets.symmetric(vertical: 4),
                           child: Text(
                             expanded ? 'see less' : 'see more',
-                            style: const TextStyle(
-                              color: AppColors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
+                            style: TextStyle(
+                              color: AppColors.text,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),

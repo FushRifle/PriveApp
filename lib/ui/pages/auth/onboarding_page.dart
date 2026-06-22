@@ -40,9 +40,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
       ),
       decoration: const PageDecoration(
         pageColor: Color(0xFF0F1119),
-        imagePadding: EdgeInsets.only(top: 20),
-        titlePadding: EdgeInsets.only(top: 20, bottom: 14),
-        bodyPadding: EdgeInsets.symmetric(horizontal: 32),
+        imagePadding: EdgeInsets.only(top: 40),
+        titlePadding: EdgeInsets.only(top: 70, bottom: 20),
+        bodyPadding: EdgeInsets.symmetric(horizontal: 32, vertical: 32),
         pageMargin: EdgeInsets.zero,
       ),
     ),
@@ -133,7 +133,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         showNextButton: true,
         showDoneButton: true,
         skip: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.08),
             borderRadius: BorderRadius.circular(12),
@@ -218,7 +218,7 @@ class _IntroTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: Text(
         title,
         textAlign: TextAlign.center,
@@ -243,7 +243,7 @@ class _IntroBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 1),
       child: Text(
         text,
         textAlign: TextAlign.center,
@@ -318,7 +318,7 @@ class _IntroArtwork extends StatelessWidget {
                 ),
                 // Badge chip
                 Positioned(
-                  top: 16,
+                  top: 40,
                   left: 16,
                   child: Container(
                     padding: const EdgeInsets.symmetric(

@@ -24,7 +24,6 @@ class ChatService {
   void setAuthToken(String token) {
     _api.setAuthToken(token);
     _startPendingRetryLoop();
-    unawaited(_streamChatService.connect().catchError((_) {}));
   }
 
   Future<void> ensureStreamConnected() {

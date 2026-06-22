@@ -606,14 +606,14 @@ class _InboxPageState extends State<InboxPage> {
                               if (isBot) ...[
                                 const SizedBox(width: 4),
                                 Container(
-                                  padding: const EdgeInsets.all(2),
+                                  padding: const EdgeInsets.all(3),
                                   decoration: BoxDecoration(
-                                    color: AppColors.secondary,
-                                    borderRadius: BorderRadius.circular(4),
+                                    color: AppColors.primary,
+                                    borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: const Icon(
                                     Icons.check_rounded,
-                                    size: 10,
+                                    size: 11,
                                     color: AppColors.white,
                                   ),
                                 ),

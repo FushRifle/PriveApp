@@ -631,11 +631,6 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: color.color,
-                                border: Border.all(
-                                    color: _chatColor == color.id
-                                        ? AppColors.primary
-                                        : AppColors.transparent,
-                                    width: 3),
                               ),
                               child: _chatColor == color.id
                                   ? const Center(
@@ -686,7 +681,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
                   title: Text(_capitalize(sound),
                       style: AppTheme.blackTextStyle.copyWith(fontSize: 16)),
                   trailing: _notificationSound == sound
-                      ? const Icon(Icons.check_circle, color: AppColors.primary)
+                      ? Icon(Icons.check_circle, color: AppColors.text)
                       : null,
                   onTap: () {
                     setState(() => _notificationSound = sound);
@@ -782,7 +777,7 @@ class _WallpaperOptionCard extends StatelessWidget {
               _preview(),
               if (isSelected)
                 Container(
-                  color: AppColors.primary.withOpacity(0.3),
+                  color: AppColors.card.withOpacity(0.2),
                   child: const Center(
                     child: Icon(
                       Icons.check_circle,

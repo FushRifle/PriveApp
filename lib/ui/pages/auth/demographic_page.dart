@@ -252,7 +252,7 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
 
   Widget _buildSkipButton(bool isLoading) {
     return Padding(
-      padding: const EdgeInsets.only(top: 50, right: 20),
+      padding: const EdgeInsets.only(top: 60, right: 20),
       child: Align(
         alignment: Alignment.topRight,
         child: GestureDetector(
@@ -260,14 +260,14 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
-              color: AppColors.grey.shade100,
+              color: AppColors.primary,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: AppColors.primary.withOpacity(0.3)),
             ),
             child: Text(
               'Skip',
               style: AppTheme.blackTextStyle.copyWith(
-                color: AppColors.primary,
+                color: AppColors.white,
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
               ),
@@ -477,7 +477,7 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
   Widget _buildGenderSection() {
     return _buildFormCard(
       icon: Icons.person,
-      iconColors: [AppColors.purple, AppColors.pink],
+      iconColors: [AppColors.primary, AppColors.secondary],
       title: 'Gender',
       child: Wrap(
         spacing: 10,
@@ -489,7 +489,7 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.primary : AppColors.grey.shade100,
+                color: isSelected ? AppColors.primary : AppColors.card,
                 borderRadius: BorderRadius.circular(30),
                 border: Border.all(
                   color:
@@ -499,7 +499,7 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
               child: Text(
                 gender,
                 style: TextStyle(
-                  color: isSelected ? AppColors.white : AppColors.grey.shade700,
+                  color: isSelected ? AppColors.white : AppColors.text,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                   fontSize: 14,
                 ),
@@ -526,7 +526,7 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.primary : AppColors.grey.shade100,
+                color: isSelected ? AppColors.primary : AppColors.card,
                 borderRadius: BorderRadius.circular(30),
                 border: Border.all(
                   color:
@@ -536,7 +536,7 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
               child: Text(
                 option,
                 style: TextStyle(
-                  color: isSelected ? AppColors.white : AppColors.grey.shade700,
+                  color: isSelected ? AppColors.white : AppColors.text,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                   fontSize: 14,
                 ),
@@ -555,7 +555,7 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
       title: 'Location',
       child: TextField(
         controller: _locationController,
-        style: const TextStyle(fontSize: 16),
+        style: const TextStyle(fontSize: 16,),
         decoration: InputDecoration(
           hintText: 'City, Country',
           hintStyle: AppTheme.greyTextStyle.copyWith(fontSize: 14),
@@ -807,12 +807,12 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: AppColors.card,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.grey.shade100),
+        border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
-            color: AppColors.grey.shade100,
+            color: AppColors.greyColor,
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -852,10 +852,10 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: AppColors.background,
         boxShadow: [
           BoxShadow(
-            color: AppColors.grey.shade100,
+            color: AppColors.card,
             blurRadius: 16,
             offset: const Offset(0, -4),
           ),
@@ -870,9 +870,7 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
                 child: Container(
                   height: 50,
                   decoration: BoxDecoration(
-                    color: AppColors.white,
                     borderRadius: BorderRadius.circular(25),
-                    border: Border.all(color: AppColors.grey.shade300),
                   ),
                   child: Center(
                     child: Text(
