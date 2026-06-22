@@ -78,6 +78,12 @@ class _InboxPageState extends State<InboxPage> {
               color: AppColors.primary,
               onRefresh: _refreshConversations,
               child: BlocBuilder<ChatBloc, ChatState>(
+                buildWhen: (previous, current) {
+                  return previous.conversations != current.conversations ||
+                      previous.conversationsStatus !=
+                          current.conversationsStatus ||
+                      previous.error != current.error;
+                },
                 builder: (context, state) {
                   final conversations = _getDisplayConversations(state);
                   final hasCachedOrLiveConversations = conversations.isNotEmpty;
@@ -218,27 +224,23 @@ class _InboxPageState extends State<InboxPage> {
   List<_ChatMessage> _getDisplayConversations(ChatState state) {
     final conversations = <_ChatMessage>[];
     final ownerId = _readCurrentUserId();
-    final cachedConversations = _chatService.readCachedConversations(
-      cacheOwnerId: ownerId,
-    );
     final archivedIds = _chatService.readArchivedConversationIds(
       cacheOwnerId: ownerId,
     );
     final mergedSource = <ConversationModel>[];
-    final byId = <int, ConversationModel>{};
 
-    for (final conv in cachedConversations) {
-      try {
-        final model = ConversationModel.fromJson(conv);
-        byId[model.id] = model;
-      } catch (_) {}
+    if (state.conversations.isNotEmpty) {
+      mergedSource.addAll(state.conversations);
+    } else {
+      final cachedConversations = _chatService.readCachedConversations(
+        cacheOwnerId: ownerId,
+      );
+      for (final conv in cachedConversations) {
+        try {
+          mergedSource.add(ConversationModel.fromJson(conv));
+        } catch (_) {}
+      }
     }
-
-    for (final conv in state.conversations) {
-      byId[conv.id] = conv;
-    }
-
-    mergedSource.addAll(byId.values);
 
     final sortedConversations = List.of(mergedSource);
     sortedConversations.sort((a, b) {
@@ -251,10 +253,14 @@ class _InboxPageState extends State<InboxPage> {
       if (archivedIds.contains(conv.id)) continue;
       final isBot = conv.name.toLowerCase() == 'clique' ||
           conv.username.toLowerCase() == 'clique';
-      final latestCachedMessage = _latestCachedMessage(
-        conv.id,
-        ownerId: ownerId,
-      );
+      final needsCachedPreview =
+          conv.lastMessage.trim().isEmpty || conv.timestamp.trim().isEmpty;
+      final latestCachedMessage = needsCachedPreview
+          ? _latestCachedMessage(
+              conv.id,
+              ownerId: ownerId,
+            )
+          : null;
       final displayMessage = _pickDisplayMessage(conv, latestCachedMessage);
       final displayTime = _pickDisplayTime(conv, latestCachedMessage);
 

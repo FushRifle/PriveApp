@@ -73,11 +73,10 @@ class _FriendsListPageState extends State<FriendsListPage>
             icon:
                 const Icon(Icons.person_add_outlined, color: AppColors.primary),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Find friends feature coming soon'),
-                  duration: Duration(seconds: 1),
-                ),
+              HapticFeedback.lightImpact();
+              Navigator.pushNamed(
+                context,
+                NamedRoutes.peopleYouMayKnowScreen,
               );
             },
           ),

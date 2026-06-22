@@ -68,10 +68,22 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         return;
       }
 
-      _streamEventSubscription = _chatService.streamEvents.listen((event) {
-        switch (event.type) {
+      _streamEventSubscription =
+          _chatService.streamEvents.listen((streamEvent) {
+        switch (streamEvent.type) {
           case 'message.new':
           case 'notification.message_new':
+            final activeConversationId = state.activeConversationId;
+            if (activeConversationId != null && activeConversationId > 0) {
+              add(LoadMessages(
+                conversationId: activeConversationId,
+                page: 1,
+                forceRefresh: true,
+                silent: true,
+              ));
+            }
+            add(RefreshConversations());
+            break;
           case 'message.deleted':
           case 'notification.mark_read':
           case 'notification.mark_unread':
@@ -80,6 +92,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           case 'member.added':
           case 'member.removed':
             add(RefreshConversations());
+            break;
         }
       });
     } catch (_) {}
@@ -602,13 +615,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
       _chatService.clearMessagesCache(event.conversationId);
       add(RefreshConversations());
-
-      add(LoadMessages(
-        conversationId: event.conversationId,
-        page: 1,
-        forceRefresh: true,
-        silent: true,
-      ));
     } catch (_) {
       _messageCache[event.conversationId] = state.messages;
       await _persistMessages(event.conversationId, state.messages);

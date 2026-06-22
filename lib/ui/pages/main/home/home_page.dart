@@ -555,10 +555,26 @@ class _PeopleYouMayKnowCardState extends State<_PeopleYouMayKnowCard> {
                       ),
                     ),
                   ),
-                  Icon(
-                    Icons.person_add_alt_1_rounded,
-                    color: widget.palette.primary,
-                    size: 20,
+                  IconButton(
+                    tooltip: 'See more people',
+                    onPressed: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.pushNamed(
+                        context,
+                        NamedRoutes.peopleYouMayKnowScreen,
+                      );
+                    },
+                    icon: Icon(
+                      Icons.person_add_alt_1_rounded,
+                      color: widget.palette.primary,
+                      size: 20,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 36,
+                      height: 36,
+                    ),
                   ),
                 ],
               ),

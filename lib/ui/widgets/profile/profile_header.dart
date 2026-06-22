@@ -531,6 +531,12 @@ class ProfileStatsRow extends StatelessWidget {
                             child: ProfileStatBlock(
                               value: _formatCount(stats?.followingCount ?? 0),
                               label: 'Following',
+                              onTap: isOwnProfile
+                                  ? () => _openFollowList(
+                                        context,
+                                        isFollowers: false,
+                                      )
+                                  : null,
                             ),
                           ),
                           SizedBox(
@@ -538,6 +544,12 @@ class ProfileStatsRow extends StatelessWidget {
                             child: ProfileStatBlock(
                               value: _formatCount(stats?.followersCount ?? 0),
                               label: 'Followers',
+                              onTap: isOwnProfile
+                                  ? () => _openFollowList(
+                                        context,
+                                        isFollowers: true,
+                                      )
+                                  : null,
                             ),
                           ),
                           SizedBox(
@@ -567,6 +579,12 @@ class ProfileStatsRow extends StatelessWidget {
                           child: ProfileStatBlock(
                             value: _formatCount(stats?.followingCount ?? 0),
                             label: 'Following',
+                            onTap: isOwnProfile
+                                ? () => _openFollowList(
+                                      context,
+                                      isFollowers: false,
+                                    )
+                                : null,
                           ),
                         ),
                         Container(
@@ -578,6 +596,12 @@ class ProfileStatsRow extends StatelessWidget {
                           child: ProfileStatBlock(
                             value: _formatCount(stats?.followersCount ?? 0),
                             label: 'Followers',
+                            onTap: isOwnProfile
+                                ? () => _openFollowList(
+                                      context,
+                                      isFollowers: true,
+                                    )
+                                : null,
                           ),
                         ),
                         Container(
@@ -622,21 +646,34 @@ class ProfileStatsRow extends StatelessWidget {
     if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}K';
     return value.toString();
   }
+
+  void _openFollowList(
+    BuildContext context, {
+    required bool isFollowers,
+  }) {
+    Navigator.pushNamed(
+      context,
+      NamedRoutes.friendListScreen,
+      arguments: {'isFollowers': isFollowers},
+    );
+  }
 }
 
 class ProfileStatBlock extends StatelessWidget {
   final String value;
   final String label;
+  final VoidCallback? onTap;
 
   const ProfileStatBlock({
     super.key,
     required this.value,
     required this.label,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    final content = Column(
       children: [
         Text(
           value,
@@ -655,6 +692,22 @@ class ProfileStatBlock extends StatelessWidget {
           ),
         ),
       ],
+    );
+
+    if (onTap == null) {
+      return content;
+    }
+
+    return Material(
+      color: AppColors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: content,
+        ),
+      ),
     );
   }
 }

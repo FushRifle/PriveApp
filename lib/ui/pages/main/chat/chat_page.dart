@@ -58,7 +58,6 @@ class _ChatPageState extends State<ChatPage>
   bool _isSending = false;
 
   Timer? _typingTimer;
-  Timer? _messageSyncTimer;
   Timer? _draftSaveTimer;
   Timer? _draftHintTimer;
   bool _isTyping = false;
@@ -70,7 +69,7 @@ class _ChatPageState extends State<ChatPage>
   bool get wantKeepAlive => true;
 
   bool get _isCliqueBot =>
-      widget.userId == 0 || widget.userName.toLowerCase() == 'Clique';
+      widget.userId == 0 || widget.userName.toLowerCase() == 'clique';
 
   int? get _draftOwnerId {
     final user = context.read<AuthBloc>().state.user;
@@ -124,7 +123,6 @@ class _ChatPageState extends State<ChatPage>
     _scrollListener = _handleScroll;
     _scrollController.addListener(_scrollListener);
     _loadInitialData();
-    _startMessageSync();
     _restoreDraft();
   }
 
@@ -139,15 +137,14 @@ class _ChatPageState extends State<ChatPage>
   void dispose() {
     final ownerId = _draftOwnerId;
     final draft = _messageController.text;
-    _scrollController.dispose();
+    _scrollController.removeListener(_scrollListener);
     _messageController.removeListener(_scheduleDraftSave);
     _draftSaveTimer?.cancel();
     _draftHintTimer?.cancel();
     unawaited(_persistDraft(draft: draft, ownerId: ownerId));
     _messageController.dispose();
-    _scrollController.removeListener(_scrollListener);
+    _scrollController.dispose();
     _typingTimer?.cancel();
-    _messageSyncTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -232,21 +229,6 @@ class _ChatPageState extends State<ChatPage>
     chatBloc.add(LoadConversationInfo(conversationId: widget.conversationId));
     chatBloc.add(LoadChatSettings(conversationId: widget.conversationId));
     chatBloc.add(MarkMessagesAsRead(conversationId: widget.conversationId));
-  }
-
-  void _startMessageSync() {
-    if (_isCliqueBot) return;
-    _messageSyncTimer?.cancel();
-    _messageSyncTimer = Timer.periodic(const Duration(seconds: 12), (_) {
-      if (!mounted) return;
-      if (_isSending) return;
-      context.read<ChatBloc>().add(LoadMessages(
-            conversationId: widget.conversationId,
-            page: 1,
-            forceRefresh: true,
-            silent: true,
-          ));
-    });
   }
 
   void _scheduleDraftSave() {
@@ -471,6 +453,13 @@ class _ChatPageState extends State<ChatPage>
           ),
         ],
         child: BlocBuilder<ChatBloc, ChatState>(
+          buildWhen: (previous, current) {
+            return previous.activeConversationId !=
+                    current.activeConversationId ||
+                previous.messages != current.messages ||
+                previous.messagesStatus != current.messagesStatus ||
+                previous.chatSettings != current.chatSettings;
+          },
           builder: (context, state) {
             final messages = state.activeConversationId == widget.conversationId
                 ? state.messages
@@ -638,6 +627,9 @@ class _ChatPageState extends State<ChatPage>
                     style: AppTheme.blackTextStyle
                         .copyWith(fontWeight: FontWeight.w600, fontSize: 16)),
                 BlocBuilder<ChatBloc, ChatState>(
+                  buildWhen: (previous, current) {
+                    return previous.conversations != current.conversations;
+                  },
                   builder: (context, state) {
                     if (_isCliqueBot) {
                       return Text('Always here',

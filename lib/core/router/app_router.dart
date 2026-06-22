@@ -62,6 +62,7 @@ import 'package:clique/ui/pages/Clique/terms_page.dart';
 
 import 'package:clique/ui/pages/social/friends_list_page.dart';
 import 'package:clique/ui/pages/social/insights_page.dart';
+import 'package:clique/ui/pages/social/people_you_may_know_page.dart';
 
 class AppRouter {
   static Route<dynamic> onGenerateRoute(
@@ -132,11 +133,18 @@ class AppRouter {
         );
 
       case NamedRoutes.friendListScreen:
+        final args = settings.arguments;
+        final isFollowers = args is Map ? args['isFollowers'] != false : true;
         return _page(
           BlocProvider(
             create: (_) => FriendsBloc(),
-            child: const FriendsListPage(),
+            child: FriendsListPage(isFollowers: isFollowers),
           ),
+        );
+
+      case NamedRoutes.peopleYouMayKnowScreen:
+        return _page(
+          const PeopleYouMayKnowPage(),
         );
 
       case NamedRoutes.insightsScreen:

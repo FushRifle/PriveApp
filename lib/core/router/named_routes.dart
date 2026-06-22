@@ -13,6 +13,7 @@ class NamedRoutes {
   static const accountSwitchScreen = '/account-switch-screen';
   static const insightsScreen = '/insights-screen';
   static const friendListScreen = '/friends-screen';
+  static const peopleYouMayKnowScreen = '/people-you-may-know-screen';
   static const matchScreen = '/match-screen';
 
   //Main
