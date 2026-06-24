@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:clique/core/models/calls.dart';
 import 'package:clique/core/services/calls/call_service.dart';
 import 'package:clique/core/services/calls/stream_call_service.dart';
+import 'package:clique/core/services/calls/permission_service.dart';
 import 'package:flutter/material.dart';
 import 'package:stream_video_flutter/stream_video_flutter.dart' as stream;
+import 'package:clique/ui/widgets/call/clique_call_content.dart';
 
 class IncomingCallScreen extends StatefulWidget {
   final IncomingCallNotification notification;
@@ -36,6 +38,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen> {
     try {
       final call = await StreamCallService.instance.prepareIncomingCall(
         callId: widget.notification.roomId,
+        isVideo: widget.notification.callType == 'video',
       );
       if (!mounted) return;
       setState(() {
@@ -57,6 +60,13 @@ class _IncomingCallScreenState extends State<IncomingCallScreen> {
     _isResponding = true;
 
     try {
+      final isVideo = widget.notification.callType == 'video';
+      final hasPermission =
+          await PermissionService.checkPermissions(video: isVideo) ||
+              await PermissionService.requestPermissions(video: isVideo);
+      if (!hasPermission) {
+        throw StateError('Required call permission was not granted');
+      }
       await widget.callService.acceptCall(callId: widget.notification.callId);
       await _call!.accept();
     } catch (e) {
@@ -105,6 +115,14 @@ class _IncomingCallScreenState extends State<IncomingCallScreen> {
     }
   }
 
+  Future<void> _endAcceptedCall() async {
+    try {
+      await _call?.leave();
+      await widget.callService.endCall(callId: widget.notification.callId);
+    } catch (_) {}
+    if (mounted && Navigator.canPop(context)) Navigator.pop(context);
+  }
+
   Future<void> _showErrorAndExit(String message) async {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -125,6 +143,12 @@ class _IncomingCallScreenState extends State<IncomingCallScreen> {
             onAcceptCallTap: _acceptCall,
             onDeclineCallTap: _declineCall,
             onCallDisconnected: _handleDisconnected,
+            callContentWidgetBuilder: (context, activeCall) =>
+                CliqueCallContent(
+              call: activeCall,
+              isVideo: widget.notification.callType == 'video',
+              onLeave: () => unawaited(_endAcceptedCall()),
+            ),
           ),
         ),
       );

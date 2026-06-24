@@ -49,17 +49,20 @@ class CallButton extends StatelessWidget {
   }) async {
     final navigator = Navigator.of(context);
 
-    final hasPermissions = await PermissionService.checkPermissions();
+    final isVideo = callType == 'video';
+    final hasPermissions =
+        await PermissionService.checkPermissions(video: isVideo);
     if (!context.mounted) return;
 
     if (!hasPermissions) {
-      final granted = await PermissionService.requestPermissions();
+      final granted =
+          await PermissionService.requestPermissions(video: isVideo);
       if (!context.mounted) return;
 
       if (!granted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Camera and microphone permissions required'),
+            content: Text('Required call permission was not granted'),
           ),
         );
         return;

@@ -13,7 +13,6 @@ import 'package:clique/bloc/chat/chat_bloc.dart';
 import 'package:clique/bloc/chat/gallery/chat_gallery_cubit.dart';
 import 'package:clique/bloc/cloudinary/cloudinary_cubit.dart';
 import 'package:clique/core/models/chat_wallpaper.dart';
-import 'package:clique/core/services/chat/chat_service.dart';
 import 'package:clique/core/services/media_service.dart';
 import 'package:clique/ui/pages/main/chat/chat_info_page.dart';
 import 'package:clique/ui/widgets/chat/message_bubble.dart';
@@ -48,7 +47,6 @@ class _ChatPageState extends State<ChatPage>
   final TextEditingController _messageController = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
   final MediaService _mediaService = MediaService();
-  final ChatService _chatService = ChatService();
 
   String _wallpaper = 'default';
   Color _chatColor = AppColors.primary;
@@ -58,11 +56,7 @@ class _ChatPageState extends State<ChatPage>
   bool _isSending = false;
 
   Timer? _typingTimer;
-  Timer? _draftSaveTimer;
-  Timer? _draftHintTimer;
   bool _isTyping = false;
-  String _lastSavedDraft = '';
-  bool _showDraftSaved = false;
   late final VoidCallback _scrollListener;
 
   @override
@@ -70,14 +64,6 @@ class _ChatPageState extends State<ChatPage>
 
   bool get _isCliqueBot =>
       widget.userId == 0 || widget.userName.toLowerCase() == 'clique';
-
-  int? get _draftOwnerId {
-    final user = context.read<AuthBloc>().state.user;
-    final rawId = user?['id'];
-    if (rawId is int) return rawId;
-    if (rawId is String) return int.tryParse(rawId);
-    return null;
-  }
 
   bool get _hasMessageLimit => widget.maxOutgoingMessages > 0;
 
@@ -119,11 +105,9 @@ class _ChatPageState extends State<ChatPage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _setupAuth();
-    _messageController.addListener(_scheduleDraftSave);
     _scrollListener = _handleScroll;
     _scrollController.addListener(_scrollListener);
     _loadInitialData();
-    _restoreDraft();
   }
 
   void _setupAuth() {
@@ -135,13 +119,7 @@ class _ChatPageState extends State<ChatPage>
 
   @override
   void dispose() {
-    final ownerId = _draftOwnerId;
-    final draft = _messageController.text;
     _scrollController.removeListener(_scrollListener);
-    _messageController.removeListener(_scheduleDraftSave);
-    _draftSaveTimer?.cancel();
-    _draftHintTimer?.cancel();
-    unawaited(_persistDraft(draft: draft, ownerId: ownerId));
     _messageController.dispose();
     _scrollController.dispose();
     _typingTimer?.cancel();
@@ -151,13 +129,11 @@ class _ChatPageState extends State<ChatPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
-      unawaited(_persistDraft(ownerId: _draftOwnerId));
-    }
-
     if (state != AppLifecycleState.resumed || !mounted || _isCliqueBot) return;
 
+    context.read<ChatBloc>().add(
+          RetryPendingMessages(conversationId: widget.conversationId),
+        );
     context.read<ChatBloc>().add(LoadMessages(
           conversationId: widget.conversationId,
           page: 1,
@@ -229,61 +205,6 @@ class _ChatPageState extends State<ChatPage>
     chatBloc.add(LoadConversationInfo(conversationId: widget.conversationId));
     chatBloc.add(LoadChatSettings(conversationId: widget.conversationId));
     chatBloc.add(MarkMessagesAsRead(conversationId: widget.conversationId));
-  }
-
-  void _scheduleDraftSave() {
-    _draftSaveTimer?.cancel();
-    _draftSaveTimer = Timer(
-      const Duration(milliseconds: 300),
-      () => unawaited(_persistDraft(ownerId: _draftOwnerId)),
-    );
-  }
-
-  Future<void> _restoreDraft() async {
-    final draft = _chatService.readCachedDraft(
-      widget.conversationId,
-      cacheOwnerId: _draftOwnerId,
-    );
-    if (draft == null || draft == _messageController.text) {
-      return;
-    }
-
-    _lastSavedDraft = draft;
-    _messageController.value = TextEditingValue(
-      text: draft,
-      selection: TextSelection.collapsed(offset: draft.length),
-    );
-  }
-
-  Future<void> _persistDraft({String? draft, int? ownerId}) async {
-    final value = draft ?? _messageController.text;
-    if (value == _lastSavedDraft) {
-      return;
-    }
-
-    _lastSavedDraft = value;
-    await _chatService.saveDraft(
-      widget.conversationId,
-      value,
-      cacheOwnerId: ownerId ?? _draftOwnerId,
-    );
-
-    if (!mounted) return;
-
-    if (value.trim().isNotEmpty) {
-      setState(() => _showDraftSaved = true);
-      _draftHintTimer?.cancel();
-      _draftHintTimer = Timer(
-        const Duration(seconds: 2),
-        () {
-          if (mounted) {
-            setState(() => _showDraftSaved = false);
-          }
-        },
-      );
-    } else if (_showDraftSaved) {
-      setState(() => _showDraftSaved = false);
-    }
   }
 
   Future<void> _loadMoreMessages() async {
@@ -520,9 +441,6 @@ class _ChatPageState extends State<ChatPage>
                   if (_buildTypingIndicator(state))
                     _buildTypingIndicatorWidget(),
                   if (_hasMessageLimit) _buildMessageLimitBanner(messages),
-                  if (_showDraftSaved &&
-                      _messageController.text.trim().isNotEmpty)
-                    _buildDraftSavedIndicator(),
                   ChatInputBar(
                     controller: _messageController,
                     onSendMessage: _sendMessage,
@@ -817,40 +735,6 @@ class _ChatPageState extends State<ChatPage>
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildDraftSavedIndicator() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.darkCard : AppColors.white,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: (isDark ? AppColors.white : AppColors.black)
-                  .withOpacity(0.06),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.cloud_done_outlined,
-                  size: 14, color: AppColors.greenColor),
-              const SizedBox(width: 6),
-              Text(
-                'Draft saved locally',
-                style: AppTheme.greyTextStyle.copyWith(fontSize: 11),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

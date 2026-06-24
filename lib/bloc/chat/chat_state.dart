@@ -128,6 +128,7 @@ class MessageModel {
   final int id;
   final int conversationId; // ADD THIS
   final String? streamMessageId;
+  final String? clientMessageId;
   final int senderId;
   final int receiverId;
   final String message;
@@ -147,6 +148,7 @@ class MessageModel {
     required this.id,
     required this.conversationId, // ADD THIS
     this.streamMessageId,
+    this.clientMessageId,
     required this.senderId,
     required this.receiverId,
     required this.message,
@@ -164,20 +166,31 @@ class MessageModel {
   });
 
   factory MessageModel.fromJson(Map<String, dynamic> json) {
+    final rawReplyId = json['replyToId'] ?? json['reply_to_id'];
+    final parsedReplyId = rawReplyId is int
+        ? rawReplyId
+        : int.tryParse(rawReplyId?.toString() ?? '');
+    final replyToId =
+        parsedReplyId != null && parsedReplyId > 0 ? parsedReplyId : null;
     return MessageModel(
       id: json['id'] ?? 0,
       conversationId: json['conversationId'] ?? json['conversation_id'] ?? 0,
       streamMessageId: json['streamMessageId'] ??
           json['stream_message_id'] ??
           json['streamId'],
+      clientMessageId: json['clientMessageId'] ?? json['client_message_id'],
       senderId: json['senderId'] ?? json['sender_id'] ?? 0,
       receiverId: json['receiverId'] ?? json['receiver_id'] ?? 0,
       message: json['message'] ?? '',
       messageType: json['messageType'] ?? json['message_type'] ?? 'text',
       mediaUrl: json['mediaUrl'] ?? json['media_url'],
-      replyToId: json['replyToId'] ?? json['reply_to_id'],
-      replyToMessage: json['replyToMessage'] ?? json['reply_to_message'],
-      replyToSender: json['replyToSender'] ?? json['reply_to_sender'],
+      replyToId: replyToId,
+      replyToMessage: replyToId == null
+          ? null
+          : json['replyToMessage'] ?? json['reply_to_message'],
+      replyToSender: replyToId == null
+          ? null
+          : json['replyToSender'] ?? json['reply_to_sender'],
       sourceType: json['sourceType'] ?? json['source_type'],
       sourceId: (json['sourceId'] ?? json['source_id'])?.toString(),
       sourcePreview: json['sourcePreview'] ?? json['source_preview'],
@@ -192,6 +205,7 @@ class MessageModel {
       'id': id,
       'conversationId': conversationId, // ADD THIS
       'streamMessageId': streamMessageId,
+      'clientMessageId': clientMessageId,
       'senderId': senderId,
       'receiverId': receiverId,
       'message': message,
@@ -213,6 +227,7 @@ class MessageModel {
     int? id,
     int? conversationId,
     String? streamMessageId,
+    String? clientMessageId,
     int? senderId,
     int? receiverId,
     String? message,
@@ -232,6 +247,7 @@ class MessageModel {
       id: id ?? this.id,
       conversationId: conversationId ?? this.conversationId,
       streamMessageId: streamMessageId ?? this.streamMessageId,
+      clientMessageId: clientMessageId ?? this.clientMessageId,
       senderId: senderId ?? this.senderId,
       receiverId: receiverId ?? this.receiverId,
       message: message ?? this.message,

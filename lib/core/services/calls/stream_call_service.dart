@@ -122,12 +122,16 @@ class StreamCallService {
     if (result.isFailure) {
       throw result.getErrorOrNull() ?? StateError('Failed to create call');
     }
+    if (!isVideo) {
+      await call.setCameraEnabled(enabled: false);
+    }
 
     return call;
   }
 
   Future<stream.Call> prepareIncomingCall({
     required String callId,
+    required bool isVideo,
   }) async {
     await connect();
 
@@ -139,6 +143,9 @@ class StreamCallService {
     final result = await call.getOrCreate();
     if (result.isFailure) {
       throw result.getErrorOrNull() ?? StateError('Failed to open call');
+    }
+    if (!isVideo) {
+      await call.setCameraEnabled(enabled: false);
     }
 
     return call;

@@ -171,6 +171,12 @@ class _OtherProfilePageState extends State<OtherProfilePage>
 
   Future<void> _toggleFollow() async {
     if (_isFollowBusy) return;
+    if (_relationship?.hasPendingRequest == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Follow request is pending')),
+      );
+      return;
+    }
 
     HapticFeedback.mediumImpact();
 
@@ -189,6 +195,13 @@ class _OtherProfilePageState extends State<OtherProfilePage>
       }
 
       if (!mounted) return;
+      final relationship =
+          await _friendsService.checkRelationship(widget.userId);
+      if (!mounted) return;
+      setState(() {
+        _relationship = relationship;
+        _isFollowing = relationship.isFollowing;
+      });
       try {
         context.read<FriendsBloc>().add(LoadFollowStats());
       } catch (_) {
@@ -320,6 +333,8 @@ class _OtherProfilePageState extends State<OtherProfilePage>
                   profile: profile,
                   isOwnProfile: false,
                   isFollowing: _isFollowing,
+                  isFollowRequested:
+                      _relationship?.hasPendingRequest ?? false,
                   tabController: _tabController,
                   scrollController: _scrollController,
                   onRetry: _reloadProfile,

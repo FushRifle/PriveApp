@@ -4,6 +4,7 @@ import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:clique/core/services/chat/chat_service.dart';
 import 'package:clique/core/services/user/user_service.dart';
+import 'package:uuid/uuid.dart';
 
 part 'chat_event.dart';
 part 'chat_state.dart';
@@ -254,6 +255,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     if (pending.conversationId != delivered.conversationId) return false;
     if (pending.senderId != delivered.senderId) return false;
     if (pending.receiverId != delivered.receiverId) return false;
+    if (pending.clientMessageId != null && delivered.clientMessageId != null) {
+      return pending.clientMessageId == delivered.clientMessageId;
+    }
     if (pending.message != delivered.message) return false;
     if (pending.messageType != delivered.messageType) return false;
     if (pending.mediaUrl != delivered.mediaUrl) return false;
@@ -503,10 +507,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     _inFlightMessageKeys.add(sendKey);
 
     final tempId = -DateTime.now().microsecondsSinceEpoch;
+    final clientMessageId = const Uuid().v4();
 
     final tempMessage = MessageModel(
       id: tempId,
       conversationId: event.conversationId,
+      clientMessageId: clientMessageId,
       senderId: _currentUserId!,
       receiverId: event.receiverId,
       message: event.message,
@@ -556,6 +562,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         mediaUrl: event.mediaUrl,
         replyToId: event.replyToId,
         replyToStreamMessageId: event.replyToStreamMessageId,
+        clientMessageId: clientMessageId,
       );
 
       MessageModel? realMessage;
@@ -566,6 +573,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           id: parsed.id,
           conversationId: parsed.conversationId,
           streamMessageId: parsed.streamMessageId,
+          clientMessageId: parsed.clientMessageId ?? clientMessageId,
           senderId: parsed.senderId,
           receiverId: parsed.receiverId,
           message: parsed.message,
@@ -764,6 +772,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           mediaUrl: pending.mediaUrl,
           replyToId: pending.replyToId,
           replyToStreamMessageId: pending.streamMessageId,
+          clientMessageId: pending.clientMessageId,
         );
 
         if (response == null) continue;

@@ -8,6 +8,7 @@ class FeedPost {
   final int likes;
   final int comments;
   final int shares;
+  final int views;
   final int saves;
   final int reposts;
   final bool isLiked;
@@ -31,6 +32,7 @@ class FeedPost {
     required this.likes,
     required this.comments,
     this.shares = 0,
+    this.views = 0,
     this.saves = 0,
     this.reposts = 0,
     required this.isLiked,
@@ -69,6 +71,12 @@ class FeedPost {
           json['comment_count'] ??
           json['_count']?['comments']),
       shares: _toInt(json['shares'] ?? json['shareCount']),
+      views: _toInt(json['views'] ??
+          json['viewsCount'] ??
+          json['views_count'] ??
+          json['viewCount'] ??
+          json['view_count'] ??
+          json['_count']?['views']),
       saves: _toInt(json['saves'] ?? json['saveCount']),
       reposts: _toInt(json['reposts'] ?? json['repostCount']),
       isLiked: json['isLiked'] == true || json['is_liked'] == true,
@@ -111,6 +119,7 @@ class FeedPost {
         'likes': likes,
         'comments': comments,
         'shares': shares,
+        'views': views,
         'saves': saves,
         'reposts': reposts,
         'isLiked': isLiked,
@@ -135,6 +144,7 @@ class FeedPost {
     int? likes,
     int? comments,
     int? shares,
+    int? views,
     int? saves,
     int? reposts,
     bool? isLiked,
@@ -158,6 +168,7 @@ class FeedPost {
       likes: likes ?? this.likes,
       comments: comments ?? this.comments,
       shares: shares ?? this.shares,
+      views: views ?? this.views,
       saves: saves ?? this.saves,
       reposts: reposts ?? this.reposts,
       isLiked: isLiked ?? this.isLiked,

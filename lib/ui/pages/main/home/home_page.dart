@@ -259,8 +259,8 @@ class _HomePageState extends State<HomePage>
             onRefresh: _refresh,
             child: CustomScrollView(
               controller: _scrollController,
-              cacheExtent: 3200,
-              physics: const BouncingScrollPhysics(
+              cacheExtent: 1000,
+              physics: const ClampingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ),
               slivers: [

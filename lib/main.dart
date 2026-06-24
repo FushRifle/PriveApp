@@ -264,6 +264,7 @@ class _SecurityGateState extends State<_SecurityGate>
   bool _authGuardReady = false;
   int? _lockUserId;
   AppLockSettings? _lockSettings;
+  DateTime? _backgroundedAt;
 
   @override
   void initState() {
@@ -280,15 +281,23 @@ class _SecurityGateState extends State<_SecurityGate>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      if (mounted) {
+      final backgroundedAt = _backgroundedAt;
+      _backgroundedAt = null;
+      final timeoutSeconds = _lockSettings?.timeoutSeconds ?? 0;
+      final shouldRelock = _lockSettings?.enabled == true &&
+          timeoutSeconds > 0 &&
+          backgroundedAt != null &&
+          DateTime.now().difference(backgroundedAt) >=
+              Duration(seconds: timeoutSeconds);
+      if (shouldRelock && mounted) {
         setState(() => _isUnlocked = false);
-      }
-      if (_authGuardReady) {
-        _bootstrap(forcePrompt: true);
+        if (_authGuardReady) {
+          unawaited(_bootstrap(forcePrompt: true));
+        }
       }
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
-      _isUnlocked = false;
+      _backgroundedAt ??= DateTime.now();
     }
   }
 

@@ -37,6 +37,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
   bool _didAutoPrompt = false;
   bool _didInit = false;
   int? _resolvedUserId;
+  int _timeoutSeconds = 0;
 
   @override
   void didChangeDependencies() {
@@ -78,6 +79,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
         _isBiometricEnabled = settings.biometricEnabled;
         _isPinEnabled = settings.pinEnabled;
         _savedPin = savedPin;
+        _timeoutSeconds = settings.timeoutSeconds;
         _isLoading = false;
         _error = null;
       });
@@ -159,6 +161,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
         _isBiometricEnabled = settings.biometricEnabled;
         _isPinEnabled = settings.pinEnabled;
         _savedPin = savedPin;
+        _timeoutSeconds = settings.timeoutSeconds;
       });
     } catch (e) {
       debugPrint('App lock remote refresh skipped: $e');
@@ -181,7 +184,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
         await _appLockService.save(
           biometricEnabled: true,
           pinEnabled: _isPinEnabled,
-          timeoutSeconds: 0,
+          timeoutSeconds: _timeoutSeconds,
           pin: _isPinEnabled ? _savedPin : null,
           userId: _resolvedUserId,
         );
@@ -283,7 +286,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
     await _appLockService.save(
       biometricEnabled: biometricEnabled,
       pinEnabled: pinEnabled,
-      timeoutSeconds: 0,
+      timeoutSeconds: _timeoutSeconds,
       pin: pin,
       userId: _resolvedUserId,
     );
@@ -308,6 +311,52 @@ class _LockScreenPageState extends State<LockScreenPage> {
             ),
           );
     } catch (_) {}
+  }
+
+  Future<void> _changeTimeout(int seconds) async {
+    if (!_isBiometricEnabled && !_isPinEnabled) return;
+    await _appLockService.save(
+      biometricEnabled: _isBiometricEnabled,
+      pinEnabled: _isPinEnabled,
+      timeoutSeconds: seconds,
+      pin: _isPinEnabled ? _savedPin : null,
+      userId: _resolvedUserId,
+    );
+    if (!mounted) return;
+    setState(() => _timeoutSeconds = seconds);
+    _reloadSettingsSilently();
+  }
+
+  String _timeoutLabel(int seconds) {
+    if (seconds == 0) return 'Only after app restart';
+    if (seconds < 60) return 'After $seconds seconds';
+    final minutes = seconds ~/ 60;
+    return 'After $minutes ${minutes == 1 ? 'minute' : 'minutes'}';
+  }
+
+  Future<void> _showTimeoutPicker() async {
+    final selected = await showModalBottomSheet<int>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(
+              title: Text('Require unlock'),
+              subtitle: Text('Choose when Clique locks after leaving the app'),
+            ),
+            for (final seconds in const [0, 15, 60, 300, 900])
+              RadioListTile<int>(
+                value: seconds,
+                groupValue: _timeoutSeconds,
+                title: Text(_timeoutLabel(seconds)),
+                onChanged: (value) => Navigator.pop(context, value),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (selected != null) await _changeTimeout(selected);
   }
 
   void _showSuccessSheet(String message) {
@@ -718,6 +767,26 @@ class _LockScreenPageState extends State<LockScreenPage> {
               ),
             ),
 
+            if (_isBiometricEnabled || _isPinEnabled)
+              Container(
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: isDarkMode ? AppColors.darkCard : Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 8,
+                  ),
+                  leading: const Icon(Icons.timer_outlined),
+                  title: const Text('Lock timer'),
+                  subtitle: Text(_timeoutLabel(_timeoutSeconds)),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: _showTimeoutPicker,
+                ),
+              ),
+
             // Info Card
             Container(
               padding: const EdgeInsets.all(20),
@@ -753,7 +822,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: Text(
-                      'App lock will require authentication every time you open the app. You can use biometric or PIN, or both.',
+                      'App lock protects a fresh app start. If you choose a timer, it also locks after Clique stays in the background for that long.',
                       style: TextStyle(
                         fontSize: 13,
                         height: 1.4,

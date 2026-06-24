@@ -7,6 +7,7 @@ class PostActions extends StatelessWidget {
   final int likeCount;
   final int commentCount;
   final int shareCount;
+  final int viewCount;
   final int repostCount;
   final bool isSaved;
   final bool isReposted;
@@ -28,6 +29,7 @@ class PostActions extends StatelessWidget {
     required this.likeCount,
     required this.commentCount,
     this.shareCount = 0,
+    this.viewCount = 0,
     this.repostCount = 0,
     this.isSaved = false,
     this.isReposted = false,
@@ -100,11 +102,11 @@ class PostActions extends StatelessWidget {
           SizedBox(width: gap),
           Flexible(
             child: _ResponsiveAction(
-              icon: Icons.send_outlined,
-              label: shareCount > 0 ? _formatCount(shareCount) : null,
+              icon: Icons.visibility_outlined,
+              label: _formatCount(viewCount),
               color: actionColor,
-              onTap: onShare,
-              showLabel: !isSmall,
+              onTap: null,
+              showLabel: !isTiny,
               compact: isSmall,
             ),
           ),
@@ -153,7 +155,7 @@ class _ResponsiveAction extends StatelessWidget {
   final IconData icon;
   final String? label;
   final Color color;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final VoidCallback? onLongPress;
   final bool showLabel;
   final bool compact;
@@ -163,7 +165,7 @@ class _ResponsiveAction extends StatelessWidget {
     required this.icon,
     this.label,
     required this.color,
-    required this.onTap,
+    this.onTap,
     this.onLongPress,
     required this.showLabel,
     required this.compact,
@@ -190,10 +192,12 @@ class _ResponsiveAction extends StatelessWidget {
       color: AppColors.backgroundColor.withOpacity(0.96),
       borderRadius: BorderRadius.circular(radius),
       child: InkWell(
-        onTap: () {
-          HapticFeedback.lightImpact();
-          onTap();
-        },
+        onTap: onTap == null
+            ? null
+            : () {
+                HapticFeedback.lightImpact();
+                onTap?.call();
+              },
         onLongPress: onLongPress == null
             ? null
             : () {

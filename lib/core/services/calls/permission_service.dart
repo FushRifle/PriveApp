@@ -1,29 +1,31 @@
 import 'package:permission_handler/permission_handler.dart';
 
 class PermissionService {
-  static Future<bool> requestPermissions() async {
-    final cameraStatus = await Permission.camera.status;
+  static Future<bool> requestPermissions({required bool video}) async {
     final microphoneStatus = await Permission.microphone.status;
+    final cameraStatus = video ? await Permission.camera.status : null;
 
-    if (cameraStatus.isGranted && microphoneStatus.isGranted) {
+    if (microphoneStatus.isGranted && (!video || cameraStatus!.isGranted)) {
       return true;
     }
 
-    final statuses = await [
-      Permission.camera,
+    final statuses = await <Permission>[
       Permission.microphone,
+      if (video) Permission.camera,
     ].request();
 
-    final grantedCamera = statuses[Permission.camera]?.isGranted ?? false;
     final grantedMicrophone =
         statuses[Permission.microphone]?.isGranted ?? false;
+    final grantedCamera =
+        !video || (statuses[Permission.camera]?.isGranted ?? false);
 
     return grantedCamera && grantedMicrophone;
   }
 
-  static Future<bool> checkPermissions() async {
-    final cameraStatus = await Permission.camera.status;
+  static Future<bool> checkPermissions({required bool video}) async {
     final microphoneStatus = await Permission.microphone.status;
+    if (!video) return microphoneStatus.isGranted;
+    final cameraStatus = await Permission.camera.status;
 
     return cameraStatus.isGranted && microphoneStatus.isGranted;
   }

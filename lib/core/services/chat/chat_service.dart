@@ -565,6 +565,7 @@ class ChatService {
     required String messageType,
     String? mediaUrl,
     String? replyToStreamMessageId,
+    String? clientMessageId,
   }) async {
     try {
       final channel = _streamChatService.channelForConversation(
@@ -587,6 +588,7 @@ class ChatService {
 
       final response = await channel.sendMessage(
         stream.Message(
+          id: clientMessageId,
           text: message,
           parentId: replyToStreamMessageId,
           attachments: attachments,
@@ -1086,6 +1088,7 @@ class ChatService {
     String? mediaUrl,
     int? replyToId,
     String? replyToStreamMessageId,
+    String? clientMessageId,
   }) async {
     final key = _messageKey(
       receiverId: receiverId,
@@ -1111,6 +1114,7 @@ class ChatService {
           messageType: messageType,
           mediaUrl: mediaUrl,
           replyToStreamMessageId: replyToStreamMessageId,
+          clientMessageId: clientMessageId,
         );
 
         if (streamResponse != null) {
@@ -1128,6 +1132,7 @@ class ChatService {
         'messageType': messageType,
         if (mediaUrl != null) 'mediaUrl': mediaUrl,
         if (replyToId != null) 'replyToId': replyToId,
+        if (clientMessageId != null) 'clientMessageId': clientMessageId,
       };
 
       final response = await _api.post(

@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/core/services/user/user_service.dart';
+import 'package:clique/core/services/home/feed_service.dart';
 import 'package:clique/ui/widgets/post/anonymous/anonymous_post_card.dart';
 import 'package:clique/ui/pages/main/home/edit_post_page.dart';
 import 'package:clique/ui/pages/main/home/post_detail_page.dart';
@@ -36,6 +39,7 @@ class CardPost extends StatefulWidget {
 
 class _CardPostState extends State<CardPost> {
   final UserService _userService = UserService();
+  final FeedService _feedService = FeedService();
   final GlobalKey _likeActionKey = GlobalKey();
   late bool _isLiked;
   late bool _isSaved;
@@ -44,6 +48,7 @@ class _CardPostState extends State<CardPost> {
   late int _commentCount;
   late int _shareCount;
   late int _repostCount;
+  late int _viewCount;
   IconData? _selectedReactionIcon;
   Color? _selectedReactionColor;
   String? _selectedReactionLabel;
@@ -87,6 +92,7 @@ class _CardPostState extends State<CardPost> {
     _commentCount = widget.post.comments;
     _shareCount = widget.post.shares;
     _repostCount = widget.post.reposts;
+    _viewCount = widget.post.views;
     if (_isLiked) {
       _selectedReactionIcon = Icons.favorite_rounded;
       _selectedReactionColor = AppColors.redAccent;
@@ -118,6 +124,8 @@ class _CardPostState extends State<CardPost> {
   void _openDetail() {
     if (widget.isDetailView) return;
 
+    unawaited(_recordView());
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -129,6 +137,13 @@ class _CardPostState extends State<CardPost> {
         ),
       ),
     );
+  }
+
+  Future<void> _recordView() async {
+    try {
+      final views = await _feedService.recordPostView(widget.post.id);
+      if (mounted && views > 0) setState(() => _viewCount = views);
+    } catch (_) {}
   }
 
   void _toggleLike() {
@@ -566,6 +581,7 @@ class _CardPostState extends State<CardPost> {
                 likeCount: _likeCount,
                 commentCount: _commentCount,
                 shareCount: _shareCount,
+                viewCount: _viewCount,
                 repostCount: _repostCount,
                 isSaved: _isSaved,
                 isReposted: _isReposted,

@@ -9,6 +9,7 @@ class ProfileBody extends StatelessWidget {
   final ProfileView? profile;
   final bool isOwnProfile;
   final bool isFollowing;
+  final bool isFollowRequested;
   final TabController tabController;
   final ScrollController scrollController;
   final VoidCallback onRetry;
@@ -25,6 +26,7 @@ class ProfileBody extends StatelessWidget {
     required this.profile,
     required this.isOwnProfile,
     required this.isFollowing,
+    this.isFollowRequested = false,
     required this.tabController,
     required this.scrollController,
     required this.onRetry,
@@ -69,6 +71,7 @@ class ProfileBody extends StatelessWidget {
               profile: currentProfile,
               isOwnProfile: isOwnProfile,
               isFollowing: isFollowing,
+              isFollowRequested: isFollowRequested,
               onToggleFollow: onToggleFollow,
               onMessage: onMessage,
               onOpenAccountSwitcher: onOpenAccountSwitcher,

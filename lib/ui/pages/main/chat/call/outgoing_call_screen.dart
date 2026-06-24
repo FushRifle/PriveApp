@@ -5,6 +5,7 @@ import 'package:clique/core/services/calls/call_service.dart';
 import 'package:clique/core/services/calls/stream_call_service.dart';
 import 'package:flutter/material.dart';
 import 'package:stream_video_flutter/stream_video_flutter.dart' as stream;
+import 'package:clique/ui/widgets/call/clique_call_content.dart';
 
 class OutgoingCallScreen extends StatefulWidget {
   final CallResponse? callResponse;
@@ -147,6 +148,12 @@ class _OutgoingCallScreenState extends State<OutgoingCallScreen> {
             call: call,
             onCancelCallTap: _cancelCall,
             onCallDisconnected: _handleDisconnected,
+            callContentWidgetBuilder: (context, activeCall) =>
+                CliqueCallContent(
+              call: activeCall,
+              isVideo: _backendCall?.call.callType == 'video',
+              onLeave: _cancelCall,
+            ),
           ),
         ),
       );

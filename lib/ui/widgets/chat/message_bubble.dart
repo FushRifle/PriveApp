@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
@@ -159,7 +160,7 @@ class MessageBubble extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Replying to ${message.replyToSender}',
+                  'Replying to ${message.replyToSender?.trim().isNotEmpty == true ? message.replyToSender : 'message'}',
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w500,
@@ -427,6 +428,9 @@ class MessageBubble extends StatelessWidget {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
+              context.read<ChatBloc>().add(
+                    DeleteMessage(messageId: message.id),
+                  );
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
@@ -484,6 +488,12 @@ class MessageBubble extends StatelessWidget {
             onPressed: () {
               if (selectedReason != null) {
                 Navigator.pop(context);
+                context.read<ChatBloc>().add(
+                      ReportMessage(
+                        messageId: message.id,
+                        reason: selectedReason!,
+                      ),
+                    );
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(

@@ -125,6 +125,18 @@ class FeedService {
     return _feedCacheService.readLatestFeed();
   }
 
+  Future<int> recordPostView(int postId) async {
+    if (postId <= 0) return 0;
+    final response = await _api.post('/api/feed/posts/$postId/view');
+    final data = response.data;
+    if (data is Map) {
+      final value = data['views'];
+      if (value is num) return value.toInt();
+      return int.tryParse(value?.toString() ?? '') ?? 0;
+    }
+    return 0;
+  }
+
   Future<FeedPost?> findPostById(int postId) async {
     if (postId <= 0) {
       return null;

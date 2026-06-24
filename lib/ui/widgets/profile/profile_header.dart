@@ -153,6 +153,7 @@ class ProfileHeaderCard extends StatelessWidget {
   final ProfileView profile;
   final bool isOwnProfile;
   final bool isFollowing;
+  final bool isFollowRequested;
   final VoidCallback onToggleFollow;
   final ValueChanged<ProfileView>? onMessage;
   final VoidCallback? onOpenAccountSwitcher;
@@ -163,6 +164,7 @@ class ProfileHeaderCard extends StatelessWidget {
     required this.profile,
     required this.isOwnProfile,
     required this.isFollowing,
+    this.isFollowRequested = false,
     required this.onToggleFollow,
     this.onMessage,
     this.onOpenAccountSwitcher,
@@ -226,6 +228,7 @@ class ProfileHeaderCard extends StatelessWidget {
                     profile: profile,
                     isOwnProfile: isOwnProfile,
                     isFollowing: isFollowing,
+                    isFollowRequested: isFollowRequested,
                     onToggleFollow: onToggleFollow,
                     onMessage: onMessage,
                     onOpenInsights: onOpenInsights,
@@ -716,6 +719,7 @@ class ProfileActionRow extends StatelessWidget {
   final ProfileView profile;
   final bool isOwnProfile;
   final bool isFollowing;
+  final bool isFollowRequested;
   final VoidCallback onToggleFollow;
   final ValueChanged<ProfileView>? onMessage;
   final VoidCallback? onOpenInsights;
@@ -725,6 +729,7 @@ class ProfileActionRow extends StatelessWidget {
     required this.profile,
     required this.isOwnProfile,
     required this.isFollowing,
+    this.isFollowRequested = false,
     required this.onToggleFollow,
     this.onMessage,
     this.onOpenInsights,
@@ -782,11 +787,19 @@ class ProfileActionRow extends StatelessWidget {
           children: [
             Expanded(
               child: ProfileActionButton(
-                text: isFollowing ? 'FOLLOWING' : 'FOLLOW',
+                text: isFollowing
+                    ? 'FOLLOWING'
+                    : isFollowRequested
+                        ? 'REQUESTED'
+                        : 'FOLLOW',
                 backgroundColor:
-                    isFollowing ? AppColors.transparent : AppColors.primary,
-                textColor: isFollowing ? AppColors.text : AppColors.white,
-                hasBorder: isFollowing,
+                    isFollowing || isFollowRequested
+                        ? AppColors.transparent
+                        : AppColors.primary,
+                textColor: isFollowing || isFollowRequested
+                    ? AppColors.text
+                    : AppColors.white,
+                hasBorder: isFollowing || isFollowRequested,
                 onTap: onToggleFollow,
               ),
             ),

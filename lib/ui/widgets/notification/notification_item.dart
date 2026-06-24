@@ -29,6 +29,8 @@ class _NotificationItemState extends State<NotificationItem> {
   bool _isUnread = false;
   bool _isHandlingFollow = false;
   bool _followHandled = false;
+  bool _relationshipLoaded = false;
+  Relationship? _relationship;
   late Map<String, dynamic> _notification;
 
   @override
@@ -36,6 +38,38 @@ class _NotificationItemState extends State<NotificationItem> {
     super.initState();
     _notification = widget.notification;
     _isUnread = _notification['isUnread'] ?? false;
+    unawaited(_syncFollowActionState());
+  }
+
+  @override
+  void didUpdateWidget(covariant NotificationItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.notification != widget.notification) {
+      _notification = widget.notification;
+      _isUnread = _notification['isUnread'] ?? false;
+      _relationshipLoaded = false;
+      unawaited(_syncFollowActionState());
+    }
+  }
+
+  Future<void> _syncFollowActionState() async {
+    final type = _notification['type']?.toString() ?? '';
+    if (type != 'follow' && type != 'friend_request') return;
+    final actorId = _actorId();
+    if (actorId <= 0) return;
+    try {
+      final relationship = await _friendsService.checkRelationship(actorId);
+      if (!mounted) return;
+      setState(() {
+        _relationship = relationship;
+        _relationshipLoaded = true;
+        _followHandled = type == 'friend_request'
+            ? !relationship.hasReceivedRequest
+            : relationship.isFollowing || !relationship.isFollowedBy;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _relationshipLoaded = true);
+    }
   }
 
   Future<void> _markAsRead(int notificationId) async {
@@ -270,8 +304,15 @@ class _NotificationItemState extends State<NotificationItem> {
     if (actorId <= 0 || _isHandlingFollow) return;
     setState(() => _isHandlingFollow = true);
     try {
-      await _friendsService.followUser(actorId);
-      await _markFollowHandled('Follower accepted');
+      if (_isPrivateRequest) {
+        final requestId = _requestId();
+        if (requestId <= 0) throw StateError('Follow request is unavailable');
+        await _friendsService.acceptFriendRequest(requestId);
+        await _markFollowHandled('Follow request accepted');
+      } else {
+        await _friendsService.followUser(actorId);
+        await _markFollowHandled('Following back');
+      }
     } catch (e) {
       final message = e.toString().toLowerCase();
       if (message.contains('already')) {
@@ -289,8 +330,15 @@ class _NotificationItemState extends State<NotificationItem> {
     if (actorId <= 0 || _isHandlingFollow) return;
     setState(() => _isHandlingFollow = true);
     try {
-      await _friendsService.removeFollower(actorId);
-      await _markFollowHandled('Follower rejected');
+      if (_isPrivateRequest) {
+        final requestId = _requestId();
+        if (requestId <= 0) throw StateError('Follow request is unavailable');
+        await _friendsService.declineFriendRequest(requestId);
+        await _markFollowHandled('Follow request declined');
+      } else {
+        await _friendsService.removeFollower(actorId);
+        await _markFollowHandled('Follower removed');
+      }
     } catch (e) {
       _showActionSnack(e.toString(), isError: true);
     } finally {
@@ -338,10 +386,26 @@ class _NotificationItemState extends State<NotificationItem> {
     );
   }
 
+  bool get _isPrivateRequest =>
+      _notification['type']?.toString() == 'friend_request';
+
+  int _requestId() {
+    final data = NotificationUtils.asMap(_notification['data']);
+    return NotificationUtils.readInt(
+      data['requestId'] ?? data['friendRequestId'] ?? data['request_id'],
+    );
+  }
+
   bool _shouldShowFollowActions() {
-    if (_followHandled) return false;
+    if (_followHandled || !_relationshipLoaded) return false;
     final type = _notification['type']?.toString() ?? '';
-    return type == 'follow' && _actorId() > 0;
+    if (_actorId() <= 0) return false;
+    if (type == 'friend_request') {
+      return _relationship?.hasReceivedRequest ?? _requestId() > 0;
+    }
+    return type == 'follow' &&
+        (_relationship?.isFollowedBy ?? true) &&
+        !(_relationship?.isFollowing ?? false);
   }
 
   void _showDeleteDialog(List<int> notificationIds, bool isGroup) {
@@ -414,9 +478,7 @@ class _NotificationItemState extends State<NotificationItem> {
                       const Spacer(),
                       _FollowActionButton(
                         onPressed: _isHandlingFollow ? null : _acceptFollower,
-                        icon: _isHandlingFollow
-                            ? null
-                            : Icons.check_rounded,
+                        icon: _isHandlingFollow ? null : Icons.check_rounded,
                         color: AppColors.primary,
                         label: 'Accept',
                         isLoading: _isHandlingFollow,
@@ -483,9 +545,7 @@ class _FollowActionButton extends StatelessWidget {
                 Icon(
                   icon,
                   size: 16,
-                  color: onPressed != null
-                      ? color
-                      : color.withOpacity(0.5),
+                  color: onPressed != null ? color : color.withOpacity(0.5),
                 ),
               const SizedBox(width: 6),
               Text(
@@ -493,9 +553,7 @@ class _FollowActionButton extends StatelessWidget {
                 style: AppTheme.blackTextStyle.copyWith(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: onPressed != null
-                      ? color
-                      : color.withOpacity(0.5),
+                  color: onPressed != null ? color : color.withOpacity(0.5),
                 ),
               ),
             ],

@@ -446,7 +446,12 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
       trailing: Icon(Icons.chevron_right, color: _mutedText, size: 20),
       onTap: () {
         HapticFeedback.lightImpact();
-        // TODO: Implement search
+        showSearch<MessageModel?>(
+          context: context,
+          delegate: _MessageSearchDelegate(
+            context.read<ChatBloc>().state.messages,
+          ),
+        );
       },
       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
     );
@@ -572,7 +577,12 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
                           return _WallpaperOptionCard(
                             wallpaper: wallpaper,
                             isSelected: isSelected,
-                            onTap: () {
+                            onTap: () async {
+                              final asset = wallpaper.asset;
+                              if (asset != null) {
+                                await precacheImage(AssetImage(asset), context);
+                                if (!mounted || !context.mounted) return;
+                              }
                               setState(() => _wallpaper = wallpaper.id);
                               _updateSettings(showSnackbar: true);
                               Navigator.pop(context);
@@ -849,4 +859,67 @@ class ColorOption {
   final Color color;
 
   ColorOption({required this.id, required this.name, required this.color});
+}
+
+class _MessageSearchDelegate extends SearchDelegate<MessageModel?> {
+  final List<MessageModel> messages;
+
+  _MessageSearchDelegate(this.messages);
+
+  @override
+  String get searchFieldLabel => 'Search messages';
+
+  @override
+  List<Widget> buildActions(BuildContext context) => [
+        if (query.isNotEmpty)
+          IconButton(
+            icon: const Icon(Icons.clear_rounded),
+            onPressed: () => query = '',
+          ),
+      ];
+
+  @override
+  Widget buildLeading(BuildContext context) => IconButton(
+        icon: const Icon(Icons.arrow_back_rounded),
+        onPressed: () => close(context, null),
+      );
+
+  @override
+  Widget buildResults(BuildContext context) => _buildMatches(context);
+
+  @override
+  Widget buildSuggestions(BuildContext context) => _buildMatches(context);
+
+  Widget _buildMatches(BuildContext context) {
+    final needle = query.trim().toLowerCase();
+    final matches = needle.isEmpty
+        ? const <MessageModel>[]
+        : messages
+            .where((message) => message.message.toLowerCase().contains(needle))
+            .toList();
+
+    if (needle.isEmpty) {
+      return const Center(child: Text('Type to find a message'));
+    }
+    if (matches.isEmpty) {
+      return const Center(child: Text('No matching messages'));
+    }
+    return ListView.separated(
+      itemCount: matches.length,
+      separatorBuilder: (_, __) => const Divider(height: 1),
+      itemBuilder: (context, index) {
+        final message = matches[index];
+        return ListTile(
+          leading: Icon(message.isOwn ? Icons.north_east : Icons.south_west),
+          title: Text(
+            message.message,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          subtitle: Text(message.isOwn ? 'You' : 'Received'),
+          onTap: () => close(context, message),
+        );
+      },
+    );
+  }
 }

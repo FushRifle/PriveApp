@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:clique/core/services/auth/auth_service.dart';
@@ -142,9 +144,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(state.copyWith(status: AuthStatus.loading, isLoading: true));
 
-    await PushNotificationService.instance.deleteDeviceToken();
-    await _authService.signOut();
-
     emit(
       const AuthState(
         status: AuthStatus.unauthenticated,
@@ -152,6 +151,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         isLoading: false,
       ),
     );
+
+    unawaited(PushNotificationService.instance.deleteDeviceToken());
+    unawaited(_authService.signOut());
   }
 
   Future<void> _onCheckAuthStatus(

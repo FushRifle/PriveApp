@@ -10,6 +10,7 @@ import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
 import 'package:clique/bloc/chat/gallery/chat_gallery_cubit.dart';
 import 'package:clique/ui/pages/main/chat/chat_settings_page.dart';
+import 'package:clique/core/router/named_routes.dart';
 
 class ChatInfoPage extends StatefulWidget {
   final String userName;
@@ -104,6 +105,16 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
         avatar: widget.userAvatar,
       ),
       callType: callType,
+    );
+  }
+
+  void _openProfile() {
+    if (_isBot || widget.userId <= 0) return;
+    HapticFeedback.lightImpact();
+    Navigator.pushNamed(
+      context,
+      NamedRoutes.otherProfileScreen,
+      arguments: widget.userId,
     );
   }
 
@@ -269,7 +280,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                   icon: Icons.person_outline,
                   label: 'Profile',
                   color: AppColors.primary,
-                  onTap: () {}),
+                  onTap: _openProfile),
             ],
           ),
           if (!_isBot) ...[
@@ -334,50 +345,57 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
   Widget _buildAvatar(String fallbackText) {
     final avatar = widget.userAvatar;
 
-    return Container(
-      width: 80,
-      height: 80,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.primary, width: 3),
-        color: _surface,
-      ),
-      child: ClipOval(
-        child: avatar.isNotEmpty && avatar.startsWith('http')
-            ? CachedNetworkImage(
-                imageUrl: avatar,
-                fit: BoxFit.cover,
-                fadeInDuration: const Duration(milliseconds: 120),
-                memCacheWidth: 220,
-                placeholder: (context, url) => Container(
-                  color: AppColors.primary.withOpacity(0.1),
-                  child: const Center(child: CircularProgressIndicator()),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  color: AppColors.primary.withOpacity(0.1),
-                  child: Center(
-                    child: Text(
-                      fallbackText,
-                      style: const TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary),
+    return Semantics(
+      button: !_isBot,
+      label: _isBot ? widget.userName : 'View ${widget.userName} profile',
+      child: GestureDetector(
+        onTap: _isBot ? null : _openProfile,
+        child: Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.primary, width: 3),
+            color: _surface,
+          ),
+          child: ClipOval(
+            child: avatar.isNotEmpty && avatar.startsWith('http')
+                ? CachedNetworkImage(
+                    imageUrl: avatar,
+                    fit: BoxFit.cover,
+                    fadeInDuration: const Duration(milliseconds: 120),
+                    memCacheWidth: 220,
+                    placeholder: (context, url) => Container(
+                      color: AppColors.primary.withOpacity(0.1),
+                      child: const Center(child: CircularProgressIndicator()),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      color: AppColors.primary.withOpacity(0.1),
+                      child: Center(
+                        child: Text(
+                          fallbackText,
+                          style: const TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary),
+                        ),
+                      ),
+                    ),
+                  )
+                : Container(
+                    color: AppColors.primary.withOpacity(0.1),
+                    child: Center(
+                      child: Text(
+                        fallbackText,
+                        style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary),
+                      ),
                     ),
                   ),
-                ),
-              )
-            : Container(
-                color: AppColors.primary.withOpacity(0.1),
-                child: Center(
-                  child: Text(
-                    fallbackText,
-                    style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary),
-                  ),
-                ),
-              ),
+          ),
+        ),
       ),
     );
   }
