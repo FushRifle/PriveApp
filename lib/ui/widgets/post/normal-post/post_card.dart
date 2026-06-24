@@ -22,6 +22,7 @@ import 'package:clique/ui/widgets/post/normal-post/post_reaction_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
 class CardPost extends StatefulWidget {
   final FeedPost post;
@@ -53,6 +54,10 @@ class _CardPostState extends State<CardPost> {
   Color? _selectedReactionColor;
   String? _selectedReactionLabel;
   bool _isOwnPost = false;
+  Timer? _viewSyncTimer;
+  DateTime? _lastViewSyncAt;
+  double _visibleFraction = 0;
+  bool _isViewRequestInFlight = false;
 
   bool get _hasMedia => widget.post.attachments.isNotEmpty;
   bool get _canEditPost =>
@@ -77,11 +82,24 @@ class _CardPostState extends State<CardPost> {
         oldWidget.post.comments != widget.post.comments ||
         oldWidget.post.shares != widget.post.shares ||
         oldWidget.post.reposts != widget.post.reposts ||
+        oldWidget.post.views != widget.post.views ||
         oldWidget.post.isLiked != widget.post.isLiked ||
         oldWidget.post.isSaved != widget.post.isSaved ||
         oldWidget.post.isReposted != widget.post.isReposted) {
       _syncPostState();
     }
+
+    if (oldWidget.post.id != widget.post.id) {
+      _viewSyncTimer?.cancel();
+      _visibleFraction = 0;
+      _lastViewSyncAt = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _viewSyncTimer?.cancel();
+    super.dispose();
   }
 
   void _syncPostState() {
@@ -140,10 +158,46 @@ class _CardPostState extends State<CardPost> {
   }
 
   Future<void> _recordView() async {
+    if (_isViewRequestInFlight) return;
+    _isViewRequestInFlight = true;
     try {
       final views = await _feedService.recordPostView(widget.post.id);
-      if (mounted && views > 0) setState(() => _viewCount = views);
-    } catch (_) {}
+      _lastViewSyncAt = DateTime.now();
+      if (mounted && views >= 0 && views != _viewCount) {
+        setState(() => _viewCount = views);
+      }
+    } catch (_) {
+    } finally {
+      _isViewRequestInFlight = false;
+    }
+  }
+
+  void _onVisibilityChanged(VisibilityInfo info) {
+    _visibleFraction = info.visibleFraction;
+    if (_visibleFraction < 0.55) {
+      _viewSyncTimer?.cancel();
+      _viewSyncTimer = null;
+      return;
+    }
+
+    if (_viewSyncTimer != null) return;
+    final lastSync = _lastViewSyncAt;
+    final delay = lastSync == null ||
+            DateTime.now().difference(lastSync) >= const Duration(seconds: 30)
+        ? const Duration(milliseconds: 700)
+        : const Duration(seconds: 30) - DateTime.now().difference(lastSync);
+    _viewSyncTimer = Timer(delay, _syncVisibleView);
+  }
+
+  Future<void> _syncVisibleView() async {
+    _viewSyncTimer = null;
+    if (!mounted || _visibleFraction < 0.55) return;
+    await _recordView();
+    if (!mounted || _visibleFraction < 0.55) return;
+    _viewSyncTimer = Timer(
+      const Duration(seconds: 30),
+      _syncVisibleView,
+    );
   }
 
   void _toggleLike() {
@@ -512,92 +566,96 @@ class _CardPostState extends State<CardPost> {
 
   @override
   Widget build(BuildContext context) {
-    return RepaintBoundary(
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: _openDetail,
-        child: Container(
-          margin: EdgeInsets.only(
-            bottom: widget.isDetailView ? 0 : 18,
-          ),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColors.cardColor.withOpacity(0.98),
-                AppColors.cardColor,
+    return VisibilityDetector(
+      key: ValueKey('post_visibility_${widget.post.id}'),
+      onVisibilityChanged: _onVisibilityChanged,
+      child: RepaintBoundary(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _openDetail,
+          child: Container(
+            margin: EdgeInsets.only(
+              bottom: widget.isDetailView ? 0 : 18,
+            ),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.cardColor.withOpacity(0.98),
+                  AppColors.cardColor,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(
+                color: AppColors.cardBorderColor.withOpacity(0.88),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.shadowElevated.withOpacity(0.78),
+                  blurRadius: 1,
+                  offset: const Offset(0, 1),
+                ),
               ],
             ),
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(
-              color: AppColors.cardBorderColor.withOpacity(0.88),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                PostHeader(
+                  post: widget.post,
+                  isOwnProfile: _isOwnPost,
+                  onMoreTap: widget.isDetailView ? null : _showPostOptions,
+                ),
+                if (widget.post.isPoll)
+                  PollPostBody(
+                    post: widget.post,
+                    isDetailView: widget.isDetailView,
+                  )
+                else if (widget.post.isQuestion)
+                  QuestionPostBody(
+                    post: widget.post,
+                    isDetailView: widget.isDetailView,
+                  )
+                else if (widget.post.isAnonymousPost)
+                  AnonymousPostBody(
+                    post: widget.post,
+                    isDetailView: widget.isDetailView,
+                  )
+                else if (widget.post.content.trim().isNotEmpty)
+                  PostFooter(
+                    post: widget.post,
+                    isTextOnly: !_hasMedia,
+                    maxLines: widget.isDetailView ? null : (_hasMedia ? 3 : 5),
+                  ),
+                if (_hasMedia)
+                  PostMedia(
+                    post: widget.post,
+                    isDetailView: widget.isDetailView,
+                  ),
+                PostActions(
+                  isLiked: _isLiked,
+                  likeCount: _likeCount,
+                  commentCount: _commentCount,
+                  shareCount: _shareCount,
+                  viewCount: _viewCount,
+                  repostCount: _repostCount,
+                  isSaved: _isSaved,
+                  isReposted: _isReposted,
+                  onLike: _toggleLike,
+                  onLikeLongPress: _showReactionSheet,
+                  likeActionKey: _likeActionKey,
+                  onComment: _openComments,
+                  onSave: _toggleSave,
+                  onShare: _share,
+                  onRepost: _repost,
+                  selectedReactionIcon: _selectedReactionIcon,
+                  selectedReactionColor: _selectedReactionColor,
+                  selectedReactionLabel: _selectedReactionLabel,
+                  showLikeAction: !widget.post.isPoll,
+                ),
+              ],
             ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.shadowElevated.withOpacity(0.78),
-                blurRadius: 1,
-                offset: const Offset(0, 1),
-              ),
-            ],
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              PostHeader(
-                post: widget.post,
-                isOwnProfile: _isOwnPost,
-                onMoreTap: widget.isDetailView ? null : _showPostOptions,
-              ),
-              if (widget.post.isPoll)
-                PollPostBody(
-                  post: widget.post,
-                  isDetailView: widget.isDetailView,
-                )
-              else if (widget.post.isQuestion)
-                QuestionPostBody(
-                  post: widget.post,
-                  isDetailView: widget.isDetailView,
-                )
-              else if (widget.post.isAnonymousPost)
-                AnonymousPostBody(
-                  post: widget.post,
-                  isDetailView: widget.isDetailView,
-                )
-              else if (widget.post.content.trim().isNotEmpty)
-                PostFooter(
-                  post: widget.post,
-                  isTextOnly: !_hasMedia,
-                  maxLines: widget.isDetailView ? null : (_hasMedia ? 3 : 5),
-                ),
-              if (_hasMedia)
-                PostMedia(
-                  post: widget.post,
-                  isDetailView: widget.isDetailView,
-                ),
-              PostActions(
-                isLiked: _isLiked,
-                likeCount: _likeCount,
-                commentCount: _commentCount,
-                shareCount: _shareCount,
-                viewCount: _viewCount,
-                repostCount: _repostCount,
-                isSaved: _isSaved,
-                isReposted: _isReposted,
-                onLike: _toggleLike,
-                onLikeLongPress: _showReactionSheet,
-                likeActionKey: _likeActionKey,
-                onComment: _openComments,
-                onSave: _toggleSave,
-                onShare: _share,
-                onRepost: _repost,
-                selectedReactionIcon: _selectedReactionIcon,
-                selectedReactionColor: _selectedReactionColor,
-                selectedReactionLabel: _selectedReactionLabel,
-                showLikeAction: !widget.post.isPoll,
-              ),
-            ],
           ),
         ),
       ),

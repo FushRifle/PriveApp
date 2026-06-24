@@ -326,7 +326,7 @@ class _HomePageState extends State<HomePage>
                           ),
                         ),
                         SliverPadding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
                           sliver: SliverList.separated(
                             itemCount: posts.length + (posts.length ~/ 6),
                             separatorBuilder: (_, __) =>
