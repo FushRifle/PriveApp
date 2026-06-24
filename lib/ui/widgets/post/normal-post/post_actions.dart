@@ -49,90 +49,98 @@ class PostActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final actionColor = AppColors.text;
-    final width = MediaQuery.sizeOf(context).width;
-
-    final isTiny = width < 340;
-    final isSmall = width < 390;
-
-    final horizontalPadding = isSmall ? 10.0 : 16.0;
-    final gap = isTiny
-        ? 6.0
-        : isSmall
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final isTiny = width < 340;
+        final isSmall = width < 390;
+        final horizontalPadding = isTiny
             ? 8.0
-            : 10.0;
+            : isSmall
+                ? 12.0
+                : 16.0;
+        final gap = isTiny
+            ? 8.0
+            : isSmall
+                ? 10.0
+                : 12.0;
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        horizontalPadding,
-        10,
-        horizontalPadding,
-        16,
-      ),
-      child: Row(
-        children: [
-          if (showLikeAction) ...[
-            Flexible(
-              child: _ResponsiveAction(
-                key: likeActionKey,
-                icon: isLiked
-                    ? (selectedReactionIcon ?? Icons.favorite_rounded)
-                    : Icons.favorite_border_rounded,
-                label: _formatCount(likeCount),
-                color: isLiked
-                    ? (selectedReactionColor ?? AppColors.redAccent)
-                    : actionColor,
-                onTap: onLike,
-                onLongPress: onLikeLongPress,
-                showLabel: !isTiny,
-                compact: isSmall,
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            10,
+            horizontalPadding,
+            16,
+          ),
+          child: Row(
+            children: [
+              if (showLikeAction) ...[
+                Expanded(
+                  child: _ResponsiveAction(
+                    key: likeActionKey,
+                    icon: isLiked
+                        ? (selectedReactionIcon ?? Icons.favorite_rounded)
+                        : Icons.favorite_border_rounded,
+                    label: _formatCount(likeCount),
+                    color: isLiked
+                        ? (selectedReactionColor ?? AppColors.redAccent)
+                        : actionColor,
+                    onTap: onLike,
+                    onLongPress: onLikeLongPress,
+                    showLabel: !isTiny,
+                    compact: isSmall,
+                  ),
+                ),
+                SizedBox(width: gap),
+              ],
+              Expanded(
+                child: _ResponsiveAction(
+                  icon: Icons.mode_comment_outlined,
+                  label: _formatCount(commentCount),
+                  color: actionColor,
+                  onTap: onComment,
+                  showLabel: !isTiny,
+                  compact: isSmall,
+                ),
               ),
-            ),
-            SizedBox(width: gap),
-          ],
-          Flexible(
-            child: _ResponsiveAction(
-              icon: Icons.mode_comment_outlined,
-              label: _formatCount(commentCount),
-              color: actionColor,
-              onTap: onComment,
-              showLabel: !isTiny,
-              compact: isSmall,
-            ),
+              SizedBox(width: gap),
+              Expanded(
+                child: _ResponsiveAction(
+                  icon: Icons.repeat_rounded,
+                  label: repostCount > 0 ? _formatCount(repostCount) : null,
+                  color: isReposted ? AppColors.primary : actionColor,
+                  onTap: onRepost,
+                  showLabel: !isSmall,
+                  compact: isSmall,
+                ),
+              ),
+              SizedBox(width: gap),
+              Expanded(
+                child: _ResponsiveAction(
+                  icon: Icons.visibility_outlined,
+                  label: _formatCount(viewCount),
+                  color: actionColor,
+                  onTap: null,
+                  showLabel: !isTiny,
+                  compact: isSmall,
+                ),
+              ),
+              SizedBox(width: gap),
+              Expanded(
+                child: _ResponsiveAction(
+                  icon: isSaved
+                      ? Icons.bookmark_rounded
+                      : Icons.bookmark_border_rounded,
+                  color: isSaved ? AppColors.primary : actionColor,
+                  onTap: onSave,
+                  showLabel: false,
+                  compact: isSmall,
+                ),
+              ),
+            ],
           ),
-          SizedBox(width: gap),
-          Flexible(
-            child: _ResponsiveAction(
-              icon: Icons.visibility_outlined,
-              label: _formatCount(viewCount),
-              color: actionColor,
-              onTap: null,
-              showLabel: !isTiny,
-              compact: isSmall,
-            ),
-          ),
-          SizedBox(width: gap),
-          Flexible(
-            child: _ResponsiveAction(
-              icon: Icons.repeat_rounded,
-              label: repostCount > 0 ? _formatCount(repostCount) : null,
-              color: isReposted ? AppColors.primary : actionColor,
-              onTap: onRepost,
-              showLabel: !isSmall,
-              compact: isSmall,
-            ),
-          ),
-          SizedBox(width: gap),
-          _ResponsiveAction(
-            icon: isSaved
-                ? Icons.bookmark_rounded
-                : Icons.bookmark_border_rounded,
-            color: isSaved ? AppColors.primary : actionColor,
-            onTap: onSave,
-            showLabel: false,
-            compact: isSmall,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -207,7 +215,6 @@ class _ResponsiveAction extends StatelessWidget {
         borderRadius: BorderRadius.circular(radius),
         child: Container(
           constraints: const BoxConstraints(
-            minWidth: 40,
             minHeight: 40,
           ),
           padding: EdgeInsets.symmetric(

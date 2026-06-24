@@ -18,6 +18,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final Set<int> _loadingConversations = {};
   final Set<String> _inFlightMessageKeys = {};
   int _messageRequestId = 0;
+  bool _isRefreshingConversations = false;
   StreamSubscription? _streamEventSubscription;
 
   ChatBloc() : super(const ChatState()) {
@@ -300,6 +301,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     await _loadCurrentUserId();
 
     try {
+      // The bloc already holds the latest list for this session. Real-time
+      // events and explicit refreshes are responsible for updating it.
+      if (state.conversationsStatus == ChatStatus.success) {
+        return;
+      }
+
       final cachedConversations = state.conversations.isNotEmpty
           ? state.conversations
           : await _loadPersistedConversations();
@@ -310,10 +317,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           conversationsStatus: ChatStatus.success,
           clearError: true,
         ));
-      } else if (state.conversations.isEmpty) {
-        emit(state.copyWith(conversationsStatus: ChatStatus.loading));
+        return;
       }
 
+      emit(state.copyWith(conversationsStatus: ChatStatus.loading));
+
+      // A network request is only needed when there is no cached inbox yet.
       final data = await _chatService.getConversations(
         forceRefresh: true,
         cacheOwnerId: _currentUserId,
@@ -340,6 +349,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
   Future<void> _onRefreshConversations(
       RefreshConversations event, Emitter<ChatState> emit) async {
+    if (_isRefreshingConversations) return;
+    _isRefreshingConversations = true;
+
     await _loadCurrentUserId();
     emit(state.copyWith(conversationsStatus: ChatStatus.refreshing));
     try {
@@ -366,6 +378,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         conversationsStatus: ChatStatus.error,
         error: e.toString(),
       ));
+    } finally {
+      _isRefreshingConversations = false;
     }
   }
 
@@ -555,13 +569,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
     try {
       final response = await _chatService.sendMessage(
-        conversationId: event.conversationId,
         receiverId: event.receiverId,
         message: event.message,
         messageType: event.messageType,
         mediaUrl: event.mediaUrl,
         replyToId: event.replyToId,
-        replyToStreamMessageId: event.replyToStreamMessageId,
         clientMessageId: clientMessageId,
       );
 
@@ -765,13 +777,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         }
 
         final response = await _chatService.sendMessage(
-          conversationId: event.conversationId,
           receiverId: pending.receiverId,
           message: pending.message,
           messageType: pending.messageType,
           mediaUrl: pending.mediaUrl,
           replyToId: pending.replyToId,
-          replyToStreamMessageId: pending.streamMessageId,
           clientMessageId: pending.clientMessageId,
         );
 

@@ -264,8 +264,8 @@ class _SplashScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
-              width: 116,
-              height: 116,
+              width: 170,
+              height: 170,
               child: Lottie.asset(
                 'assets/animations/loading.json',
                 repeat: true,

@@ -836,7 +836,7 @@ class _ReelItemState extends State<ReelItem>
       child: Column(
         children: [
           Container(
-            height: 130,
+            height: 110,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
@@ -850,7 +850,7 @@ class _ReelItemState extends State<ReelItem>
           ),
           const Spacer(),
           Container(
-            height: 260,
+            height: 220,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.bottomCenter,
@@ -883,51 +883,62 @@ class _ReelItemState extends State<ReelItem>
         _localRepostDelta;
 
     return Positioned(
-      right: 14,
-      bottom: 104,
+      right: 10,
+      bottom: 18,
       child: SafeArea(
         top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ActionButton(
-              icon: _isLiked
-                  ? (_selectedReactionIcon ?? Icons.favorite)
-                  : Icons.favorite_border,
-              label: formatCount(likeCount < 0 ? 0 : likeCount),
-              color: _isLiked
-                  ? (_selectedReactionColor ?? AppColors.redColor)
-                  : AppColors.white,
-              onTap: _handleLike,
-              onLongPress: _showReactionPicker,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppColors.black.withOpacity(0.28),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: AppColors.white.withOpacity(0.12),
             ),
-            const SizedBox(height: 20),
-            ActionButton(
-              icon: Icons.mode_comment_outlined,
-              label: formatCount(commentCount < 0 ? 0 : commentCount),
-              onTap: _handleComment,
-            ),
-            const SizedBox(height: 20),
-            ActionButton(
-              icon: Icons.send_rounded,
-              label: formatCount(shareCount < 0 ? 0 : shareCount),
-              onTap: _handleShare,
-            ),
-            const SizedBox(height: 20),
-            ActionButton(
-              icon:
-                  _isReposted ? Icons.repeat_on_rounded : Icons.repeat_rounded,
-              label: formatCount(repostCount < 0 ? 0 : repostCount),
-              color: _isReposted ? AppColors.primary : AppColors.white,
-              onTap: _handleRepost,
-            ),
-            const SizedBox(height: 20),
-            ActionButton(
-              icon: Icons.more_horiz,
-              label: '',
-              onTap: _showMoreActions,
-            ),
-          ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ActionButton(
+                icon: _isLiked
+                    ? (_selectedReactionIcon ?? Icons.favorite)
+                    : Icons.favorite_border,
+                label: formatCount(likeCount < 0 ? 0 : likeCount),
+                color: _isLiked
+                    ? (_selectedReactionColor ?? AppColors.redColor)
+                    : AppColors.white,
+                onTap: _handleLike,
+                onLongPress: _showReactionPicker,
+              ),
+              const SizedBox(height: 8),
+              ActionButton(
+                icon: Icons.mode_comment_outlined,
+                label: formatCount(commentCount < 0 ? 0 : commentCount),
+                onTap: _handleComment,
+              ),
+              const SizedBox(height: 8),
+              ActionButton(
+                icon: Icons.send_rounded,
+                label: formatCount(shareCount < 0 ? 0 : shareCount),
+                onTap: _handleShare,
+              ),
+              const SizedBox(height: 8),
+              ActionButton(
+                icon: _isReposted
+                    ? Icons.repeat_on_rounded
+                    : Icons.repeat_rounded,
+                label: formatCount(repostCount < 0 ? 0 : repostCount),
+                color: _isReposted ? AppColors.primary : AppColors.white,
+                onTap: _handleRepost,
+              ),
+              const SizedBox(height: 8),
+              ActionButton(
+                icon: Icons.more_horiz,
+                label: '',
+                onTap: _showMoreActions,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -935,23 +946,21 @@ class _ReelItemState extends State<ReelItem>
 
   Widget _buildMuteButton() {
     return Positioned(
-      top: MediaQuery.paddingOf(context).top + 74,
-      right: 16,
-      child: SafeArea(
-        child: Material(
-          color: AppColors.black.withOpacity(0.34),
-          shape: const CircleBorder(),
-          child: InkWell(
-            onTap: _toggleMute,
-            customBorder: const CircleBorder(),
-            child: SizedBox(
-              width: 42,
-              height: 62,
-              child: Icon(
-                _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
-                color: AppColors.white,
-                size: 22,
-              ),
+      top: MediaQuery.paddingOf(context).top + 58,
+      right: 12,
+      child: Material(
+        color: AppColors.black.withOpacity(0.34),
+        shape: const CircleBorder(),
+        child: InkWell(
+          onTap: _toggleMute,
+          customBorder: const CircleBorder(),
+          child: SizedBox(
+            width: 42,
+            height: 42,
+            child: Icon(
+              _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+              color: AppColors.white,
+              size: 24,
             ),
           ),
         ),
@@ -975,9 +984,9 @@ class _ReelItemState extends State<ReelItem>
         username;
 
     return Positioned(
-      left: 16,
-      right: 88,
-      bottom: 24,
+      left: 12,
+      right: 70,
+      bottom: 12,
       child: SafeArea(
         top: false,
         child: Column(
@@ -988,7 +997,7 @@ class _ReelItemState extends State<ReelItem>
                 ProfileAvatar(
                   imageUrl: avatar,
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 Flexible(
                   child: Text(
                     username,
@@ -996,7 +1005,7 @@ class _ReelItemState extends State<ReelItem>
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: AppColors.white,
-                      fontSize: 15,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -1010,7 +1019,7 @@ class _ReelItemState extends State<ReelItem>
                   ),
                 ],
                 if (!_isCurrentUser()) ...[
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   FollowButton(
                     isFollowing: _isFollowing,
                     onTap: _toggleFollow,
@@ -1019,13 +1028,13 @@ class _ReelItemState extends State<ReelItem>
               ],
             ),
             if (caption.trim().isNotEmpty) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               EffectText(
                 text: caption,
                 style: const TextStyle(
                   color: AppColors.white,
-                  fontSize: 14,
-                  height: 1.25,
+                  fontSize: 13,
+                  height: 1.2,
                 ),
                 hashtagColor: AppColors.storyYellow,
                 mentionColor: AppColors.secondary,
@@ -1034,23 +1043,19 @@ class _ReelItemState extends State<ReelItem>
               ),
             ],
             if (hashtags.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 5,
-                runSpacing: 2,
-                children: hashtags.map((tag) {
-                  return Text(
-                    '#$tag',
-                    style: const TextStyle(
-                      color: AppColors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  );
-                }).toList(),
+              const SizedBox(height: 5),
+              Text(
+                hashtags.map((tag) => '#$tag').join(' '),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Row(
               children: [
                 const Icon(

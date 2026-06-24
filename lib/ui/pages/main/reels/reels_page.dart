@@ -148,7 +148,7 @@ class _ReelsPageState extends State<ReelsPage> {
                                     await Future.delayed(
                                         const Duration(milliseconds: 500));
                                   },
-                                  color: AppColors.white,
+                                  color: AppColors.secondary,
                                   child: ReelItem(
                                     reel: reels[index],
                                     isActive: widget.isVisible &&
@@ -168,36 +168,6 @@ class _ReelsPageState extends State<ReelsPage> {
                                 );
                               },
                             ),
-                      // Header
-                      Positioned(
-                        top: MediaQuery.of(context).padding.top + 20,
-                        left: 16,
-                        right: 16,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            GestureDetector(
-                              onTap: () {
-                                HapticFeedback.lightImpact();
-                                _handleBack();
-                              },
-                              child: Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withOpacity(0.7),
-                                  borderRadius: BorderRadius.circular(15),
-                                ),
-                                child: const Icon(
-                                  Icons.arrow_back_ios_new,
-                                  color: AppColors.white,
-                                  size: 20,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 ),

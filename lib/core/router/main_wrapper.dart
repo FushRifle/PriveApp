@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -134,16 +134,19 @@ class _MainWrapperState extends State<MainWrapper>
     }
   }
 
-  bool get _showBottomBar => _currentIndex != 1;
+  bool get _showBottomBar => true;
 
   double _getBottomPadding(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
-    if (Platform.isAndroid) {
+    if (kIsWeb) {
+      return 8;
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.android) {
       return bottomPadding > 0 ? bottomPadding + 8 : 8;
-    } else if (Platform.isIOS) {
+    } else if (defaultTargetPlatform == TargetPlatform.iOS) {
       return bottomPadding > 0 ? bottomPadding + 4 : 20;
     } else {
-      // Web
       return 8;
     }
   }
@@ -279,11 +282,14 @@ class _MainWrapperState extends State<MainWrapper>
                           ],
                           onTap: _onNavBarTap,
                         ),
-                        Positioned(
-                          top: -30,
+                        AnimatedPositioned(
+                          duration: const Duration(milliseconds: 600),
+                          curve: Curves.easeInOutCubic,
+                          top: _currentIndex == 0 ? -30 : 0,
                           child: _CreateButton(
                             pulseAnimation: _pulseAnimation,
                             onTap: _handleCreatePost,
+                            isDocked: _currentIndex != 0,
                           ),
                         ),
                       ],
@@ -438,10 +444,12 @@ class _EventTabScope extends StatelessWidget {
 class _CreateButton extends StatelessWidget {
   final Animation<double> pulseAnimation;
   final VoidCallback onTap;
+  final bool isDocked;
 
   const _CreateButton({
     required this.pulseAnimation,
     required this.onTap,
+    required this.isDocked,
   });
 
   @override
@@ -451,9 +459,11 @@ class _CreateButton extends StatelessWidget {
       builder: (context, child) {
         return Transform.scale(
           scale: pulseAnimation.value,
-          child: SizedBox(
-            width: 74,
-            height: 74,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeInOutCubic,
+            width: isDocked ? 60 : 74,
+            height: isDocked ? 60 : 74,
             child: Center(
               child: Material(
                 color: Colors.transparent,
@@ -463,39 +473,47 @@ class _CreateButton extends StatelessWidget {
                   radius: 42,
                   containedInkWell: true,
                   customBorder: const CircleBorder(),
-                  child: Container(
-                    width: 58,
-                    height: 58,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 600),
+                    curve: Curves.easeInOutCubic,
+                    width: isDocked ? 44 : 58,
+                    height: isDocked ? 44 : 58,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
                           AppColors.primary,
-                          AppColors.primary.withOpacity(0.8),
+                          AppColors.primary.withOpacity(isDocked ? 0.68 : 0.8),
                         ],
                       ),
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primary.withOpacity(0.4),
-                          blurRadius: 12,
-                          spreadRadius: 2,
-                          offset: const Offset(0, 4),
+                          color: AppColors.primary
+                              .withOpacity(isDocked ? 0.22 : 0.4),
+                          blurRadius: isDocked ? 7 : 12,
+                          spreadRadius: isDocked ? 0 : 2,
+                          offset: Offset(0, isDocked ? 2 : 4),
                         ),
                         BoxShadow(
-                          color: AppColors.primary.withOpacity(0.2),
-                          blurRadius: 20,
-                          spreadRadius: 1,
-                          offset: const Offset(0, 8),
+                          color: AppColors.primary
+                              .withOpacity(isDocked ? 0.08 : 0.2),
+                          blurRadius: isDocked ? 10 : 20,
+                          spreadRadius: isDocked ? 0 : 1,
+                          offset: Offset(0, isDocked ? 3 : 8),
                         ),
                       ],
                     ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.add_rounded,
-                        size: 32,
-                        color: Colors.white,
+                    child: Center(
+                      child: AnimatedSize(
+                        duration: const Duration(milliseconds: 600),
+                        curve: Curves.easeInOutCubic,
+                        child: Icon(
+                          Icons.add_rounded,
+                          size: isDocked ? 26 : 32,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),

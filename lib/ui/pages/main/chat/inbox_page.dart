@@ -464,9 +464,13 @@ class _InboxPageState extends State<InboxPage> {
                   size: 18,
                 ),
                 const SizedBox(width: 10),
-                Text(
-                  'Conversation with ${message.name} archived',
-                  style: TextStyle(color: AppColors.text),
+                Expanded(
+                  child: Text(
+                    'Conversation with ${message.name} archived',
+                    style: TextStyle(color: AppColors.text),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),

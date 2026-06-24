@@ -440,6 +440,8 @@ class ChatService {
             .toString();
     final mediaUrl = pending['mediaUrl'] ?? pending['media_url'];
     final replyToId = pending['replyToId'] ?? pending['reply_to_id'];
+    final clientMessageId =
+        pending['clientMessageId'] ?? pending['client_message_id'];
 
     if (receiverId <= 0 || message.isEmpty) {
       return null;
@@ -466,6 +468,7 @@ class ChatService {
         'messageType': messageType,
         if (mediaUrl != null) 'mediaUrl': mediaUrl,
         if (replyToId != null) 'replyToId': replyToId,
+        if (clientMessageId != null) 'clientMessageId': clientMessageId,
       };
 
       final response = await _api.post(
@@ -558,53 +561,6 @@ class ChatService {
     );
   }
 
-  Future<Map<String, dynamic>?> _sendStreamMessage({
-    required int conversationId,
-    required int receiverId,
-    required String message,
-    required String messageType,
-    String? mediaUrl,
-    String? replyToStreamMessageId,
-    String? clientMessageId,
-  }) async {
-    try {
-      final channel = _streamChatService.channelForConversation(
-        conversationId,
-        receiverId: receiverId,
-      );
-      await channel.watch(presence: true);
-
-      final attachments = <stream.Attachment>[];
-      if (mediaUrl != null && mediaUrl.trim().isNotEmpty) {
-        attachments.add(
-          stream.Attachment(
-            type: messageType,
-            assetUrl: mediaUrl,
-            imageUrl: messageType == 'image' ? mediaUrl : null,
-            thumbUrl: messageType == 'video' ? mediaUrl : null,
-          ),
-        );
-      }
-
-      final response = await channel.sendMessage(
-        stream.Message(
-          id: clientMessageId,
-          text: message,
-          parentId: replyToStreamMessageId,
-          attachments: attachments,
-        ),
-      );
-
-      return _streamMessageToJson(
-        response.message,
-        conversationId: conversationId,
-        receiverId: receiverId,
-      );
-    } catch (_) {
-      return null;
-    }
-  }
-
   Future<bool> _deleteStreamMessage(int messageId) async {
     final resolved = await _findStreamMessageByLocalId(messageId);
     final channel = resolved.$1;
@@ -655,17 +611,13 @@ class ChatService {
 
     final mapped = messages.map((message) {
       final senderId = _readInt(message.user?.id);
-      final replyParentId = _readInt(message.parentId) != 0
-          ? _readInt(message.parentId)
-          : (message.parentId != null
-              ? _stableMessageId(message.parentId!)
-              : 0);
+      final replyParentId = _streamReferenceId(message.parentId);
       final mediaUrl = _readStreamMediaUrl(message);
       final messageType = _readStreamMessageType(message, mediaUrl);
       final isOwn = currentUserId != null && message.user?.id == currentUserId;
 
       return <String, dynamic>{
-        'id': _stableMessageId(message.id),
+        'id': _streamLocalMessageId(message),
         'streamMessageId': message.id,
         'conversationId': conversationId,
         'senderId': senderId,
@@ -714,36 +666,19 @@ class ChatService {
     return 0;
   }
 
-  Map<String, dynamic> _streamMessageToJson(
-    stream.Message message, {
-    required int conversationId,
-    required int receiverId,
-  }) {
-    final senderId = _readInt(message.user?.id);
-    final mediaUrl = _readStreamMediaUrl(message);
-    final messageType = _readStreamMessageType(message, mediaUrl);
-    final isOwn = message.user?.id == _streamChatService.currentUserId;
+  int _streamLocalMessageId(stream.Message message) {
+    final localId = _readInt(message.extraData['local_message_id']);
+    return localId > 0 ? localId : _streamReferenceId(message.id);
+  }
 
-    return <String, dynamic>{
-      'id': _stableMessageId(message.id),
-      'streamMessageId': message.id,
-      'conversationId': conversationId,
-      'senderId': senderId,
-      'receiverId': receiverId,
-      'message': message.text ?? '',
-      'messageType': messageType,
-      'mediaUrl': mediaUrl,
-      'replyToId': _readInt(message.parentId) != 0
-          ? _readInt(message.parentId)
-          : (message.parentId != null
-              ? _stableMessageId(message.parentId!)
-              : 0),
-      'replyToMessage': message.quotedMessage?.text,
-      'replyToSender': message.quotedMessage?.user?.name,
-      'isRead': true,
-      'isOwn': isOwn,
-      'createdAt': message.createdAt.toIso8601String(),
-    };
+  int _streamReferenceId(String? id) {
+    if (id == null || id.isEmpty) return 0;
+    if (id.startsWith('db-')) {
+      final databaseId = int.tryParse(id.substring(3));
+      if (databaseId != null && databaseId > 0) return databaseId;
+    }
+    final numericId = int.tryParse(id);
+    return numericId ?? _stableMessageId(id);
   }
 
   int _stableMessageId(String id) {
@@ -1081,13 +1016,11 @@ class ChatService {
   }
 
   Future<Map<String, dynamic>?> sendMessage({
-    int? conversationId,
     required int receiverId,
     required String message,
     String messageType = 'text',
     String? mediaUrl,
     int? replyToId,
-    String? replyToStreamMessageId,
     String? clientMessageId,
   }) async {
     final key = _messageKey(
@@ -1105,27 +1038,6 @@ class ChatService {
     _sendingMessageKeys.add(key);
 
     try {
-      try {
-        await _streamChatService.connect();
-        final streamResponse = await _sendStreamMessage(
-          conversationId: conversationId ?? receiverId,
-          receiverId: receiverId,
-          message: message,
-          messageType: messageType,
-          mediaUrl: mediaUrl,
-          replyToStreamMessageId: replyToStreamMessageId,
-          clientMessageId: clientMessageId,
-        );
-
-        if (streamResponse != null) {
-          clearAllCache();
-          _api.removeCacheByPath('/api/chat');
-          return streamResponse;
-        }
-      } catch (_) {
-        // Fall through to the existing REST path.
-      }
-
       final data = {
         'receiverId': receiverId,
         'message': message,

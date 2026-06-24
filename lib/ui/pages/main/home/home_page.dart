@@ -1240,7 +1240,7 @@ class _FeedHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Fresh perspectives from your circle',
+                  'Perspectives from your Circle.',
                   style: AppTheme.greyTextStyle.copyWith(
                     color: palette.mutedText,
                     fontSize: 13,

@@ -176,7 +176,7 @@ class _PollPostBodyState extends State<PollPostBody> {
             end: Alignment.bottomRight,
             colors: [
               AppColors.card.withOpacity(0.92),
-              AppColors.secondary.withOpacity(0.05),
+              AppColors.cardColor.withOpacity(0.05),
             ],
           ),
           borderRadius: BorderRadius.circular(24),
@@ -304,9 +304,9 @@ class _PollPostBodyState extends State<PollPostBody> {
             borderRadius: BorderRadius.circular(12),
             color: AppColors.primary.withOpacity(0.12),
           ),
-          child: const Icon(
+          child: Icon(
             Icons.poll_rounded,
-            color: AppColors.primary,
+            color: AppColors.text,
             size: 18,
           ),
         ),
@@ -317,7 +317,7 @@ class _PollPostBodyState extends State<PollPostBody> {
             Text(
               'Poll',
               style: AppTheme.blackTextStyle.copyWith(
-                color: AppColors.primary,
+                color: AppColors.text,
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
               ),
@@ -340,7 +340,7 @@ class _PollPostBodyState extends State<PollPostBody> {
             decoration: BoxDecoration(
               color: poll != null && poll.hasExpired
                   ? AppColors.redAccent.withOpacity(0.1)
-                  : AppColors.primary.withOpacity(0.08),
+                  : AppColors.text.withOpacity(0.08),
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
@@ -348,9 +348,9 @@ class _PollPostBodyState extends State<PollPostBody> {
               style: AppTheme.greyTextStyle.copyWith(
                 color: poll != null && poll.hasExpired
                     ? AppColors.redAccent
-                    : AppColors.primary,
+                    : AppColors.text,
                 fontSize: 11,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
@@ -403,7 +403,7 @@ class _PollPostBodyState extends State<PollPostBody> {
                             gradient: LinearGradient(
                               colors: [
                                 AppColors.primary.withOpacity(0.16),
-                                AppColors.secondary.withOpacity(0.12),
+                                AppColors.cardBorder.withOpacity(0.12),
                               ],
                             ),
                           ),
@@ -415,18 +415,13 @@ class _PollPostBodyState extends State<PollPostBody> {
               Row(
                 children: [
                   Container(
-                    width: 22,
-                    height: 22,
+                    width: 28,
+                    height: 38,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: selected
                           ? AppColors.primary
                           : AppColors.transparent,
-                      border: Border.all(
-                        color: selected
-                            ? AppColors.primary
-                            : AppColors.textSecondary.withOpacity(0.35),
-                      ),
                     ),
                     child: selected
                         ? const Icon(
