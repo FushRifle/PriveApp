@@ -2,6 +2,7 @@ import 'package:clique/core/models/feeds_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:clique/app/configs/colors.dart';
+import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/services/home/feed_service.dart';
 import 'package:clique/ui/pages/main/home/post_detail_page.dart';
 import 'package:clique/ui/widgets/notification/details/notification_hero.dart';
@@ -81,6 +82,35 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
     );
   }
 
+  void _openChat(Map<String, dynamic> notification, Map<String, dynamic> data) {
+    final conversationId = _readInt(
+      data['conversationId'] ??
+          data['conversation_id'] ??
+          notification['conversationId'] ??
+          notification['conversation_id'],
+    );
+    if (conversationId <= 0) {
+      Navigator.pushNamed(context, NamedRoutes.inboxScreen);
+      return;
+    }
+
+    Navigator.pushNamed(
+      context,
+      NamedRoutes.chatScreen,
+      arguments: {
+        'conversationId': conversationId,
+        'userName': _actorName(notification),
+        'userAvatar': notification['actorAvatar'] ?? data['actorAvatar'] ?? '',
+        'userId': _readInt(
+          notification['actorId'] ??
+              data['actorId'] ??
+              data['senderId'] ??
+              data['sender_id'],
+        ),
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final notification = widget.notification;
@@ -95,6 +125,7 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
     final accent = _notificationColor(type);
     final summary = _summaryForType(type, notification);
     final isComment = type == 'comment' || type == 'post_comment';
+    final isMessage = type == 'message' || type == 'chat';
 
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
@@ -137,7 +168,9 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
             sliver: SliverList(
               delegate: SliverChildListDelegate([
                 const SizedBox(height: 10),
-                if (isComment)
+                if (isMessage)
+                  _buildMessageDetails(notification, data, accent)
+                else if (isComment)
                   _buildCommentDetails(notification, data, accent)
                 else
                   PostSection(
@@ -148,6 +181,76 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
                     onOpenPost: _openPost,
                   ),
               ]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMessageDetails(
+    Map<String, dynamic> notification,
+    Map<String, dynamic> data,
+    Color accent,
+  ) {
+    final message =
+        (notification['message'] ?? data['message'] ?? '').toString().trim();
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 18, 14, 14),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border.withOpacity(0.7)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: accent.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.chat_bubble_outline_rounded,
+                    color: accent, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Message',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+              ),
+            ],
+          ),
+          if (message.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Text(
+              message,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    height: 1.4,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.text,
+                  ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () => _openChat(notification, data),
+              icon: const Text('Open chat'),
+              label: const Icon(Icons.chevron_right_rounded),
+              style: TextButton.styleFrom(
+                foregroundColor: accent,
+                textStyle: const TextStyle(fontWeight: FontWeight.w800),
+              ),
             ),
           ),
         ],

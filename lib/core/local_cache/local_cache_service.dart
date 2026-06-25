@@ -31,6 +31,7 @@ class LocalCacheService {
         Hive.openBox<dynamic>(HiveCacheKeys.metaBox),
         Hive.openBox<dynamic>(HiveCacheKeys.chatBox),
         Hive.openBox<dynamic>(HiveCacheKeys.notificationBox),
+        Hive.openBox<dynamic>(HiveCacheKeys.postDraftBox),
         Hive.openBox<dynamic>(
           HiveCacheKeys.appLockBox,
           encryptionCipher: appLockCipher,
@@ -58,6 +59,7 @@ class LocalCacheService {
       box(HiveCacheKeys.metaBox)?.clear() ?? Future.value(0),
       box(HiveCacheKeys.chatBox)?.clear() ?? Future.value(0),
       box(HiveCacheKeys.notificationBox)?.clear() ?? Future.value(0),
+      box(HiveCacheKeys.postDraftBox)?.clear() ?? Future.value(0),
     ]);
   }
 

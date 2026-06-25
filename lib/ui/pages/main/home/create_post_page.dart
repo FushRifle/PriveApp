@@ -195,6 +195,13 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
   bool get _hasMedia => _mediaItems.isNotEmpty;
 
+  bool get _hasDraftContent =>
+      _textController.text.trim().isNotEmpty ||
+      _hashtagController.text.trim().isNotEmpty ||
+      _hashtags.isNotEmpty ||
+      _pollOptions.isNotEmpty ||
+      _mediaItems.isNotEmpty;
+
   bool get _canSubmit {
     if (_isSubmitting || _isPicking) return false;
 
@@ -225,14 +232,17 @@ class _CreatePostPageState extends State<CreatePostPage> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: !_isSubmitting,
+      canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop && _isSubmitting) {
+        if (didPop) return;
+        if (_isSubmitting) {
           _showSnackBar(
             'Post is uploading. Please wait.',
             isError: true,
           );
+          return;
         }
+        _handleBack();
       },
       child: Scaffold(
         resizeToAvoidBottomInset: true,
@@ -416,11 +426,15 @@ class _CreatePostPageState extends State<CreatePostPage> {
     }
   }
 
-  void _handleBack() {
+  Future<void> _handleBack() async {
     if (_isSubmitting) return;
 
     if (_currentStep == PostCreationStep.options) {
-      Navigator.pop(context);
+      if (_hasDraftContent) {
+        await _confirmDraftExit();
+      } else {
+        Navigator.pop(context);
+      }
       return;
     }
 
@@ -434,6 +448,42 @@ class _CreatePostPageState extends State<CreatePostPage> {
     if (_currentStep == PostCreationStep.mediaPreview) {
       _clearMediaAndGoBack();
     }
+  }
+
+  Future<void> _confirmDraftExit() async {
+    final action = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: AppColors.card,
+          title: const Text('Save draft?'),
+          content:
+              const Text('Keep this post draft or discard it before leaving.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'cancel'),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'discard'),
+              child: const Text('Discard'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, 'keep'),
+              child: const Text('Keep draft'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted || action == null || action == 'cancel') return;
+    if (action == 'discard') {
+      await _draftService.deleteDraft(_draftId);
+    } else {
+      await _saveDraft();
+    }
+    if (mounted) Navigator.pop(context);
   }
 
   void _clearMediaAndGoBack() {

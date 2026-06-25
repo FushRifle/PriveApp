@@ -933,10 +933,10 @@ class ProfileStickyTabBar extends StatelessWidget {
       splashFactory: NoSplash.splashFactory,
       overlayColor: WidgetStatePropertyAll<Color>(AppColors.transparent),
       tabs: [
-        const Tab(icon: Icon(Icons.grid_on_rounded)),
-        const Tab(icon: Icon(Icons.movie_filter_outlined)),
-        const Tab(icon: Icon(Icons.bookmark_border_rounded)),
-        const Tab(icon: Icon(Icons.drafts_outlined)),
+        const Tab(icon: Icon(Icons.grid_on_rounded), text: 'Posts'),
+        const Tab(icon: Icon(Icons.movie_filter_outlined), text: 'Media'),
+        const Tab(icon: Icon(Icons.bookmark_border_rounded), text: 'Saved'),
+        const Tab(icon: Icon(Icons.drafts_outlined), text: 'Drafts'),
       ],
     );
 

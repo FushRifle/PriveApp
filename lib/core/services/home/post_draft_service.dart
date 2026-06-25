@@ -8,7 +8,8 @@ class PostDraftService {
   static const _key = 'post_drafts';
 
   List<Map<String, dynamic>> getDrafts() {
-    final box = LocalCacheService.box(HiveCacheKeys.feedBox);
+    _migrateLegacyDrafts();
+    final box = LocalCacheService.box(HiveCacheKeys.postDraftBox);
     final raw = box?.get(_key);
     if (raw is! List) return const [];
     return raw
@@ -21,7 +22,7 @@ class PostDraftService {
   }
 
   Future<void> upsertDraft(Map<String, dynamic> draft) async {
-    final box = LocalCacheService.box(HiveCacheKeys.feedBox);
+    final box = LocalCacheService.box(HiveCacheKeys.postDraftBox);
     if (box == null) return;
 
     final id = draft['id']?.toString();
@@ -37,11 +38,23 @@ class PostDraftService {
   }
 
   Future<void> deleteDraft(String id) async {
-    final box = LocalCacheService.box(HiveCacheKeys.feedBox);
+    final box = LocalCacheService.box(HiveCacheKeys.postDraftBox);
     if (box == null) return;
     final drafts =
         getDrafts().where((item) => item['id']?.toString() != id).toList();
     await box.put(_key, drafts);
+  }
+
+  void _migrateLegacyDrafts() {
+    final target = LocalCacheService.box(HiveCacheKeys.postDraftBox);
+    final legacy = LocalCacheService.box(HiveCacheKeys.feedBox);
+    if (target == null || legacy == null || target.containsKey(_key)) return;
+
+    final raw = legacy.get(_key);
+    if (raw is List && raw.isNotEmpty) {
+      target.put(_key, raw);
+    }
+    legacy.delete(_key);
   }
 
   static List<MediaItem> mediaItemsFromDraft(Map<String, dynamic> draft) {
