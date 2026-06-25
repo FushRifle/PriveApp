@@ -1,12 +1,10 @@
 import 'package:clique/core/models/feeds_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clique/app/configs/colors.dart';
-import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/services/home/feed_service.dart';
-import 'package:clique/ui/pages/main/home/post_detail_page.dart';
+import 'package:clique/ui/widgets/post/normal-post/post_card.dart';
 
 class NotificationDetailsPage extends StatefulWidget {
   final Map<String, dynamic> notification;
@@ -25,13 +23,18 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
   final FeedService _feedService = FeedService();
 
   late final int _postId;
+  List<int> _groupPostIds = [];
   FeedPost? _post;
+  List<FeedPost>? _groupPosts;
+  bool _isLoadingGroupPosts = false;
 
   @override
   void initState() {
     super.initState();
     _postId = _resolvePostId();
-    _loadPost();
+    _groupPostIds = _resolveGroupPostIds();
+    if (_postId > 0) _loadSinglePost();
+    if (_groupPostIds.isNotEmpty) _loadGroupPosts();
   }
 
   int _resolvePostId() {
@@ -49,33 +52,52 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
     );
   }
 
-  Future<void> _loadPost() async {
-    if (_postId <= 0) {
-      return;
+  List<int> _resolveGroupPostIds() {
+    final notification = widget.notification;
+    final data = _asMap(notification['data']);
+    dynamic list = data['postIds'] ??
+        data['post_ids'] ??
+        data['targetIds'] ??
+        data['target_ids'] ??
+        notification['postIds'] ??
+        notification['post_ids'] ??
+        notification['targetIds'] ??
+        notification['target_ids'];
+    if (list is List) {
+      return list
+          .map((e) => _readInt(e))
+          .where((id) => id > 0)
+          .toList();
     }
+    return [];
+  }
 
+  Future<void> _loadSinglePost() async {
     try {
       final post = await _feedService.getPostById(_postId);
       if (!mounted) return;
       setState(() => _post = post);
-    } catch (_) {
-      return;
-    }
+    } catch (_) {}
   }
 
-  void _openPost() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => BlocProvider.value(
-          value: context.read<FeedBloc>(),
-          child: PostDetailPage(
-            postId: _post?.id ?? _postId,
-            initialPost: _post,
-          ),
-        ),
-      ),
-    );
+  Future<void> _loadGroupPosts() async {
+    setState(() => _isLoadingGroupPosts = true);
+    try {
+      final posts = <FeedPost>[];
+      for (final id in _groupPostIds) {
+        try {
+          final post = await _feedService.getPostById(id);
+          if (mounted) posts.add(post!);
+        } catch (_) {}
+      }
+      if (!mounted) return;
+      setState(() {
+        _groupPosts = posts;
+        _isLoadingGroupPosts = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingGroupPosts = false);
+    }
   }
 
   void _openChat(Map<String, dynamic> notification, Map<String, dynamic> data) {
@@ -89,7 +111,6 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
       Navigator.pushNamed(context, NamedRoutes.inboxScreen);
       return;
     }
-
     Navigator.pushNamed(
       context,
       NamedRoutes.chatScreen,
@@ -120,8 +141,10 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
     final time = _formatTime(notification['createdAt']?.toString());
     final accent = _notificationColor(type);
     final summary = _summaryForType(type, notification);
-    final isComment = type == 'comment' || type == 'post_comment';
     final isMessage = type == 'message' || type == 'chat';
+    final isComment = type == 'comment' || type == 'post_comment';
+    final hasPost = _post != null;
+    final hasGroupPosts = _groupPosts != null && _groupPosts!.isNotEmpty;
 
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
@@ -148,6 +171,7 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
           parent: AlwaysScrollableScrollPhysics(),
         ),
         children: [
+          // Notification header card
           _ActivityHeaderCard(
             actorName: actorName,
             type: type,
@@ -158,26 +182,47 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
             postImage: postImage,
           ),
           const SizedBox(height: 12),
+          // Show group posts if present
+          if (hasGroupPosts) ...[
+            _SectionLabel(title: 'Group Posts'),
+            const SizedBox(height: 8),
+            ..._groupPosts!.map(
+              (post) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: CardPost(post: post, isDetailView: false),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+          // Show single post if present (and not already shown as group)
+          if (hasPost && !hasGroupPosts) ...[
+            _SectionLabel(title: 'Post'),
+            const SizedBox(height: 8),
+            CardPost(post: _post!, isDetailView: false),
+            const SizedBox(height: 12),
+          ],
+          // Loading indicator for group posts
+          if (_isLoadingGroupPosts)
+            const Center(child: CircularProgressIndicator()),
+          // Detail sections based on type
           if (isMessage)
             _buildMessageDetails(notification, data, accent)
           else if (isComment)
             _buildCommentDetails(notification, data, accent)
-          else
+          else if (!hasPost && !hasGroupPosts)
             _buildGenericDetails(summary, content, accent),
         ],
       ),
     );
   }
 
+  // --- Detail builders (unchanged) ---
   Widget _buildGenericDetails(String summary, String content, Color accent) {
     return _DetailPanel(
       icon: Icons.notifications_none_rounded,
       title: summary,
-      body:
-          content.isEmpty ? 'Open the related page for more context.' : content,
+      body: content.isEmpty ? 'Open the related page for more context.' : content,
       accent: accent,
-      actionLabel: _postId > 0 ? 'View page' : null,
-      onAction: _postId > 0 ? _openPost : null,
     );
   }
 
@@ -219,11 +264,10 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
       title: 'Comment',
       body: comment.isEmpty ? 'Comment activity' : comment,
       accent: accent,
-      actionLabel: 'View page',
-      onAction: _postId > 0 ? _openPost : null,
     );
   }
 
+  // --- Helper methods (identical to original) ---
   Map<String, dynamic> _asMap(dynamic value) {
     if (value is Map<String, dynamic>) return value;
     if (value is Map) return Map<String, dynamic>.from(value);
@@ -265,7 +309,6 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
         if (url.isNotEmpty) return url;
       }
     }
-
     return '';
   }
 
@@ -354,6 +397,8 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
     }
   }
 }
+
+// ---- UI Widgets ----
 
 class _ActivityHeaderCard extends StatelessWidget {
   final String actorName;
@@ -493,9 +538,27 @@ class _ActivityAvatar extends StatelessWidget {
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Icon(icon, color: accent),
               )
-            : Center(
-                child: Icon(icon, color: accent),
-              ),
+            : Center(child: Icon(icon, color: accent)),
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String title;
+  const _SectionLabel({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 4),
+      child: Text(
+        title,
+        style: TextStyle(
+          color: AppColors.textSecondary,
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

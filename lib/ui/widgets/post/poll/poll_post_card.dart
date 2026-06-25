@@ -127,9 +127,7 @@ class _PollPostBodyState extends State<PollPostBody> {
 
   Future<void> _submitVote() async {
     final poll = _poll;
-    if (poll == null || !_canVote || _selectedOptionIds.isEmpty) {
-      return;
-    }
+    if (poll == null || !_canVote || _selectedOptionIds.isEmpty) return;
 
     setState(() {
       _isVoting = true;
@@ -167,23 +165,24 @@ class _PollPostBodyState extends State<PollPostBody> {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         width: double.infinity,
         padding: EdgeInsets.all(widget.isDetailView ? 18 : 16),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.card.withOpacity(0.92),
-              AppColors.cardColor.withOpacity(0.05),
-            ],
-          ),
+          color: AppColors.card, // solid card color for cleaner look
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: AppColors.cardBorderColor),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.black.withOpacity(0.04),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 180),
+          duration: const Duration(milliseconds: 200),
           child: _isLoading
               ? _buildLoadingState()
               : _error != null
@@ -200,10 +199,10 @@ class _PollPostBodyState extends State<PollPostBody> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildTopRow(isLoading: true),
-        const SizedBox(height: 14),
-        _skeletonLine(widthFactor: 0.76),
-        const SizedBox(height: 10),
-        _skeletonLine(widthFactor: 0.92),
+        const SizedBox(height: 16),
+        _skeletonLine(widthFactor: 0.75),
+        const SizedBox(height: 12),
+        _skeletonLine(widthFactor: 0.9),
         const SizedBox(height: 18),
         _skeletonOption(),
         const SizedBox(height: 10),
@@ -215,31 +214,40 @@ class _PollPostBodyState extends State<PollPostBody> {
   Widget _buildErrorState() {
     return Column(
       key: const ValueKey('poll_error'),
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildTopRow(),
-        const SizedBox(height: 14),
-        Text(
-          'Poll failed to load.',
-          style: AppTheme.blackTextStyle.copyWith(
-            color: AppColors.text,
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
+        const SizedBox(height: 18),
+        Center(
+          child: Column(
+            children: [
+              Icon(Icons.error_outline_rounded,
+                  size: 32, color: AppColors.redAccent),
+              const SizedBox(height: 12),
+              Text(
+                'Poll could not be loaded',
+                style: AppTheme.blackTextStyle.copyWith(
+                  color: AppColors.text,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                _error ?? '',
+                textAlign: TextAlign.center,
+                style: AppTheme.greyTextStyle.copyWith(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () => _loadPoll(forceRefresh: true),
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: const Text('Retry'),
+              ),
+            ],
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          _error ?? '',
-          style: AppTheme.greyTextStyle.copyWith(
-            color: AppColors.textSecondary,
-            fontSize: 12,
-          ),
-        ),
-        const SizedBox(height: 14),
-        TextButton.icon(
-          onPressed: () => _loadPoll(forceRefresh: true),
-          icon: const Icon(Icons.refresh_rounded),
-          label: const Text('Retry'),
         ),
       ],
     );
@@ -247,9 +255,7 @@ class _PollPostBodyState extends State<PollPostBody> {
 
   Widget _buildPollContent(String question) {
     final poll = _poll;
-    if (poll == null) {
-      return _buildErrorState();
-    }
+    if (poll == null) return _buildErrorState();
 
     final showResults = poll.userVoted || poll.hasExpired;
 
@@ -258,30 +264,23 @@ class _PollPostBodyState extends State<PollPostBody> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildTopRow(),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         Text(
           question.isEmpty ? 'Poll question' : question,
           style: AppTheme.blackTextStyle.copyWith(
             color: AppColors.text,
-            fontSize: 17,
+            fontSize: 18,
             fontWeight: FontWeight.w800,
-            height: 1.35,
+            height: 1.3,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
         if (poll.options.isNotEmpty)
-          Column(
-            children: poll.options
-                .map(
-                  (option) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _buildOptionTile(
-                      option,
-                      showResults: showResults,
-                    ),
-                  ),
-                )
-                .toList(),
+          ...poll.options.map(
+            (option) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _buildOptionTile(option, showResults: showResults),
+            ),
           ),
       ],
     );
@@ -298,16 +297,16 @@ class _PollPostBodyState extends State<PollPostBody> {
     return Row(
       children: [
         Container(
-          width: 34,
-          height: 34,
+          width: 36,
+          height: 36,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: AppColors.primary.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(10),
+            color: AppColors.primary.withOpacity(0.1),
           ),
           child: Icon(
             Icons.poll_rounded,
-            color: AppColors.text,
-            size: 18,
+            color: AppColors.primary,
+            size: 20,
           ),
         ),
         const SizedBox(width: 10),
@@ -328,7 +327,6 @@ class _PollPostBodyState extends State<PollPostBody> {
                 style: AppTheme.greyTextStyle.copyWith(
                   color: AppColors.textSecondary,
                   fontSize: 11,
-                  fontWeight: FontWeight.w500,
                 ),
               ),
           ],
@@ -336,11 +334,11 @@ class _PollPostBodyState extends State<PollPostBody> {
         const Spacer(),
         if (!isLoading && expiryLabel != null)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
               color: poll != null && poll.hasExpired
                   ? AppColors.redAccent.withOpacity(0.1)
-                  : AppColors.text.withOpacity(0.08),
+                  : AppColors.text.withOpacity(0.07),
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
@@ -363,75 +361,77 @@ class _PollPostBodyState extends State<PollPostBody> {
     required bool showResults,
   }) {
     final poll = _poll;
-    final selected = _selectedOptionIds.contains(option.id) ||
+    final isSelected = _selectedOptionIds.contains(option.id) ||
         (poll?.userVoteOptionId == option.id);
-    final fill = showResults ? (option.percentage / 100).clamp(0.0, 1.0) : 0.0;
+    final fillAmount = showResults ? (option.percentage / 100).clamp(0.0, 1.0) : 0.0;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: showResults ? null : () => _toggleOption(option),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
           width: double.infinity,
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: selected
-                ? AppColors.primary.withOpacity(0.08)
-                : AppColors.cardColor.withOpacity(0.95),
-            borderRadius: BorderRadius.circular(18),
+            color: isSelected
+                ? AppColors.primary.withOpacity(0.06)
+                : AppColors.cardColor,
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: selected
-                  ? AppColors.primary.withOpacity(0.35)
+              color: isSelected
+                  ? AppColors.primary.withOpacity(0.4)
                   : AppColors.cardBorderColor,
             ),
           ),
           child: Stack(
             children: [
-              if (showResults)
+              // Progress bar for results view
+              if (showResults && fillAmount > 0)
                 Positioned.fill(
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(14),
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: FractionallySizedBox(
-                        widthFactor: fill,
+                        widthFactor: fillAmount,
                         child: Container(
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                AppColors.primary.withOpacity(0.16),
-                                AppColors.cardBorder.withOpacity(0.12),
-                              ],
-                            ),
+                            color: AppColors.primary.withOpacity(0.08),
                           ),
                         ),
                       ),
                     ),
                   ),
                 ),
+              // Content row
               Row(
                 children: [
-                  Container(
-                    width: 28,
-                    height: 38,
+                  // Selection indicator
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 24,
+                    height: 24,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: selected
+                      color: isSelected
                           ? AppColors.primary
                           : AppColors.transparent,
+                      border: Border.all(
+                        color: isSelected
+                            ? AppColors.primary
+                            : AppColors.border,
+                        width: 1.5,
+                      ),
                     ),
-                    child: selected
-                        ? const Icon(
-                            Icons.check_rounded,
-                            size: 14,
-                            color: AppColors.white,
-                          )
+                    child: isSelected
+                        ? const Icon(Icons.check_rounded,
+                            size: 14, color: Colors.white)
                         : null,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -440,8 +440,10 @@ class _PollPostBodyState extends State<PollPostBody> {
                           option.text.isEmpty ? 'Option' : option.text,
                           style: AppTheme.blackTextStyle.copyWith(
                             color: AppColors.text,
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                            fontWeight: isSelected
+                                ? FontWeight.w700
+                                : FontWeight.w600,
                           ),
                         ),
                         if (showResults) ...[
@@ -461,7 +463,7 @@ class _PollPostBodyState extends State<PollPostBody> {
                                 '${option.percentage.toStringAsFixed(1)}%',
                                 style: AppTheme.greyTextStyle.copyWith(
                                   color: AppColors.primary,
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
@@ -486,7 +488,7 @@ class _PollPostBodyState extends State<PollPostBody> {
       child: Container(
         height: 14,
         decoration: BoxDecoration(
-          color: AppColors.cardColor.withOpacity(0.8),
+          color: AppColors.cardBorderColor,
           borderRadius: BorderRadius.circular(999),
         ),
       ),
@@ -496,24 +498,19 @@ class _PollPostBodyState extends State<PollPostBody> {
   Widget _skeletonOption() {
     return Container(
       width: double.infinity,
-      height: 54,
+      height: 52,
       decoration: BoxDecoration(
-        color: AppColors.cardColor.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(18),
+        color: AppColors.cardColor,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.cardBorderColor),
       ),
     );
   }
 
   String _formatExpiry(DateTime? expiresAt) {
-    if (expiresAt == null) {
-      return 'No expiry';
-    }
-
+    if (expiresAt == null) return 'No expiry';
     final remaining = expiresAt.difference(DateTime.now());
-    if (remaining.isNegative) {
-      return 'Ended';
-    }
+    if (remaining.isNegative) return 'Ended';
 
     final totalHours = remaining.inHours;
     if (totalHours >= 24) {

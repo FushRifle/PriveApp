@@ -40,6 +40,11 @@ class ReelItem extends StatefulWidget {
 
 class _ReelItemState extends State<ReelItem>
     with AutomaticKeepAliveClientMixin {
+  // ---------------------------------------------------------------------------
+  // Space reserved for the floating bottom navigation bar
+  // (height of the bar + some breathing room)
+  static const double _bottomBarSpace = 110.0;
+
   VideoPlayerController? _videoController;
 
   bool _isInitialized = false;
@@ -734,8 +739,14 @@ class _ReelItemState extends State<ReelItem>
           _buildRightActions(),
           _buildMuteButton(),
           _buildBottomInfo(),
+          // Video progress bar now respects the bottom bar
           if (_isInitialized && _videoController != null)
-            VideoProgress(controller: _videoController!),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: _bottomBarSpace,
+              child: VideoProgress(controller: _videoController!),
+            ),
         ],
       ),
     );
@@ -844,7 +855,7 @@ class _ReelItemState extends State<ReelItem>
 
     return Positioned(
       right: 10,
-      bottom: 18,
+      bottom: _bottomBarSpace,          // raised above the bottom nav bar
       child: SafeArea(
         top: false,
         child: Container(
@@ -952,7 +963,7 @@ class _ReelItemState extends State<ReelItem>
     return Positioned(
       left: 12,
       right: 70,
-      bottom: 12,
+      bottom: _bottomBarSpace,          // raised above the bottom nav bar
       child: SafeArea(
         top: false,
         child: Column(

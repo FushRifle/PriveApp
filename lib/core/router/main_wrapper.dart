@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -135,7 +136,6 @@ class _MainWrapperState extends State<MainWrapper>
   }
 
   bool get _showBottomBar => true;
-
   double _getBottomPadding(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     if (kIsWeb) {
@@ -172,128 +172,130 @@ class _MainWrapperState extends State<MainWrapper>
           _onTabChanged(0);
         },
         child: Scaffold(
-          backgroundColor: backgroundColor,
+          backgroundColor: Colors.transparent,
           extendBody: true,
           body: Stack(
             children: [
-              Padding(
-                padding: EdgeInsets.only(
-                  bottom: _showBottomBar ? 96 : 0,
-                ),
-                child: PageStorage(
-                  bucket: _bucket,
-                  child: PageView(
-                    controller: _pageController,
-                    physics: const NeverScrollableScrollPhysics(),
-                    onPageChanged: (index) {
-                      if (_currentIndex == index) return;
-                      setState(() {
-                        _currentIndex = index;
-                        _visitedTabs.add(index);
-                        _navBarIndex = _pageIndexToNavIndex(index);
-                      });
-                    },
-                    children: [
-                      _DeferredTab(
-                          enabled: _visitedTabs.contains(0),
-                          child:
-                              const HomePage(key: PageStorageKey('home_page'))),
-                      _DeferredTab(
-                          enabled: _visitedTabs.contains(1),
-                          child: ReelsPage(
-                              key: PageStorageKey('reels_page'),
-                              onBack: () => _onTabChanged(0),
-                              isVisible: _currentIndex == 1)),
-                      _DeferredTab(
-                          enabled: _visitedTabs.contains(2),
-                          child: const _EventTabScope(
-                              key: PageStorageKey('events_page'),
-                              child: EventsPage())),
-                      _DeferredTab(
-                          enabled: _visitedTabs.contains(3),
-                          child: const _ChatTabScope(
-                              key: PageStorageKey('inbox_page'),
-                              child: InboxPage())),
-                    ],
-                  ),
+              PageStorage(
+                bucket: _bucket,
+                child: PageView(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  onPageChanged: (index) {
+                    if (_currentIndex == index) return;
+                    setState(() {
+                      _currentIndex = index;
+                      _visitedTabs.add(index);
+                      _navBarIndex = _pageIndexToNavIndex(index);
+                    });
+                  },
+                  children: [
+                    _DeferredTab(
+                        enabled: _visitedTabs.contains(0),
+                        child:
+                            const HomePage(key: PageStorageKey('home_page'))),
+                    _DeferredTab(
+                        enabled: _visitedTabs.contains(1),
+                        child: ReelsPage(
+                            key: PageStorageKey('reels_page'),
+                            onBack: () => _onTabChanged(0),
+                            isVisible: _currentIndex == 1)),
+                    _DeferredTab(
+                        enabled: _visitedTabs.contains(2),
+                        child: const _EventTabScope(
+                            key: PageStorageKey('events_page'),
+                            child: EventsPage())),
+                    _DeferredTab(
+                        enabled: _visitedTabs.contains(3),
+                        child: const _ChatTabScope(
+                            key: PageStorageKey('inbox_page'),
+                            child: InboxPage())),
+                  ],
                 ),
               ),
-              if (_showBottomBar)
-                const Positioned.fill(
-                    child: IgnorePointer(child: _BackgroundGradient())),
+              // Floating bottom bar with glass effect
               if (_showBottomBar)
                 Positioned(
                   left: 12,
                   right: 12,
                   bottom: 12,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: backgroundColor,
-                      borderRadius: BorderRadius.circular(28),
-                      boxShadow: [
-                        BoxShadow(
-                          color:
-                              Colors.black.withOpacity(isDarkMode ? 0.3 : 0.1),
-                          blurRadius: 20,
-                          offset: const Offset(0, -5),
-                        ),
-                      ],
-                    ),
-                    padding: EdgeInsets.only(
-                      bottom: _getBottomPadding(context),
-                      top: 8,
-                    ),
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      alignment: Alignment.topCenter,
-                      children: [
-                        CurvedNavigationBar(
-                          key: _bottomNavigationKey,
-                          index: _navBarIndex,
-                          height: 60,
-                          color: backgroundColor,
-                          buttonBackgroundColor: backgroundColor,
-                          backgroundColor: Colors.transparent,
-                          animationCurve: Curves.easeInOut,
-                          animationDuration: const Duration(milliseconds: 600),
-                          letIndexChange: (index) => index != 2,
-                          items: [
-                            _buildNavItem(
-                              icon: Icons.home_rounded,
-                              isSelected: _navBarIndex == 0,
-                              unselectedColor: unselectedColor,
+                  child: Stack(
+                    clipBehavior: Clip.none, // allow the button to overflow
+                    alignment: Alignment.topCenter,
+                    children: [
+                      // Blurred navigation bar background (no button inside)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(28),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: backgroundColor.withOpacity(0.7),
+                              borderRadius: BorderRadius.circular(28),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black
+                                      .withOpacity(isDarkMode ? 0.3 : 0.1),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, -5),
+                                ),
+                              ],
                             ),
-                            _buildNavItem(
-                              icon: Icons.play_circle_fill_rounded,
-                              isSelected: _navBarIndex == 1,
-                              unselectedColor: unselectedColor,
+                            padding: EdgeInsets.only(
+                              bottom: _getBottomPadding(context),
+                              top: 8,
                             ),
-                            const SizedBox.shrink(),
-                            _buildNavItem(
-                              icon: Icons.date_range_rounded,
-                              isSelected: _navBarIndex == 3,
-                              unselectedColor: unselectedColor,
+                            child: CurvedNavigationBar(
+                              key: _bottomNavigationKey,
+                              index: _navBarIndex,
+                              height: 60,
+                              color: Colors.transparent,
+                              buttonBackgroundColor: Colors.transparent,
+                              backgroundColor: Colors.transparent,
+                              animationCurve: Curves.easeInOut,
+                              animationDuration:
+                                  const Duration(milliseconds: 600),
+                              letIndexChange: (index) => index != 2,
+                              items: [
+                                _buildNavItem(
+                                  icon: Icons.home_rounded,
+                                  isSelected: _navBarIndex == 0,
+                                  unselectedColor: unselectedColor,
+                                ),
+                                _buildNavItem(
+                                  icon: Icons.play_circle_fill_rounded,
+                                  isSelected: _navBarIndex == 1,
+                                  unselectedColor: unselectedColor,
+                                ),
+                                const SizedBox.shrink(),
+                                _buildNavItem(
+                                  icon: Icons.date_range_rounded,
+                                  isSelected: _navBarIndex == 3,
+                                  unselectedColor: unselectedColor,
+                                ),
+                                _buildNavItem(
+                                  icon: Icons.send_rounded,
+                                  isSelected: _navBarIndex == 4,
+                                  unselectedColor: unselectedColor,
+                                ),
+                              ],
+                              onTap: _onNavBarTap,
                             ),
-                            _buildNavItem(
-                              icon: Icons.send_rounded,
-                              isSelected: _navBarIndex == 4,
-                              unselectedColor: unselectedColor,
-                            ),
-                          ],
-                          onTap: _onNavBarTap,
-                        ),
-                        AnimatedPositioned(
-                          duration: const Duration(milliseconds: 600),
-                          curve: Curves.easeInOutCubic,
-                          top: _currentIndex == 0 ? -30 : 0,
-                          child: _CreateButton(
-                            pulseAnimation: _pulseAnimation,
-                            onTap: _handleCreatePost,
-                            isDocked: _currentIndex != 0,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      // Create button – lives outside the clip, can float above the bar
+                      AnimatedPositioned(
+                        duration: const Duration(milliseconds: 600),
+                        curve: Curves.easeInOutCubic,
+                        top: _currentIndex == 0 ? -30 : 0,
+                        child: _CreateButton(
+                          pulseAnimation: _pulseAnimation,
+                          onTap: _handleCreatePost,
+                          isDocked: _currentIndex != 0,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
             ],
@@ -523,26 +525,6 @@ class _CreateButton extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _BackgroundGradient extends StatelessWidget {
-  const _BackgroundGradient();
-  @override
-  Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final color = isDarkMode ? AppColors.darkBackground : Colors.white;
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: Container(
-        height: 150,
-        decoration: BoxDecoration(
-            gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [color.withOpacity(0), color.withOpacity(0.92)])),
-      ),
     );
   }
 }
