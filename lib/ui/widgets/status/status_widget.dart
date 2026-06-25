@@ -66,7 +66,7 @@ class StatusWidget extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(18),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+            padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -151,7 +151,7 @@ class StatusWidget extends StatelessWidget {
                 Text(
                   isAddStatus ? 'Your Story' : name,
                   style: AppTheme.blackTextStyle.copyWith(
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: hasUnviewed ? FontWeight.w700 : FontWeight.w500,
                   ),
                   maxLines: 1,

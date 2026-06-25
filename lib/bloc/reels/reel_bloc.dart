@@ -320,15 +320,16 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     RepostReel event,
     Emitter<ReelState> emit,
   ) async {
-    if (event.index < 0 || event.index >= state.reels.length) return;
+    final resolvedIndex = _resolveReelIndex(event.reelId, event.index);
+    if (resolvedIndex < 0 || resolvedIndex >= state.reels.length) return;
 
-    final oldReel = state.reels[event.index];
+    final oldReel = state.reels[resolvedIndex];
     if (oldReel is! Map) return;
 
     if (_readBool(oldReel['isReposted'] ?? oldReel['is_reposted'])) return;
 
     final updatedReels = List<dynamic>.from(state.reels);
-    updatedReels[event.index] = {
+    updatedReels[resolvedIndex] = {
       ...Map<String, dynamic>.from(oldReel),
       'isReposted': true,
       'reposts': _readInt(oldReel['reposts'] ?? oldReel['repostCount']) + 1,
@@ -343,12 +344,35 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
       );
     } catch (e) {
       final rolledBackReels = List<dynamic>.from(state.reels);
-      rolledBackReels[event.index] = oldReel;
+      rolledBackReels[resolvedIndex] = oldReel;
       emit(state.copyWith(
         reels: rolledBackReels,
         error: e.toString(),
       ));
     }
+  }
+
+  int _resolveReelIndex(String reelId, int fallbackIndex) {
+    if (fallbackIndex >= 0 && fallbackIndex < state.reels.length) {
+      final candidate = state.reels[fallbackIndex];
+      if (candidate is Map && _readReelId(candidate) == reelId) {
+        return fallbackIndex;
+      }
+    }
+
+    for (var index = 0; index < state.reels.length; index++) {
+      final reel = state.reels[index];
+      if (reel is Map && _readReelId(reel) == reelId) {
+        return index;
+      }
+    }
+
+    return fallbackIndex;
+  }
+
+  String _readReelId(Map reel) {
+    final id = reel['id'] ?? reel['reelId'] ?? reel['reel_id'];
+    return id?.toString() ?? '';
   }
 
   void _onIncrementReelCommentCount(

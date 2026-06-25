@@ -16,7 +16,7 @@ class NotificationLoadingShimmer extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.card,
+              color: AppColors.background,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(

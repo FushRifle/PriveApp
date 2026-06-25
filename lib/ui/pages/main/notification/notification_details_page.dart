@@ -1,7 +1,9 @@
 import 'package:clique/core/models/feeds_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clique/app/configs/colors.dart';
+import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/services/home/feed_service.dart';
 import 'package:clique/ui/pages/main/home/post_detail_page.dart';
@@ -65,9 +67,12 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => PostDetailPage(
-          postId: _post?.id ?? _postId,
-          initialPost: _post,
+        builder: (_) => BlocProvider.value(
+          value: context.read<FeedBloc>(),
+          child: PostDetailPage(
+            postId: _post?.id ?? _postId,
+            initialPost: _post,
+          ),
         ),
       ),
     );

@@ -42,7 +42,6 @@ class _TextPostComposer extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     final isCompactWidth = size.width < 390;
-    final textBoxHeight = (size.height * 0.28).clamp(170.0, 260.0);
     final horizontalPadding = isCompactWidth ? 14.0 : 16.0;
     final titleFontSize = isCompactWidth ? 17.0 : 18.0;
 
@@ -55,6 +54,8 @@ class _TextPostComposer extends StatelessWidget {
         16 + MediaQuery.viewInsetsOf(context).bottom,
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _ComposerTypeSelector(
             selectedType: postType,
@@ -64,8 +65,8 @@ class _TextPostComposer extends StatelessWidget {
             onAnonymousCategoryChanged: onAnonymousCategoryChanged,
           ),
           const SizedBox(height: 10),
-          SizedBox(
-            height: textBoxHeight,
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 170),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -80,26 +81,25 @@ class _TextPostComposer extends StatelessWidget {
                     ),
                   ),
                 ),
-                Expanded(
-                  child: TokenSuggestionField(
-                    controller: textController,
-                    enabled: enabled,
-                    suggestionsBuilder: suggestionsBuilder,
-                    maxLines: null,
-                    style: AppTheme.blackTextStyle.copyWith(
+                TokenSuggestionField(
+                  controller: textController,
+                  enabled: enabled,
+                  suggestionsBuilder: suggestionsBuilder,
+                  minLines: 4,
+                  maxLines: null,
+                  style: AppTheme.blackTextStyle.copyWith(
+                    fontSize: titleFontSize,
+                    height: 1.42,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: _composerHint(postType),
+                    hintStyle: AppTheme.greyTextStyle.copyWith(
                       fontSize: titleFontSize,
-                      height: 1.42,
                       fontWeight: FontWeight.w500,
+                      color: AppColors.textSecondary.withOpacity(0.55),
                     ),
-                    decoration: InputDecoration(
-                      hintText: _composerHint(postType),
-                      hintStyle: AppTheme.greyTextStyle.copyWith(
-                        fontSize: titleFontSize,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondary.withOpacity(0.55),
-                      ),
-                      border: InputBorder.none,
-                    ),
+                    border: InputBorder.none,
                   ),
                 ),
               ],
@@ -186,6 +186,7 @@ class _MediaPostComposer extends StatelessWidget {
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(14, 6, 14, 24),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _ComposerTypeSelector(

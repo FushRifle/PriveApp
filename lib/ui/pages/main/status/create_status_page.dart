@@ -332,11 +332,11 @@ class _CreateStatusPageState extends State<CreateStatusPage>
           ),
           const SizedBox(width: 12),
           AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
+            duration: const Duration(milliseconds: 160),
             child: Material(
               color: Colors.transparent,
               child: InkWell(
-                onTap: _isSubmitting ? null : _shareStatus,
+                onTap: _isSubmitting || !_hasContent ? null : _shareStatus,
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
@@ -344,19 +344,23 @@ class _CreateStatusPageState extends State<CreateStatusPage>
                     vertical: 12,
                   ),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: _hasContent
-                          ? [AppColors.background]
-                          : [
-                              Colors.white.withOpacity(0.1),
-                              Colors.white.withOpacity(0.05)
-                            ],
-                    ),
+                    color: _hasContent
+                        ? AppColors.primary
+                        : Colors.white.withOpacity(0.12),
+                    boxShadow: _hasContent
+                        ? [
+                            BoxShadow(
+                              color: AppColors.primary.withOpacity(0.32),
+                              blurRadius: 16,
+                              offset: const Offset(0, 8),
+                            ),
+                          ]
+                        : null,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: _hasContent
-                          ? Colors.white.withOpacity(0.2)
-                          : Colors.white.withOpacity(0.1),
+                          ? Colors.white.withOpacity(0.18)
+                          : Colors.white.withOpacity(0.12),
                     ),
                   ),
                   child: _isSubmitting

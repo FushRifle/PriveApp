@@ -635,7 +635,6 @@ class _ReelItemState extends State<ReelItem>
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
       builder: (context) {
-        final isOwner = _isCurrentUser();
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 10),
@@ -651,32 +650,12 @@ class _ReelItemState extends State<ReelItem>
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
-                if (isOwner)
-                  ListTile(
-                    leading: const Icon(Icons.delete_outline_rounded),
-                    title: const Text('Delete'),
-                    textColor: AppColors.redColor,
-                    iconColor: AppColors.redColor,
-                    onTap: () {
-                      Navigator.pop(context);
-                      _deleteReel();
-                    },
-                  ),
-                if (!isOwner)
-                  ListTile(
-                    leading: const Icon(Icons.flag_outlined),
-                    title: const Text('Report'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _reportReel();
-                    },
-                  ),
                 ListTile(
-                  leading: const Icon(Icons.bookmark_border_rounded),
-                  title: const Text('Save'),
+                  leading: const Icon(Icons.flag_outlined),
+                  title: const Text('Report'),
                   onTap: () {
                     Navigator.pop(context);
-                    _saveReel();
+                    _reportReel();
                   },
                 ),
               ],
@@ -710,20 +689,6 @@ class _ReelItemState extends State<ReelItem>
       await ReelService().reportReel(reelId);
       if (!mounted) return;
       _showSnackBar('Report submitted');
-    } catch (e) {
-      if (!mounted) return;
-      _showSnackBar(e.toString(), isError: true);
-    }
-  }
-
-  Future<void> _deleteReel() async {
-    final reelId = _reelId;
-    if (reelId == null) return;
-    try {
-      await ReelService().deleteReel(reelId);
-      if (!mounted) return;
-      _showSnackBar('Reel deleted');
-      context.read<ReelBloc>().add(RefreshReels());
     } catch (e) {
       if (!mounted) return;
       _showSnackBar(e.toString(), isError: true);
@@ -916,6 +881,12 @@ class _ReelItemState extends State<ReelItem>
                 icon: Icons.send_rounded,
                 label: formatCount(shareCount < 0 ? 0 : shareCount),
                 onTap: _handleShare,
+              ),
+              const SizedBox(height: 8),
+              ActionButton(
+                icon: Icons.bookmark_border_rounded,
+                label: '',
+                onTap: _saveReel,
               ),
               const SizedBox(height: 8),
               ActionButton(
