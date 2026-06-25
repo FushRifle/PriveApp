@@ -10,6 +10,8 @@ import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/models/gallery_model.dart';
 import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/core/services/home/feed_service.dart';
+import 'package:clique/core/services/home/post_draft_service.dart';
+import 'package:clique/ui/pages/main/home/create_post_page.dart';
 import 'package:clique/ui/widgets/post/normal-post/repost_card.dart';
 
 enum ProfileGalleryTabType {
@@ -99,7 +101,9 @@ class ProfileSavedPostsTab extends StatefulWidget {
 
 class _ProfileSavedPostsTabState extends State<ProfileSavedPostsTab> {
   final FeedService _feedService = FeedService();
+  final PostDraftService _draftService = PostDraftService();
   List<FeedPost> _savedPosts = const [];
+  List<Map<String, dynamic>> _drafts = const [];
   bool _isLoading = true;
   bool _isRefreshing = false;
   String? _error;
@@ -107,7 +111,12 @@ class _ProfileSavedPostsTabState extends State<ProfileSavedPostsTab> {
   @override
   void initState() {
     super.initState();
+    _loadDrafts();
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadSavedPosts());
+  }
+
+  void _loadDrafts() {
+    _drafts = _draftService.getDrafts();
   }
 
   Future<void> _loadSavedPosts({bool refresh = false}) async {
@@ -124,6 +133,9 @@ class _ProfileSavedPostsTabState extends State<ProfileSavedPostsTab> {
     }
 
     try {
+      if (refresh) {
+        _loadDrafts();
+      }
       final response = await _feedService.getSavedPosts(
         page: 1,
         forceRefresh: refresh,
@@ -161,7 +173,7 @@ class _ProfileSavedPostsTabState extends State<ProfileSavedPostsTab> {
       );
     }
 
-    if (_savedPosts.isEmpty) {
+    if (_savedPosts.isEmpty && _drafts.isEmpty) {
       return ProfileEmptyState(
         icon: Icons.bookmark_border_rounded,
         message: 'No saved posts yet',
@@ -179,10 +191,21 @@ class _ProfileSavedPostsTabState extends State<ProfileSavedPostsTab> {
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
         ),
-        itemCount: _savedPosts.length + (_isRefreshing ? 1 : 0),
+        itemCount: _savedPosts.length +
+            (_drafts.isNotEmpty ? 1 : 0) +
+            (_isRefreshing ? 1 : 0),
         separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          if (index >= _savedPosts.length) {
+          if (_drafts.isNotEmpty && index == 0) {
+            return _DraftsSection(
+              drafts: _drafts,
+              onOpen: _openDraft,
+              onDelete: _deleteDraft,
+            );
+          }
+
+          final postIndex = index - (_drafts.isNotEmpty ? 1 : 0);
+          if (postIndex >= _savedPosts.length) {
             return const Padding(
               padding: EdgeInsets.symmetric(vertical: 16),
               child: Center(
@@ -195,12 +218,109 @@ class _ProfileSavedPostsTabState extends State<ProfileSavedPostsTab> {
           }
 
           return RepostCard(
-            post: _savedPosts[index],
+            post: _savedPosts[postIndex],
             isDetailView: false,
           );
         },
       ),
     );
+  }
+
+  Future<void> _openDraft(Map<String, dynamic> draft) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CreatePostPage(initialDraft: draft),
+      ),
+    );
+    if (!mounted) return;
+    setState(_loadDrafts);
+  }
+
+  Future<void> _deleteDraft(String id) async {
+    await _draftService.deleteDraft(id);
+    if (!mounted) return;
+    setState(_loadDrafts);
+  }
+}
+
+class _DraftsSection extends StatelessWidget {
+  final List<Map<String, dynamic>> drafts;
+  final ValueChanged<Map<String, dynamic>> onOpen;
+  final ValueChanged<String> onDelete;
+
+  const _DraftsSection({
+    required this.drafts,
+    required this.onOpen,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.cardColor,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.cardBorderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.drafts_outlined, color: AppColors.primary, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Drafts',
+                style: AppTheme.blackTextStyle.copyWith(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ...drafts.map((draft) {
+            final id = draft['id']?.toString() ?? '';
+            final text = draft['text']?.toString().trim() ?? '';
+            final type = draft['postType']?.toString() ?? 'post';
+            final updatedAt = draft['updatedAt']?.toString() ?? '';
+            return ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.edit_note_rounded),
+              title: Text(
+                text.isEmpty
+                    ? '${type[0].toUpperCase()}${type.substring(1)} draft'
+                    : text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              subtitle: Text(
+                updatedAt.isEmpty
+                    ? 'Saved locally'
+                    : 'Saved ${_formatDraftTime(updatedAt)}',
+              ),
+              onTap: () => onOpen(draft),
+              trailing: IconButton(
+                icon: const Icon(Icons.delete_outline_rounded),
+                onPressed: id.isEmpty ? null : () => onDelete(id),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  String _formatDraftTime(String value) {
+    final date = DateTime.tryParse(value);
+    if (date == null) return 'locally';
+    final diff = DateTime.now().difference(date);
+    if (diff.inDays > 0) return '${diff.inDays}d ago';
+    if (diff.inHours > 0) return '${diff.inHours}h ago';
+    if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
+    return 'just now';
   }
 }
 

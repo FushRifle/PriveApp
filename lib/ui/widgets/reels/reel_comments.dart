@@ -122,16 +122,23 @@ class _ReelCommentsSheetState extends State<ReelCommentsSheet> {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return DraggableScrollableSheet(
-      initialChildSize: 0.72,
+      initialChildSize: 0.82,
       minChildSize: 0.45,
-      maxChildSize: 0.92,
+      maxChildSize: 0.95,
       builder: (context, sheetController) {
         return Container(
           decoration: BoxDecoration(
             color: AppColors.cardColor,
             borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(24),
+              top: Radius.circular(28),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.black.withOpacity(0.22),
+                blurRadius: 24,
+                offset: const Offset(0, -8),
+              ),
+            ],
           ),
           child: Padding(
             padding: EdgeInsets.only(bottom: bottomInset),
@@ -147,17 +154,31 @@ class _ReelCommentsSheetState extends State<ReelCommentsSheet> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 8, 10),
+                  padding: const EdgeInsets.fromLTRB(18, 14, 8, 12),
                   child: Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          'Comments',
-                          style: TextStyle(
-                            color: AppColors.text,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Comments',
+                              style: TextStyle(
+                                color: AppColors.text,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${_comments.length} ${_comments.length == 1 ? 'comment' : 'comments'}',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       IconButton(
@@ -215,12 +236,15 @@ class _ReelCommentsSheetState extends State<ReelCommentsSheet> {
       onRefresh: _loadComments,
       child: ListView.separated(
         controller: controller,
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        padding: const EdgeInsets.fromLTRB(18, 2, 18, 16),
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
         ),
         itemCount: _comments.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 14),
+        separatorBuilder: (_, __) => Divider(
+          height: 22,
+          color: AppColors.divider.withOpacity(0.65),
+        ),
         itemBuilder: (context, index) {
           return CommentTile(
             reelId: widget.reelId,
@@ -235,9 +259,16 @@ class _ReelCommentsSheetState extends State<ReelCommentsSheet> {
     return SafeArea(
       top: false,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
         decoration: BoxDecoration(
           color: AppColors.cardColor,
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.black.withOpacity(0.05),
+              blurRadius: 14,
+              offset: const Offset(0, -4),
+            ),
+          ],
           border: Border(
             top: BorderSide(
               color: AppColors.divider,
@@ -367,116 +398,108 @@ class _CommentTileState extends State<CommentTile> {
     final selectedReaction = _selectedReaction;
     final hasLongText = text.length > 180;
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.backgroundColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.cardBorderColor),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CommentAvatar(
-            imageUrl: avatar,
-            fallback: name,
-            size: 40,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: AppColors.text,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    if (timeLabel.isNotEmpty) ...[
-                      const SizedBox(width: 8),
-                      Text(
-                        timeLabel,
-                        style: TextStyle(
-                          color: AppColors.textHint,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      text,
-                      maxLines: _expanded ? null : 5,
-                      overflow: _expanded
-                          ? TextOverflow.visible
-                          : TextOverflow.ellipsis,
-                      softWrap: true,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CommentAvatar(
+          imageUrl: avatar,
+          fallback: name,
+          size: 40,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: AppColors.textSecondary,
+                        color: AppColors.text,
                         fontSize: 14,
-                        height: 1.35,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                    if (hasLongText)
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () => setState(() => _expanded = !_expanded),
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            _expanded ? 'see less' : 'see more',
-                            style: TextStyle(
-                              color: AppColors.primary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                            ),
+                  ),
+                  if (timeLabel.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      timeLabel,
+                      style: TextStyle(
+                        color: AppColors.textHint,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 6),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    text,
+                    maxLines: _expanded ? null : 5,
+                    overflow: _expanded
+                        ? TextOverflow.visible
+                        : TextOverflow.ellipsis,
+                    softWrap: true,
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                      height: 1.35,
+                    ),
+                  ),
+                  if (hasLongText)
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => setState(() => _expanded = !_expanded),
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          _expanded ? 'see less' : 'see more',
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
                       ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    InkWell(
-                      borderRadius: BorderRadius.circular(999),
-                      onTap: _isReacting ? null : _showReactionPicker,
-                      child: MiniStat(
-                        icon: selectedReaction?.icon ??
-                            Icons.emoji_emotions_outlined,
-                        label: selectedReaction == null
-                            ? 'React'
-                            : '${selectedReaction.label}${likes > 0 ? ' ${formatCommentCount(likes)}' : ''}',
-                      ),
                     ),
-                    if (replies > 0)
-                      MiniStat(
-                        icon: Icons.reply_rounded,
-                        label: formatCommentCount(replies),
-                      ),
-                  ],
-                ),
-              ],
-            ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  InkWell(
+                    borderRadius: BorderRadius.circular(999),
+                    onTap: _isReacting ? null : _showReactionPicker,
+                    child: MiniStat(
+                      icon: selectedReaction?.icon ??
+                          Icons.emoji_emotions_outlined,
+                      label: selectedReaction == null
+                          ? 'React'
+                          : '${selectedReaction.label}${likes > 0 ? ' ${formatCommentCount(likes)}' : ''}',
+                    ),
+                  ),
+                  if (replies > 0)
+                    MiniStat(
+                      icon: Icons.reply_rounded,
+                      label: formatCommentCount(replies),
+                    ),
+                ],
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

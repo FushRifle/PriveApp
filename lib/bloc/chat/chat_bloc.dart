@@ -269,20 +269,52 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     return ageDelta <= 5;
   }
 
+  String _messageDedupeKey(MessageModel message) {
+    final clientMessageId = message.clientMessageId?.trim();
+    if (clientMessageId != null && clientMessageId.isNotEmpty) {
+      return 'client:$clientMessageId';
+    }
+
+    final streamMessageId = message.streamMessageId?.trim();
+    if (streamMessageId != null && streamMessageId.isNotEmpty) {
+      return 'stream:$streamMessageId';
+    }
+
+    if (!message.isPending && message.id > 0) {
+      return 'id:${message.id}';
+    }
+
+    return [
+      'pending',
+      message.conversationId,
+      message.senderId,
+      message.receiverId,
+      message.message.trim(),
+      message.messageType.trim().toLowerCase(),
+      message.mediaUrl ?? '',
+      message.replyToId ?? '',
+      message.createdAt.millisecondsSinceEpoch ~/ 30000,
+    ].join('|');
+  }
+
   List<MessageModel> _mergeMessages(List<MessageModel> messages) {
-    final deliveredById = <int, MessageModel>{};
+    final deliveredByKey = <String, MessageModel>{};
     final pending = <MessageModel>[];
+    final pendingByKey = <String, MessageModel>{};
 
     for (final message in messages) {
       final processed = _ownMessage(message);
+      final key = _messageDedupeKey(processed);
       if (processed.isPending) {
-        pending.add(processed);
+        pendingByKey.putIfAbsent(key, () => processed);
       } else {
-        deliveredById[processed.id] = processed;
+        deliveredByKey[key] = processed;
       }
     }
 
-    final delivered = deliveredById.values.toList();
+    pending.addAll(pendingByKey.values);
+
+    final delivered = deliveredByKey.values.toList();
     final remainingPending = pending.where((pendingMessage) {
       return !delivered.any(
         (deliveredMessage) =>
@@ -1109,7 +1141,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     final processedMessage = _ownMessage(MessageModel.fromJson(event.message));
 
     final cachedMessages = _messageCache[processedMessage.conversationId] ??
-        const <MessageModel>[];
+        (state.activeConversationId == processedMessage.conversationId
+            ? state.messages
+            : const <MessageModel>[]);
     final updatedMessages = _mergeMessages([
       processedMessage,
       ...cachedMessages,

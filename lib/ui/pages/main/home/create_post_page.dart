@@ -6,6 +6,7 @@ import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/core/clients/cloudinary_service.dart';
 import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/core/services/media_service.dart';
+import 'package:clique/core/services/home/post_draft_service.dart';
 import 'package:clique/core/services/tagging/tagging_service.dart';
 import 'package:clique/core/services/user/user_service.dart';
 import 'package:clique/core/models/create_post_models.dart';
@@ -23,8 +24,11 @@ part '../../../widgets/home/create-post/create_post_composer.dart';
 part '../../../widgets/home/create-post/create_post_upload_overlay.dart';
 
 class CreatePostPage extends StatefulWidget {
+  final Map<String, dynamic>? initialDraft;
+
   const CreatePostPage({
     super.key,
+    this.initialDraft,
   });
 
   @override
@@ -46,6 +50,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
   final MediaService _mediaService = MediaService();
   final UserService _userService = UserService();
   final TaggingService _taggingService = TaggingService();
+  final PostDraftService _draftService = PostDraftService();
 
   final List<MediaItem> _mediaItems = [];
   final List<String> _hashtags = [];
@@ -69,12 +74,18 @@ class _CreatePostPageState extends State<CreatePostPage> {
   bool _isSubmitting = false;
   bool _isPicking = false;
   double _uploadProgress = 0.0;
+  Timer? _draftSaveTimer;
+  late String _draftId;
 
   PostCreationStep _currentStep = PostCreationStep.options;
 
   @override
   void initState() {
     super.initState();
+
+    _draftId = widget.initialDraft?['id']?.toString() ??
+        DateTime.now().microsecondsSinceEpoch.toString();
+    _restoreDraft(widget.initialDraft);
 
     _textController.addListener(_onComposerChanged);
     for (final controller in _pollOptionControllers) {
@@ -84,6 +95,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
   @override
   void dispose() {
+    _draftSaveTimer?.cancel();
     _textController.removeListener(_onComposerChanged);
     _textController.dispose();
     _hashtagController.dispose();
@@ -97,6 +109,88 @@ class _CreatePostPageState extends State<CreatePostPage> {
   void _onComposerChanged() {
     if (!mounted) return;
     setState(() {});
+    _scheduleDraftSave();
+  }
+
+  void _restoreDraft(Map<String, dynamic>? draft) {
+    if (draft == null) return;
+
+    _textController.text = draft['text']?.toString() ?? '';
+    _hashtagController.text = draft['hashtagText']?.toString() ?? '';
+    _hashtags
+      ..clear()
+      ..addAll((draft['hashtags'] as List? ?? const []).map((e) => '$e'));
+    _postType = PostComposerType.values.firstWhere(
+      (type) => type.name == draft['postType']?.toString(),
+      orElse: () => PostComposerType.post,
+    );
+    _anonymousCategory =
+        draft['anonymousCategory']?.toString() ?? _anonymousCategory;
+    _pollExpirationHours =
+        int.tryParse(draft['pollExpirationHours']?.toString() ?? '') ??
+            _pollExpirationHours;
+
+    final pollOptions =
+        (draft['pollOptions'] as List? ?? const []).map((e) => '$e').toList();
+    for (final controller in _pollOptionControllers) {
+      controller.dispose();
+    }
+    _pollOptionControllers
+      ..clear()
+      ..addAll(
+        (pollOptions.length < 2 ? ['', ''] : pollOptions)
+            .map((value) => TextEditingController(text: value)),
+      );
+
+    _mediaItems
+      ..clear()
+      ..addAll(PostDraftService.mediaItemsFromDraft(draft));
+    _currentStep = _mediaItems.isNotEmpty
+        ? PostCreationStep.mediaPreview
+        : _textController.text.trim().isNotEmpty ||
+                pollOptions.any((e) => e.isNotEmpty)
+            ? PostCreationStep.textInput
+            : PostCreationStep.options;
+  }
+
+  void _scheduleDraftSave() {
+    if (_isSubmitting) return;
+    _draftSaveTimer?.cancel();
+    _draftSaveTimer = Timer(const Duration(milliseconds: 450), _saveDraft);
+  }
+
+  Future<void> _saveDraft() async {
+    if (_isSubmitting) return;
+
+    final hasContent = _textController.text.trim().isNotEmpty ||
+        _hashtagController.text.trim().isNotEmpty ||
+        _hashtags.isNotEmpty ||
+        _pollOptions.isNotEmpty ||
+        _mediaItems.isNotEmpty;
+    if (!hasContent) {
+      await _draftService.deleteDraft(_draftId);
+      return;
+    }
+
+    await _draftService.upsertDraft({
+      'id': _draftId,
+      'text': _textController.text,
+      'hashtagText': _hashtagController.text,
+      'hashtags': _hashtags,
+      'postType': _postType.name,
+      'anonymousCategory': _anonymousCategory,
+      'pollExpirationHours': _pollExpirationHours,
+      'pollOptions':
+          _pollOptionControllers.map((controller) => controller.text).toList(),
+      'mediaItems': _mediaItems
+          .map((item) => {
+                'path': item.file?.path,
+                'fileName': item.fileName,
+                'type': item.type.name,
+              })
+          .toList(),
+      'updatedAt': DateTime.now().toIso8601String(),
+    });
   }
 
   bool get _hasMedia => _mediaItems.isNotEmpty;
@@ -399,8 +493,9 @@ class _CreatePostPageState extends State<CreatePostPage> {
   }
 
   void _addPollOption() {
+    final controller = TextEditingController()..addListener(_onComposerChanged);
     setState(() {
-      _pollOptionControllers.add(TextEditingController());
+      _pollOptionControllers.add(controller);
     });
   }
 
@@ -608,6 +703,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
             _currentStep = PostCreationStep.mediaPreview;
           });
+          _scheduleDraftSave();
           return;
         }
 
@@ -641,6 +737,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
           _currentStep = PostCreationStep.mediaPreview;
         });
+        _scheduleDraftSave();
       } else {
         final pickedFile = await _imagePicker.pickVideo(
           source: source,
@@ -667,6 +764,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
           _currentStep = PostCreationStep.mediaPreview;
         });
+        _scheduleDraftSave();
       }
     } catch (e) {
       _showSnackBar(
@@ -738,6 +836,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
       }
 
       unawaited(_syncUserTags('post', createdPost.id, content));
+      unawaited(_draftService.deleteDraft(_draftId));
 
       _showSnackBar('Post created successfully');
 
@@ -829,6 +928,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
       }
 
       unawaited(_syncUserTags('post', createdPost.id, content));
+      unawaited(_draftService.deleteDraft(_draftId));
 
       _showSnackBar('Post created successfully');
 

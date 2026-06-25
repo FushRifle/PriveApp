@@ -70,15 +70,12 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
   }
 
   void _openPost() {
-    final post = _post;
-    if (post == null) return;
-
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => PostDetailPage(
-          postId: post.id,
-          initialPost: post,
+          postId: _post?.id ?? _postId,
+          initialPost: _post,
         ),
       ),
     );
@@ -97,6 +94,7 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
     final time = _formatTime(notification['createdAt']?.toString());
     final accent = _notificationColor(type);
     final summary = _summaryForType(type, notification);
+    final isComment = type == 'comment' || type == 'post_comment';
 
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
@@ -138,17 +136,103 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                
                 const SizedBox(height: 10),
-                
-                PostSection(
-                  isLoading: _isLoadingPost,
-                  post: _post,
-                  postId: _postId,
-                  postImage: postImage,
-                  onOpenPost: _openPost,
-                ),
+                if (isComment)
+                  _buildCommentDetails(notification, data, accent)
+                else
+                  PostSection(
+                    isLoading: _isLoadingPost,
+                    post: _post,
+                    postId: _postId,
+                    postImage: postImage,
+                    onOpenPost: _openPost,
+                  ),
               ]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCommentDetails(
+    Map<String, dynamic> notification,
+    Map<String, dynamic> data,
+    Color accent,
+  ) {
+    final comment = (data['comment'] ??
+            data['commentText'] ??
+            data['comment_text'] ??
+            data['snippet'] ??
+            notification['content'] ??
+            notification['message'] ??
+            '')
+        .toString()
+        .trim();
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 18, 14, 14),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border.withOpacity(0.7)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withOpacity(0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: accent.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.mode_comment_outlined,
+                  color: accent,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Comment',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            comment.isEmpty ? 'Comment activity' : comment,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  height: 1.4,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.text,
+                ),
+          ),
+          const SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: _postId > 0 ? _openPost : null,
+              icon: const Text('View page'),
+              label: const Icon(Icons.chevron_right_rounded),
+              style: TextButton.styleFrom(
+                foregroundColor: accent,
+                textStyle: const TextStyle(fontWeight: FontWeight.w800),
+              ),
             ),
           ),
         ],

@@ -537,11 +537,6 @@ class _ReelItemState extends State<ReelItem>
   void _performRepost(String reelId, {String content = ''}) {
     if (!mounted || _isReposted) return;
 
-    setState(() {
-      _isReposted = true;
-      _localRepostDelta += 1;
-    });
-
     context.read<ReelBloc>().add(
           RepostReel(
             reelId: reelId,
@@ -667,14 +662,6 @@ class _ReelItemState extends State<ReelItem>
                       _deleteReel();
                     },
                   ),
-                ListTile(
-                  leading: const Icon(Icons.bookmark_border_rounded),
-                  title: const Text('Save'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _saveReel();
-                  },
-                ),
                 if (!isOwner)
                   ListTile(
                     leading: const Icon(Icons.flag_outlined),
@@ -684,6 +671,14 @@ class _ReelItemState extends State<ReelItem>
                       _reportReel();
                     },
                   ),
+                ListTile(
+                  leading: const Icon(Icons.bookmark_border_rounded),
+                  title: const Text('Save'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _saveReel();
+                  },
+                ),
               ],
             ),
           ),

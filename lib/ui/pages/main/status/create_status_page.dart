@@ -207,6 +207,8 @@ class _CreateStatusPageState extends State<CreateStatusPage>
                                 selectedMediaType: _selectedMediaType,
                                 isPreviewVideoReady: _isPreviewVideoReady,
                                 previewVideoController: _previewVideoController,
+                                captionController: _textController,
+                                captionTextAlign: _textAlign,
                                 onRemoveMedia: () {
                                   setState(() {
                                     _selectedMediaFile = null;
@@ -218,17 +220,18 @@ class _CreateStatusPageState extends State<CreateStatusPage>
                               ),
                               const SizedBox(height: 20),
                             ],
-                            Align(
-                              alignment: Alignment.topCenter,
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  maxWidth: 980,
-                                  minHeight: 120,
-                                  maxHeight: 420,
+                            if (!_hasMedia)
+                              Align(
+                                alignment: Alignment.topCenter,
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 980,
+                                    minHeight: 120,
+                                    maxHeight: 420,
+                                  ),
+                                  child: _buildComposerCard(),
                                 ),
-                                child: _buildComposerCard(),
                               ),
-                            ),
                           ],
                         ),
                       ),
@@ -503,7 +506,7 @@ class _CreateStatusPageState extends State<CreateStatusPage>
                     child: Container(
                       width: drawerWidth,
                       height: drawerHeight,
-                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
                       decoration: BoxDecoration(
                         color: AppColors.card,
                         borderRadius: BorderRadius.circular(28),
@@ -564,7 +567,7 @@ class _CreateStatusPageState extends State<CreateStatusPage>
                                       }),
                                       activeAlignment: _textAlign,
                                     ),
-                                    const SizedBox(height: 5),
+                                    const SizedBox(height: 18),
                                     StyleControls(
                                       fontSize: _fontSize,
                                       textLength:

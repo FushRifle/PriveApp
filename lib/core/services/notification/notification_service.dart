@@ -14,12 +14,15 @@ class NotificationService {
     bool forceRefresh = false,
   }) async {
     try {
-      final response = await _api.get('/api/notifications', queryParameters: {
-        'page': page,
-        'pageSize': pageSize,
-        'unread': unreadOnly,
-      }, forceRefresh: forceRefresh);
-      final normalized = _normalizeNotificationsResponse(response.data, pageSize);
+      final response = await _api.get('/api/notifications',
+          queryParameters: {
+            'page': page,
+            'pageSize': pageSize,
+            'unread': unreadOnly,
+          },
+          forceRefresh: forceRefresh);
+      final normalized =
+          _normalizeNotificationsResponse(response.data, pageSize);
       if (page == 1 && !unreadOnly) {
         await _saveCachedNotifications(normalized);
       }
@@ -258,6 +261,10 @@ class NotificationService {
       case 'new_comment':
       case 'post_comment':
         return 'comment';
+      case 'new_message':
+      case 'message_new':
+      case 'chat_message':
+        return 'message';
       case 'new_follower':
         return 'follow';
       case 'achievement':
@@ -279,8 +286,10 @@ class NotificationService {
           json['commentNotifications'] ?? json['notifyNewComment'] ?? true,
       'followNotifications':
           json['followNotifications'] ?? json['notifyNewFollower'] ?? true,
-      'messageNotifications':
-          json['messageNotifications'] ?? json['notifyFriendRequest'] ?? true,
+      'messageNotifications': json['messageNotifications'] ??
+          json['notifyNewMessage'] ??
+          json['notifyMessage'] ??
+          true,
       'matchNotifications':
           json['matchNotifications'] ?? json['notifySystemUpdates'] ?? true,
     };
@@ -299,7 +308,7 @@ class NotificationService {
       if (json.containsKey('followNotifications'))
         'notifyNewFollower': json['followNotifications'],
       if (json.containsKey('messageNotifications'))
-        'notifyFriendRequest': json['messageNotifications'],
+        'notifyNewMessage': json['messageNotifications'],
       if (json.containsKey('matchNotifications'))
         'notifySystemUpdates': json['matchNotifications'],
     };

@@ -55,8 +55,11 @@ class EventBloc extends Bloc<EventEvent, EventState> {
       );
       if (requestId != _listRequestId) return;
 
-      final merged =
-          nextPage == 1 ? events : _dedupe([...state.events, ...events]);
+      final merged = nextPage == 1
+          ? event.silent
+              ? _dedupe([...state.events, ...events])
+              : events
+          : _dedupe([...state.events, ...events]);
 
       emit(state.copyWith(
         status: EventStatus.success,
@@ -176,6 +179,9 @@ class EventBloc extends Bloc<EventEvent, EventState> {
   }
 
   void _scheduleSilentRefreshes() {
+    unawaited(Future<void>.delayed(const Duration(milliseconds: 250), () {
+      add(const LoadEvents(refresh: true, silent: true));
+    }));
     unawaited(Future<void>.delayed(const Duration(milliseconds: 900), () {
       add(const LoadEvents(refresh: true, silent: true));
     }));

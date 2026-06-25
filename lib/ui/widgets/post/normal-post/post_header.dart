@@ -29,7 +29,7 @@ class PostHeader extends StatelessWidget {
     final canOpenProfile = post.user.id > 0 && !post.isAnonymousPost;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 12, 12),
+      padding: const EdgeInsets.fromLTRB(14, 12, 10, 8),
       child: Row(
         children: [
           Expanded(
@@ -128,21 +128,22 @@ class _PostAvatar extends StatelessWidget {
                 errorBuilder: (_, __, ___) => _AvatarFallback(text: fallback),
               )
             : avatar.isNotEmpty && avatar.startsWith('http')
-            ? CachedNetworkImage(
-                imageUrl: avatar,
-                fit: BoxFit.cover,
-                placeholder: (_, __) => _AvatarFallback(text: fallback),
-                errorWidget: (_, __, ___) => _AvatarFallback(text: fallback),
-              )
-            : avatar.isNotEmpty
-                ? Image.asset(
-                    avatar,
+                ? CachedNetworkImage(
+                    imageUrl: avatar,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) {
-                      return _AvatarFallback(text: fallback);
-                    },
+                    placeholder: (_, __) => _AvatarFallback(text: fallback),
+                    errorWidget: (_, __, ___) =>
+                        _AvatarFallback(text: fallback),
                   )
-                : _AvatarFallback(text: fallback),
+                : avatar.isNotEmpty
+                    ? Image.asset(
+                        avatar,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) {
+                          return _AvatarFallback(text: fallback);
+                        },
+                      )
+                    : _AvatarFallback(text: fallback),
       ),
     );
   }

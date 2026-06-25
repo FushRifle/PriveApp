@@ -31,9 +31,9 @@ class PostMedia extends StatelessWidget {
     final double aspectRatio = isDetailView ? 0.92 : 1.0;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(22),
         child: ColoredBox(
           color: AppColors.black,
           child: AspectRatio(

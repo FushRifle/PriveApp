@@ -260,7 +260,7 @@ class _HomePageState extends State<HomePage>
             child: CustomScrollView(
               controller: _scrollController,
               cacheExtent: 1000,
-              physics: const ClampingScrollPhysics(
+              physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ),
               slivers: [
@@ -1008,11 +1008,11 @@ class _StoriesSection extends StatelessWidget {
     final isLoading = state.status == StoriesStatus.loading;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 20),
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      margin: const EdgeInsets.fromLTRB(12, 6, 12, 14),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
         color: palette.card,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(color: palette.border),
         boxShadow: [
           BoxShadow(
@@ -1026,7 +1026,7 @@ class _StoriesSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Row(
               children: [
                 Text(
@@ -1074,13 +1074,13 @@ class _StoriesSection extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           SizedBox(
-            height: 96,
+            height: 88,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 18),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
               itemCount: groups.length + 1,
               separatorBuilder: (_, __) => const SizedBox(width: 12),
               itemBuilder: (context, index) {

@@ -25,10 +25,10 @@ class PostFooter extends StatelessWidget {
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        16,
+        14,
         isTextOnly ? 4 : 0,
-        16,
-        12,
+        14,
+        8,
       ),
       child: EffectText(
         text: content,

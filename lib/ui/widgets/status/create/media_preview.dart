@@ -9,6 +9,8 @@ class MediaPreviewWidget extends StatelessWidget {
   final bool isPreviewVideoReady;
   final VideoPlayerController? previewVideoController;
   final VoidCallback onRemoveMedia;
+  final TextEditingController? captionController;
+  final TextAlign captionTextAlign;
 
   const MediaPreviewWidget({
     super.key,
@@ -17,6 +19,8 @@ class MediaPreviewWidget extends StatelessWidget {
     required this.isPreviewVideoReady,
     required this.previewVideoController,
     required this.onRemoveMedia,
+    this.captionController,
+    this.captionTextAlign = TextAlign.center,
   });
 
   @override
@@ -108,7 +112,9 @@ class MediaPreviewWidget extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          isVideo ? Icons.videocam_rounded : Icons.image_rounded,
+                          isVideo
+                              ? Icons.videocam_rounded
+                              : Icons.image_rounded,
                           color: Colors.white,
                           size: 14,
                         ),
@@ -148,6 +154,51 @@ class MediaPreviewWidget extends StatelessWidget {
                 ],
               ),
             ),
+            if (captionController != null)
+              Positioned(
+                left: 18,
+                right: 18,
+                bottom: 18,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.34),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withOpacity(0.12)),
+                  ),
+                  child: TextField(
+                    controller: captionController,
+                    minLines: 1,
+                    maxLines: 4,
+                    textAlign: captionTextAlign,
+                    cursorColor: Colors.white,
+                    keyboardType: TextInputType.multiline,
+                    textInputAction: TextInputAction.newline,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      height: 1.35,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Add a caption',
+                      hintStyle: TextStyle(
+                        color: Colors.white.withOpacity(0.68),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      border: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

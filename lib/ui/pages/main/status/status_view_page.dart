@@ -44,6 +44,8 @@ class _StatusViewPageState extends State<StatusViewPage>
   bool _shouldResumeAfterInteraction = false;
   bool _isSendingReply = false;
   bool _showReplySent = false;
+  int _videoSeekRequest = 0;
+  Duration _videoSeekOffset = Duration.zero;
   final Set<String> _expandedStoryTextIds = {};
 
   @override
@@ -126,6 +128,28 @@ class _StatusViewPageState extends State<StatusViewPage>
     if (!_isPaused) {
       _progressController.forward();
     }
+  }
+
+  void _seekCurrentVideo(Duration offset) {
+    if (_stories.isEmpty) return;
+    final story = _stories[_safeStoryIndex(_stories)];
+    if (!_isVideoStory(story)) return;
+
+    final duration = _progressController.duration;
+    if (duration != null && duration > Duration.zero) {
+      final currentMs = (duration.inMilliseconds * _progressController.value)
+          .round()
+          .clamp(0, duration.inMilliseconds);
+      final nextMs = (currentMs + offset.inMilliseconds)
+          .clamp(0, duration.inMilliseconds)
+          .toInt();
+      _progressController.value = nextMs / duration.inMilliseconds;
+    }
+
+    setState(() {
+      _videoSeekOffset = offset;
+      _videoSeekRequest++;
+    });
   }
 
   void _nextStatus() {
@@ -325,6 +349,7 @@ class _StatusViewPageState extends State<StatusViewPage>
             ),
             _buildHeader(stories),
             _buildProgressBars(stories),
+            if (_isVideoStory(stories[safeIndex])) _buildVideoSeekControls(),
             _buildBottomActions(stories),
             if (_showReplySent) _buildReplySentToast(),
             if (_isPaused && !_replyFocusNode.hasFocus)
@@ -392,6 +417,8 @@ class _StatusViewPageState extends State<StatusViewPage>
                         isActive:
                             story.id == _stories[_safeStoryIndex(_stories)].id,
                         isPaused: _isPaused,
+                        seekRequest: _videoSeekRequest,
+                        seekOffset: _videoSeekOffset,
                         onDurationReady: (duration) {
                           _handleVideoDuration(story.id, duration);
                         },
@@ -439,6 +466,60 @@ class _StatusViewPageState extends State<StatusViewPage>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildVideoSeekControls() {
+    Widget button({
+      required IconData icon,
+      required VoidCallback onTap,
+      required Alignment alignment,
+    }) {
+      return Align(
+        alignment: alignment,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18),
+          child: Material(
+            color: AppColors.black.withOpacity(0.28),
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: onTap,
+              child: SizedBox(
+                width: 48,
+                height: 48,
+                child: Icon(icon, color: AppColors.white, size: 28),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Positioned.fill(
+      top: MediaQuery.paddingOf(context).top + 86,
+      bottom: 126,
+      child: IgnorePointer(
+        ignoring: false,
+        child: Row(
+          children: [
+            Expanded(
+              child: button(
+                icon: Icons.replay_10_rounded,
+                alignment: Alignment.centerLeft,
+                onTap: () => _seekCurrentVideo(const Duration(seconds: -10)),
+              ),
+            ),
+            Expanded(
+              child: button(
+                icon: Icons.forward_10_rounded,
+                alignment: Alignment.centerRight,
+                onTap: () => _seekCurrentVideo(const Duration(seconds: 10)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1296,12 +1377,16 @@ class _StatusVideoPlayer extends StatefulWidget {
   final String url;
   final bool isActive;
   final bool isPaused;
+  final int seekRequest;
+  final Duration seekOffset;
   final ValueChanged<Duration> onDurationReady;
 
   const _StatusVideoPlayer({
     required this.url,
     required this.isActive,
     required this.isPaused,
+    required this.seekRequest,
+    required this.seekOffset,
     required this.onDurationReady,
   });
 
@@ -1329,12 +1414,16 @@ class _StatusVideoPlayerState extends State<_StatusVideoPlayer> {
       return;
     }
     if (oldWidget.isActive != widget.isActive ||
-        oldWidget.isPaused != widget.isPaused) {
+        oldWidget.isPaused != widget.isPaused ||
+        oldWidget.seekRequest != widget.seekRequest) {
       if (!oldWidget.isActive && widget.isActive) {
         final duration = _controller?.value.duration;
         if (duration != null && duration > Duration.zero) {
           widget.onDurationReady(duration);
         }
+      }
+      if (oldWidget.seekRequest != widget.seekRequest) {
+        _seekBy(widget.seekOffset);
       }
       _syncPlayback();
     }
@@ -1385,6 +1474,17 @@ class _StatusVideoPlayerState extends State<_StatusVideoPlayer> {
     } else {
       await controller.pause();
     }
+  }
+
+  Future<void> _seekBy(Duration offset) async {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+    final duration = controller.value.duration;
+    final next = controller.value.position + offset;
+    final clamped = Duration(
+      milliseconds: next.inMilliseconds.clamp(0, duration.inMilliseconds),
+    );
+    await controller.seekTo(clamped);
   }
 
   Future<void> _disposeController() async {
