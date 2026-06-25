@@ -5,8 +5,6 @@ import 'package:clique/app/configs/colors.dart';
 import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/services/home/feed_service.dart';
 import 'package:clique/ui/pages/main/home/post_detail_page.dart';
-import 'package:clique/ui/widgets/notification/details/notification_hero.dart';
-import 'package:clique/ui/widgets/notification/details/post_section.dart';
 
 class NotificationDetailsPage extends StatefulWidget {
   final Map<String, dynamic> notification;
@@ -26,7 +24,6 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
 
   late final int _postId;
   FeedPost? _post;
-  bool _isLoadingPost = true;
 
   @override
   void initState() {
@@ -52,21 +49,15 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
 
   Future<void> _loadPost() async {
     if (_postId <= 0) {
-      if (!mounted) return;
-      setState(() => _isLoadingPost = false);
       return;
     }
 
     try {
       final post = await _feedService.getPostById(_postId);
       if (!mounted) return;
-      setState(() {
-        _post = post;
-        _isLoadingPost = false;
-      });
+      setState(() => _post = post);
     } catch (_) {
-      if (!mounted) return;
-      setState(() => _isLoadingPost = false);
+      return;
     }
   }
 
@@ -136,55 +127,52 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
-      body: CustomScrollView(
+      appBar: AppBar(
+        backgroundColor: AppColors.backgroundColor,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+        ),
+        title: const Text('Activity'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
         ),
-        slivers: [
-          SliverAppBar(
-            pinned: true,
-            expandedHeight: 280,
-            backgroundColor: AppColors.backgroundColor,
-            elevation: 0,
-            leading: IconButton(
-              onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.arrow_back_ios_new_rounded),
-            ),
-            flexibleSpace: FlexibleSpaceBar(
-              collapseMode: CollapseMode.parallax,
-              background: NotificationHero(
-                actorName: actorName,
-                type: type,
-                time: time,
-                accent: accent,
-                summary: summary,
-                content: content,
-                postImage: postImage,
-              ),
-            ),
+        children: [
+          _ActivityHeaderCard(
+            actorName: actorName,
+            type: type,
+            time: time,
+            accent: accent,
+            summary: summary,
+            content: content,
+            postImage: postImage,
           ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                const SizedBox(height: 10),
-                if (isMessage)
-                  _buildMessageDetails(notification, data, accent)
-                else if (isComment)
-                  _buildCommentDetails(notification, data, accent)
-                else
-                  PostSection(
-                    isLoading: _isLoadingPost,
-                    post: _post,
-                    postId: _postId,
-                    postImage: postImage,
-                    onOpenPost: _openPost,
-                  ),
-              ]),
-            ),
-          ),
+          const SizedBox(height: 12),
+          if (isMessage)
+            _buildMessageDetails(notification, data, accent)
+          else if (isComment)
+            _buildCommentDetails(notification, data, accent)
+          else
+            _buildGenericDetails(summary, content, accent),
         ],
       ),
+    );
+  }
+
+  Widget _buildGenericDetails(String summary, String content, Color accent) {
+    return _DetailPanel(
+      icon: Icons.notifications_none_rounded,
+      title: summary,
+      body:
+          content.isEmpty ? 'Open the related page for more context.' : content,
+      accent: accent,
+      actionLabel: _postId > 0 ? 'View page' : null,
+      onAction: _postId > 0 ? _openPost : null,
     );
   }
 
@@ -196,65 +184,13 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
     final message =
         (notification['message'] ?? data['message'] ?? '').toString().trim();
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(18, 18, 14, 14),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border.withOpacity(0.7)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: accent.withOpacity(0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.chat_bubble_outline_rounded,
-                    color: accent, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Message',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-              ),
-            ],
-          ),
-          if (message.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Text(
-              message,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    height: 1.4,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.text,
-                  ),
-            ),
-          ],
-          const SizedBox(height: 16),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: () => _openChat(notification, data),
-              icon: const Text('Open chat'),
-              label: const Icon(Icons.chevron_right_rounded),
-              style: TextButton.styleFrom(
-                foregroundColor: accent,
-                textStyle: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-            ),
-          ),
-        ],
-      ),
+    return _DetailPanel(
+      icon: Icons.chat_bubble_outline_rounded,
+      title: 'Message',
+      body: message.isEmpty ? 'Open the conversation to reply.' : message,
+      accent: accent,
+      actionLabel: 'Open chat',
+      onAction: () => _openChat(notification, data),
     );
   }
 
@@ -273,73 +209,13 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
         .toString()
         .trim();
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(18, 18, 14, 14),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border.withOpacity(0.7)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withOpacity(0.04),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: accent.withOpacity(0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.mode_comment_outlined,
-                  color: accent,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Comment',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Text(
-            comment.isEmpty ? 'Comment activity' : comment,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  height: 1.4,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.text,
-                ),
-          ),
-          const SizedBox(height: 16),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: _postId > 0 ? _openPost : null,
-              icon: const Text('View page'),
-              label: const Icon(Icons.chevron_right_rounded),
-              style: TextButton.styleFrom(
-                foregroundColor: accent,
-                textStyle: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-            ),
-          ),
-        ],
-      ),
+    return _DetailPanel(
+      icon: Icons.mode_comment_outlined,
+      title: 'Comment',
+      body: comment.isEmpty ? 'Comment activity' : comment,
+      accent: accent,
+      actionLabel: 'View page',
+      onAction: _postId > 0 ? _openPost : null,
     );
   }
 
@@ -400,6 +276,9 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
 
   Color _notificationColor(String type) {
     switch (type) {
+      case 'message':
+      case 'chat':
+        return AppColors.primary;
       case 'like':
       case 'post_like':
         return AppColors.primary;
@@ -468,5 +347,233 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> {
     } catch (_) {
       return 'Just now';
     }
+  }
+}
+
+class _ActivityHeaderCard extends StatelessWidget {
+  final String actorName;
+  final String type;
+  final String time;
+  final Color accent;
+  final String summary;
+  final String content;
+  final String postImage;
+
+  const _ActivityHeaderCard({
+    required this.actorName,
+    required this.type,
+    required this.time,
+    required this.accent,
+    required this.summary,
+    required this.content,
+    required this.postImage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border.withOpacity(0.65)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _ActivityAvatar(
+            imageUrl: postImage,
+            fallback: actorName,
+            accent: accent,
+            type: type,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        actorName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.text,
+                                ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      time,
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  summary,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: accent,
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                if (content.trim().isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    content,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          height: 1.35,
+                          color: AppColors.textSecondary,
+                        ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActivityAvatar extends StatelessWidget {
+  final String imageUrl;
+  final String fallback;
+  final Color accent;
+  final String type;
+
+  const _ActivityAvatar({
+    required this.imageUrl,
+    required this.fallback,
+    required this.accent,
+    required this.type,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = switch (type) {
+      'message' || 'chat' => Icons.chat_bubble_outline_rounded,
+      'comment' || 'post_comment' => Icons.mode_comment_outlined,
+      'like' || 'post_like' => Icons.favorite_border_rounded,
+      'follow' ||
+      'friend_request' ||
+      'friend_accepted' =>
+        Icons.person_add_alt_rounded,
+      _ => Icons.notifications_none_rounded,
+    };
+
+    return Tooltip(
+      message: fallback,
+      child: Container(
+        width: 52,
+        height: 52,
+        decoration: BoxDecoration(
+          color: accent.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(17),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: imageUrl.trim().isNotEmpty
+            ? Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Icon(icon, color: accent),
+              )
+            : Center(
+                child: Icon(icon, color: accent),
+              ),
+      ),
+    );
+  }
+}
+
+class _DetailPanel extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String body;
+  final Color accent;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  const _DetailPanel({
+    required this.icon,
+    required this.title,
+    required this.body,
+    required this.accent,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 14, 12),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border.withOpacity(0.65)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: accent.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: Icon(icon, color: accent, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.text,
+                      ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            body,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  height: 1.4,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.text,
+                ),
+          ),
+          if (actionLabel != null) ...[
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: onAction,
+                icon: Text(actionLabel!),
+                label: const Icon(Icons.chevron_right_rounded),
+                style: TextButton.styleFrom(
+                  foregroundColor: accent,
+                  textStyle: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }

@@ -42,17 +42,17 @@ class _TextPostComposer extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     final isCompactWidth = size.width < 390;
-    final textBoxHeight = (size.height * 0.33).clamp(210.0, 330.0);
-    final horizontalPadding = isCompactWidth ? 16.0 : 20.0;
-    final titleFontSize = isCompactWidth ? 18.0 : 20.0;
+    final textBoxHeight = (size.height * 0.28).clamp(170.0, 260.0);
+    final horizontalPadding = isCompactWidth ? 14.0 : 16.0;
+    final titleFontSize = isCompactWidth ? 17.0 : 18.0;
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: EdgeInsets.fromLTRB(
         horizontalPadding,
-        8,
+        4,
         horizontalPadding,
-        24 + MediaQuery.viewInsetsOf(context).bottom,
+        16 + MediaQuery.viewInsetsOf(context).bottom,
       ),
       child: Column(
         children: [
@@ -63,18 +63,23 @@ class _TextPostComposer extends StatelessWidget {
             onChanged: onPostTypeChanged,
             onAnonymousCategoryChanged: onAnonymousCategoryChanged,
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           SizedBox(
             height: textBoxHeight,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _ComposerSurfaceHeader(
-                  title: _composerTitle(postType),
-                  subtitle: _composerSubtitle(postType),
-                  accent: _composerAccent(postType),
+                Padding(
+                  padding: const EdgeInsets.only(left: 2, bottom: 8),
+                  child: Text(
+                    _composerTitle(postType),
+                    style: AppTheme.blackTextStyle.copyWith(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      color: _composerAccent(postType),
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 14),
                 Expanded(
                   child: TokenSuggestionField(
                     controller: textController,
@@ -117,7 +122,7 @@ class _TextPostComposer extends StatelessWidget {
               enabled: enabled,
             ),
           ],
-          const SizedBox(height: 14),
+          const SizedBox(height: 8),
           _HashtagInput(
             controller: hashtagController,
             hashtags: hashtags,
@@ -179,7 +184,7 @@ class _MediaPostComposer extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 36),
+      padding: const EdgeInsets.fromLTRB(14, 6, 14, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -190,12 +195,12 @@ class _MediaPostComposer extends StatelessWidget {
             onChanged: onPostTypeChanged,
             onAnonymousCategoryChanged: onAnonymousCategoryChanged,
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           _MediaPreview(
             mediaItems: mediaItems,
             onChangeMedia: onChangeMedia,
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 10),
           _CaptionInput(
             controller: textController,
             enabled: enabled,
@@ -218,7 +223,7 @@ class _MediaPostComposer extends StatelessWidget {
               enabled: enabled,
             ),
           ],
-          const SizedBox(height: 14),
+          const SizedBox(height: 8),
           _HashtagInput(
             controller: hashtagController,
             hashtags: hashtags,
@@ -230,63 +235,6 @@ class _MediaPostComposer extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _ComposerSurfaceHeader extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final Color accent;
-
-  const _ComposerSurfaceHeader({
-    required this.title,
-    required this.subtitle,
-    required this.accent,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            color: accent.withOpacity(0.14),
-          ),
-          child: Icon(
-            Icons.edit_note_rounded,
-            color: accent,
-            size: 22,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: AppTheme.blackTextStyle.copyWith(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                subtitle,
-                style: AppTheme.greyTextStyle.copyWith(
-                  fontSize: 12,
-                  height: 1.35,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }
@@ -581,99 +529,63 @@ class _HashtagInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardColor,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.cardBorderColor),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(13),
-                ),
-                child: const Icon(
-                  Icons.tag_rounded,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Hashtags',
-                  style: AppTheme.blackTextStyle.copyWith(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
+    return Column(
+      children: [
+        TokenSuggestionField(
+          controller: controller,
+          enabled: enabled,
+          suggestionsBuilder: suggestionsBuilder,
+          supportedTokenTypes: const [ComposerTokenType.hashtag],
+          textInputAction: TextInputAction.done,
+          onSubmitted: onAddHashtag,
+          style: AppTheme.blackTextStyle.copyWith(
+            fontSize: 15,
           ),
-          const SizedBox(height: 12),
-          TokenSuggestionField(
-            controller: controller,
-            enabled: enabled,
-            suggestionsBuilder: suggestionsBuilder,
-            supportedTokenTypes: const [ComposerTokenType.hashtag],
-            textInputAction: TextInputAction.done,
-            onSubmitted: onAddHashtag,
-            style: AppTheme.blackTextStyle.copyWith(
-              fontSize: 15,
+          textAlign: TextAlign.start,
+          decoration: InputDecoration(
+            hintText: 'Add hashtags',
+            hintStyle: AppTheme.greyTextStyle.copyWith(
+              fontSize: 14,
             ),
-            textAlign: TextAlign.start,
-            decoration: InputDecoration(
-              hintText: 'Add hashtags',
-              hintStyle: AppTheme.greyTextStyle.copyWith(
-                fontSize: 14,
-              ),
-              border: InputBorder.none,
-              prefixIcon: const Icon(
-                Icons.tag_rounded,
-                color: AppColors.primary,
-                size: 20,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
-              ),
-              filled: true,
-              fillColor: AppColors.backgroundColor,
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: AppColors.cardBorderColor),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: AppColors.primary),
-              ),
+            border: InputBorder.none,
+            prefixIcon: const Icon(
+              Icons.tag_rounded,
+              color: AppColors.primary,
+              size: 18,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
+            filled: true,
+            fillColor: AppColors.cardColor,
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: AppColors.cardBorderColor),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColors.primary),
             ),
           ),
-          if (hashtags.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: hashtags.map((tag) {
-                  return _HashtagChip(
-                    tag: tag,
-                    onRemove: () => onRemoveHashtag(tag),
-                  );
-                }).toList(),
-              ),
+        ),
+        if (hashtags.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: hashtags.map((tag) {
+                return _HashtagChip(
+                  tag: tag,
+                  onRemove: () => onRemoveHashtag(tag),
+                );
+              }).toList(),
             ),
-          ],
+          ),
         ],
-      ),
+      ],
     );
   }
 }
@@ -744,28 +656,9 @@ class _ComposerTypeSelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text(
-              'Content Type',
-              style: AppTheme.blackTextStyle.copyWith(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const Spacer(),
-            Text(
-              'Tap to switch modes',
-              style: AppTheme.greyTextStyle.copyWith(
-                fontSize: 11,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
         Wrap(
-          spacing: 10,
-          runSpacing: 10,
+          spacing: 8,
+          runSpacing: 8,
           children: PostComposerType.values.map((type) {
             final isSelected = type == selectedType;
             return ChoiceChip(
@@ -1167,19 +1060,6 @@ String _composerTitle(PostComposerType type) {
     PostComposerType.poll => 'Build your poll',
     PostComposerType.question => 'Ask the feed',
     PostComposerType.anonymous => 'Anonymous draft',
-  };
-}
-
-String _composerSubtitle(PostComposerType type) {
-  return switch (type) {
-    PostComposerType.post =>
-      'Short, direct, and easy to scan. Keep the first line strong.',
-    PostComposerType.poll =>
-      'Ask something people can answer without overthinking.',
-    PostComposerType.question =>
-      'A sharp prompt gets better replies than a vague one.',
-    PostComposerType.anonymous =>
-      'Your identity stays hidden while the content stays clear.',
   };
 }
 

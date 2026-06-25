@@ -346,7 +346,7 @@ class _CreateStatusPageState extends State<CreateStatusPage>
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: _hasContent
-                          ? [AppColors.primary]
+                          ? [AppColors.background]
                           : [
                               Colors.white.withOpacity(0.1),
                               Colors.white.withOpacity(0.05)
