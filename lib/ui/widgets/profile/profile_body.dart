@@ -100,6 +100,7 @@ class ProfileBody extends StatelessWidget {
                 onLoadMoreMedia(userId, ProfileGalleryTabType.media),
           ),
           const ProfileSavedPostsTab(),
+          const ProfileDraftsTab(),
         ],
       ),
     );

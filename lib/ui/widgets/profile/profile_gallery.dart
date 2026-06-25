@@ -101,9 +101,7 @@ class ProfileSavedPostsTab extends StatefulWidget {
 
 class _ProfileSavedPostsTabState extends State<ProfileSavedPostsTab> {
   final FeedService _feedService = FeedService();
-  final PostDraftService _draftService = PostDraftService();
   List<FeedPost> _savedPosts = const [];
-  List<Map<String, dynamic>> _drafts = const [];
   bool _isLoading = true;
   bool _isRefreshing = false;
   String? _error;
@@ -111,12 +109,7 @@ class _ProfileSavedPostsTabState extends State<ProfileSavedPostsTab> {
   @override
   void initState() {
     super.initState();
-    _loadDrafts();
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadSavedPosts());
-  }
-
-  void _loadDrafts() {
-    _drafts = _draftService.getDrafts();
   }
 
   Future<void> _loadSavedPosts({bool refresh = false}) async {
@@ -133,9 +126,6 @@ class _ProfileSavedPostsTabState extends State<ProfileSavedPostsTab> {
     }
 
     try {
-      if (refresh) {
-        _loadDrafts();
-      }
       final response = await _feedService.getSavedPosts(
         page: 1,
         forceRefresh: refresh,
@@ -173,7 +163,7 @@ class _ProfileSavedPostsTabState extends State<ProfileSavedPostsTab> {
       );
     }
 
-    if (_savedPosts.isEmpty && _drafts.isEmpty) {
+    if (_savedPosts.isEmpty) {
       return ProfileEmptyState(
         icon: Icons.bookmark_border_rounded,
         message: 'No saved posts yet',
@@ -191,21 +181,10 @@ class _ProfileSavedPostsTabState extends State<ProfileSavedPostsTab> {
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
         ),
-        itemCount: _savedPosts.length +
-            (_drafts.isNotEmpty ? 1 : 0) +
-            (_isRefreshing ? 1 : 0),
+        itemCount: _savedPosts.length + (_isRefreshing ? 1 : 0),
         separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          if (_drafts.isNotEmpty && index == 0) {
-            return _DraftsSection(
-              drafts: _drafts,
-              onOpen: _openDraft,
-              onDelete: _deleteDraft,
-            );
-          }
-
-          final postIndex = index - (_drafts.isNotEmpty ? 1 : 0);
-          if (postIndex >= _savedPosts.length) {
+          if (index >= _savedPosts.length) {
             return const Padding(
               padding: EdgeInsets.symmetric(vertical: 16),
               child: Center(
@@ -218,10 +197,63 @@ class _ProfileSavedPostsTabState extends State<ProfileSavedPostsTab> {
           }
 
           return RepostCard(
-            post: _savedPosts[postIndex],
+            post: _savedPosts[index],
             isDetailView: false,
           );
         },
+      ),
+    );
+  }
+}
+
+class ProfileDraftsTab extends StatefulWidget {
+  const ProfileDraftsTab({super.key});
+
+  @override
+  State<ProfileDraftsTab> createState() => _ProfileDraftsTabState();
+}
+
+class _ProfileDraftsTabState extends State<ProfileDraftsTab> {
+  final PostDraftService _draftService = PostDraftService();
+  List<Map<String, dynamic>> _drafts = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDrafts();
+  }
+
+  void _loadDrafts() {
+    _drafts = _draftService.getDrafts();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_drafts.isEmpty) {
+      return ProfileEmptyState(
+        icon: Icons.drafts_outlined,
+        message: 'No post drafts',
+        subtitle: 'Start a post and it will autosave here.',
+        actionText: 'Refresh',
+        onAction: () => setState(_loadDrafts),
+      );
+    }
+
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: () async => setState(_loadDrafts),
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 42),
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
+        children: [
+          _DraftsSection(
+            drafts: _drafts,
+            onOpen: _openDraft,
+            onDelete: _deleteDraft,
+          ),
+        ],
       ),
     );
   }
@@ -272,7 +304,7 @@ class _DraftsSection extends StatelessWidget {
               Icon(Icons.drafts_outlined, color: AppColors.primary, size: 20),
               const SizedBox(width: 8),
               Text(
-                'Drafts',
+                'Drafts (${drafts.length})',
                 style: AppTheme.blackTextStyle.copyWith(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,

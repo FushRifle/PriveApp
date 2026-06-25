@@ -328,6 +328,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
+  List<MessageModel> mergeMessagesForTesting(List<MessageModel> messages) {
+    return _mergeMessages(messages);
+  }
+
   Future<void> _onLoadConversations(
       LoadConversations event, Emitter<ChatState> emit) async {
     await _loadCurrentUserId();

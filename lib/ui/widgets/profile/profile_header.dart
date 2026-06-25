@@ -792,10 +792,9 @@ class ProfileActionRow extends StatelessWidget {
                     : isFollowRequested
                         ? 'REQUESTED'
                         : 'FOLLOW',
-                backgroundColor:
-                    isFollowing || isFollowRequested
-                        ? AppColors.transparent
-                        : AppColors.primary,
+                backgroundColor: isFollowing || isFollowRequested
+                    ? AppColors.transparent
+                    : AppColors.primary,
                 textColor: isFollowing || isFollowRequested
                     ? AppColors.text
                     : AppColors.white,
@@ -937,6 +936,7 @@ class ProfileStickyTabBar extends StatelessWidget {
         const Tab(icon: Icon(Icons.grid_on_rounded)),
         const Tab(icon: Icon(Icons.movie_filter_outlined)),
         const Tab(icon: Icon(Icons.bookmark_border_rounded)),
+        const Tab(icon: Icon(Icons.drafts_outlined)),
       ],
     );
 

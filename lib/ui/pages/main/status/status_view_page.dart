@@ -46,6 +46,7 @@ class _StatusViewPageState extends State<StatusViewPage>
   bool _showReplySent = false;
   int _videoSeekRequest = 0;
   Duration _videoSeekOffset = Duration.zero;
+  String? _completedVideoStoryId;
   final Set<String> _expandedStoryTextIds = {};
 
   @override
@@ -99,6 +100,7 @@ class _StatusViewPageState extends State<StatusViewPage>
 
   void _startStoryProgress(Story story) {
     _progressController.reset();
+    _completedVideoStoryId = null;
 
     if (_isVideoStory(story)) {
       // Wait for the player to report its real duration before starting.
@@ -109,6 +111,26 @@ class _StatusViewPageState extends State<StatusViewPage>
     _progressController.duration = _defaultStoryDuration;
     if (!_isPaused) {
       _progressController.forward();
+    }
+  }
+
+  void _handleVideoProgress(
+    String storyId,
+    Duration position,
+    Duration duration,
+  ) {
+    if (!mounted || _stories.isEmpty || duration <= Duration.zero) return;
+    final currentStory = _stories[_safeStoryIndex(_stories)];
+    if (currentStory.id != storyId || !_isVideoStory(currentStory)) return;
+
+    final ratio = position.inMilliseconds / duration.inMilliseconds;
+    _progressController.value = ratio.clamp(0.0, 1.0);
+
+    if (position >= duration && _completedVideoStoryId != storyId) {
+      _completedVideoStoryId = storyId;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _nextStatus();
+      });
     }
   }
 
@@ -125,9 +147,6 @@ class _StatusViewPageState extends State<StatusViewPage>
     _progressController
       ..duration = Duration(milliseconds: durationMs)
       ..reset();
-    if (!_isPaused) {
-      _progressController.forward();
-    }
   }
 
   void _seekCurrentVideo(Duration offset) {
@@ -421,6 +440,9 @@ class _StatusViewPageState extends State<StatusViewPage>
                         seekOffset: _videoSeekOffset,
                         onDurationReady: (duration) {
                           _handleVideoDuration(story.id, duration);
+                        },
+                        onProgress: (position, duration) {
+                          _handleVideoProgress(story.id, position, duration);
                         },
                       ),
               ),
@@ -1380,6 +1402,7 @@ class _StatusVideoPlayer extends StatefulWidget {
   final int seekRequest;
   final Duration seekOffset;
   final ValueChanged<Duration> onDurationReady;
+  final void Function(Duration position, Duration duration) onProgress;
 
   const _StatusVideoPlayer({
     required this.url,
@@ -1388,6 +1411,7 @@ class _StatusVideoPlayer extends StatefulWidget {
     required this.seekRequest,
     required this.seekOffset,
     required this.onDurationReady,
+    required this.onProgress,
   });
 
   @override
@@ -1445,6 +1469,7 @@ class _StatusVideoPlayerState extends State<_StatusVideoPlayer> {
 
     try {
       await controller.initialize();
+      controller.addListener(_handleControllerTick);
       await controller.setLooping(false);
       await controller.setVolume(0);
       if (!mounted || _controller != controller) {
@@ -1476,6 +1501,15 @@ class _StatusVideoPlayerState extends State<_StatusVideoPlayer> {
     }
   }
 
+  void _handleControllerTick() {
+    final controller = _controller;
+    if (!mounted || controller == null || !controller.value.isInitialized) {
+      return;
+    }
+    if (!widget.isActive) return;
+    widget.onProgress(controller.value.position, controller.value.duration);
+  }
+
   Future<void> _seekBy(Duration offset) async {
     final controller = _controller;
     if (controller == null || !controller.value.isInitialized) return;
@@ -1491,6 +1525,7 @@ class _StatusVideoPlayerState extends State<_StatusVideoPlayer> {
     final controller = _controller;
     _controller = null;
     _isReady = false;
+    controller?.removeListener(_handleControllerTick);
     await controller?.pause();
     await controller?.dispose();
   }
