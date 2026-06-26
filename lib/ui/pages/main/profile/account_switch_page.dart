@@ -10,7 +10,12 @@ import 'package:clique/core/local_cache/local_cache_service.dart';
 import 'package:clique/core/services/user/user_service.dart';
 
 class AccountSwitchPage extends StatefulWidget {
-  const AccountSwitchPage({super.key});
+  final bool isSheet;
+
+  const AccountSwitchPage({
+    super.key,
+    this.isSheet = false,
+  });
 
   @override
   State<AccountSwitchPage> createState() => _AccountSwitchPageState();
@@ -121,6 +126,88 @@ class _AccountSwitchPageState extends State<AccountSwitchPage> {
     await _switchProfile(profileUserId);
   }
 
+  Future<void> _showAddAccountSheet() async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 42,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              const SizedBox(height: 14),
+              ListTile(
+                leading: const Icon(Icons.link_rounded),
+                title: const Text('Link existing profile'),
+                subtitle: const Text('Use a profile user ID from your account'),
+                onTap: () => Navigator.pop(context, 'link'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.person_add_alt_1_rounded),
+                title: const Text('Create new profile'),
+                subtitle: const Text('Add a fresh profile to this account'),
+                onTap: () => Navigator.pop(context, 'create'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (action == 'link') {
+      await _linkExistingProfile();
+    } else if (action == 'create') {
+      await _createProfile();
+    }
+  }
+
+  Future<void> _linkExistingProfile() async {
+    final profileUserId = await showModalBottomSheet<int>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const _LinkProfileSheet(),
+    );
+    if (profileUserId == null || profileUserId <= 0) return;
+
+    setState(() => _isSwitching = true);
+    try {
+      await _userService.linkProfile(profileUserId);
+      await LocalCacheService.clearAll();
+      if (!mounted) return;
+      await _loadProfiles();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile linked'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSwitching = false);
+    }
+  }
+
   Future<void> _createProfile() async {
     final result = await showModalBottomSheet<_CreateProfileData>(
       context: context,
@@ -205,44 +292,84 @@ class _AccountSwitchPageState extends State<AccountSwitchPage> {
     return Scaffold(
       backgroundColor:
           isDark ? AppColors.darkBackground : AppColors.settingsLightBackground,
-      appBar: AppBar(
-        backgroundColor: AppColors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        title: Text(
-          'Switch Account',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: isDark ? AppColors.white : AppColors.black,
-          ),
-        ),
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: isDark ? AppColors.white : AppColors.black,
-          ),
-        ),
-        actions: [
-          IconButton(
-            onPressed: _loadProfiles,
-            icon: Icon(
-              Icons.refresh_rounded,
-              color: isDark ? AppColors.white : AppColors.black,
+      appBar: widget.isSheet
+          ? null
+          : AppBar(
+              backgroundColor: AppColors.transparent,
+              elevation: 0,
+              centerTitle: true,
+              title: Text(
+                'Switch Account',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? AppColors.white : AppColors.black,
+                ),
+              ),
+              leading: IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: isDark ? AppColors.white : AppColors.black,
+                ),
+              ),
+              actions: [
+                IconButton(
+                  onPressed: _loadProfiles,
+                  icon: Icon(
+                    Icons.refresh_rounded,
+                    color: isDark ? AppColors.white : AppColors.black,
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(18),
+          padding: EdgeInsets.fromLTRB(18, widget.isSheet ? 10 : 18, 18, 18),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (widget.isSheet) ...[
+                Center(
+                  child: Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.white24 : AppColors.border,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Switch account',
+                        style: AppTheme.blackTextStyle.copyWith(
+                          color: isDark ? AppColors.white : AppColors.black,
+                          fontWeight: AppTheme.bold,
+                          fontSize: 20,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Refresh',
+                      onPressed: _loadProfiles,
+                      icon: const Icon(Icons.refresh_rounded),
+                    ),
+                    IconButton(
+                      tooltip: 'Close',
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+              ],
               _Header(
                 count: _profiles.length,
                 isDark: isDark,
-                onCreate: _createProfile,
+                onCreate: _showAddAccountSheet,
               ),
               const SizedBox(height: 18),
               Expanded(
@@ -536,7 +663,7 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Link another profile from the backend when you are ready.',
+            'Add another profile to switch between accounts here.',
             textAlign: TextAlign.center,
             style: AppTheme.greyTextStyle.copyWith(fontSize: 13),
           ),
@@ -606,6 +733,84 @@ class _CreateProfileData {
   });
 }
 
+class _LinkProfileSheet extends StatefulWidget {
+  const _LinkProfileSheet();
+
+  @override
+  State<_LinkProfileSheet> createState() => _LinkProfileSheetState();
+}
+
+class _LinkProfileSheetState extends State<_LinkProfileSheet> {
+  final _profileIdController = TextEditingController();
+
+  @override
+  void dispose() {
+    _profileIdController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Link existing profile',
+                style: AppTheme.blackTextStyle.copyWith(
+                  fontSize: 20,
+                  fontWeight: AppTheme.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Enter the profile user ID to attach it to this account.',
+                style: AppTheme.greyTextStyle.copyWith(fontSize: 13),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _profileIdController,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.done,
+                decoration: const InputDecoration(
+                  labelText: 'Profile user ID',
+                  border: OutlineInputBorder(),
+                ),
+                onSubmitted: (_) => _submit(),
+              ),
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _submit,
+                  child: const Text('Link profile'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _submit() {
+    final id = int.tryParse(_profileIdController.text.trim()) ?? 0;
+    if (id <= 0) return;
+    Navigator.pop(context, id);
+  }
+}
+
 class _CreateProfileSheet extends StatefulWidget {
   const _CreateProfileSheet();
 
@@ -642,7 +847,7 @@ class _CreateProfileSheetState extends State<_CreateProfileSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Create profile',
+                'Add another account',
                 style: AppTheme.blackTextStyle.copyWith(
                   fontSize: 20,
                   fontWeight: AppTheme.bold,
@@ -653,7 +858,7 @@ class _CreateProfileSheetState extends State<_CreateProfileSheet> {
                 controller: _nameController,
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
-                  labelText: 'Profile name',
+                  labelText: 'Account name',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -662,7 +867,7 @@ class _CreateProfileSheetState extends State<_CreateProfileSheet> {
                 controller: _usernameController,
                 textInputAction: TextInputAction.done,
                 decoration: const InputDecoration(
-                  labelText: 'Username',
+                  labelText: 'Account username',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -695,7 +900,7 @@ class _CreateProfileSheetState extends State<_CreateProfileSheet> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: _submit,
-                  child: const Text('Create and switch'),
+                  child: const Text('Add account'),
                 ),
               ),
             ],

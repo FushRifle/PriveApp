@@ -8,6 +8,7 @@ import 'package:clique/bloc/profile/profile_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/models/profile_view.dart';
+import 'package:clique/ui/pages/main/profile/account_switch_page.dart';
 import 'package:clique/ui/widgets/profile/profile_widgets.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -75,8 +76,26 @@ class _ProfilePageState extends State<ProfilePage>
     _loadProfile();
   }
 
-  void _openAccountSwitcher() {
-    Navigator.pushNamed(context, NamedRoutes.accountSwitchScreen);
+  Future<void> _openAccountSwitcher() async {
+    final switched = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: AppColors.transparent,
+      builder: (_) => MultiBlocProvider(
+        providers: [
+          BlocProvider.value(value: context.read<UserBloc>()),
+          BlocProvider.value(value: context.read<ProfileBloc>()),
+        ],
+        child: const FractionallySizedBox(
+          heightFactor: 0.92,
+          child: AccountSwitchPage(isSheet: true),
+        ),
+      ),
+    );
+    if (switched == true && mounted) {
+      _reloadProfile();
+    }
   }
 
   void _handleTabChanged() {

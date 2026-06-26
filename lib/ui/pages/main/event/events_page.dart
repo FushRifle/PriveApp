@@ -94,7 +94,7 @@ class _EventsPageState extends State<EventsPage>
                     onActionTap: _openCreateEvent,
                   ),
                 ),
-                
+
                 // Search & Filters
                 SliverToBoxAdapter(
                   child: Padding(
@@ -107,7 +107,7 @@ class _EventsPageState extends State<EventsPage>
                     ),
                   ),
                 ),
-                
+
                 // Featured Section Label
                 if (!isEmpty)
                   SliverToBoxAdapter(
@@ -121,7 +121,7 @@ class _EventsPageState extends State<EventsPage>
                       ),
                     ),
                   ),
-                
+
                 // Background Update Indicator
                 if (state.status == EventStatus.loading &&
                     state.events.isNotEmpty)
@@ -131,7 +131,7 @@ class _EventsPageState extends State<EventsPage>
                       child: const _BackgroundUpdatePill(),
                     ),
                   ),
-                
+
                 // Loading State
                 if (isInitialLoading)
                   const SliverToBoxAdapter(
@@ -140,7 +140,7 @@ class _EventsPageState extends State<EventsPage>
                       child: EventsLoadingShimmer(),
                     ),
                   )
-                
+
                 // Empty State
                 else if (isEmpty)
                   SliverToBoxAdapter(
@@ -149,7 +149,7 @@ class _EventsPageState extends State<EventsPage>
                       child: EventsEmptyState(onCreate: _openCreateEvent),
                     ),
                   )
-                
+
                 // Events Content
                 else ...[
                   // Featured Event Card
@@ -188,7 +188,7 @@ class _EventsPageState extends State<EventsPage>
                       ),
                     ),
                   ),
-                  
+
                   // More Events Section
                   SliverToBoxAdapter(
                     child: Padding(
@@ -201,7 +201,7 @@ class _EventsPageState extends State<EventsPage>
                       ),
                     ),
                   ),
-                  
+
                   // Remaining Events List
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
@@ -243,7 +243,7 @@ class _EventsPageState extends State<EventsPage>
                           ),
                   ),
                 ],
-                
+
                 // Pagination Loader
                 if (!isInitialLoading &&
                     !isEmpty &&
@@ -264,7 +264,7 @@ class _EventsPageState extends State<EventsPage>
                       ),
                     ),
                   ),
-                  
+
                 // Bottom Safe Area
                 const SliverToBoxAdapter(
                   child: SizedBox(height: 100),
@@ -284,8 +284,9 @@ class _EventsPageState extends State<EventsPage>
         SnackBar(
           content: Row(
             children: [
-              const Icon(Icons.error_outline_rounded, 
-                color: AppColors.error, 
+              const Icon(
+                Icons.error_outline_rounded,
+                color: AppColors.error,
                 size: 20,
               ),
               const SizedBox(width: 12),
@@ -293,7 +294,8 @@ class _EventsPageState extends State<EventsPage>
             ],
           ),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
           backgroundColor: AppColors.card,
         ),
@@ -307,8 +309,9 @@ class _EventsPageState extends State<EventsPage>
         SnackBar(
           content: const Row(
             children: [
-              Icon(Icons.check_circle_outline_rounded, 
-                color: AppColors.success, 
+              Icon(
+                Icons.check_circle_outline_rounded,
+                color: AppColors.success,
                 size: 20,
               ),
               SizedBox(width: 12),
@@ -316,7 +319,8 @@ class _EventsPageState extends State<EventsPage>
             ],
           ),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
           backgroundColor: AppColors.card,
           duration: const Duration(seconds: 2),
@@ -391,15 +395,36 @@ class _EventsPageState extends State<EventsPage>
   }
 
   bool _isOwner(EventModel event) {
-    final user = context.read<AuthBloc>().state.user;
-    final rawId = user?['id'];
-    final currentUserId = rawId is int
-        ? rawId
-        : rawId is String
-            ? int.tryParse(rawId)
-            : null;
+    final currentUserId =
+        _readCurrentUserId(context.read<AuthBloc>().state.user);
     final hostId = event.hostId != 0 ? event.hostId : event.host?.id;
-    return currentUserId != null && hostId != null && currentUserId == hostId;
+    return currentUserId != null &&
+        hostId != null &&
+        hostId > 0 &&
+        currentUserId == hostId;
+  }
+
+  int? _readCurrentUserId(Map<String, dynamic>? user) {
+    if (user == null) return null;
+    final candidates = [
+      user['id'],
+      user['userId'],
+      user['user_id'],
+      user['profileUserId'],
+      user['profile_user_id'],
+      if (user['user'] is Map) (user['user'] as Map)['id'],
+      if (user['profile'] is Map) (user['profile'] as Map)['userId'],
+      if (user['profile'] is Map) (user['profile'] as Map)['user_id'],
+    ];
+    for (final value in candidates) {
+      final id = value is int
+          ? value
+          : value is num
+              ? value.toInt()
+              : int.tryParse(value?.toString() ?? '');
+      if (id != null && id > 0) return id;
+    }
+    return null;
   }
 }
 

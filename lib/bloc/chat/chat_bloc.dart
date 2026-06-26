@@ -328,6 +328,30 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
+  List<MessageModel> _visibleMessagesForConversation(int conversationId) {
+    return state.activeConversationId == conversationId
+        ? state.messages
+            .where((m) => m.conversationId == conversationId)
+            .toList()
+        : const <MessageModel>[];
+  }
+
+  Future<List<MessageModel>> _durableMessagesForConversation(
+    int conversationId, {
+    List<MessageModel> extra = const <MessageModel>[],
+  }) async {
+    final inMemory = _messageCache[conversationId] ?? const <MessageModel>[];
+    final visible = _visibleMessagesForConversation(conversationId);
+    final persisted = await _loadPersistedMessages(conversationId);
+
+    return _mergeMessages([
+      ...extra,
+      ...visible,
+      ...inMemory,
+      ...persisted,
+    ]);
+  }
+
   List<MessageModel> mergeMessagesForTesting(List<MessageModel> messages) {
     return _mergeMessages(messages);
   }
@@ -446,11 +470,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     _loadingConversations.add(cacheKey);
 
     try {
-      final inMemoryMessages = _messageCache[cacheKey];
-      final cachedMessages =
-          inMemoryMessages != null && inMemoryMessages.isNotEmpty
-              ? inMemoryMessages
-              : await _loadPersistedMessages(cacheKey);
+      final cachedMessages = await _durableMessagesForConversation(cacheKey);
 
       if (cachedMessages.isNotEmpty) {
         _messageCache[cacheKey] = cachedMessages;
@@ -493,11 +513,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       if (event.page == 1) {
         updatedMessages = [
           ...fetchedMessages,
-          ...cachedMessages,
+          ...await _durableMessagesForConversation(cacheKey),
         ];
       } else {
         updatedMessages = [
-          ...state.messages,
+          ...await _durableMessagesForConversation(cacheKey),
           ...fetchedMessages,
         ];
       }
@@ -672,9 +692,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       _chatService.clearMessagesCache(event.conversationId);
       add(RefreshConversations());
     } catch (_) {
-      _messageCache[event.conversationId] = state.messages;
-      await _persistMessages(event.conversationId, state.messages);
+      final durableMessages =
+          await _durableMessagesForConversation(event.conversationId);
+      _messageCache[event.conversationId] = durableMessages;
+      await _persistMessages(event.conversationId, durableMessages);
       emit(state.copyWith(
+        messages: durableMessages,
         messagesStatus: ChatStatus.success,
         clearError: true,
       ));

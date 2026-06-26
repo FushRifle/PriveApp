@@ -295,8 +295,7 @@ class _SecurityGateState extends State<_SecurityGate>
           unawaited(_bootstrap(forcePrompt: true));
         }
       }
-    } else if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
+    } else if (state == AppLifecycleState.paused) {
       _backgroundedAt ??= DateTime.now();
     }
   }

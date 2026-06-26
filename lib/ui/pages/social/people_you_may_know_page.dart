@@ -129,26 +129,41 @@ class _PeopleYouMayKnowPageState extends State<PeopleYouMayKnowPage> {
           return RefreshIndicator(
             color: AppColors.primary,
             onRefresh: _refresh,
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
+            child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics(),
               ),
-              itemCount: suggestions.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (context, index) {
-                final person = suggestions[index];
-                final followed = _following.contains(person.id);
-                return _SuggestionTile(
-                  person: person,
-                  followed: followed,
-                  onOpen: () => _openProfile(person.id),
-                  onFollow: () {
-                    HapticFeedback.lightImpact();
-                    _follow(person);
-                  },
-                );
-              },
+              slivers: [
+                SliverToBoxAdapter(
+                  child: _DiscoveryHeader(count: suggestions.length),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+                  sliver: SliverGrid.builder(
+                    gridDelegate:
+                        const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 240,
+                      mainAxisExtent: 214,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                    ),
+                    itemCount: suggestions.length,
+                    itemBuilder: (context, index) {
+                      final person = suggestions[index];
+                      final followed = _following.contains(person.id);
+                      return _SuggestionTile(
+                        person: person,
+                        followed: followed,
+                        onOpen: () => _openProfile(person.id),
+                        onFollow: () {
+                          HapticFeedback.lightImpact();
+                          _follow(person);
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           );
         },
@@ -160,6 +175,65 @@ class _PeopleYouMayKnowPageState extends State<PeopleYouMayKnowPage> {
     if (value is int) return value;
     if (value is num) return value.toInt();
     return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+}
+
+class _DiscoveryHeader extends StatelessWidget {
+  final int count;
+
+  const _DiscoveryHeader({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.cardColor,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.cardBorderColor),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.group_add_rounded,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$count suggested ${count == 1 ? 'person' : 'people'}',
+                    style: AppTheme.blackTextStyle.copyWith(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Follow people to tune your feed and conversations.',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -237,48 +311,44 @@ class _SuggestionTile extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: AppColors.cardBorderColor),
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _Avatar(person: person),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      person.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTheme.blackTextStyle.copyWith(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    Text(
-                      person.username.isEmpty
-                          ? 'View profile'
-                          : '@${person.username}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
-                    ),
-                    if (person.mutualConnections > 0)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          '${person.mutualConnections} mutual connections',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTheme.greyTextStyle.copyWith(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                  ],
+              Center(child: _Avatar(person: person)),
+              const SizedBox(height: 12),
+              Text(
+                person.name,
+                maxLines: 1,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                style: AppTheme.blackTextStyle.copyWith(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(height: 3),
+              Text(
+                person.username.isEmpty
+                    ? 'View profile'
+                    : '@${person.username}',
+                maxLines: 1,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
+              ),
+              const Spacer(),
+              if (person.mutualConnections > 0)
+                Text(
+                  '${person.mutualConnections} mutual',
+                  maxLines: 1,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTheme.greyTextStyle.copyWith(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              const SizedBox(height: 10),
               FilledButton(
                 onPressed: followed ? null : onFollow,
                 style: FilledButton.styleFrom(
@@ -286,7 +356,7 @@ class _SuggestionTile extends StatelessWidget {
                   foregroundColor: AppColors.white,
                   disabledBackgroundColor: AppColors.border,
                   disabledForegroundColor: AppColors.textHint,
-                  minimumSize: const Size(88, 38),
+                  minimumSize: const Size(double.infinity, 40),
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

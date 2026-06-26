@@ -18,15 +18,36 @@ class EventDetailsPage extends StatelessWidget {
   });
 
   bool _isOwner(BuildContext context) {
-    final user = context.read<AuthBloc>().state.user;
-    final rawId = user?['id'];
-    final currentUserId = rawId is int
-        ? rawId
-        : rawId is String
-            ? int.tryParse(rawId)
-            : null;
+    final currentUserId =
+        _readCurrentUserId(context.read<AuthBloc>().state.user);
     final hostId = event.hostId != 0 ? event.hostId : event.host?.id;
-    return currentUserId != null && hostId != null && currentUserId == hostId;
+    return currentUserId != null &&
+        hostId != null &&
+        hostId > 0 &&
+        currentUserId == hostId;
+  }
+
+  int? _readCurrentUserId(Map<String, dynamic>? user) {
+    if (user == null) return null;
+    final candidates = [
+      user['id'],
+      user['userId'],
+      user['user_id'],
+      user['profileUserId'],
+      user['profile_user_id'],
+      if (user['user'] is Map) (user['user'] as Map)['id'],
+      if (user['profile'] is Map) (user['profile'] as Map)['userId'],
+      if (user['profile'] is Map) (user['profile'] as Map)['user_id'],
+    ];
+    for (final value in candidates) {
+      final id = value is int
+          ? value
+          : value is num
+              ? value.toInt()
+              : int.tryParse(value?.toString() ?? '');
+      if (id != null && id > 0) return id;
+    }
+    return null;
   }
 
   @override

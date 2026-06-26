@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
@@ -34,7 +33,6 @@ class _MainWrapperState extends State<MainWrapper>
   int _currentIndex = 0;
   bool _isOpeningCreatePost = false;
   final Set<int> _visitedTabs = {0};
-  final GlobalKey<CurvedNavigationBarState> _bottomNavigationKey = GlobalKey();
 
   // Navigation bar index mapping:
   // nav[0] -> page[0] (Home)
@@ -220,7 +218,7 @@ class _MainWrapperState extends State<MainWrapper>
                   right: 12,
                   bottom: 12,
                   child: Stack(
-                    clipBehavior: Clip.none, // allow the button to overflow
+                    clipBehavior: Clip.none,
                     alignment: Alignment.topCenter,
                     children: [
                       // Blurred navigation bar background (no button inside)
@@ -241,53 +239,51 @@ class _MainWrapperState extends State<MainWrapper>
                                 ),
                               ],
                             ),
-                            padding: EdgeInsets.only(
-                              bottom: _getBottomPadding(context),
-                              top: 8,
+                            padding: EdgeInsets.fromLTRB(
+                              10,
+                              8,
+                              10,
+                              _getBottomPadding(context),
                             ),
-                            child: CurvedNavigationBar(
-                              key: _bottomNavigationKey,
-                              index: _navBarIndex,
+                            child: SizedBox(
                               height: 60,
-                              color: Colors.transparent,
-                              buttonBackgroundColor: Colors.transparent,
-                              backgroundColor: Colors.transparent,
-                              animationCurve: Curves.easeInOut,
-                              animationDuration:
-                                  const Duration(milliseconds: 600),
-                              letIndexChange: (index) => index != 2,
-                              items: [
-                                _buildNavItem(
-                                  icon: Icons.home_rounded,
-                                  isSelected: _navBarIndex == 0,
-                                  unselectedColor: unselectedColor,
-                                ),
-                                _buildNavItem(
-                                  icon: Icons.play_circle_fill_rounded,
-                                  isSelected: _navBarIndex == 1,
-                                  unselectedColor: unselectedColor,
-                                ),
-                                const SizedBox.shrink(),
-                                _buildNavItem(
-                                  icon: Icons.date_range_rounded,
-                                  isSelected: _navBarIndex == 3,
-                                  unselectedColor: unselectedColor,
-                                ),
-                                _buildNavItem(
-                                  icon: Icons.send_rounded,
-                                  isSelected: _navBarIndex == 4,
-                                  unselectedColor: unselectedColor,
-                                ),
-                              ],
-                              onTap: _onNavBarTap,
+                              child: Row(
+                                children: [
+                                  _buildNavItem(
+                                    icon: Icons.home_rounded,
+                                    navIndex: 0,
+                                    isSelected: _navBarIndex == 0,
+                                    unselectedColor: unselectedColor,
+                                  ),
+                                  _buildNavItem(
+                                    icon: Icons.play_circle_fill_rounded,
+                                    navIndex: 1,
+                                    isSelected: _navBarIndex == 1,
+                                    unselectedColor: unselectedColor,
+                                  ),
+                                  const Expanded(child: SizedBox.shrink()),
+                                  _buildNavItem(
+                                    icon: Icons.date_range_rounded,
+                                    navIndex: 3,
+                                    isSelected: _navBarIndex == 3,
+                                    unselectedColor: unselectedColor,
+                                  ),
+                                  _buildNavItem(
+                                    icon: Icons.send_rounded,
+                                    navIndex: 4,
+                                    isSelected: _navBarIndex == 4,
+                                    unselectedColor: unselectedColor,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
                       // Create button – lives outside the clip, can float above the bar
                       AnimatedPositioned(
-                        duration: const Duration(milliseconds: 600),
-                        curve: Curves.easeInOutCubic,
+                        duration: const Duration(milliseconds: 260),
+                        curve: Curves.easeOutCubic,
                         top: _currentIndex == 0 ? -30 : 0,
                         child: _CreateButton(
                           pulseAnimation: _pulseAnimation,
@@ -307,55 +303,57 @@ class _MainWrapperState extends State<MainWrapper>
 
   Widget _buildNavItem({
     required IconData icon,
+    required int navIndex,
     required bool isSelected,
     required Color unselectedColor,
   }) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeInOut,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 400),
-            curve: Curves.easeInOut,
-            width: isSelected ? 32 : 0,
-            height: 3,
-          ),
-          const SizedBox(height: 6),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 400),
-            curve: Curves.easeInOut,
-            width: isSelected ? 44 : 36,
-            height: isSelected ? 44 : 36,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isSelected
-                  ? AppColors.border.withOpacity(0.1)
-                  : Colors.transparent,
-              border: Border.all(
-                color: isSelected
-                    ? AppColors.border.withOpacity(0.3)
-                    : Colors.transparent,
-                width: isSelected ? 1.5 : 0,
+    return Expanded(
+      child: Center(
+        child: SizedBox(
+          width: 52,
+          height: 52,
+          child: Material(
+            color: Colors.transparent,
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: () => _onNavBarTap(navIndex),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                width: 44,
+                height: 44,
+                margin: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isSelected
+                      ? AppColors.border.withOpacity(0.1)
+                      : Colors.transparent,
+                  border: Border.all(
+                    color: isSelected
+                        ? AppColors.border.withOpacity(0.3)
+                        : Colors.transparent,
+                    width: isSelected ? 1.5 : 0,
+                  ),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: AppColors.primary.withOpacity(0.15),
+                            blurRadius: 7,
+                            spreadRadius: 0,
+                          ),
+                        ]
+                      : [],
+                ),
+                child: Icon(
+                  icon,
+                  size: isSelected ? 28 : 24,
+                  color: isSelected ? AppColors.primary : unselectedColor,
+                ),
               ),
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: AppColors.primary.withOpacity(0.15),
-                        blurRadius: 7,
-                        spreadRadius: 0,
-                      ),
-                    ]
-                  : [],
-            ),
-            child: Icon(
-              icon,
-              size: isSelected ? 30 : 25,
-              color: isSelected ? AppColors.primary : unselectedColor,
             ),
           ),
-        ],
+        ),
       ),
     );
   }

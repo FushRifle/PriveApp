@@ -329,9 +329,9 @@ class _LockScreenPageState extends State<LockScreenPage> {
 
   String _timeoutLabel(int seconds) {
     if (seconds == 0) return 'Only after app restart';
-    if (seconds < 60) return 'After $seconds seconds';
+    if (seconds < 60) return 'After $seconds seconds inactive';
     final minutes = seconds ~/ 60;
-    return 'After $minutes ${minutes == 1 ? 'minute' : 'minutes'}';
+    return 'After $minutes ${minutes == 1 ? 'minute' : 'minutes'} inactive';
   }
 
   Future<void> _showTimeoutPicker() async {
@@ -343,7 +343,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
           children: [
             const ListTile(
               title: Text('Require unlock'),
-              subtitle: Text('Choose when Clique locks after leaving the app'),
+              subtitle: Text('Choose how long the app can stay inactive'),
             ),
             for (final seconds in const [0, 15, 60, 300, 900])
               RadioListTile<int>(
@@ -780,7 +780,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
                     vertical: 8,
                   ),
                   leading: const Icon(Icons.timer_outlined),
-                  title: const Text('Lock timer'),
+                  title: const Text('Inactivity lock'),
                   subtitle: Text(_timeoutLabel(_timeoutSeconds)),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: _showTimeoutPicker,
@@ -822,7 +822,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: Text(
-                      'App lock protects a fresh app start. If you choose a timer, it also locks after Clique stays in the background for that long.',
+                      'App lock protects a fresh app start. Inactivity options only count time after Clique is sent to the background.',
                       style: TextStyle(
                         fontSize: 13,
                         height: 1.4,

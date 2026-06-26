@@ -47,7 +47,11 @@ class _RegisterPageState extends State<RegisterPage> {
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state.status == AuthStatus.authenticated) {
-            Navigator.popUntil(context, (route) => route.isFirst);
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              NamedRoutes.homeScreen,
+              (route) => false,
+            );
           } else if (state.status == AuthStatus.verificationRequired) {
             _showSnack(
               state.error ?? 'Check your email to verify your account.',

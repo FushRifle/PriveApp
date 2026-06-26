@@ -741,10 +741,12 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
       final createdPost = await _waitForPostCreation(feedBloc, initialPostIds);
       if (createdPost == null) {
-        if (mounted) setState(() {
-          _isSubmitting = false;
-          _uploadProgress = 0.0;
-        });
+        if (mounted) {
+          setState(() {
+            _isSubmitting = false;
+            _uploadProgress = 0.0;
+          });
+        }
         return;
       }
 
@@ -756,10 +758,12 @@ class _CreatePostPageState extends State<CreatePostPage> {
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       _showSnackBar('Error: $e', isError: true);
-      if (mounted) setState(() {
-        _isSubmitting = false;
-        _uploadProgress = 0.0;
-      });
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+          _uploadProgress = 0.0;
+        });
+      }
     }
   }
 

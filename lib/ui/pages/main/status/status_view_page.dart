@@ -421,10 +421,13 @@ class _StatusViewPageState extends State<StatusViewPage>
         width: double.infinity,
         height: double.infinity,
         color: AppColors.black,
-        child: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: EdgeInsets.only(bottom: hasText ? 138 : 0),
                 child: hasImage
                     ? Image(
                         image: _getImageProvider(mediaUrl),
@@ -446,21 +449,23 @@ class _StatusViewPageState extends State<StatusViewPage>
                         },
                       ),
               ),
-              if (hasText)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                  child: _StoryTextBubble(
-                    story: story,
-                    expanded: _expandedStoryTextIds.contains(story.id),
-                    maxLines: 3,
-                    onToggle: () => _toggleStoryText(story.id),
-                    style: _getTextStyle(story, hasMedia: true).copyWith(
-                      shadows: const [],
-                    ),
+            ),
+            if (hasText)
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: MediaQuery.paddingOf(context).bottom + 96,
+                child: _StoryTextBubble(
+                  story: story,
+                  expanded: _expandedStoryTextIds.contains(story.id),
+                  maxLines: 3,
+                  onToggle: () => _toggleStoryText(story.id),
+                  style: _getTextStyle(story, hasMedia: true).copyWith(
+                    shadows: const [],
                   ),
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
       );
     }
@@ -1104,8 +1109,7 @@ class _StatusViewPageState extends State<StatusViewPage>
                 ListTile(
                   leading: const Icon(Icons.edit_note_rounded),
                   title: const Text('Repost with caption'),
-                  subtitle: const Text(
-                      'Caption support will attach when backend accepts it'),
+                  subtitle: const Text('Add a note before sharing'),
                   onTap: () {
                     Navigator.pop(context);
                     _showRepostCaptionDialog(story);
@@ -1471,7 +1475,7 @@ class _StatusVideoPlayerState extends State<_StatusVideoPlayer> {
       await controller.initialize();
       controller.addListener(_handleControllerTick);
       await controller.setLooping(false);
-      await controller.setVolume(0);
+      await controller.setVolume(1);
       if (!mounted || _controller != controller) {
         await controller.dispose();
         return;

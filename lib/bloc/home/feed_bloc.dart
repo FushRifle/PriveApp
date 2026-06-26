@@ -435,7 +435,11 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
       return post;
     }).toList();
 
-    emit(state.copyWith(posts: updatedPosts));
+    emit(state.copyWith(
+      posts: updatedPosts,
+      isReposting: true,
+      clearGeneralError: true,
+    ));
 
     try {
       final repostedPost = await _feedService.repost(
@@ -1037,7 +1041,8 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
 
     final hasSourcePost = state.posts.any((post) => post.id == event.postId);
     if (hasSourcePost) {
-      final sourcePost = state.posts.firstWhere((post) => post.id == event.postId);
+      final sourcePost =
+          state.posts.firstWhere((post) => post.id == event.postId);
       if (sourcePost.user.id != event.ownerId) {
         emit(
           state.copyWith(
