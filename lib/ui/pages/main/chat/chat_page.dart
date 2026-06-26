@@ -592,7 +592,7 @@ class _ChatPageState extends State<ChatPage>
             width: MediaQuery.sizeOf(context).width * (mine ? 0.58 : 0.66),
             height: index == 1 ? 58 : 42,
             decoration: BoxDecoration(
-              color: AppColors.card.withOpacity(0.72),
+              color: AppColors.cardColor.withOpacity(0.72),
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: AppColors.border.withOpacity(0.45)),
             ),

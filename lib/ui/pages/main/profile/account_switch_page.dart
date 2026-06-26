@@ -296,12 +296,12 @@ class _AccountSwitchPageState extends State<AccountSwitchPage> {
           ? null
           : AppBar(
               backgroundColor: AppColors.transparent,
-              elevation: 0,
+              elevation: 1,
               centerTitle: true,
               title: Text(
                 'Switch Account',
                 style: TextStyle(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                   color: isDark ? AppColors.white : AppColors.black,
                 ),
               ),
@@ -348,7 +348,7 @@ class _AccountSwitchPageState extends State<AccountSwitchPage> {
                         style: AppTheme.blackTextStyle.copyWith(
                           color: isDark ? AppColors.white : AppColors.black,
                           fontWeight: AppTheme.bold,
-                          fontSize: 20,
+                          fontSize: 15,
                         ),
                       ),
                     ),
@@ -433,7 +433,7 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkCard : AppColors.card,
         borderRadius: BorderRadius.circular(20),
@@ -444,8 +444,8 @@ class _Header extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 54,
-            height: 54,
+            width: 34,
+            height: 34,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.primary.withOpacity(0.1),
@@ -464,9 +464,9 @@ class _Header extends StatelessWidget {
                 Text(
                   'Linked accounts',
                   style: AppTheme.blackTextStyle.copyWith(
-                    color: isDark ? AppColors.white : AppColors.black,
+                    color:  AppColors.text,
                     fontWeight: AppTheme.bold,
-                    fontSize: 18,
+                    fontSize: 15,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -520,7 +520,7 @@ class _ProfileCard extends StatelessWidget {
       onTap: isActive || isSwitching ? null : onTap,
       borderRadius: BorderRadius.circular(18),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: isActive
               ? AppColors.primary.withOpacity(0.08)
@@ -754,7 +754,7 @@ class _LinkProfileSheetState extends State<_LinkProfileSheet> {
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 26),
         decoration: BoxDecoration(
           color: AppColors.card,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),

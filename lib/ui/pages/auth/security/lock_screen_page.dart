@@ -435,7 +435,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
             child: Icon(
               Icons.arrow_back_ios_new,
               color: isDarkMode ? AppColors.primary : AppColors.primary,
-              size: 18,
+              size: 24,
             ),
           ),
           onPressed: () => Navigator.pop(context),
@@ -447,7 +447,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
           children: [
             if (_isLoading)
               const Padding(
-                padding: EdgeInsets.only(top: 48, bottom: 24),
+                padding: EdgeInsets.only(top: 24, bottom: 24),
                 child: CircularProgressIndicator(),
               ),
 
@@ -462,19 +462,12 @@ class _LockScreenPageState extends State<LockScreenPage> {
                       Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppColors.primary.withOpacity(0.2),
-                              AppColors.primary.withOpacity(0.05),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
+                          color: AppColors.secondary,
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           Icons.security_rounded,
-                          color: AppColors.primary,
+                          color: AppColors.white,
                           size: 55,
                         ),
                       ),
@@ -502,15 +495,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
                               ),
                             ],
                           ),
-                          child: Text(
-                            badge,
-                            style: TextStyle(
-                              color: AppColors.primary,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
+                        
                         ),
                       ),
                     ],
@@ -521,7 +506,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: isDarkMode ? AppColors.white : AppColors.black,
+                      color: AppColors.text,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -531,9 +516,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
                         : 'Lock profile #$badge with your preferred method',
                     style: TextStyle(
                       fontSize: 14,
-                      color: isDarkMode
-                          ? AppColors.greyTextColor
-                          : AppColors.lightColor,
+                      color: AppColors.text,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -668,10 +651,10 @@ class _LockScreenPageState extends State<LockScreenPage> {
 
             // PIN Section
             Container(
-              margin: const EdgeInsets.only(bottom: 20),
+              margin: const EdgeInsets.only(bottom: 20, top: 20),
               decoration: BoxDecoration(
                 color: isDarkMode ? AppColors.darkCard : Colors.white,
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(26),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.05),
@@ -681,20 +664,15 @@ class _LockScreenPageState extends State<LockScreenPage> {
                 ],
               ),
               child: Padding(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(25),
                 child: Column(
                   children: [
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                AppColors.primary,
-                                AppColors.primary.withOpacity(0.7),
-                              ],
-                            ),
+                            color: AppColors.secondary,
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: const Icon(
@@ -712,17 +690,8 @@ class _LockScreenPageState extends State<LockScreenPage> {
                                 'PIN Lock',
                                 style: TextStyle(
                                   fontSize: 18,
+                                  
                                   fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Secure your app with a numeric PIN',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: isDarkMode
-                                      ? AppColors.greyTextColor
-                                      : AppColors.lightColor,
                                 ),
                               ),
                             ],
@@ -791,17 +760,10 @@ class _LockScreenPageState extends State<LockScreenPage> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.primary.withOpacity(0.15),
-                    AppColors.primary.withOpacity(0.05),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+               color: AppColors.card,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: AppColors.primary.withOpacity(0.2),
+                  color: AppColors.border.withOpacity(0.2),
                   width: 1,
                 ),
               ),
@@ -810,12 +772,12 @@ class _LockScreenPageState extends State<LockScreenPage> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.2),
+                      color: AppColors.secondary.withOpacity(0.8),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.info_outline,
-                      color: AppColors.primary,
+                      color: AppColors.white,
                       size: 20,
                     ),
                   ),
@@ -824,11 +786,9 @@ class _LockScreenPageState extends State<LockScreenPage> {
                     child: Text(
                       'App lock protects a fresh app start. Inactivity options only count time after Clique is sent to the background.',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 14,
                         height: 1.4,
-                        color: isDarkMode
-                            ? AppColors.greyTextColor
-                            : AppColors.lightColor,
+                        color: AppColors.text
                       ),
                     ),
                   ),

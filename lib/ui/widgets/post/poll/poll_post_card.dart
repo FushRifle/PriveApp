@@ -170,7 +170,7 @@ class _PollPostBodyState extends State<PollPostBody> {
         width: double.infinity,
         padding: EdgeInsets.all(widget.isDetailView ? 18 : 16),
         decoration: BoxDecoration(
-          color: AppColors.card, // solid card color for cleaner look
+          color: AppColors.card,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: AppColors.cardBorderColor),
           boxShadow: [
@@ -269,8 +269,8 @@ class _PollPostBodyState extends State<PollPostBody> {
           question.isEmpty ? 'Poll question' : question,
           style: AppTheme.blackTextStyle.copyWith(
             color: AppColors.text,
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
             height: 1.3,
           ),
         ),

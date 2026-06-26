@@ -5,13 +5,13 @@ import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
+import 'package:clique/core/services/chat/chat_service.dart';
 import 'package:clique/ui/pages/main/chat/archived_chat_page.dart';
 import 'package:clique/ui/pages/main/chat/chat_page.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:clique/core/services/chat/chat_service.dart';
-
 import 'package:clique/ui/widgets/common/app_page_header.dart';
-import 'package:clique/ui/widgets/chat/inbox_loading_shimmer.dart';
+import 'package:clique/ui/widgets/chat/inbox/inbox_loading_shimmer.dart';
+import 'package:clique/ui/widgets/chat/inbox/inbox_message_item.dart';
+import 'package:clique/ui/widgets/chat/inbox/inbox_toolbar.dart';
 
 class InboxPage extends StatefulWidget {
   const InboxPage({super.key});
@@ -24,7 +24,7 @@ class _InboxPageState extends State<InboxPage> {
   final _refreshIndicatorKey = GlobalKey<RefreshIndicatorState>();
   final TextEditingController _searchController = TextEditingController();
   final ChatService _chatService = ChatService();
-  _InboxFilter _filter = _InboxFilter.all;
+  InboxFilter _filter = InboxFilter.all;
   String _query = '';
 
   @override
@@ -71,8 +71,8 @@ class _InboxPageState extends State<InboxPage> {
       body: Column(
         children: [
           AppPageHeader(
-            title: 'Messages',
-            subtitle: 'Your conversations',
+            title: 'Inbox',
+            subtitle: 'Chat With Your Clique.',
             leadingIcon: Icons.message_outlined,
             actionIcon: Icons.archive_rounded,
             onActionTap: () {
@@ -90,7 +90,7 @@ class _InboxPageState extends State<InboxPage> {
               });
             },
           ),
-          _InboxToolbar(
+          InboxToolbar(
             controller: _searchController,
             filter: _filter,
             onFilterChanged: (filter) {
@@ -135,10 +135,7 @@ class _InboxPageState extends State<InboxPage> {
                     return _buildFilteredEmptyState();
                   }
 
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: _buildMessageList(context, conversations),
-                  );
+                  return _buildMessageList(conversations);
                 },
               ),
             ),
@@ -160,32 +157,32 @@ class _InboxPageState extends State<InboxPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 88,
-                height: 88,
+                width: 72,
+                height: 72,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(24),
+                  color: AppColors.primary.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Icon(
                   Icons.chat_bubble_outline_rounded,
-                  size: 40,
-                  color: AppColors.primary.withOpacity(0.6),
+                  size: 32,
+                  color: AppColors.primary.withOpacity(0.5),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               Text(
                 'No messages yet',
                 style: AppTheme.blackTextStyle.copyWith(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 'Start a conversation with someone\nto see your messages here',
                 style: AppTheme.greyTextStyle.copyWith(
-                  fontSize: 14,
-                  height: 1.5,
+                  fontSize: 13,
+                  height: 1.4,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -204,48 +201,47 @@ class _InboxPageState extends State<InboxPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 80,
-              height: 80,
+              width: 72,
+              height: 72,
               decoration: BoxDecoration(
-                color: AppColors.redColor.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(24),
+                color: AppColors.redColor.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(20),
               ),
               child: Icon(
                 Icons.error_outline_rounded,
-                size: 36,
-                color: AppColors.redColor.withOpacity(0.6),
+                size: 32,
+                color: AppColors.redColor.withOpacity(0.5),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             Text(
               'Something went wrong',
               style: AppTheme.blackTextStyle.copyWith(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               error ?? 'Failed to load conversations',
               style: AppTheme.greyTextStyle.copyWith(
-                fontSize: 14,
-                height: 1.5,
+                fontSize: 13,
+                height: 1.4,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
+            const SizedBox(height: 20),
+            OutlinedButton.icon(
               onPressed: _loadConversations,
               icon: const Icon(Icons.refresh_rounded, size: 18),
               label: const Text('Try Again'),
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(140, 46),
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.white,
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(140, 42),
+                foregroundColor: AppColors.primary,
+                side: const BorderSide(color: AppColors.primary),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                elevation: 0,
               ),
             ),
           ],
@@ -254,8 +250,57 @@ class _InboxPageState extends State<InboxPage> {
     );
   }
 
-  List<_ChatMessage> _getDisplayConversations(ChatState state) {
-    final conversations = <_ChatMessage>[];
+  Widget _buildFilteredEmptyState() {
+    final label = _query.isNotEmpty
+        ? 'No conversations match your search'
+        : switch (_filter) {
+            InboxFilter.unread => 'No unread conversations',
+            InboxFilter.pinned => 'No pinned conversations',
+            InboxFilter.all => 'No conversations',
+          };
+    final subtitle = _query.isNotEmpty
+        ? 'Try a name or message preview from another conversation.'
+        : switch (_filter) {
+            InboxFilter.unread => 'New messages will appear here.',
+            InboxFilter.pinned => 'Pin important chats to keep them close.',
+            InboxFilter.all => 'Start a conversation to see it here.',
+          };
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: BouncingScrollPhysics(),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      children: [
+        const SizedBox(height: 96),
+        Icon(
+          _query.isNotEmpty
+              ? Icons.manage_search_rounded
+              : Icons.filter_list_rounded,
+          size: 42,
+          color: AppColors.textHint,
+        ),
+        const SizedBox(height: 16),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: AppTheme.blackTextStyle.copyWith(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          subtitle,
+          textAlign: TextAlign.center,
+          style: AppTheme.greyTextStyle.copyWith(fontSize: 13, height: 1.4),
+        ),
+      ],
+    );
+  }
+
+  List<ChatMessage> _getDisplayConversations(ChatState state) {
+    final conversations = <ChatMessage>[];
     final ownerId = _readCurrentUserId();
     final archivedIds = _chatService.readArchivedConversationIds(
       cacheOwnerId: ownerId,
@@ -286,7 +331,7 @@ class _InboxPageState extends State<InboxPage> {
       final displayMessage = _pickDisplayMessage(conv, latestCachedMessage);
       final displayTime = _pickDisplayTime(conv, latestCachedMessage);
 
-      conversations.add(_ChatMessage(
+      conversations.add(ChatMessage(
         id: conv.id.toString(),
         userId: conv.userId,
         name: conv.name,
@@ -314,16 +359,16 @@ class _InboxPageState extends State<InboxPage> {
     return conversations;
   }
 
-  List<_ChatMessage> _applyFilters(List<_ChatMessage> conversations) {
+  List<ChatMessage> _applyFilters(List<ChatMessage> conversations) {
     return conversations.where((conversation) {
       switch (_filter) {
-        case _InboxFilter.unread:
+        case InboxFilter.unread:
           if (!conversation.isUnread) return false;
           break;
-        case _InboxFilter.pinned:
+        case InboxFilter.pinned:
           if (!conversation.isPinned) return false;
           break;
-        case _InboxFilter.all:
+        case InboxFilter.all:
           break;
       }
 
@@ -331,55 +376,6 @@ class _InboxPageState extends State<InboxPage> {
       return conversation.name.toLowerCase().contains(_query) ||
           conversation.message.toLowerCase().contains(_query);
     }).toList();
-  }
-
-  Widget _buildFilteredEmptyState() {
-    final label = _query.isNotEmpty
-        ? 'No conversations match your search'
-        : switch (_filter) {
-            _InboxFilter.unread => 'No unread conversations',
-            _InboxFilter.pinned => 'No pinned conversations',
-            _InboxFilter.all => 'No conversations',
-          };
-    final subtitle = _query.isNotEmpty
-        ? 'Try a name or message preview from another conversation.'
-        : switch (_filter) {
-            _InboxFilter.unread => 'New messages will appear here.',
-            _InboxFilter.pinned => 'Pin important chats to keep them close.',
-            _InboxFilter.all => 'Start a conversation to see it here.',
-          };
-
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(
-        parent: BouncingScrollPhysics(),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      children: [
-        const SizedBox(height: 96),
-        Icon(
-          _query.isNotEmpty
-              ? Icons.manage_search_rounded
-              : Icons.filter_list_rounded,
-          size: 54,
-          color: AppColors.textHint,
-        ),
-        const SizedBox(height: 16),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style: AppTheme.blackTextStyle.copyWith(
-            fontSize: 17,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          subtitle,
-          textAlign: TextAlign.center,
-          style: AppTheme.greyTextStyle.copyWith(fontSize: 13, height: 1.4),
-        ),
-      ],
-    );
   }
 
   Map<String, dynamic>? _latestCachedMessage(
@@ -502,338 +498,27 @@ class _InboxPageState extends State<InboxPage> {
     }
   }
 
-  Widget _buildMessageList(
-      BuildContext context, List<_ChatMessage> conversations) {
-    if (conversations.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 88,
-              height: 88,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Icon(
-                Icons.chat_bubble_outline_rounded,
-                size: 40,
-                color: AppColors.primary.withOpacity(0.6),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'No messages yet',
-              style: AppTheme.blackTextStyle.copyWith(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Start a conversation with someone\nto see your messages here',
-              style: AppTheme.greyTextStyle.copyWith(
-                fontSize: 14,
-                height: 1.5,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
-    }
-
+  Widget _buildMessageList(List<ChatMessage> conversations) {
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       physics: const BouncingScrollPhysics(),
       itemCount: conversations.length,
       itemBuilder: (context, index) {
         final message = conversations[index];
-        return _buildMessageItem(context, message);
+        return InboxMessageItem(
+          message: message,
+          onTap: () => _openChat(message),
+          onLongPress: () => _showConversationActions(message),
+          onPin: () => _togglePin(message),
+          onMute: () => _toggleMute(message),
+          onMarkUnread: () => _markUnread(message),
+          onArchive: () => _archiveConversation(message),
+        );
       },
     );
   }
 
-  Widget _buildMessageItem(BuildContext context, _ChatMessage message) {
-    final firstLetter =
-        message.name.isNotEmpty ? message.name[0].toUpperCase() : 'U';
-    final isBot = message.name.toLowerCase() == 'clique';
-
-    return Dismissible(
-      key: Key(message.id),
-      direction: DismissDirection.horizontal,
-      confirmDismiss: (direction) async {
-        if (direction == DismissDirection.startToEnd) {
-          _togglePin(message);
-          return false;
-        }
-
-        await _archiveConversation(message);
-        return true;
-      },
-      background: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              AppColors.secondary.withOpacity(0.9),
-              AppColors.secondary,
-            ],
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
-          borderRadius: BorderRadius.circular(18),
-        ),
-        alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: 24),
-        child: Icon(
-          message.isPinned ? Icons.push_pin_outlined : Icons.push_pin_rounded,
-          color: AppColors.white,
-          size: 24,
-        ),
-      ),
-      secondaryBackground: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              AppColors.primary.withOpacity(0.9),
-              AppColors.primary,
-            ],
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
-          borderRadius: BorderRadius.circular(18),
-        ),
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 24),
-        child: const Icon(
-          Icons.archive_rounded,
-          color: AppColors.white,
-          size: 24,
-        ),
-      ),
-      child: GestureDetector(
-        onTap: () {
-          _openChat(message);
-        },
-        onLongPress: () => _showConversationActions(message),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: message.isUnread
-                ? AppColors.primary.withOpacity(0.04)
-                : AppColors.card,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: message.isUnread
-                  ? AppColors.primary.withOpacity(0.12)
-                  : Colors.transparent,
-              width: 1,
-            ),
-            boxShadow: message.isUnread
-                ? [
-                    BoxShadow(
-                      color: AppColors.primary.withOpacity(0.06),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : [],
-          ),
-          child: Row(
-            children: [
-              // Avatar
-              Stack(
-                children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: message.isUnread
-                            ? AppColors.primary.withOpacity(0.3)
-                            : Colors.transparent,
-                        width: 2,
-                      ),
-                      boxShadow: [
-                        if (message.isUnread)
-                          BoxShadow(
-                            color: AppColors.primary.withOpacity(0.15),
-                            blurRadius: 8,
-                            spreadRadius: 1,
-                          ),
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: _buildAvatar(message, firstLetter),
-                    ),
-                  ),
-                  if (message.isOnline)
-                    Positioned(
-                      bottom: 2,
-                      right: 2,
-                      child: Container(
-                        width: 14,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.greenColor,
-                          border: Border.all(
-                            color: AppColors.card,
-                            width: 2.5,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.greenColor.withOpacity(0.3),
-                              blurRadius: 4,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(width: 14),
-
-              // Content
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  message.name,
-                                  style: AppTheme.blackTextStyle.copyWith(
-                                    fontWeight: message.isUnread
-                                        ? FontWeight.w800
-                                        : FontWeight.w600,
-                                    fontSize: 15,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              if (isBot) ...[
-                                const SizedBox(width: 4),
-                                Container(
-                                  padding: const EdgeInsets.all(3),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primary,
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: const Icon(
-                                    Icons.check_rounded,
-                                    size: 11,
-                                    color: AppColors.white,
-                                  ),
-                                ),
-                              ],
-                              if (message.isPinned) ...[
-                                const SizedBox(width: 6),
-                                Icon(
-                                  Icons.push_pin_rounded,
-                                  size: 14,
-                                  color: AppColors.primary.withOpacity(0.7),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          message.time,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: message.isUnread
-                                ? AppColors.primary
-                                : AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 5),
-                    Row(
-                      children: [
-                        if (message.isMuted)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 4),
-                            child: Icon(
-                              Icons.notifications_off_rounded,
-                              size: 14,
-                              color: AppColors.textSecondary.withOpacity(0.6),
-                            ),
-                          ),
-                        Expanded(
-                          child: Text(
-                            message.isTyping ? 'typing...' : message.message,
-                            style: TextStyle(
-                              fontSize: 13.5,
-                              height: 1.3,
-                              color: message.isTyping
-                                  ? AppColors.primary
-                                  : message.isUnread
-                                      ? AppColors.text
-                                      : AppColors.textSecondary,
-                              fontWeight: message.isTyping || message.isUnread
-                                  ? FontWeight.w500
-                                  : FontWeight.w400,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (message.unreadCount > 0) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 7,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              color: AppColors.primary,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.primary.withOpacity(0.3),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Text(
-                              message.unreadCount > 99
-                                  ? '99+'
-                                  : '${message.unreadCount}',
-                              style: AppTheme.whiteTextStyle.copyWith(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _openChat(_ChatMessage message) {
+  void _openChat(ChatMessage message) {
     HapticFeedback.lightImpact();
     final conversationId = int.tryParse(message.id);
     if (conversationId == null) return;
@@ -866,7 +551,7 @@ class _InboxPageState extends State<InboxPage> {
     );
   }
 
-  Future<void> _archiveConversation(_ChatMessage message) async {
+  Future<void> _archiveConversation(ChatMessage message) async {
     HapticFeedback.mediumImpact();
     final conversationId = int.tryParse(message.id);
     if (conversationId == null) return;
@@ -883,7 +568,7 @@ class _InboxPageState extends State<InboxPage> {
     );
   }
 
-  void _togglePin(_ChatMessage message) {
+  void _togglePin(ChatMessage message) {
     HapticFeedback.selectionClick();
     final conversationId = int.tryParse(message.id);
     if (conversationId == null) return;
@@ -900,7 +585,7 @@ class _InboxPageState extends State<InboxPage> {
     );
   }
 
-  void _toggleMute(_ChatMessage message) {
+  void _toggleMute(ChatMessage message) {
     HapticFeedback.selectionClick();
     final conversationId = int.tryParse(message.id);
     if (conversationId == null) return;
@@ -923,7 +608,7 @@ class _InboxPageState extends State<InboxPage> {
     );
   }
 
-  void _markUnread(_ChatMessage message) {
+  void _markUnread(ChatMessage message) {
     HapticFeedback.selectionClick();
     final conversationId = int.tryParse(message.id);
     if (conversationId == null) return;
@@ -940,7 +625,7 @@ class _InboxPageState extends State<InboxPage> {
     );
   }
 
-  void _showConversationActions(_ChatMessage message) {
+  void _showConversationActions(ChatMessage message) {
     HapticFeedback.mediumImpact();
     showModalBottomSheet<void>(
       context: context,
@@ -1020,198 +705,28 @@ class _InboxPageState extends State<InboxPage> {
             Expanded(
               child: Text(
                 message,
-                style: TextStyle(color: AppColors.text),
+                style: const TextStyle(color: AppColors.white),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
         ),
-        backgroundColor: AppColors.card,
+        backgroundColor: AppColors.text.withOpacity(0.85),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
         ),
         margin: const EdgeInsets.all(16),
-      ),
-    );
-  }
-
-  Widget _buildAvatar(_ChatMessage message, String firstLetter) {
-    if (message.name.toLowerCase() == 'clique') {
-      return Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              AppColors.primary,
-              AppColors.secondary,
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: Center(
-          child: Text(
-            'C',
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              color: AppColors.white,
-              letterSpacing: -0.5,
-            ),
-          ),
-        ),
-      );
-    }
-
-    if (message.avatar.isNotEmpty && message.avatar.startsWith('http')) {
-      return CachedNetworkImage(
-        imageUrl: message.avatar,
-        fit: BoxFit.cover,
-        errorWidget: (_, __, ___) => _avatarFallback(firstLetter),
-        placeholder: (_, __) => Container(
-          color: AppColors.primary.withOpacity(0.05),
-          child: Center(
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: AppColors.primary.withOpacity(0.3),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return _avatarFallback(firstLetter);
-  }
-
-  Widget _avatarFallback(String text) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.primary.withOpacity(0.12),
-            AppColors.primary.withOpacity(0.06),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Center(
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            color: AppColors.primary,
-            letterSpacing: -0.2,
-          ),
-        ),
+        duration: const Duration(seconds: 3),
       ),
     );
   }
 }
 
-enum _InboxFilter { all, unread, pinned }
-
-class _InboxToolbar extends StatelessWidget {
-  final TextEditingController controller;
-  final _InboxFilter filter;
-  final ValueChanged<_InboxFilter> onFilterChanged;
-  final VoidCallback onClearSearch;
-
-  const _InboxToolbar({
-    required this.controller,
-    required this.filter,
-    required this.onFilterChanged,
-    required this.onClearSearch,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-      child: Column(
-        children: [
-          TextField(
-            controller: controller,
-            textInputAction: TextInputAction.search,
-            decoration: InputDecoration(
-              hintText: 'Search conversations',
-              prefixIcon: const Icon(Icons.search_rounded),
-              suffixIcon: controller.text.trim().isEmpty
-                  ? null
-                  : IconButton(
-                      tooltip: 'Clear search',
-                      onPressed: onClearSearch,
-                      icon: const Icon(Icons.close_rounded),
-                    ),
-              filled: true,
-              fillColor: AppColors.card,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: AppColors.border),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: AppColors.border),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: AppColors.primary),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 13,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SegmentedButton<_InboxFilter>(
-                showSelectedIcon: false,
-                style: ButtonStyle(
-                  visualDensity: VisualDensity.compact,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  shape: WidgetStatePropertyAll(
-                    RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                ),
-                segments: const [
-                  ButtonSegment(
-                    value: _InboxFilter.all,
-                    icon: Icon(Icons.chat_bubble_outline_rounded, size: 16),
-                    label: Text('All'),
-                  ),
-                  ButtonSegment(
-                    value: _InboxFilter.unread,
-                    icon: Icon(Icons.mark_chat_unread_outlined, size: 16),
-                    label: Text('Unread'),
-                  ),
-                  ButtonSegment(
-                    value: _InboxFilter.pinned,
-                    icon: Icon(Icons.push_pin_outlined, size: 16),
-                    label: Text('Pinned'),
-                  ),
-                ],
-                selected: {filter},
-                onSelectionChanged: (values) => onFilterChanged(values.first),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
+// Small helper icon used in the bottom sheet
 class _ActionIcon extends StatelessWidget {
   final IconData icon;
-
   const _ActionIcon({required this.icon});
 
   @override
@@ -1228,7 +743,8 @@ class _ActionIcon extends StatelessWidget {
   }
 }
 
-class _ChatMessage {
+// Public data model – used by both this file and the extracted widgets
+class ChatMessage {
   final String id;
   final int userId;
   final String name;
@@ -1243,7 +759,7 @@ class _ChatMessage {
   final bool isMuted;
   final DateTime sortTime;
 
-  _ChatMessage({
+  ChatMessage({
     required this.id,
     required this.userId,
     required this.name,

@@ -88,7 +88,7 @@ class _ProfilePageState extends State<ProfilePage>
           BlocProvider.value(value: context.read<ProfileBloc>()),
         ],
         child: const FractionallySizedBox(
-          heightFactor: 0.92,
+          heightFactor: 0.72,
           child: AccountSwitchPage(isSheet: true),
         ),
       ),

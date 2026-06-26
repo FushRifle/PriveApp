@@ -826,8 +826,9 @@ class ProfileErrorState extends StatelessWidget {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: onRetry,
-              style:
-                  ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(120, 48),
+                  backgroundColor: AppColors.primary),
               child: const Text('Retry'),
             ),
           ],

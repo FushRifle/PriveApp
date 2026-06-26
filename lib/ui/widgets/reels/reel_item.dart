@@ -40,9 +40,6 @@ class ReelItem extends StatefulWidget {
 
 class _ReelItemState extends State<ReelItem>
     with AutomaticKeepAliveClientMixin {
-  // ---------------------------------------------------------------------------
-  // Space reserved for the floating bottom navigation bar
-  // (height of the bar + some breathing room)
   static const double _bottomBarSpace = 110.0;
 
   VideoPlayerController? _videoController;
@@ -736,17 +733,16 @@ class _ReelItemState extends State<ReelItem>
           _buildVideoLayer(),
           _buildGradients(),
           if (!_isPlaying && _isInitialized) _buildPlayPauseOverlay(),
-          _buildRightActions(),
-          _buildMuteButton(),
-          _buildBottomInfo(),
-          // Video progress bar now respects the bottom bar
           if (_isInitialized && _videoController != null)
             Positioned(
               left: 0,
+              top: 0,
               right: 0,
-              bottom: _bottomBarSpace,
               child: VideoProgress(controller: _videoController!),
             ),
+          _buildRightActions(),
+          _buildMuteButton(),
+          _buildBottomInfo(),
         ],
       ),
     );
@@ -855,7 +851,7 @@ class _ReelItemState extends State<ReelItem>
 
     return Positioned(
       right: 10,
-      bottom: _bottomBarSpace,          // raised above the bottom nav bar
+      bottom: _bottomBarSpace,
       child: SafeArea(
         top: false,
         child: Container(
@@ -963,7 +959,7 @@ class _ReelItemState extends State<ReelItem>
     return Positioned(
       left: 12,
       right: 70,
-      bottom: _bottomBarSpace,          // raised above the bottom nav bar
+      bottom: _bottomBarSpace,
       child: SafeArea(
         top: false,
         child: Column(
@@ -1005,13 +1001,13 @@ class _ReelItemState extends State<ReelItem>
               ],
             ),
             if (caption.trim().isNotEmpty) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
               EffectText(
                 text: caption,
-                style: const TextStyle(
-                  color: AppColors.white,
-                  fontSize: 13,
-                  height: 1.2,
+                style: TextStyle(
+                  color: AppColors.text,
+                  fontSize: 14,
+                  height: 1.5,
                 ),
                 hashtagColor: AppColors.storyYellow,
                 mentionColor: AppColors.secondary,
@@ -1032,7 +1028,7 @@ class _ReelItemState extends State<ReelItem>
                 ),
               ),
             ],
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Row(
               children: [
                 const Icon(
@@ -1048,12 +1044,13 @@ class _ReelItemState extends State<ReelItem>
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: AppColors.white,
-                      fontSize: 12,
+                      fontSize: 13,
                     ),
                   ),
                 ),
               ],
             ),
+            const SizedBox(width: 16),
           ],
         ),
       ),

@@ -103,7 +103,6 @@ class _StatusViewPageState extends State<StatusViewPage>
     _completedVideoStoryId = null;
 
     if (_isVideoStory(story)) {
-      // Wait for the player to report its real duration before starting.
       _progressController.duration = _maximumVideoStoryDuration;
       return;
     }
@@ -508,15 +507,15 @@ class _StatusViewPageState extends State<StatusViewPage>
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18),
           child: Material(
-            color: AppColors.black.withOpacity(0.28),
+            color: AppColors.primary.withOpacity(0.58),
             shape: const CircleBorder(),
             child: InkWell(
               customBorder: const CircleBorder(),
               onTap: onTap,
               child: SizedBox(
-                width: 48,
-                height: 48,
-                child: Icon(icon, color: AppColors.white, size: 28),
+                width: 50,
+                height: 50,
+                child: Icon(icon, color: AppColors.white, size: 30),
               ),
             ),
           ),

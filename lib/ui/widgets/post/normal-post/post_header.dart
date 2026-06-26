@@ -29,7 +29,7 @@ class PostHeader extends StatelessWidget {
     final canOpenProfile = post.user.id > 0 && !post.isAnonymousPost;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 12, 10, 8),
+      padding: const EdgeInsets.fromLTRB(14, 12, 10, 10),
       child: Row(
         children: [
           Expanded(
@@ -76,7 +76,7 @@ class PostHeader extends StatelessWidget {
               },
               icon: Icon(
                 Icons.more_horiz_rounded,
-                color: AppColors.text,
+                color: AppColors.primary,
               ),
             ),
         ],
@@ -123,7 +123,7 @@ class _PostAvatar extends StatelessWidget {
       child: ClipOval(
         child: isOfficial
             ? Image.asset(
-                'assets/icons/clique.png',
+                'assets/icons/clique-new.png',
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => _AvatarFallback(text: fallback),
               )
@@ -201,7 +201,8 @@ class _PostUserInfo extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: AppTheme.blackTextStyle.copyWith(
-                  fontSize: 15,
+                  fontSize: 14,
+                  color: AppColors.secondary,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -286,9 +287,9 @@ class _TypeBadge extends StatelessWidget {
       child: Text(
         value,
         style: AppTheme.blackTextStyle.copyWith(
-          color: AppColors.primary,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
+          color: AppColors.textHint,
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );

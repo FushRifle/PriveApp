@@ -77,6 +77,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     ? AppColors.darkBackground
                     : AppColors.settingsLightBackground,
                 appBar: AppBar(
+                  
                   backgroundColor: AppColors.transparent,
                   elevation: 0,
                   centerTitle: true,
@@ -84,14 +85,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     onPressed: () => Navigator.pop(context),
                     icon: Icon(
                       Icons.arrow_back_ios_new_rounded,
-                      color: isDark ? AppColors.white : AppColors.black,
+                      color: AppColors.primary,
                     ),
                   ),
                   title: Text(
                     'Settings',
                     style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? AppColors.white : AppColors.black,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 24,
+                      color: AppColors.text,
                     ),
                   ),
                 ),
@@ -99,7 +101,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 18,
-                    vertical: 10,
+                    vertical: 20,
                   ),
                   child: Column(
                     children: [
@@ -169,7 +171,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           _switchTile(
                             isDark: isDark,
                             icon: Icons.security_rounded,
-                            title: 'Two Factor Authentication',
+                            title: 'Two Factor',
                             subtitle: 'Extra security layer',
                             value: twoFactor,
                             onChanged: (v) {
@@ -441,13 +443,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Widget _buildProfileCard(Map<String, dynamic>? user, bool isDark) {
     final name = _readUserName(user);
     final avatar = user?['avatar']?.toString() ?? '';
-    final username = user?['username']?.toString();
-    final email = user?['email']?.toString();
-    final subtitle = username != null && username.trim().isNotEmpty
-        ? '@${username.trim()}'
-        : email != null && email.trim().isNotEmpty
-            ? email.trim()
-            : 'View profile';
+    user?['username']?.toString();
+    user?['email']?.toString();
 
     return GestureDetector(
       onTap: () {
@@ -457,10 +454,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         );
       },
       child: Container(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          color: isDark ? AppColors.darkCard : AppColors.white,
+          borderRadius: BorderRadius.circular(20),
+          color: AppColors.cardBorderColor,
           boxShadow: [
             BoxShadow(
               blurRadius: 25,
@@ -486,15 +483,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: isDark ? AppColors.white : AppColors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      color: AppColors.grey.shade500,
-                      fontSize: 13,
+                      color: AppColors.text,
                     ),
                   ),
                 ],
@@ -502,7 +491,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
             Icon(
               Icons.chevron_right_rounded,
-              color: AppColors.grey.shade500,
+              color: AppColors.white,
             ),
           ],
         ),
@@ -541,8 +530,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final fallback = name.isNotEmpty ? name[0].toUpperCase() : 'U';
 
     return Container(
-      width: 68,
-      height: 68,
+      width: 48,
+      height: 48,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: LinearGradient(
@@ -582,7 +571,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     bool isDark,
   ) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 26),
+      padding: const EdgeInsets.only(bottom: 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -602,7 +591,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
           Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(20),
               color: isDark ? AppColors.darkCard : AppColors.white,
               border: Border.all(
                 color: isDark
@@ -630,19 +619,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     return ListTile(
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(
-        horizontal: 18,
-        vertical: 4,
+        horizontal: 14,
+        vertical: 5,
       ),
       leading: Container(
         width: 42,
         height: 42,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          color: AppColors.primary.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+          color: AppColors.secondary.withOpacity(0.8),
         ),
         child: Icon(
           icon,
-          color: AppColors.primary,
+          color: AppColors.white,
           size: 20,
         ),
       ),
@@ -650,20 +639,20 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         title,
         style: TextStyle(
           fontWeight: FontWeight.w600,
-          color: isDark ? AppColors.white : AppColors.black,
+          color: AppColors.text,
         ),
       ),
       subtitle: Text(
         subtitle,
         style: TextStyle(
           fontSize: 12,
-          color: AppColors.grey.shade500,
+          color: AppColors.grey,
         ),
       ),
       trailing: trailing ??
           Icon(
             Icons.chevron_right_rounded,
-            color: AppColors.grey.shade500,
+            color: AppColors.primary,
           ),
     );
   }
@@ -676,19 +665,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(
-        horizontal: 18,
+        horizontal: 14,
         vertical: 4,
       ),
       leading: Container(
         width: 42,
         height: 42,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          color: AppColors.primary.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+          color: AppColors.secondary.withOpacity(0.8),
         ),
         child: Icon(
           icon,
-          color: AppColors.primary,
+          color: AppColors.white,
           size: 20,
         ),
       ),
@@ -760,11 +749,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         height: 42,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
-          color: AppColors.primary.withOpacity(0.1),
+          color: AppColors.secondary.withOpacity(0.8),
         ),
         child: Icon(
           icon,
-          color: AppColors.primary,
+          color: AppColors.white,
           size: 20,
         ),
       ),
@@ -789,7 +778,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     return Divider(
       height: 1,
       indent: 78,
-      color: isDark ? AppColors.white10 : AppColors.black.withOpacity(0.05),
+      color: AppColors.cardBorder.withOpacity(0.8),
     );
   }
 

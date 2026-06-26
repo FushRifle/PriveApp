@@ -185,12 +185,14 @@ class _ReelCommentsSheetState extends State<ReelCommentsSheet> {
                         onPressed: () => Navigator.pop(context),
                         icon: Icon(
                           Icons.close,
-                          color: AppColors.text,
+                          color: AppColors.error,
                         ),
                       ),
                     ],
                   ),
+                  
                 ),
+                                            const SizedBox(height: 10),
                 Expanded(
                   child: _buildComments(sheetController),
                 ),
@@ -207,7 +209,7 @@ class _ReelCommentsSheetState extends State<ReelCommentsSheet> {
     if (_isLoading) {
       return Center(
         child: CircularProgressIndicator(
-          color: AppColors.primary,
+          color: AppColors.secondary,
           strokeWidth: 2,
         ),
       );
@@ -232,7 +234,7 @@ class _ReelCommentsSheetState extends State<ReelCommentsSheet> {
     }
 
     return RefreshIndicator(
-      color: AppColors.primary,
+      color: AppColors.secondary,
       onRefresh: _loadComments,
       child: ListView.separated(
         controller: controller,
@@ -259,7 +261,7 @@ class _ReelCommentsSheetState extends State<ReelCommentsSheet> {
     return SafeArea(
       top: false,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
         decoration: BoxDecoration(
           color: AppColors.cardColor,
           boxShadow: [
@@ -406,7 +408,7 @@ class _CommentTileState extends State<CommentTile> {
           fallback: name,
           size: 40,
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12, height: 12,),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -419,7 +421,7 @@ class _CommentTileState extends State<CommentTile> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: AppColors.text,
+                        color: AppColors.secondary,
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
                       ),
@@ -450,7 +452,7 @@ class _CommentTileState extends State<CommentTile> {
                         : TextOverflow.ellipsis,
                     softWrap: true,
                     style: TextStyle(
-                      color: AppColors.textSecondary,
+                      color: AppColors.text,
                       fontSize: 14,
                       height: 1.35,
                     ),
@@ -486,7 +488,7 @@ class _CommentTileState extends State<CommentTile> {
                           Icons.emoji_emotions_outlined,
                       label: selectedReaction == null
                           ? 'React'
-                          : '${selectedReaction.label}${likes > 0 ? ' ${formatCommentCount(likes)}' : ''}',
+                          :  formatCommentCount(likes),
                     ),
                   ),
                   if (replies > 0)

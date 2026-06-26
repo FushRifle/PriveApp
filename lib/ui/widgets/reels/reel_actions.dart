@@ -310,7 +310,7 @@ class MiniStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.primary.withOpacity(0.08),
         borderRadius: BorderRadius.circular(999),
@@ -318,12 +318,12 @@ class MiniStat extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: AppColors.primary),
-          const SizedBox(width: 6),
+          Icon(icon, size: 16, color: AppColors.primary),
+          const SizedBox(width: 8),
           Text(
             label,
             style: TextStyle(
-              color: AppColors.primary,
+              color: AppColors.text,
               fontSize: 11,
               fontWeight: FontWeight.bold,
             ),

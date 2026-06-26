@@ -253,7 +253,7 @@ class _HomePageState extends State<HomePage>
         body: SafeArea(
           top: false,
           child: RefreshIndicator(
-            color: palette.primary,
+            color: AppColors.secondary,
             backgroundColor: palette.card,
             edgeOffset: MediaQuery.paddingOf(context).top + 60,
             onRefresh: _refresh,
@@ -326,7 +326,7 @@ class _HomePageState extends State<HomePage>
                           ),
                         ),
                         SliverPadding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
                           sliver: SliverList.separated(
                             itemCount: posts.length + (posts.length ~/ 6),
                             separatorBuilder: (_, __) =>
@@ -1222,7 +1222,7 @@ class _FeedHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 10, 18, 14),
+      padding: const EdgeInsets.fromLTRB(20, 10, 18, 24),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -1300,6 +1300,7 @@ class _FeedHeader extends StatelessWidget {
           ),
         ],
       ),
+      
     );
   }
 }

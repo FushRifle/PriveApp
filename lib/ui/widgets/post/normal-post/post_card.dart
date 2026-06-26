@@ -626,7 +626,7 @@ class _CardPostState extends State<CardPost> {
                   PostFooter(
                     post: widget.post,
                     isTextOnly: !_hasMedia,
-                    maxLines: widget.isDetailView ? null : (_hasMedia ? 3 : 5),
+                    maxLines: widget.isDetailView ? null : (_hasMedia ? 4 : 5),
                   ),
                 if (_hasMedia)
                   PostMedia(

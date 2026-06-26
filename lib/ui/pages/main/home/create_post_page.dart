@@ -19,9 +19,7 @@ import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
 
 class CreatePostPage extends StatefulWidget {
   final Map<String, dynamic>? initialDraft;
-
   const CreatePostPage({super.key, this.initialDraft});
-
   @override
   State<CreatePostPage> createState() => _CreatePostPageState();
 }
@@ -61,7 +59,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
   PostComposerType _postType = PostComposerType.post;
   String _anonymousCategory = 'confession';
   int _pollExpirationHours = 24;
-
   bool _isSubmitting = false;
   bool _isPicking = false;
   double _uploadProgress = 0.0;
@@ -190,15 +187,12 @@ class _CreatePostPageState extends State<CreatePostPage> {
     final hasTags = _hashtags.isNotEmpty ||
         _extractHashtags(_hashtagController.text).isNotEmpty;
 
-    // Polls require a question and at least two options
     if (_postType == PostComposerType.poll) {
       return _textController.text.trim().isNotEmpty && _pollOptions.length >= 2;
     }
-    // Questions require a title
     if (_postType == PostComposerType.question) {
       return hasText;
     }
-    // Regular and anonymous posts need text, tags or media
     return hasText || hasTags || _hasMedia;
   }
 
@@ -225,7 +219,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
         body: SafeArea(
           child: Stack(
             children: [
-              // Background ambient gradients
               Positioned(
                 top: -90,
                 right: -70,
@@ -853,9 +846,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
 }
 
 // -----------------------------------------------------------------------------
-// Inline UI Widgets (replacing all previous part files and options view)
-
-/// Simple header with close, title, and Post button.
 class _Header extends StatelessWidget {
   final bool canSubmit;
   final bool isSubmitting;
@@ -872,7 +862,7 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       child: Row(
         children: [
           Material(
@@ -938,7 +928,6 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// The main composer that contains everything in one scrollable view.
 class _ComposerSection extends StatelessWidget {
   final PostComposerType postType;
   final String anonymousCategory;
@@ -991,7 +980,7 @@ class _ComposerSection extends StatelessWidget {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: EdgeInsets.fromLTRB(
-          16, 8, 16, 24 + MediaQuery.viewInsetsOf(context).bottom),
+          16, 20, 16, 24 + MediaQuery.viewInsetsOf(context).bottom),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1026,7 +1015,7 @@ class _ComposerSection extends StatelessWidget {
           ),
           // Anonymous category (only if applicable)
           if (postType == PostComposerType.anonymous) ...[
-            const SizedBox(height: 14),
+            const SizedBox(height: 18),
             Text('Anonymous Category',
                 style: AppTheme.blackTextStyle.copyWith(
                     fontSize: 13, fontWeight: FontWeight.w800)),
@@ -1061,7 +1050,7 @@ class _ComposerSection extends StatelessWidget {
               }).toList(),
             ),
           ],
-          const SizedBox(height: 14),
+          const SizedBox(height: 20),
           // Main text field
           TokenSuggestionField(
             controller: textController,
@@ -1158,9 +1147,8 @@ class _ComposerSection extends StatelessWidget {
                 },
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
           ],
-          // Add media buttons
           Row(
             children: [
               _MediaButton(
@@ -1190,7 +1178,6 @@ class _ComposerSection extends StatelessWidget {
       };
 }
 
-/// Small icon + label button for adding media.
 class _MediaButton extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -1228,8 +1215,6 @@ class _MediaButton extends StatelessWidget {
     );
   }
 }
-
-// --- Existing auxiliary widgets (unchanged, now private to this file) --------
 
 class _PollComposerPanel extends StatelessWidget {
   final bool enabled;
@@ -1642,7 +1627,6 @@ class _HashtagChip extends StatelessWidget {
   }
 }
 
-/// Upload overlay, shown when the post is being submitted.
 class _UploadOverlay extends StatelessWidget {
   final double progress;
 
