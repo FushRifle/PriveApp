@@ -56,8 +56,7 @@ class SendMessage extends ChatEvent {
     this.replyToStreamMessageId,
   });
   @override
-  List<Object?> get props =>
-      [
+  List<Object?> get props => [
         conversationId,
         receiverId,
         message,
@@ -118,6 +117,17 @@ class MarkMessagesAsRead extends ChatEvent {
   const MarkMessagesAsRead({required this.conversationId});
   @override
   List<Object?> get props => [conversationId];
+}
+
+class SetConversationUnread extends ChatEvent {
+  final int conversationId;
+  final int unreadCount;
+  const SetConversationUnread({
+    required this.conversationId,
+    required this.unreadCount,
+  });
+  @override
+  List<Object?> get props => [conversationId, unreadCount];
 }
 
 class SetTyping extends ChatEvent {

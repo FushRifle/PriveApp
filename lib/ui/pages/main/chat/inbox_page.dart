@@ -22,12 +22,24 @@ class InboxPage extends StatefulWidget {
 
 class _InboxPageState extends State<InboxPage> {
   final _refreshIndicatorKey = GlobalKey<RefreshIndicatorState>();
+  final TextEditingController _searchController = TextEditingController();
   final ChatService _chatService = ChatService();
+  _InboxFilter _filter = _InboxFilter.all;
+  String _query = '';
 
   @override
   void initState() {
     super.initState();
+    _searchController.addListener(_handleSearchChanged);
     _loadConversations();
+  }
+
+  @override
+  void dispose() {
+    _searchController
+      ..removeListener(_handleSearchChanged)
+      ..dispose();
+    super.dispose();
   }
 
   void _loadConversations() {
@@ -37,6 +49,12 @@ class _InboxPageState extends State<InboxPage> {
   Future<void> _refreshConversations() async {
     context.read<ChatBloc>().add(RefreshConversations());
     await Future.delayed(const Duration(milliseconds: 500));
+  }
+
+  void _handleSearchChanged() {
+    final next = _searchController.text.trim().toLowerCase();
+    if (next == _query) return;
+    setState(() => _query = next);
   }
 
   @override
@@ -72,6 +90,15 @@ class _InboxPageState extends State<InboxPage> {
               });
             },
           ),
+          _InboxToolbar(
+            controller: _searchController,
+            filter: _filter,
+            onFilterChanged: (filter) {
+              HapticFeedback.selectionClick();
+              setState(() => _filter = filter);
+            },
+            onClearSearch: () => _searchController.clear(),
+          ),
           Expanded(
             child: RefreshIndicator(
               key: _refreshIndicatorKey,
@@ -85,8 +112,10 @@ class _InboxPageState extends State<InboxPage> {
                       previous.error != current.error;
                 },
                 builder: (context, state) {
-                  final conversations = _getDisplayConversations(state);
-                  final hasCachedOrLiveConversations = conversations.isNotEmpty;
+                  final allConversations = _getDisplayConversations(state);
+                  final conversations = _applyFilters(allConversations);
+                  final hasCachedOrLiveConversations =
+                      allConversations.isNotEmpty;
 
                   if (state.conversationsStatus == ChatStatus.loading &&
                       !hasCachedOrLiveConversations) {
@@ -98,8 +127,12 @@ class _InboxPageState extends State<InboxPage> {
                     return _buildErrorWidget(state.error);
                   }
 
-                  if (conversations.isEmpty) {
+                  if (allConversations.isEmpty) {
                     return _buildEmptyState();
+                  }
+
+                  if (conversations.isEmpty) {
+                    return _buildFilteredEmptyState();
                   }
 
                   return Padding(
@@ -264,6 +297,7 @@ class _InboxPageState extends State<InboxPage> {
         avatar: conv.avatar,
         isUnread: conv.unreadCount > 0,
         isOnline: conv.isOnline,
+        isTyping: conv.isTyping,
         unreadCount: conv.unreadCount,
         isPinned: conv.isPinned,
         isMuted: conv.isMuted,
@@ -278,6 +312,74 @@ class _InboxPageState extends State<InboxPage> {
     });
 
     return conversations;
+  }
+
+  List<_ChatMessage> _applyFilters(List<_ChatMessage> conversations) {
+    return conversations.where((conversation) {
+      switch (_filter) {
+        case _InboxFilter.unread:
+          if (!conversation.isUnread) return false;
+          break;
+        case _InboxFilter.pinned:
+          if (!conversation.isPinned) return false;
+          break;
+        case _InboxFilter.all:
+          break;
+      }
+
+      if (_query.isEmpty) return true;
+      return conversation.name.toLowerCase().contains(_query) ||
+          conversation.message.toLowerCase().contains(_query);
+    }).toList();
+  }
+
+  Widget _buildFilteredEmptyState() {
+    final label = _query.isNotEmpty
+        ? 'No conversations match your search'
+        : switch (_filter) {
+            _InboxFilter.unread => 'No unread conversations',
+            _InboxFilter.pinned => 'No pinned conversations',
+            _InboxFilter.all => 'No conversations',
+          };
+    final subtitle = _query.isNotEmpty
+        ? 'Try a name or message preview from another conversation.'
+        : switch (_filter) {
+            _InboxFilter.unread => 'New messages will appear here.',
+            _InboxFilter.pinned => 'Pin important chats to keep them close.',
+            _InboxFilter.all => 'Start a conversation to see it here.',
+          };
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: BouncingScrollPhysics(),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      children: [
+        const SizedBox(height: 96),
+        Icon(
+          _query.isNotEmpty
+              ? Icons.manage_search_rounded
+              : Icons.filter_list_rounded,
+          size: 54,
+          color: AppColors.textHint,
+        ),
+        const SizedBox(height: 16),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: AppTheme.blackTextStyle.copyWith(
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          subtitle,
+          textAlign: TextAlign.center,
+          style: AppTheme.greyTextStyle.copyWith(fontSize: 13, height: 1.4),
+        ),
+      ],
+    );
   }
 
   Map<String, dynamic>? _latestCachedMessage(
@@ -460,8 +562,38 @@ class _InboxPageState extends State<InboxPage> {
 
     return Dismissible(
       key: Key(message.id),
-      direction: DismissDirection.endToStart,
+      direction: DismissDirection.horizontal,
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          _togglePin(message);
+          return false;
+        }
+
+        await _archiveConversation(message);
+        return true;
+      },
       background: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.secondary.withOpacity(0.9),
+              AppColors.secondary,
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.only(left: 24),
+        child: Icon(
+          message.isPinned ? Icons.push_pin_outlined : Icons.push_pin_rounded,
+          color: AppColors.white,
+          size: 24,
+        ),
+      ),
+      secondaryBackground: Container(
         margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -482,66 +614,11 @@ class _InboxPageState extends State<InboxPage> {
           size: 24,
         ),
       ),
-      onDismissed: (direction) async {
-        final conversationId = int.tryParse(message.id);
-        if (conversationId != null) {
-          await _chatService.archiveConversation(
-            conversationId,
-            cacheOwnerId: _readCurrentUserId(),
-          );
-        }
-        if (!context.mounted) return;
-        setState(() {});
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(
-                  Icons.archive_rounded,
-                  color: AppColors.white,
-                  size: 18,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Conversation with ${message.name} archived',
-                    style: TextStyle(color: AppColors.text),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: AppColors.card,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
-      },
       child: GestureDetector(
         onTap: () {
-          HapticFeedback.lightImpact();
-          final conversationId = int.tryParse(message.id);
-          if (conversationId != null) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => BlocProvider.value(
-                  value: context.read<ChatBloc>(),
-                  child: ChatPage(
-                    conversationId: conversationId,
-                    userName: message.name,
-                    userAvatar: message.avatar,
-                    userId: message.userId,
-                  ),
-                ),
-              ),
-            );
-          }
+          _openChat(message);
         },
+        onLongPress: () => _showConversationActions(message),
         child: Container(
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.all(14),
@@ -698,14 +775,16 @@ class _InboxPageState extends State<InboxPage> {
                           ),
                         Expanded(
                           child: Text(
-                            message.message,
+                            message.isTyping ? 'typing...' : message.message,
                             style: TextStyle(
                               fontSize: 13.5,
                               height: 1.3,
-                              color: message.isUnread
-                                  ? AppColors.text
-                                  : AppColors.textSecondary,
-                              fontWeight: message.isUnread
+                              color: message.isTyping
+                                  ? AppColors.primary
+                                  : message.isUnread
+                                      ? AppColors.text
+                                      : AppColors.textSecondary,
+                              fontWeight: message.isTyping || message.isUnread
                                   ? FontWeight.w500
                                   : FontWeight.w400,
                             ),
@@ -750,6 +829,210 @@ class _InboxPageState extends State<InboxPage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _openChat(_ChatMessage message) {
+    HapticFeedback.lightImpact();
+    final conversationId = int.tryParse(message.id);
+    if (conversationId == null) return;
+
+    if (message.unreadCount > 0) {
+      context.read<ChatBloc>().add(
+            SetConversationUnread(
+              conversationId: conversationId,
+              unreadCount: 0,
+            ),
+          );
+      context.read<ChatBloc>().add(
+            MarkMessagesAsRead(conversationId: conversationId),
+          );
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: context.read<ChatBloc>(),
+          child: ChatPage(
+            conversationId: conversationId,
+            userName: message.name,
+            userAvatar: message.avatar,
+            userId: message.userId,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _archiveConversation(_ChatMessage message) async {
+    HapticFeedback.mediumImpact();
+    final conversationId = int.tryParse(message.id);
+    if (conversationId == null) return;
+
+    await _chatService.archiveConversation(
+      conversationId,
+      cacheOwnerId: _readCurrentUserId(),
+    );
+    if (!mounted) return;
+    setState(() {});
+    _showInboxSnack(
+      icon: Icons.archive_rounded,
+      message: 'Conversation with ${message.name} archived',
+    );
+  }
+
+  void _togglePin(_ChatMessage message) {
+    HapticFeedback.selectionClick();
+    final conversationId = int.tryParse(message.id);
+    if (conversationId == null) return;
+
+    context.read<ChatBloc>().add(
+          UpdateChatSettings(
+            conversationId: conversationId,
+            isPinned: !message.isPinned,
+          ),
+        );
+    _showInboxSnack(
+      icon: message.isPinned ? Icons.push_pin_outlined : Icons.push_pin_rounded,
+      message: message.isPinned ? 'Chat unpinned' : 'Chat pinned',
+    );
+  }
+
+  void _toggleMute(_ChatMessage message) {
+    HapticFeedback.selectionClick();
+    final conversationId = int.tryParse(message.id);
+    if (conversationId == null) return;
+    final nextMuted = !message.isMuted;
+
+    context.read<ChatBloc>().add(
+          UpdateChatSettings(
+            conversationId: conversationId,
+            isMuted: nextMuted,
+            muteUntil: nextMuted
+                ? DateTime.now().add(const Duration(days: 3650))
+                : null,
+          ),
+        );
+    _showInboxSnack(
+      icon: nextMuted
+          ? Icons.notifications_off_rounded
+          : Icons.notifications_active_outlined,
+      message: nextMuted ? 'Chat muted' : 'Chat unmuted',
+    );
+  }
+
+  void _markUnread(_ChatMessage message) {
+    HapticFeedback.selectionClick();
+    final conversationId = int.tryParse(message.id);
+    if (conversationId == null) return;
+
+    context.read<ChatBloc>().add(
+          SetConversationUnread(
+            conversationId: conversationId,
+            unreadCount: message.unreadCount > 0 ? message.unreadCount : 1,
+          ),
+        );
+    _showInboxSnack(
+      icon: Icons.mark_chat_unread_outlined,
+      message: 'Marked unread',
+    );
+  }
+
+  void _showConversationActions(_ChatMessage message) {
+    HapticFeedback.mediumImpact();
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: _ActionIcon(
+                    icon: message.isPinned
+                        ? Icons.push_pin_outlined
+                        : Icons.push_pin_rounded,
+                  ),
+                  title: Text(message.isPinned ? 'Unpin chat' : 'Pin chat'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _togglePin(message);
+                  },
+                ),
+                ListTile(
+                  leading: _ActionIcon(
+                    icon: message.isMuted
+                        ? Icons.notifications_active_outlined
+                        : Icons.notifications_off_rounded,
+                  ),
+                  title: Text(message.isMuted ? 'Unmute chat' : 'Mute chat'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _toggleMute(message);
+                  },
+                ),
+                ListTile(
+                  leading: const _ActionIcon(
+                    icon: Icons.mark_chat_unread_outlined,
+                  ),
+                  title: const Text('Mark unread'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _markUnread(message);
+                  },
+                ),
+                ListTile(
+                  leading: const _ActionIcon(icon: Icons.archive_rounded),
+                  title: const Text('Archive chat'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _archiveConversation(message);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showInboxSnack({
+    required IconData icon,
+    required String message,
+  }) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(icon, color: AppColors.white, size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: TextStyle(color: AppColors.text),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: AppColors.card,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        margin: const EdgeInsets.all(16),
       ),
     );
   }
@@ -828,6 +1111,123 @@ class _InboxPageState extends State<InboxPage> {
   }
 }
 
+enum _InboxFilter { all, unread, pinned }
+
+class _InboxToolbar extends StatelessWidget {
+  final TextEditingController controller;
+  final _InboxFilter filter;
+  final ValueChanged<_InboxFilter> onFilterChanged;
+  final VoidCallback onClearSearch;
+
+  const _InboxToolbar({
+    required this.controller,
+    required this.filter,
+    required this.onFilterChanged,
+    required this.onClearSearch,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+      child: Column(
+        children: [
+          TextField(
+            controller: controller,
+            textInputAction: TextInputAction.search,
+            decoration: InputDecoration(
+              hintText: 'Search conversations',
+              prefixIcon: const Icon(Icons.search_rounded),
+              suffixIcon: controller.text.trim().isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: 'Clear search',
+                      onPressed: onClearSearch,
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+              filled: true,
+              fillColor: AppColors.card,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: AppColors.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: AppColors.primary),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 13,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SegmentedButton<_InboxFilter>(
+                showSelectedIcon: false,
+                style: ButtonStyle(
+                  visualDensity: VisualDensity.compact,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: WidgetStatePropertyAll(
+                    RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+                segments: const [
+                  ButtonSegment(
+                    value: _InboxFilter.all,
+                    icon: Icon(Icons.chat_bubble_outline_rounded, size: 16),
+                    label: Text('All'),
+                  ),
+                  ButtonSegment(
+                    value: _InboxFilter.unread,
+                    icon: Icon(Icons.mark_chat_unread_outlined, size: 16),
+                    label: Text('Unread'),
+                  ),
+                  ButtonSegment(
+                    value: _InboxFilter.pinned,
+                    icon: Icon(Icons.push_pin_outlined, size: 16),
+                    label: Text('Pinned'),
+                  ),
+                ],
+                selected: {filter},
+                onSelectionChanged: (values) => onFilterChanged(values.first),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionIcon extends StatelessWidget {
+  final IconData icon;
+
+  const _ActionIcon({required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(icon, color: AppColors.primary, size: 20),
+    );
+  }
+}
+
 class _ChatMessage {
   final String id;
   final int userId;
@@ -837,6 +1237,7 @@ class _ChatMessage {
   final String avatar;
   final bool isUnread;
   final bool isOnline;
+  final bool isTyping;
   final int unreadCount;
   final bool isPinned;
   final bool isMuted;
@@ -851,6 +1252,7 @@ class _ChatMessage {
     required this.avatar,
     required this.isUnread,
     required this.isOnline,
+    required this.isTyping,
     this.unreadCount = 0,
     this.isPinned = false,
     this.isMuted = false,

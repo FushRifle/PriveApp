@@ -33,6 +33,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<DeleteMessage>(_onDeleteMessage);
     on<ReportMessage>(_onReportMessage);
     on<MarkMessagesAsRead>(_onMarkMessagesAsRead);
+    on<SetConversationUnread>(_onSetConversationUnread);
     on<SetTyping>(_onSetTyping);
     on<LoadChatSettings>(_onLoadChatSettings);
     on<UpdateChatSettings>(_onUpdateChatSettings);
@@ -982,6 +983,20 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       unawaited(_persistConversations(updatedConversations));
       emit(state.copyWith(conversations: updatedConversations));
     } catch (_) {}
+  }
+
+  void _onSetConversationUnread(
+    SetConversationUnread event,
+    Emitter<ChatState> emit,
+  ) {
+    final nextUnreadCount = event.unreadCount < 0 ? 0 : event.unreadCount;
+    final updatedConversations = state.conversations.map((conversation) {
+      if (conversation.id != event.conversationId) return conversation;
+      return conversation.copyWith(unreadCount: nextUnreadCount);
+    }).toList();
+
+    unawaited(_persistConversations(updatedConversations));
+    emit(state.copyWith(conversations: updatedConversations));
   }
 
   Future<void> _onSetTyping(SetTyping event, Emitter<ChatState> emit) async {
