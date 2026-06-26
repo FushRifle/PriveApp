@@ -16,6 +16,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   int? _currentUserId;
   final Map<int, List<MessageModel>> _messageCache = {};
   final Set<int> _loadingConversations = {};
+  final Set<int> _queuedMessageRefreshes = {};
   final Set<String> _inFlightMessageKeys = {};
   int _messageRequestId = 0;
   bool _isRefreshingConversations = false;
@@ -464,6 +465,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     final cacheKey = event.conversationId;
 
     if (_loadingConversations.contains(cacheKey)) {
+      if (event.page == 1 && event.forceRefresh) {
+        _queuedMessageRefreshes.add(cacheKey);
+      }
       return;
     }
 
@@ -547,6 +551,14 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       ));
     } finally {
       _loadingConversations.remove(cacheKey);
+      if (_queuedMessageRefreshes.remove(cacheKey)) {
+        add(LoadMessages(
+          conversationId: cacheKey,
+          page: 1,
+          forceRefresh: true,
+          silent: true,
+        ));
+      }
     }
   }
 
@@ -967,6 +979,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         }
         return conv;
       }).toList();
+      unawaited(_persistConversations(updatedConversations));
       emit(state.copyWith(conversations: updatedConversations));
     } catch (_) {}
   }
@@ -1148,6 +1161,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   void _onResetChatState(ResetChatState event, Emitter<ChatState> emit) {
     _currentUserId = null;
     _inFlightMessageKeys.clear();
+    _queuedMessageRefreshes.clear();
     _streamEventSubscription?.cancel();
     _streamEventSubscription = null;
     emit(const ChatState());

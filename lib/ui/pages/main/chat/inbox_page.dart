@@ -242,25 +242,14 @@ class _InboxPageState extends State<InboxPage> {
       }
     }
 
-    final sortedConversations = List.of(mergedSource);
-    sortedConversations.sort((a, b) {
-      if (a.isPinned && !b.isPinned) return -1;
-      if (!a.isPinned && b.isPinned) return 1;
-      return _parseTime(b.timestamp).compareTo(_parseTime(a.timestamp));
-    });
-
-    for (final conv in sortedConversations) {
+    for (final conv in mergedSource) {
       if (archivedIds.contains(conv.id)) continue;
       final isBot = conv.name.toLowerCase() == 'clique' ||
           conv.username.toLowerCase() == 'clique';
-      final needsCachedPreview =
-          conv.lastMessage.trim().isEmpty || conv.timestamp.trim().isEmpty;
-      final latestCachedMessage = needsCachedPreview
-          ? _latestCachedMessage(
-              conv.id,
-              ownerId: ownerId,
-            )
-          : null;
+      final latestCachedMessage = _latestCachedMessage(
+        conv.id,
+        ownerId: ownerId,
+      );
       final displayMessage = _pickDisplayMessage(conv, latestCachedMessage);
       final displayTime = _pickDisplayTime(conv, latestCachedMessage);
 
@@ -278,8 +267,15 @@ class _InboxPageState extends State<InboxPage> {
         unreadCount: conv.unreadCount,
         isPinned: conv.isPinned,
         isMuted: conv.isMuted,
+        sortTime: _parseTime(displayTime),
       ));
     }
+
+    conversations.sort((a, b) {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return b.sortTime.compareTo(a.sortTime);
+    });
 
     return conversations;
   }
@@ -313,7 +309,23 @@ class _InboxPageState extends State<InboxPage> {
     Map<String, dynamic>? cachedMessage,
   ) {
     final cachedText = cachedMessage?['message']?.toString().trim() ?? '';
-    if (cachedText.isNotEmpty) return cachedText;
+    final cachedType =
+        (cachedMessage?['messageType'] ?? cachedMessage?['message_type'])
+                ?.toString()
+                .trim()
+                .toLowerCase() ??
+            '';
+    final isPending = _readInt(cachedMessage?['id']) < 0;
+    final prefix = isPending ? 'Sending... ' : '';
+    if (cachedType.isNotEmpty && cachedType != 'text') {
+      return '$prefix${_previewForMessageType(cachedType)}';
+    }
+    if (cachedText.isNotEmpty) return '$prefix$cachedText';
+
+    final conversationType = conversation.lastMessageType.trim().toLowerCase();
+    if (conversationType.isNotEmpty && conversationType != 'text') {
+      return _previewForMessageType(conversationType);
+    }
     return conversation.lastMessage.trim();
   }
 
@@ -328,10 +340,36 @@ class _InboxPageState extends State<InboxPage> {
 
   int? _readCurrentUserId() {
     final user = context.read<AuthBloc>().state.user;
-    final rawId = user?['id'];
+    final rawId = user?['id'] ?? user?['userId'] ?? user?['user_id'];
     if (rawId is int) return rawId;
+    if (rawId is num) return rawId.toInt();
     if (rawId is String) return int.tryParse(rawId);
     return null;
+  }
+
+  int _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  String _previewForMessageType(String type) {
+    switch (type) {
+      case 'image':
+        return 'Photo';
+      case 'video':
+        return 'Video';
+      case 'audio':
+        return 'Voice note';
+      case 'document':
+        return 'Document';
+      case 'reel':
+        return 'Reel';
+      case 'post':
+        return 'Post';
+      default:
+        return 'Attachment';
+    }
   }
 
   DateTime _parseTime(String value) {
@@ -802,6 +840,7 @@ class _ChatMessage {
   final int unreadCount;
   final bool isPinned;
   final bool isMuted;
+  final DateTime sortTime;
 
   _ChatMessage({
     required this.id,
@@ -815,5 +854,6 @@ class _ChatMessage {
     this.unreadCount = 0,
     this.isPinned = false,
     this.isMuted = false,
+    required this.sortTime,
   });
 }

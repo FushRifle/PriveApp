@@ -14,7 +14,9 @@ class CallButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
-      icon: const Icon(Icons.call),
+      tooltip: 'Start a call',
+      icon: const Icon(Icons.call_outlined),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       onSelected: (value) =>
           initiateCall(context, receiver: receiver, callType: value),
       itemBuilder: (context) => const [

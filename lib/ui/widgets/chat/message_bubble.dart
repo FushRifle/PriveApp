@@ -14,6 +14,7 @@ class MessageBubble extends StatelessWidget {
   final Color chatColor;
   final int index;
   final VoidCallback? onReply;
+  final VoidCallback? onRetry;
 
   const MessageBubble({
     super.key,
@@ -22,6 +23,7 @@ class MessageBubble extends StatelessWidget {
     required this.chatColor,
     required this.index,
     this.onReply,
+    this.onRetry,
   });
 
   @override
@@ -304,6 +306,11 @@ class MessageBubble extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.schedule, size: 12, color: AppColors.white60),
+          SizedBox(width: 2),
+          Text(
+            'Sending',
+            style: TextStyle(fontSize: 9, color: AppColors.white60),
+          ),
         ],
       );
     }
@@ -315,6 +322,11 @@ class MessageBubble extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.done_all, size: 12, color: AppColors.white70),
+          SizedBox(width: 2),
+          Text(
+            'Read',
+            style: TextStyle(fontSize: 9, color: AppColors.white70),
+          ),
         ],
       );
     }
@@ -326,6 +338,11 @@ class MessageBubble extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(Icons.done, size: 12, color: AppColors.white60),
+        SizedBox(width: 2),
+        Text(
+          'Sent',
+          style: TextStyle(fontSize: 9, color: AppColors.white60),
+        ),
       ],
     );
   }
@@ -363,6 +380,8 @@ class MessageBubble extends StatelessWidget {
                   onReply?.call();
                 },
               ),
+            ],
+            if (message.message.trim().isNotEmpty)
               _buildOptionTile(
                 icon: Icons.copy,
                 label: 'Copy',
@@ -372,7 +391,16 @@ class MessageBubble extends StatelessWidget {
                   _copyToClipboard(context);
                 },
               ),
-            ],
+            if (message.isPending && onRetry != null)
+              _buildOptionTile(
+                icon: Icons.refresh_rounded,
+                label: 'Retry send',
+                color: AppColors.primary,
+                onTap: () {
+                  Navigator.pop(context);
+                  onRetry?.call();
+                },
+              ),
             if (isMe)
               _buildOptionTile(
                 icon: Icons.delete_outline,

@@ -69,7 +69,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
 
   void _updateSettings({bool showSnackbar = false}) {
     DateTime? muteUntil;
-    if (_isMuted && _muteDuration != 'Forever') {
+    if (_isMuted && _muteDuration != 'Always') {
       switch (_muteDuration) {
         case '1 hour':
           muteUntil = DateTime.now().add(const Duration(hours: 1));
@@ -90,7 +90,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
           conversationId: _conversationId,
           isPinned: _isPinned,
           isMuted: _isMuted,
-          muteUntil: _isMuted && _muteDuration != 'Forever' ? muteUntil : null,
+          muteUntil: _isMuted && _muteDuration != 'Always' ? muteUntil : null,
           wallpaper: _wallpaper,
           chatColor: _chatColor,
           notificationSound: _notificationSound,
@@ -111,8 +111,10 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Clear Chat'),
-        content: const Text('Delete all messages? This cannot be undone.'),
+        title: const Text('Clear conversation?'),
+        content: const Text(
+          'This removes the message history from this conversation on this device. This cannot be undone.',
+        ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
@@ -460,10 +462,10 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
   Widget _buildClearChatTile() {
     return ListTile(
       leading: const Icon(Icons.delete_outline, color: AppColors.red, size: 24),
-      title: Text('Clear Chat',
+      title: Text('Clear conversation',
           style: AppTheme.blackTextStyle.copyWith(
               fontWeight: FontWeight.w500, fontSize: 15, color: AppColors.red)),
-      subtitle: Text('Delete all messages',
+      subtitle: Text('Remove this conversation history',
           style: AppTheme.greyTextStyle.copyWith(fontSize: 12)),
       onTap: _clearChat,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
@@ -707,7 +709,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
   }
 
   void _showMuteDurationPicker() {
-    final durations = ['1 hour', '8 hours', '24 hours', '7 days', 'Forever'];
+    final durations = ['1 hour', '8 hours', '24 hours', '7 days', 'Always'];
     showModalBottomSheet(
       context: context,
       backgroundColor: _surface,
@@ -725,7 +727,7 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
                     color: AppColors.greyColor.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(2))),
             const SizedBox(height: 16),
-            Text('Mute Duration',
+            Text('Mute notifications',
                 style: AppTheme.blackTextStyle
                     .copyWith(fontWeight: FontWeight.bold, fontSize: 18)),
             const SizedBox(height: 16),

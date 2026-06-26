@@ -30,12 +30,26 @@ class _OutgoingCallScreenState extends State<OutgoingCallScreen> {
   bool _isBootstrapping = true;
   bool _isCancelling = false;
   String _status = 'Preparing call...';
+  Timer? _unansweredTimer;
 
   @override
   void initState() {
     super.initState();
     _backendCall = widget.callResponse;
+    _startBootstrapTimeout();
     unawaited(_bootstrapCall());
+  }
+
+  void _startBootstrapTimeout() {
+    _unansweredTimer?.cancel();
+    _unansweredTimer = Timer(const Duration(seconds: 30), () {
+      if (!mounted || _call != null || _isCancelling) return;
+      setState(() {
+        _isBootstrapping = false;
+        _status = 'Call could not connect';
+      });
+      unawaited(_showErrorAndExit('The call took too long to connect.'));
+    });
   }
 
   Future<void> _bootstrapCall() async {
@@ -71,6 +85,7 @@ class _OutgoingCallScreenState extends State<OutgoingCallScreen> {
         _isBootstrapping = false;
         _status = 'Calling...';
       });
+      _unansweredTimer?.cancel();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -84,6 +99,7 @@ class _OutgoingCallScreenState extends State<OutgoingCallScreen> {
   Future<void> _cancelCall() async {
     if (_isCancelling) return;
     _isCancelling = true;
+    _unansweredTimer?.cancel();
 
     try {
       await _call?.reject(reason: stream.CallRejectReason.cancel());
@@ -130,6 +146,7 @@ class _OutgoingCallScreenState extends State<OutgoingCallScreen> {
 
   @override
   void dispose() {
+    _unansweredTimer?.cancel();
     final backendCall = _backendCall;
     if (!_isCancelling && backendCall != null) {
       unawaited(_callService.endCall(callId: backendCall.call.id));
@@ -141,6 +158,7 @@ class _OutgoingCallScreenState extends State<OutgoingCallScreen> {
   Widget build(BuildContext context) {
     final call = _call;
     if (call != null) {
+      _unansweredTimer?.cancel();
       return Scaffold(
         backgroundColor: Colors.black,
         body: SafeArea(
@@ -233,6 +251,18 @@ class _OutgoingCallScreenState extends State<OutgoingCallScreen> {
                         color: Colors.white,
                         fontSize: 14,
                       ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    _isBootstrapping
+                        ? 'Checking permissions, creating the call, and joining the room.'
+                        : 'Waiting for ${widget.receiver.name} to answer.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.58),
+                      fontSize: 12,
+                      height: 1.35,
                     ),
                   ),
                   const SizedBox(height: 12),

@@ -54,6 +54,7 @@ class _ChatPageState extends State<ChatPage>
   bool _isLoadingMore = false;
   bool _hasInitialMessages = false;
   bool _isSending = false;
+  bool _showScrollToBottom = false;
 
   Timer? _typingTimer;
   bool _isTyping = false;
@@ -146,6 +147,11 @@ class _ChatPageState extends State<ChatPage>
     if (!_scrollController.hasClients) return;
 
     final position = _scrollController.position;
+    final isAwayFromBottom = position.pixels > 280;
+    if (_showScrollToBottom != isAwayFromBottom) {
+      setState(() => _showScrollToBottom = isAwayFromBottom);
+    }
+
     final isNearTop = position.maxScrollExtent - position.pixels <= 200;
     if (isNearTop &&
         !_isLoadingMore &&
@@ -288,9 +294,18 @@ class _ChatPageState extends State<ChatPage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients &&
           _scrollController.position.maxScrollExtent >= 0) {
-        _scrollController.jumpTo(0);
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+        );
       }
     });
+  }
+
+  bool _isNearBottom() {
+    if (!_scrollController.hasClients) return true;
+    return _scrollController.position.pixels < 180;
   }
 
   @override
@@ -359,9 +374,12 @@ class _ChatPageState extends State<ChatPage>
                   });
                 }
               }
-              if (state.messages.isNotEmpty && !_hasInitialMessages) {
+              final shouldAutoScroll = !_hasInitialMessages || _isNearBottom();
+              if (state.messages.isNotEmpty && shouldAutoScroll) {
                 _hasInitialMessages = true;
                 _scrollToBottom();
+              } else if (state.messages.isNotEmpty && mounted) {
+                setState(() => _showScrollToBottom = true);
               }
               if (_isLoadingMore &&
                   state.messagesStatus != ChatStatus.loading) {
@@ -395,47 +413,85 @@ class _ChatPageState extends State<ChatPage>
               child: Column(
                 children: [
                   Expanded(
-                    child: isLoading
-                        ? _buildLoadingState()
-                        : messages.isEmpty
-                            ? _buildEmptyState()
-                            : ListView.builder(
-                                controller: _scrollController,
-                                reverse: true,
-                                cacheExtent: 1400,
-                                addAutomaticKeepAlives: true,
-                                addRepaintBoundaries: true,
-                                keyboardDismissBehavior:
-                                    ScrollViewKeyboardDismissBehavior.onDrag,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 16),
-                                itemCount:
-                                    messages.length + (_isLoadingMore ? 1 : 0),
-                                itemBuilder: (context, index) {
-                                  if (_isLoadingMore &&
-                                      index == messages.length) {
-                                    return const Padding(
-                                      padding: EdgeInsets.all(16),
-                                      child: Center(
-                                        child: SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                              strokeWidth: 2),
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                  return MessageBubble(
-                                    message: messages[index],
-                                    userAvatar: widget.userAvatar,
-                                    chatColor: _getChatColor(),
-                                    index: index,
-                                    onReply: () =>
-                                        _replyToMessage(messages[index]),
-                                  );
-                                },
-                              ),
+                    child: Stack(
+                      children: [
+                        isLoading
+                            ? _buildLoadingState()
+                            : messages.isEmpty
+                                ? _buildEmptyState()
+                                : ListView.builder(
+                                    controller: _scrollController,
+                                    reverse: true,
+                                    cacheExtent: 1400,
+                                    addAutomaticKeepAlives: true,
+                                    addRepaintBoundaries: true,
+                                    keyboardDismissBehavior:
+                                        ScrollViewKeyboardDismissBehavior
+                                            .onDrag,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 16),
+                                    itemCount: messages.length +
+                                        (_isLoadingMore ? 1 : 0),
+                                    itemBuilder: (context, index) {
+                                      if (_isLoadingMore &&
+                                          index == messages.length) {
+                                        return const Padding(
+                                          padding: EdgeInsets.all(16),
+                                          child: Center(
+                                            child: SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                  strokeWidth: 2),
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                      final message = messages[index];
+                                      return Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          MessageBubble(
+                                            message: message,
+                                            userAvatar: widget.userAvatar,
+                                            chatColor: _getChatColor(),
+                                            index: index,
+                                            onReply: () =>
+                                                _replyToMessage(message),
+                                            onRetry: message.isPending
+                                                ? () => context
+                                                    .read<ChatBloc>()
+                                                    .add(RetryPendingMessages(
+                                                        conversationId: widget
+                                                            .conversationId))
+                                                : null,
+                                          ),
+                                          if (_shouldShowDateSeparator(
+                                              messages, index))
+                                            _DateSeparator(
+                                              label: _formatMessageDate(
+                                                message.createdAt,
+                                              ),
+                                            ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                        if (_showScrollToBottom && messages.isNotEmpty)
+                          Positioned(
+                            right: 16,
+                            bottom: 16,
+                            child: FloatingActionButton.small(
+                              heroTag:
+                                  'chat_scroll_bottom_${widget.conversationId}',
+                              backgroundColor: _getChatColor(),
+                              foregroundColor: AppColors.white,
+                              onPressed: _scrollToBottom,
+                              child: const Icon(Icons.keyboard_arrow_down),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                   if (isUploading) _buildUploadProgress(),
                   if (_buildTypingIndicator(state))
@@ -775,6 +831,41 @@ class _ChatPageState extends State<ChatPage>
     );
   }
 
+  bool _shouldShowDateSeparator(List<MessageModel> messages, int index) {
+    if (index >= messages.length) return false;
+    if (index == messages.length - 1) return true;
+    final current = messages[index].createdAt.toLocal();
+    final older = messages[index + 1].createdAt.toLocal();
+    return current.year != older.year ||
+        current.month != older.month ||
+        current.day != older.day;
+  }
+
+  String _formatMessageDate(DateTime value) {
+    final local = value.toLocal();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(local.year, local.month, local.day);
+    final delta = today.difference(day).inDays;
+    if (delta == 0) return 'Today';
+    if (delta == 1) return 'Yesterday';
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[local.month - 1]} ${local.day}, ${local.year}';
+  }
+
   Future<void> _pickImage(ImageSource source) async {
     final image = await _imagePicker.pickImage(source: source);
     if (image == null) return;
@@ -868,5 +959,40 @@ class _ChatPageState extends State<ChatPage>
     return isDark
         ? 'assets/wallpapers/galaxy.png'
         : 'assets/wallpapers/modern.png';
+  }
+}
+
+class _DateSeparator extends StatelessWidget {
+  final String label;
+
+  const _DateSeparator({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppColors.black.withOpacity(0.24)
+                : AppColors.white.withOpacity(0.82),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: isDark ? AppColors.white10 : AppColors.border,
+            ),
+          ),
+          child: Text(
+            label,
+            style: AppTheme.greyTextStyle.copyWith(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

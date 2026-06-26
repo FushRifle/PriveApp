@@ -582,17 +582,17 @@ class _CardPostState extends State<CardPost> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  AppColors.cardColor.withOpacity(0.98),
+                  AppColors.cardColor.withOpacity(0.80),
                   AppColors.cardColor,
                 ],
               ),
               borderRadius: BorderRadius.circular(30),
               border: Border.all(
-                color: AppColors.cardBorderColor.withOpacity(0.88),
+                color: AppColors.cardBorderColor.withOpacity(0.58),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.shadowElevated.withOpacity(0.78),
+                  color: AppColors.shadowElevated.withOpacity(0.58),
                   blurRadius: 1,
                   offset: const Offset(0, 1),
                 ),
