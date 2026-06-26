@@ -413,8 +413,23 @@ class _EventsPageState extends State<EventsPage>
       user['profileUserId'],
       user['profile_user_id'],
       if (user['user'] is Map) (user['user'] as Map)['id'],
+      if (user['user'] is Map) (user['user'] as Map)['userId'],
+      if (user['user'] is Map) (user['user'] as Map)['user_id'],
+      if (user['currentUser'] is Map) (user['currentUser'] as Map)['id'],
+      if (user['current_user'] is Map) (user['current_user'] as Map)['id'],
       if (user['profile'] is Map) (user['profile'] as Map)['userId'],
       if (user['profile'] is Map) (user['profile'] as Map)['user_id'],
+      if (user['profile'] is Map) (user['profile'] as Map)['id'],
+      if (user['activeProfile'] is Map)
+        (user['activeProfile'] as Map)['userId'],
+      if (user['activeProfile'] is Map)
+        (user['activeProfile'] as Map)['user_id'],
+      if (user['activeProfile'] is Map) (user['activeProfile'] as Map)['id'],
+      if (user['active_profile'] is Map)
+        (user['active_profile'] as Map)['userId'],
+      if (user['active_profile'] is Map)
+        (user['active_profile'] as Map)['user_id'],
+      if (user['active_profile'] is Map) (user['active_profile'] as Map)['id'],
     ];
     for (final value in candidates) {
       final id = value is int

@@ -17,7 +17,14 @@ class EventDetailsPage extends StatelessWidget {
     required this.event,
   });
 
-  bool _isOwner(BuildContext context) {
+  EventModel _currentEvent(EventState state) {
+    for (final item in state.events) {
+      if (item.id == event.id) return item;
+    }
+    return event;
+  }
+
+  bool _isOwner(BuildContext context, EventModel event) {
     final currentUserId =
         _readCurrentUserId(context.read<AuthBloc>().state.user);
     final hostId = event.hostId != 0 ? event.hostId : event.host?.id;
@@ -36,8 +43,23 @@ class EventDetailsPage extends StatelessWidget {
       user['profileUserId'],
       user['profile_user_id'],
       if (user['user'] is Map) (user['user'] as Map)['id'],
+      if (user['user'] is Map) (user['user'] as Map)['userId'],
+      if (user['user'] is Map) (user['user'] as Map)['user_id'],
+      if (user['currentUser'] is Map) (user['currentUser'] as Map)['id'],
+      if (user['current_user'] is Map) (user['current_user'] as Map)['id'],
       if (user['profile'] is Map) (user['profile'] as Map)['userId'],
       if (user['profile'] is Map) (user['profile'] as Map)['user_id'],
+      if (user['profile'] is Map) (user['profile'] as Map)['id'],
+      if (user['activeProfile'] is Map)
+        (user['activeProfile'] as Map)['userId'],
+      if (user['activeProfile'] is Map)
+        (user['activeProfile'] as Map)['user_id'],
+      if (user['activeProfile'] is Map) (user['activeProfile'] as Map)['id'],
+      if (user['active_profile'] is Map)
+        (user['active_profile'] as Map)['userId'],
+      if (user['active_profile'] is Map)
+        (user['active_profile'] as Map)['user_id'],
+      if (user['active_profile'] is Map) (user['active_profile'] as Map)['id'],
     ];
     for (final value in candidates) {
       final id = value is int
@@ -52,152 +74,169 @@ class EventDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isOwner = _isOwner(context);
+    return BlocBuilder<EventBloc, EventState>(
+      buildWhen: (previous, current) => previous.events != current.events,
+      builder: (context, state) {
+        final currentEvent = _currentEvent(state);
+        final isOwner = _isOwner(context, currentEvent);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        title: const Text('Event details'),
-        actions: [
-          if (isOwner)
-            IconButton(
-              tooltip: 'Edit event',
-              onPressed: () => _openEdit(context),
-              icon: const Icon(Icons.edit_outlined),
-            ),
-        ],
-      ),
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: _HeaderCard(
-                event: event,
-                isOwner: isOwner,
-                onEdit: () => _openEdit(context),
-                onGoing: () => context.read<EventBloc>().add(
-                      RsvpEvent(eventId: event.id, status: 'going'),
-                    ),
-                onInterested: () => context.read<EventBloc>().add(
-                      RsvpEvent(eventId: event.id, status: 'interested'),
-                    ),
-                onLeave: () => context.read<EventBloc>().add(
-                      RsvpEvent(eventId: event.id, status: 'not_going'),
-                    ),
-              ),
-            ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 12)),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverToBoxAdapter(
-              child: _SectionCard(
-                title: 'Where',
-                child: _InfoRow(
-                  icon: Icons.place_outlined,
-                  title: event.location.isEmpty
-                      ? 'Location not set'
-                      : event.location,
-                  subtitle: event.isPrivate
-                      ? 'Private event'
-                      : 'Visible to the community',
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            backgroundColor: AppColors.background,
+            surfaceTintColor: Colors.transparent,
+            elevation: 0,
+            title: const Text('Event details'),
+            actions: [
+              if (isOwner)
+                IconButton(
+                  tooltip: 'Edit event',
+                  onPressed: () => _openEdit(context, currentEvent),
+                  icon: const Icon(Icons.edit_outlined),
                 ),
-              ),
-            ),
+            ],
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 12)),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverToBoxAdapter(
-              child: _SectionCard(
-                title: isOwner ? 'Hosted by you' : 'Host',
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: AppColors.primary.withOpacity(0.12),
-                      backgroundImage: event.host?.avatar.isNotEmpty == true
-                          ? CachedNetworkImageProvider(event.host!.avatar)
-                          : null,
-                      child: event.host?.avatar.isEmpty != false
-                          ? const Icon(
-                              Icons.person_outline,
-                              color: AppColors.primary,
-                            )
-                          : null,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            isOwner
-                                ? 'You created this event'
-                                : event.host?.name.isNotEmpty == true
-                                    ? event.host!.name
-                                    : 'Event host',
-                            style: AppTheme.blackTextStyle.copyWith(
-                              fontSize: 15,
-                              fontWeight: AppTheme.bold,
-                            ),
+          body: CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  child: _HeaderCard(
+                    event: currentEvent,
+                    isOwner: isOwner,
+                    onEdit: () => _openEdit(context, currentEvent),
+                    onGoing: () => context.read<EventBloc>().add(
+                          RsvpEvent(eventId: currentEvent.id, status: 'going'),
+                        ),
+                    onInterested: () => context.read<EventBloc>().add(
+                          RsvpEvent(
+                            eventId: currentEvent.id,
+                            status: 'interested',
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            isOwner
-                                ? 'Only you can edit this event'
-                                : event.host?.username.isNotEmpty == true
-                                    ? '@${event.host!.username}'
-                                    : 'Organizer details unavailable',
-                            style:
-                                AppTheme.greyTextStyle.copyWith(fontSize: 12),
+                        ),
+                    onLeave: () => context.read<EventBloc>().add(
+                          RsvpEvent(
+                            eventId: currentEvent.id,
+                            status: 'not_going',
                           ),
-                        ],
-                      ),
-                    ),
-                  ],
+                        ),
+                  ),
                 ),
               ),
-            ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 12)),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-            sliver: SliverToBoxAdapter(
-              child: _SectionCard(
-                title: 'Activity',
-                child: Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    _MetricChip(
-                      icon: Icons.check_circle_outline,
-                      label: '${event.goingCount} going',
+              const SliverToBoxAdapter(child: SizedBox(height: 12)),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverToBoxAdapter(
+                  child: _SectionCard(
+                    title: 'Where',
+                    child: _InfoRow(
+                      icon: Icons.place_outlined,
+                      title: currentEvent.location.isEmpty
+                          ? 'Location not set'
+                          : currentEvent.location,
+                      subtitle: currentEvent.isPrivate
+                          ? 'Private event'
+                          : 'Visible to the community',
                     ),
-                    _MetricChip(
-                      icon: Icons.favorite_border,
-                      label: '${event.interestedCount} interested',
-                    ),
-                    if (event.category.isNotEmpty)
-                      _MetricChip(
-                        icon: Icons.sell_outlined,
-                        label: event.category,
-                      ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+              const SliverToBoxAdapter(child: SizedBox(height: 12)),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverToBoxAdapter(
+                  child: _SectionCard(
+                    title: isOwner ? 'Hosted by you' : 'Host',
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor: AppColors.primary.withOpacity(0.12),
+                          backgroundImage:
+                              currentEvent.host?.avatar.isNotEmpty == true
+                                  ? CachedNetworkImageProvider(
+                                      currentEvent.host!.avatar,
+                                    )
+                                  : null,
+                          child: currentEvent.host?.avatar.isEmpty != false
+                              ? const Icon(
+                                  Icons.person_outline,
+                                  color: AppColors.primary,
+                                )
+                              : null,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isOwner
+                                    ? 'You created this event'
+                                    : currentEvent.host?.name.isNotEmpty == true
+                                        ? currentEvent.host!.name
+                                        : 'Event host',
+                                style: AppTheme.blackTextStyle.copyWith(
+                                  fontSize: 15,
+                                  fontWeight: AppTheme.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                isOwner
+                                    ? 'Only you can edit this event'
+                                    : currentEvent.host?.username.isNotEmpty ==
+                                            true
+                                        ? '@${currentEvent.host!.username}'
+                                        : 'Organizer details unavailable',
+                                style: AppTheme.greyTextStyle.copyWith(
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 12)),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                sliver: SliverToBoxAdapter(
+                  child: _SectionCard(
+                    title: 'Activity',
+                    child: Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        _MetricChip(
+                          icon: Icons.check_circle_outline,
+                          label: '${currentEvent.goingCount} going',
+                        ),
+                        _MetricChip(
+                          icon: Icons.favorite_border,
+                          label: '${currentEvent.interestedCount} interested',
+                        ),
+                        if (currentEvent.category.isNotEmpty)
+                          _MetricChip(
+                            icon: Icons.sell_outlined,
+                            label: currentEvent.category,
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  void _openEdit(BuildContext context) {
+  void _openEdit(BuildContext context, EventModel event) {
     Navigator.push(
       context,
       MaterialPageRoute(
