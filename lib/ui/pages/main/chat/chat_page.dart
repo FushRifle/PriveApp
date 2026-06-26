@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:io';
 import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:clique/core/models/calls.dart';
+import 'package:clique/core/services/chat/chat_service.dart';
 import 'package:clique/ui/widgets/call/call_button.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
@@ -47,6 +49,7 @@ class _ChatPageState extends State<ChatPage>
   final TextEditingController _messageController = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
   final MediaService _mediaService = MediaService();
+  final ChatService _chatService = ChatService();
 
   String _wallpaper = 'default';
   Color _chatColor = AppColors.primary;
@@ -57,6 +60,7 @@ class _ChatPageState extends State<ChatPage>
   bool _showScrollToBottom = false;
 
   Timer? _typingTimer;
+  Timer? _draftTimer;
   bool _isTyping = false;
   late final VoidCallback _scrollListener;
 
@@ -108,6 +112,8 @@ class _ChatPageState extends State<ChatPage>
     _setupAuth();
     _scrollListener = _handleScroll;
     _scrollController.addListener(_scrollListener);
+    _messageController.addListener(_queueDraftSave);
+    _restoreDraft();
     _loadInitialData();
   }
 
@@ -120,12 +126,60 @@ class _ChatPageState extends State<ChatPage>
 
   @override
   void dispose() {
+    _saveDraftNow();
+    _draftTimer?.cancel();
     _scrollController.removeListener(_scrollListener);
+    _messageController.removeListener(_queueDraftSave);
     _messageController.dispose();
     _scrollController.dispose();
     _typingTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _restoreDraft() {
+    final draft = _chatService.readCachedDraft(
+      widget.conversationId,
+      cacheOwnerId: _readCurrentUserId(),
+    );
+    if (draft == null || draft.isEmpty) return;
+    _messageController.text = draft;
+    _messageController.selection = TextSelection.collapsed(
+      offset: _messageController.text.length,
+    );
+  }
+
+  int? _readCurrentUserId() {
+    final user = context.read<AuthBloc>().state.user;
+    final raw = user?['id'] ?? user?['userId'] ?? user?['user_id'];
+    if (raw is int) return raw;
+    if (raw is num) return raw.toInt();
+    return int.tryParse(raw?.toString() ?? '');
+  }
+
+  void _queueDraftSave() {
+    _draftTimer?.cancel();
+    _draftTimer = Timer(const Duration(milliseconds: 350), _saveDraftNow);
+  }
+
+  void _saveDraftNow() {
+    unawaited(
+      _chatService.saveDraft(
+        widget.conversationId,
+        _messageController.text,
+        cacheOwnerId: _readCurrentUserId(),
+      ),
+    );
+  }
+
+  void _clearDraft() {
+    _draftTimer?.cancel();
+    unawaited(
+      _chatService.clearDraft(
+        widget.conversationId,
+        cacheOwnerId: _readCurrentUserId(),
+      ),
+    );
   }
 
   @override
@@ -231,8 +285,10 @@ class _ChatPageState extends State<ChatPage>
       return;
     }
 
+    HapticFeedback.lightImpact();
     _sendTyping(false);
     _isSending = true;
+    _clearDraft();
 
     if (_isCliqueBot) {
       context.read<ChatBloc>().add(
@@ -355,6 +411,7 @@ class _ChatPageState extends State<ChatPage>
                     replyToStreamMessageId: _replyingTo?.streamMessageId ??
                         _replyingTo?.id.toString(),
                   ));
+              HapticFeedback.lightImpact();
               _scrollToBottom();
             },
           ),
@@ -405,6 +462,8 @@ class _ChatPageState extends State<ChatPage>
                 : const <MessageModel>[];
             final isLoading =
                 state.messagesStatus == ChatStatus.loading && messages.isEmpty;
+            final isSyncing = state.messagesStatus == ChatStatus.loading &&
+                messages.isNotEmpty;
             final isUploading = context.watch<CloudinaryCubit>().state.status ==
                 UploadStatus.uploading;
 
@@ -493,6 +552,7 @@ class _ChatPageState extends State<ChatPage>
                       ],
                     ),
                   ),
+                  if (isSyncing) _buildSyncIndicator(),
                   if (isUploading) _buildUploadProgress(),
                   if (_buildTypingIndicator(state))
                     _buildTypingIndicatorWidget(),
@@ -520,7 +580,61 @@ class _ChatPageState extends State<ChatPage>
   }
 
   Widget _buildLoadingState() {
-    return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+      itemCount: 8,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final mine = index.isEven;
+        return Align(
+          alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(
+            width: MediaQuery.sizeOf(context).width * (mine ? 0.58 : 0.66),
+            height: index == 1 ? 58 : 42,
+            decoration: BoxDecoration(
+              color: AppColors.card.withOpacity(0.72),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppColors.border.withOpacity(0.45)),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSyncIndicator() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 2),
+      child: Align(
+        alignment: Alignment.center,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.card.withOpacity(0.92),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: AppColors.border.withOpacity(0.7)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(
+                  strokeWidth: 1.8,
+                  color: _getChatColor(),
+                ),
+              ),
+              const SizedBox(width: 7),
+              Text(
+                'Syncing...',
+                style: AppTheme.greyTextStyle.copyWith(fontSize: 11),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildUploadProgress() {
@@ -889,6 +1003,7 @@ class _ChatPageState extends State<ChatPage>
   }
 
   void _startCall(String callType) {
+    HapticFeedback.lightImpact();
     CallButton.initiateCall(
       context,
       receiver: UserInfo(

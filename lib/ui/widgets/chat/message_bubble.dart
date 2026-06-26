@@ -30,8 +30,13 @@ class MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final isMe = message.isOwn;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isSoftFailed = message.isPending &&
+        DateTime.now().difference(message.createdAt) >
+            const Duration(seconds: 45);
     final otherBubbleColor = isDark ? AppColors.darkCard : AppColors.lightCard;
     final otherTextColor = isDark ? AppColors.darkText : AppColors.lightText;
+    final ownBubbleColor =
+        isSoftFailed ? chatColor.withOpacity(0.78) : chatColor;
     final borderRadius = BorderRadius.only(
       topLeft: const Radius.circular(18),
       topRight: const Radius.circular(18),
@@ -55,7 +60,10 @@ class MessageBubble extends StatelessWidget {
             Flexible(
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onLongPress: () => _showMessageOptions(context),
+                onLongPress: () {
+                  HapticFeedback.mediumImpact();
+                  _showMessageOptions(context);
+                },
                 onHorizontalDragEnd: (details) {
                   final velocity = details.primaryVelocity ?? 0;
                   final shouldReply = isMe ? velocity < -180 : velocity > 180;
@@ -67,10 +75,14 @@ class MessageBubble extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                   decoration: BoxDecoration(
-                    color: isMe ? chatColor : otherBubbleColor,
+                    color: isMe ? ownBubbleColor : otherBubbleColor,
                     borderRadius: borderRadius,
                     border: isMe
-                        ? null
+                        ? Border.all(
+                            color: isSoftFailed
+                                ? AppColors.white.withOpacity(0.26)
+                                : AppColors.transparent,
+                          )
                         : Border.all(
                             color: isDark
                                 ? AppColors.darkCardBorder
@@ -87,6 +99,42 @@ class MessageBubble extends StatelessWidget {
                         _buildStatusReplyPreview(isMe),
                       if (message.replyToId != null) _buildReplyPreview(isMe),
                       _buildMessageContent(isMe, context, otherTextColor),
+                      if (isSoftFailed && onRetry != null) ...[
+                        const SizedBox(height: 6),
+                        InkWell(
+                          onTap: onRetry,
+                          borderRadius: BorderRadius.circular(999),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.white.withOpacity(0.14),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.refresh_rounded,
+                                  size: 12,
+                                  color: AppColors.white,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Tap to retry',
+                                  style: TextStyle(
+                                    color: AppColors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 4),
                       _buildTimeAndStatus(isMe),
                     ],
