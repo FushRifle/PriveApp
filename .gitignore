@@ -16,6 +16,7 @@ migrate_working_dir/
 *.vscode
 *.plist
 *.docs
+*.logs
 
 # IntelliJ related
 *.iml

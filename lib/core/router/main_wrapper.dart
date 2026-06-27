@@ -214,67 +214,79 @@ class _MainWrapperState extends State<MainWrapper>
               // Floating bottom bar with glass effect
               if (_showBottomBar)
                 Positioned(
-                  left: 12,
-                  right: 12,
-                  bottom: 12,
+                  left: 18,
+                  right: 18,
+                  bottom: _getBottomPadding(context),
                   child: Stack(
                     clipBehavior: Clip.none,
                     alignment: Alignment.topCenter,
                     children: [
                       // Blurred navigation bar background (no button inside)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(28),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: backgroundColor.withOpacity(0.7),
-                              borderRadius: BorderRadius.circular(28),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black
-                                      .withOpacity(isDarkMode ? 0.3 : 0.1),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, -5),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black
+                                  .withOpacity(isDarkMode ? 0.28 : 0.12),
+                              blurRadius: 22,
+                              spreadRadius: -4,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: backgroundColor.withOpacity(
+                                  isDarkMode ? 0.76 : 0.82,
                                 ),
-                              ],
-                            ),
-                            padding: EdgeInsets.fromLTRB(
-                              10,
-                              8,
-                              10,
-                              _getBottomPadding(context),
-                            ),
-                            child: SizedBox(
-                              height: 60,
-                              child: Row(
-                                children: [
-                                  _buildNavItem(
-                                    icon: Icons.home_rounded,
-                                    navIndex: 0,
-                                    isSelected: _navBarIndex == 0,
-                                    unselectedColor: unselectedColor,
-                                  ),
-                                  _buildNavItem(
-                                    icon: Icons.play_circle_fill_rounded,
-                                    navIndex: 1,
-                                    isSelected: _navBarIndex == 1,
-                                    unselectedColor: unselectedColor,
-                                  ),
-                                  const Expanded(child: SizedBox.shrink()),
-                                  _buildNavItem(
-                                    icon: Icons.date_range_rounded,
-                                    navIndex: 3,
-                                    isSelected: _navBarIndex == 3,
-                                    unselectedColor: unselectedColor,
-                                  ),
-                                  _buildNavItem(
-                                    icon: Icons.send_rounded,
-                                    navIndex: 4,
-                                    isSelected: _navBarIndex == 4,
-                                    unselectedColor: unselectedColor,
-                                  ),
-                                ],
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(
+                                  color: isDarkMode
+                                      ? Colors.white.withOpacity(0.12)
+                                      : Colors.white.withOpacity(0.72),
+                                  width: 0.8,
+                                ),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              child: SizedBox(
+                                height: 50,
+                                child: Row(
+                                  children: [
+                                    _buildNavItem(
+                                      icon: Icons.home_rounded,
+                                      navIndex: 0,
+                                      isSelected: _navBarIndex == 0,
+                                      unselectedColor: unselectedColor,
+                                    ),
+                                    _buildNavItem(
+                                      icon: Icons.play_circle_fill_rounded,
+                                      navIndex: 1,
+                                      isSelected: _navBarIndex == 1,
+                                      unselectedColor: unselectedColor,
+                                    ),
+                                    const Expanded(child: SizedBox.shrink()),
+                                    _buildNavItem(
+                                      icon: Icons.date_range_rounded,
+                                      navIndex: 3,
+                                      isSelected: _navBarIndex == 3,
+                                      unselectedColor: unselectedColor,
+                                    ),
+                                    _buildNavItem(
+                                      icon: Icons.send_rounded,
+                                      navIndex: 4,
+                                      isSelected: _navBarIndex == 4,
+                                      unselectedColor: unselectedColor,
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -284,7 +296,7 @@ class _MainWrapperState extends State<MainWrapper>
                       AnimatedPositioned(
                         duration: const Duration(milliseconds: 260),
                         curve: Curves.easeOutCubic,
-                        top: _currentIndex == 0 ? -30 : 0,
+                        top: _currentIndex == 0 ? -25 : 3,
                         child: _CreateButton(
                           pulseAnimation: _pulseAnimation,
                           onTap: _handleCreatePost,
@@ -310,8 +322,8 @@ class _MainWrapperState extends State<MainWrapper>
     return Expanded(
       child: Center(
         child: SizedBox(
-          width: 52,
-          height: 52,
+          width: 46,
+          height: 46,
           child: Material(
             color: Colors.transparent,
             shape: const CircleBorder(),
@@ -321,33 +333,37 @@ class _MainWrapperState extends State<MainWrapper>
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 220),
                 curve: Curves.easeOutCubic,
-                width: 44,
-                height: 44,
+                width: 38,
+                height: 38,
                 margin: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(19),
                   color: isSelected
-                      ? AppColors.border.withOpacity(0.1)
+                      ? AppColors.primary.withOpacity(
+                          Theme.of(context).brightness == Brightness.dark
+                              ? 0.2
+                              : 0.11,
+                        )
                       : Colors.transparent,
                   border: Border.all(
                     color: isSelected
-                        ? AppColors.border.withOpacity(0.3)
+                        ? AppColors.primary.withOpacity(0.24)
                         : Colors.transparent,
-                    width: isSelected ? 1.5 : 0,
+                    width: isSelected ? 0.8 : 0,
                   ),
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
                             color: AppColors.primary.withOpacity(0.15),
-                            blurRadius: 7,
-                            spreadRadius: 0,
+                            blurRadius: 9,
+                            spreadRadius: -2,
                           ),
                         ]
                       : [],
                 ),
                 child: Icon(
                   icon,
-                  size: isSelected ? 28 : 24,
+                  size: isSelected ? 25 : 23,
                   color: isSelected ? AppColors.primary : unselectedColor,
                 ),
               ),
@@ -462,46 +478,46 @@ class _CreateButton extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 600),
             curve: Curves.easeInOutCubic,
-            width: isDocked ? 60 : 74,
-            height: isDocked ? 60 : 74,
+            width: isDocked ? 52 : 68,
+            height: isDocked ? 52 : 68,
             child: Center(
               child: Material(
                 color: Colors.transparent,
                 shape: const CircleBorder(),
                 child: InkResponse(
                   onTap: onTap,
-                  radius: 42,
+                  radius: 38,
                   containedInkWell: true,
                   customBorder: const CircleBorder(),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 600),
                     curve: Curves.easeInOutCubic,
-                    width: isDocked ? 44 : 58,
-                    height: isDocked ? 44 : 58,
+                    width: isDocked ? 40 : 54,
+                    height: isDocked ? 40 : 54,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
                           AppColors.primary,
-                          AppColors.primary.withOpacity(isDocked ? 0.68 : 0.8),
+                          AppColors.primary.withOpacity(isDocked ? 0.72 : 0.84),
                         ],
                       ),
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
                           color: AppColors.primary
-                              .withOpacity(isDocked ? 0.22 : 0.4),
-                          blurRadius: isDocked ? 7 : 12,
-                          spreadRadius: isDocked ? 0 : 2,
-                          offset: Offset(0, isDocked ? 2 : 4),
+                              .withOpacity(isDocked ? 0.2 : 0.34),
+                          blurRadius: isDocked ? 8 : 14,
+                          spreadRadius: isDocked ? -1 : 0,
+                          offset: Offset(0, isDocked ? 2 : 5),
                         ),
                         BoxShadow(
                           color: AppColors.primary
-                              .withOpacity(isDocked ? 0.08 : 0.2),
-                          blurRadius: isDocked ? 10 : 20,
-                          spreadRadius: isDocked ? 0 : 1,
-                          offset: Offset(0, isDocked ? 3 : 8),
+                              .withOpacity(isDocked ? 0.07 : 0.14),
+                          blurRadius: isDocked ? 12 : 22,
+                          spreadRadius: isDocked ? -2 : -1,
+                          offset: Offset(0, isDocked ? 3 : 9),
                         ),
                       ],
                     ),
@@ -511,7 +527,7 @@ class _CreateButton extends StatelessWidget {
                         curve: Curves.easeInOutCubic,
                         child: Icon(
                           Icons.add_rounded,
-                          size: isDocked ? 26 : 32,
+                          size: isDocked ? 24 : 30,
                           color: Colors.white,
                         ),
                       ),
