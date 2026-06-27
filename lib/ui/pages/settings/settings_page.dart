@@ -457,7 +457,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          color: AppColors.cardBorderColor,
+          color: AppColors.card,
           boxShadow: [
             BoxShadow(
               blurRadius: 25,
@@ -491,7 +491,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
             Icon(
               Icons.chevron_right_rounded,
-              color: AppColors.white,
+              color: AppColors.primary,
             ),
           ],
         ),

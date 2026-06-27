@@ -278,16 +278,13 @@ class _TypeBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.1),
+        color: AppColors.transparent,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: AppColors.primary.withOpacity(0.15),
-        ),
       ),
       child: Text(
         value,
         style: AppTheme.blackTextStyle.copyWith(
-          color: AppColors.textHint,
+          color: AppColors.text,
           fontSize: 10,
           fontWeight: FontWeight.w500,
         ),

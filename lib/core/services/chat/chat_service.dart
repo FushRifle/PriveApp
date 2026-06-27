@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:hive/hive.dart';
 import 'package:clique/core/local_cache/hive_cache_keys.dart';
 import 'package:clique/core/local_cache/local_cache_service.dart';
+import 'package:clique/core/services/chat/chat_cache_keys.dart';
 import 'package:clique/core/services/chat/stream_chat_service.dart';
 import 'package:stream_chat/stream_chat.dart' as stream;
 import '../../clients/api_service.dart';
@@ -17,13 +19,24 @@ class ChatService {
   final StreamChatService _streamChatService = StreamChatService.instance;
   final Map<String, List<Map<String, dynamic>>> _messagesCache = {};
   final Map<String, CancelToken> _cancelTokens = {};
+  final Map<String, Future<void>> _hiveWriteQueues = {};
   final Set<String> _sendingMessageKeys = {};
   Timer? _pendingRetryTimer;
   bool _isRetryingPendingMessages = false;
+  int? _activeCacheOwnerId;
+  int _cacheGeneration = 0;
 
   void setAuthToken(String token) {
     _api.setAuthToken(token);
     _startPendingRetryLoop();
+  }
+
+  void setCacheOwner(int? userId) {
+    final nextOwner = userId != null && userId > 0 ? userId : null;
+    if (_activeCacheOwnerId == nextOwner) return;
+    _activeCacheOwnerId = nextOwner;
+    _cacheGeneration++;
+    _messagesCache.clear();
   }
 
   Future<void> ensureStreamConnected() {
@@ -33,10 +46,16 @@ class ChatService {
   Stream<stream.Event> get streamEvents => _streamChatService.events;
 
   void clearAuthToken() {
+    for (final token in _cancelTokens.values) {
+      token.cancel('Authentication cleared');
+    }
     _api.clearAuthToken();
     _messagesCache.clear();
     _cancelTokens.clear();
+    _hiveWriteQueues.clear();
     _sendingMessageKeys.clear();
+    _activeCacheOwnerId = null;
+    _cacheGeneration++;
     _stopPendingRetryLoop();
     unawaited(_streamChatService.disconnect());
   }
@@ -44,9 +63,9 @@ class ChatService {
   List<Map<String, dynamic>> readCachedConversations({
     int? cacheOwnerId,
   }) {
+    if (cacheOwnerId == null) return <Map<String, dynamic>>[];
     final keysToCheck = <String>[
       _conversationsKey(cacheOwnerId: cacheOwnerId),
-      if (cacheOwnerId != null) _conversationsKey(cacheOwnerId: null),
     ];
 
     for (final key in keysToCheck) {
@@ -79,36 +98,35 @@ class ChatService {
     List<Map<String, dynamic>> conversations, {
     int? cacheOwnerId,
   }) async {
+    if (cacheOwnerId == null) return;
     final key = _conversationsKey(cacheOwnerId: cacheOwnerId);
     final normalized = conversations
         .map((conversation) => Map<String, dynamic>.from(conversation))
         .toList();
     _messagesCache[key] = normalized;
 
-    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
-    await box?.put(key, normalized);
+    await _writeHive(key, (box) => box.put(key, normalized));
   }
 
   Future<void> clearCachedConversations({int? cacheOwnerId}) async {
+    if (cacheOwnerId == null) return;
     final keysToRemove = <String>[
       _conversationsKey(cacheOwnerId: cacheOwnerId),
-      if (cacheOwnerId != null) _conversationsKey(cacheOwnerId: null),
     ];
 
     for (final key in keysToRemove) {
       _messagesCache.remove(key);
     }
 
-    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
     for (final key in keysToRemove) {
-      await box?.delete(key);
+      await _writeHive(key, (box) => box.delete(key));
     }
   }
 
   Set<int> readArchivedConversationIds({int? cacheOwnerId}) {
+    if (cacheOwnerId == null) return <int>{};
     final keysToCheck = <String>[
       _archivedChatsKey(cacheOwnerId: cacheOwnerId),
-      if (cacheOwnerId != null) _archivedChatsKey(cacheOwnerId: null),
     ];
     final box = LocalCacheService.box(HiveCacheKeys.chatBox);
 
@@ -129,44 +147,34 @@ class ChatService {
     int conversationId, {
     int? cacheOwnerId,
   }) async {
-    if (conversationId <= 0) return;
+    if (conversationId <= 0 || cacheOwnerId == null) return;
     final archived = readArchivedConversationIds(cacheOwnerId: cacheOwnerId)
       ..add(conversationId);
-    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
-    await box?.put(
-      _archivedChatsKey(cacheOwnerId: cacheOwnerId),
-      archived.toList(),
-    );
+    final key = _archivedChatsKey(cacheOwnerId: cacheOwnerId);
+    await _writeHive(key, (box) => box.put(key, archived.toList()));
   }
 
   Future<void> unarchiveConversation(
     int conversationId, {
     int? cacheOwnerId,
   }) async {
-    if (conversationId <= 0) return;
+    if (conversationId <= 0 || cacheOwnerId == null) return;
     final archived = readArchivedConversationIds(cacheOwnerId: cacheOwnerId)
       ..remove(conversationId);
-    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
-    await box?.put(
-      _archivedChatsKey(cacheOwnerId: cacheOwnerId),
-      archived.toList(),
-    );
+    final key = _archivedChatsKey(cacheOwnerId: cacheOwnerId);
+    await _writeHive(key, (box) => box.put(key, archived.toList()));
   }
 
   List<Map<String, dynamic>> readCachedMessages(
     int conversationId, {
     int? cacheOwnerId,
   }) {
+    if (cacheOwnerId == null) return <Map<String, dynamic>>[];
     final keysToCheck = <String>[
       _messagesKey(
         conversationId,
         cacheOwnerId: cacheOwnerId,
       ),
-      if (cacheOwnerId != null)
-        _messagesKey(
-          conversationId,
-          cacheOwnerId: null,
-        ),
     ];
 
     for (final memoryKey in keysToCheck) {
@@ -203,6 +211,7 @@ class ChatService {
     List<Map<String, dynamic>> messages, {
     int? cacheOwnerId,
   }) async {
+    if (cacheOwnerId == null) return;
     final key = _messagesKey(
       conversationId,
       cacheOwnerId: cacheOwnerId,
@@ -211,33 +220,27 @@ class ChatService {
         messages.map((message) => Map<String, dynamic>.from(message)).toList();
     _messagesCache[key] = normalized;
 
-    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
-    await box?.put(key, normalized);
+    await _writeHive(key, (box) => box.put(key, normalized));
   }
 
   Future<void> clearCachedMessages(
     int conversationId, {
     int? cacheOwnerId,
   }) async {
+    if (cacheOwnerId == null) return;
     final keysToRemove = <String>[
       _messagesKey(
         conversationId,
         cacheOwnerId: cacheOwnerId,
       ),
-      if (cacheOwnerId != null)
-        _messagesKey(
-          conversationId,
-          cacheOwnerId: null,
-        ),
     ];
 
     for (final key in keysToRemove) {
       _messagesCache.remove(key);
     }
 
-    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
     for (final key in keysToRemove) {
-      await box?.delete(key);
+      await _writeHive(key, (box) => box.delete(key));
     }
   }
 
@@ -245,17 +248,13 @@ class ChatService {
     int conversationId, {
     int? cacheOwnerId,
   }) {
+    if (cacheOwnerId == null) return null;
     final box = LocalCacheService.box(HiveCacheKeys.chatBox);
     final keysToCheck = <String>[
       _draftKey(
         conversationId,
         cacheOwnerId: cacheOwnerId,
       ),
-      if (cacheOwnerId != null)
-        _draftKey(
-          conversationId,
-          cacheOwnerId: null,
-        ),
     ];
 
     for (final key in keysToCheck) {
@@ -273,39 +272,53 @@ class ChatService {
     String draft, {
     int? cacheOwnerId,
   }) async {
-    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
+    if (cacheOwnerId == null) return;
     final key = _draftKey(
       conversationId,
       cacheOwnerId: cacheOwnerId,
     );
 
     if (draft.trim().isEmpty) {
-      await box?.delete(key);
+      await _writeHive(key, (box) => box.delete(key));
       return;
     }
 
-    await box?.put(key, draft);
+    await _writeHive(key, (box) => box.put(key, draft));
   }
 
   Future<void> clearDraft(
     int conversationId, {
     int? cacheOwnerId,
   }) async {
-    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
+    if (cacheOwnerId == null) return;
     final keysToRemove = <String>[
       _draftKey(
         conversationId,
         cacheOwnerId: cacheOwnerId,
       ),
-      if (cacheOwnerId != null)
-        _draftKey(
-          conversationId,
-          cacheOwnerId: null,
-        ),
     ];
     for (final key in keysToRemove) {
-      await box?.delete(key);
+      await _writeHive(key, (box) => box.delete(key));
     }
+  }
+
+  Future<void> _writeHive(
+    String key,
+    Future<void> Function(Box<dynamic> box) operation,
+  ) {
+    final generation = _cacheGeneration;
+    final previous = _hiveWriteQueues[key] ?? Future<void>.value();
+    final next = previous.catchError((_) {}).then((_) async {
+      if (generation != _cacheGeneration) return;
+      final box = LocalCacheService.box(HiveCacheKeys.chatBox);
+      if (box != null) await operation(box);
+    });
+    _hiveWriteQueues[key] = next;
+    return next.whenComplete(() {
+      if (identical(_hiveWriteQueues[key], next)) {
+        _hiveWriteQueues.remove(key);
+      }
+    });
   }
 
   CancelToken _createCancelToken(String key) {
@@ -354,14 +367,18 @@ class ChatService {
     _isRetryingPendingMessages = true;
 
     try {
+      final cacheOwnerId = _activeCacheOwnerId;
+      if (cacheOwnerId == null) return;
+
       final box = LocalCacheService.box(HiveCacheKeys.chatBox);
       if (box == null) {
         return;
       }
 
-      final keys = box.keys.whereType<String>().where(
-            (key) => key.startsWith('${HiveCacheKeys.chatMessagesPrefix}_'),
-          );
+      final keys = box.keys
+          .whereType<String>()
+          .where((key) => ChatCacheKeys.ownsMessageKey(key, cacheOwnerId))
+          .toList();
 
       for (final key in keys) {
         final raw = box.get(key);
@@ -419,7 +436,7 @@ class ChatService {
         if (didUpdate) {
           _messagesCache[key] =
               List<Map<String, dynamic>>.from(updatedMessages);
-          await box.put(key, updatedMessages);
+          await _writeHive(key, (box) => box.put(key, updatedMessages));
         }
       }
     } catch (_) {
@@ -753,12 +770,10 @@ class ChatService {
               .toList()
           : <Map<String, dynamic>>[];
 
-      if (conversations.isNotEmpty) {
-        await cacheConversations(
-          conversations,
-          cacheOwnerId: cacheOwnerId,
-        );
-      }
+      await cacheConversations(
+        conversations,
+        cacheOwnerId: cacheOwnerId,
+      );
 
       return conversations;
     } on DioException catch (e) {
@@ -944,6 +959,8 @@ class ChatService {
     bool silent = false,
     int? cacheOwnerId,
   }) async {
+    String? cancelKey;
+    CancelToken? requestCancelToken;
     try {
       final memoryKey = _messagesKey(
         conversationId,
@@ -983,6 +1000,11 @@ class ChatService {
         }
       }
 
+      if (!silent) {
+        cancelKey = 'messages_$conversationId';
+        requestCancelToken = _createCancelToken(cancelKey);
+      }
+
       final response = await _api.get(
         '/api/chat/messages/$conversationId',
         queryParameters: {
@@ -990,11 +1012,7 @@ class ChatService {
         },
         forceRefresh: forceRefresh,
         useCache: false,
-        cancelToken: silent
-            ? null
-            : _createCancelToken(
-                'messages_$conversationId',
-              ),
+        cancelToken: requestCancelToken,
       );
 
       final messages = response.data is List
@@ -1012,6 +1030,11 @@ class ChatService {
       }
 
       throw _handleError(e);
+    } finally {
+      if (cancelKey != null &&
+          identical(_cancelTokens[cancelKey], requestCancelToken)) {
+        _cancelTokens.remove(cancelKey);
+      }
     }
   }
 
@@ -1070,8 +1093,10 @@ class ChatService {
   Future<List<Map<String, dynamic>>> getCliqueBotMessages(
     int conversationId,
   ) async {
+    final cacheOwnerId = _activeCacheOwnerId;
+    if (cacheOwnerId == null) return [];
     final box = LocalCacheService.box(HiveCacheKeys.chatBox);
-    final raw = box?.get(_cliqueBotKey(conversationId));
+    final raw = box?.get(_cliqueBotKey(conversationId, cacheOwnerId));
     if (raw is! List) return [];
 
     return raw
@@ -1084,10 +1109,10 @@ class ChatService {
     required int conversationId,
     required int currentUserId,
   }) async {
+    setCacheOwner(currentUserId);
     final saved = await getCliqueBotMessages(conversationId);
     if (saved.isNotEmpty) return saved;
 
-    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
     final now = DateTime.now();
     final welcome = {
       'id': now.microsecondsSinceEpoch,
@@ -1102,7 +1127,8 @@ class ChatService {
       'createdAt': now.toIso8601String(),
     };
     final updated = [welcome];
-    await box?.put(_cliqueBotKey(conversationId), updated);
+    final key = _cliqueBotKey(conversationId, currentUserId);
+    await _writeHive(key, (box) => box.put(key, updated));
     return updated;
   }
 
@@ -1114,7 +1140,7 @@ class ChatService {
     String? replyToMessage,
     String? replyToSender,
   }) async {
-    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
+    setCacheOwner(currentUserId);
     final saved = await getCliqueBotMessages(conversationId);
     final now = DateTime.now();
     final userMessage = {
@@ -1148,24 +1174,25 @@ class ChatService {
       ...saved,
     ];
 
-    await box?.put(_cliqueBotKey(conversationId), updated);
+    final key = _cliqueBotKey(conversationId, currentUserId);
+    await _writeHive(key, (box) => box.put(key, updated));
     return updated;
   }
 
-  String _cliqueBotKey(int conversationId) {
-    return '${HiveCacheKeys.cliqueBotMessagesPrefix}_$conversationId';
+  String _cliqueBotKey(int conversationId, int cacheOwnerId) {
+    return ChatCacheKeys.cliqueBot(cacheOwnerId, conversationId);
   }
 
   String _conversationsKey({int? cacheOwnerId}) {
     return cacheOwnerId == null
         ? HiveCacheKeys.chatConversationsPrefix
-        : '${HiveCacheKeys.chatConversationsPrefix}_$cacheOwnerId';
+        : ChatCacheKeys.conversations(cacheOwnerId);
   }
 
   String _archivedChatsKey({int? cacheOwnerId}) {
     return cacheOwnerId == null
         ? HiveCacheKeys.archivedChatsPrefix
-        : '${HiveCacheKeys.archivedChatsPrefix}_$cacheOwnerId';
+        : ChatCacheKeys.archived(cacheOwnerId);
   }
 
   String _messagesKey(
@@ -1174,7 +1201,7 @@ class ChatService {
   }) {
     return cacheOwnerId == null
         ? '${HiveCacheKeys.chatMessagesPrefix}_$conversationId'
-        : '${HiveCacheKeys.chatMessagesPrefix}_${cacheOwnerId}_$conversationId';
+        : ChatCacheKeys.messages(cacheOwnerId, conversationId);
   }
 
   String _draftKey(
@@ -1183,7 +1210,7 @@ class ChatService {
   }) {
     return cacheOwnerId == null
         ? '${HiveCacheKeys.chatDraftPrefix}_$conversationId'
-        : '${HiveCacheKeys.chatDraftPrefix}_${cacheOwnerId}_$conversationId';
+        : ChatCacheKeys.draft(cacheOwnerId, conversationId);
   }
 
   String _buildCliqueReply(String input) {

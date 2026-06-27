@@ -11,6 +11,7 @@ class LocalCacheService {
   LocalCacheService._();
 
   static bool _initialized = false;
+  static Future<void>? _initializationFuture;
   static const _secureStorage = FlutterSecureStorage(
     aOptions: AndroidOptions(
       encryptedSharedPreferences: true,
@@ -23,6 +24,21 @@ class LocalCacheService {
   static Future<void> initialize() async {
     if (_initialized) return;
 
+    final existing = _initializationFuture;
+    if (existing != null) return existing;
+
+    final initialization = _initializeBoxes();
+    _initializationFuture = initialization;
+    try {
+      await initialization;
+    } finally {
+      if (!_initialized && identical(_initializationFuture, initialization)) {
+        _initializationFuture = null;
+      }
+    }
+  }
+
+  static Future<void> _initializeBoxes() async {
     try {
       await Hive.initFlutter();
       final appLockCipher = HiveAesCipher(await _appLockCipherKey());

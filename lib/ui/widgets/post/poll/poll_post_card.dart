@@ -355,8 +355,6 @@ class _PollPostBodyState extends State<PollPostBody> {
     final poll = _poll;
     final isSelected = _selectedOptionIds.contains(option.id) ||
         (poll?.userVoteOptionId == option.id);
-    final fillAmount = showResults ? (option.percentage / 100).clamp(0.0, 1.0) : 0.0;
-
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -374,32 +372,13 @@ class _PollPostBodyState extends State<PollPostBody> {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isSelected
-                  ? AppColors.primary.withOpacity(0.4)
+                  ? AppColors.border.withOpacity(0.7)
                   : AppColors.cardBorderColor,
             ),
           ),
           child: Stack(
             children: [
-              // Progress bar for results view
-              if (showResults && fillAmount > 0)
-                Positioned.fill(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: FractionallySizedBox(
-                        widthFactor: fillAmount,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.08),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              // Content row
-              Row(
+                           Row(
                 children: [
                   // Selection indicator
                   AnimatedContainer(
@@ -434,18 +413,18 @@ class _PollPostBodyState extends State<PollPostBody> {
                             color: AppColors.text,
                             fontSize: 15,
                             fontWeight: isSelected
-                                ? FontWeight.w700
-                                : FontWeight.w600,
+                                ? FontWeight.bold
+                                : FontWeight.bold,
                           ),
                         ),
                         if (showResults) ...[
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 5),
                           Row(
                             children: [
                               Text(
                                 '${option.votes} votes',
                                 style: AppTheme.greyTextStyle.copyWith(
-                                  color: AppColors.textSecondary,
+                                  color: AppColors.secondary,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                 ),

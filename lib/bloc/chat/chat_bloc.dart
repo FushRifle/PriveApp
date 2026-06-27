@@ -19,6 +19,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final Set<int> _queuedMessageRefreshes = {};
   final Set<String> _inFlightMessageKeys = {};
   int _messageRequestId = 0;
+  int _sessionGeneration = 0;
   bool _isRefreshingConversations = false;
   StreamSubscription? _streamEventSubscription;
 
@@ -59,10 +60,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   }
 
   void clearAuthToken() {
-    _streamEventSubscription?.cancel();
+    _sessionGeneration++;
+    unawaited(_streamEventSubscription?.cancel());
     _streamEventSubscription = null;
     _chatService.clearAuthToken();
     _userService.clearAuthToken();
+    if (!isClosed) add(ResetChatState());
   }
 
   Future<void> _bindStreamEvents() async {
@@ -106,7 +109,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     if (_currentUserId == null) {
       try {
         final user = await _userService.getCurrentUser();
-        _currentUserId = user['id'];
+        final rawId = user['id'];
+        _currentUserId =
+            rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
+        _chatService.setCacheOwner(_currentUserId);
       } catch (_) {}
     }
   }
@@ -361,6 +367,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   Future<void> _onLoadConversations(
       LoadConversations event, Emitter<ChatState> emit) async {
     await _loadCurrentUserId();
+    final generation = _sessionGeneration;
 
     try {
       // The bloc already holds the latest list for this session. Real-time
@@ -379,10 +386,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           conversationsStatus: ChatStatus.success,
           clearError: true,
         ));
-        return;
+      } else {
+        emit(state.copyWith(conversationsStatus: ChatStatus.loading));
       }
-
-      emit(state.copyWith(conversationsStatus: ChatStatus.loading));
 
       // A network request is only needed when there is no cached inbox yet.
       final data = await _chatService.getConversations(
@@ -391,6 +397,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       );
       final conversations =
           data.map((json) => ConversationModel.fromJson(json)).toList();
+      if (generation != _sessionGeneration) return;
       final mergedConversations = _mergeConversations(
         conversations,
         cachedConversations,
@@ -402,9 +409,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       ));
       await _persistConversations(mergedConversations);
     } catch (e) {
+      if (generation != _sessionGeneration) return;
       emit(state.copyWith(
-        conversationsStatus: ChatStatus.error,
-        error: e.toString(),
+        conversationsStatus:
+            state.conversations.isEmpty ? ChatStatus.error : ChatStatus.success,
+        error: state.conversations.isEmpty ? e.toString() : null,
+        clearError: state.conversations.isNotEmpty,
       ));
     }
   }
@@ -415,6 +425,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     _isRefreshingConversations = true;
 
     await _loadCurrentUserId();
+    final generation = _sessionGeneration;
     emit(state.copyWith(conversationsStatus: ChatStatus.refreshing));
     try {
       final data = await _chatService.getConversations(
@@ -423,6 +434,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       );
       final conversations =
           data.map((json) => ConversationModel.fromJson(json)).toList();
+      if (generation != _sessionGeneration) return;
       final mergedConversations = _mergeConversations(
         conversations,
         state.conversations.isNotEmpty
@@ -436,6 +448,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       ));
       await _persistConversations(mergedConversations);
     } catch (e) {
+      if (generation != _sessionGeneration) return;
       emit(state.copyWith(
         conversationsStatus: ChatStatus.error,
         error: e.toString(),
@@ -463,6 +476,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     await _loadCurrentUserId();
 
     final requestId = ++_messageRequestId;
+    final generation = _sessionGeneration;
     final cacheKey = event.conversationId;
 
     if (_loadingConversations.contains(cacheKey)) {
@@ -476,6 +490,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
     try {
       final cachedMessages = await _durableMessagesForConversation(cacheKey);
+      if (generation != _sessionGeneration) return;
 
       if (cachedMessages.isNotEmpty) {
         _messageCache[cacheKey] = cachedMessages;
@@ -533,6 +548,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       await _persistMessages(cacheKey, finalMessages);
 
       if (requestId != _messageRequestId ||
+          generation != _sessionGeneration ||
           state.activeConversationId != event.conversationId) {
         return;
       }
@@ -546,10 +562,14 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         clearError: true,
       ));
     } catch (e) {
-      emit(state.copyWith(
-        messagesStatus: ChatStatus.error,
-        error: e.toString(),
-      ));
+      if (requestId == _messageRequestId &&
+          generation == _sessionGeneration &&
+          state.activeConversationId == event.conversationId) {
+        emit(state.copyWith(
+          messagesStatus: ChatStatus.error,
+          error: e.toString(),
+        ));
+      }
     } finally {
       _loadingConversations.remove(cacheKey);
       if (_queuedMessageRefreshes.remove(cacheKey)) {
@@ -568,6 +588,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     Emitter<ChatState> emit,
   ) async {
     await _loadCurrentUserId();
+    final generation = _sessionGeneration;
 
     if (_currentUserId == null) {
       emit(state.copyWith(error: 'You must be signed in to send messages'));
@@ -645,6 +666,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         replyToId: event.replyToId,
         clientMessageId: clientMessageId,
       );
+      if (generation != _sessionGeneration) return;
 
       MessageModel? realMessage;
 
@@ -705,6 +727,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       _chatService.clearMessagesCache(event.conversationId);
       add(RefreshConversations());
     } catch (_) {
+      if (generation != _sessionGeneration) return;
       final durableMessages =
           await _durableMessagesForConversation(event.conversationId);
       _messageCache[event.conversationId] = durableMessages;
@@ -1174,9 +1197,14 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   }
 
   void _onResetChatState(ResetChatState event, Emitter<ChatState> emit) {
+    _sessionGeneration++;
     _currentUserId = null;
+    _messageRequestId++;
+    _messageCache.clear();
+    _loadingConversations.clear();
     _inFlightMessageKeys.clear();
     _queuedMessageRefreshes.clear();
+    _chatService.setCacheOwner(null);
     _streamEventSubscription?.cancel();
     _streamEventSubscription = null;
     emit(const ChatState());
