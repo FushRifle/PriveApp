@@ -17,6 +17,7 @@ import 'package:clique/bloc/cloudinary/cloudinary_cubit.dart';
 import 'package:clique/core/models/chat_wallpaper.dart';
 import 'package:clique/core/services/media_service.dart';
 import 'package:clique/ui/pages/main/chat/chat_info_page.dart';
+
 import 'package:clique/ui/widgets/chat/message_bubble.dart';
 import 'package:clique/ui/widgets/chat/chat_input_bar.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -52,7 +53,7 @@ class _ChatPageState extends State<ChatPage>
   final ChatService _chatService = ChatService();
 
   String _wallpaper = 'default';
-  Color _chatColor = AppColors.primary;
+  Color _chatColor = AppColors.secondary;
   MessageModel? _replyingTo;
   bool _isLoadingMore = false;
   bool _hasInitialMessages = false;
@@ -556,7 +557,6 @@ class _ChatPageState extends State<ChatPage>
                   if (isUploading) _buildUploadProgress(),
                   if (_buildTypingIndicator(state))
                     _buildTypingIndicatorWidget(),
-                  if (_hasMessageLimit) _buildMessageLimitBanner(messages),
                   ChatInputBar(
                     controller: _messageController,
                     onSendMessage: _sendMessage,
@@ -905,42 +905,6 @@ class _ChatPageState extends State<ChatPage>
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildMessageLimitBanner(List<MessageModel> messages) {
-    final remaining =
-        (widget.maxOutgoingMessages - _outgoingMessageCount(messages))
-            .clamp(0, widget.maxOutgoingMessages);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: (isDark ? AppColors.darkCard : AppColors.white),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.primary.withOpacity(0.12)),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.info_outline_rounded,
-              size: 16,
-              color: AppColors.primary,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                widget.messageLimitHint ??
-                    'You can send $remaining more message${remaining == 1 ? '' : 's'} here.',
-                style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

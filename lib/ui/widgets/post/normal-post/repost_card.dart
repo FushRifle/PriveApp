@@ -40,29 +40,30 @@ class RepostCard extends StatelessWidget {
             margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: AppColors.transparent.withOpacity(0.08),
+              color: AppColors.teal.withOpacity(0.4),
               borderRadius: BorderRadius.circular(999),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
-              children: const [
+              children: [
                 Icon(
                   Icons.repeat_rounded,
-                  color: AppColors.white,
+                  color: AppColors.text,
                   size: 16,
                 ),
-                SizedBox(width: 5),
+                const SizedBox(width: 5),
                 Text(
                   'Reposted',
                   style: TextStyle(
-                    color: AppColors.secondary,
+                    color: AppColors.text,
                     fontSize: 10,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
             ),
           ),
+          const SizedBox(height: 10,),
           CardPost(
             post: post,
             isDetailView: isDetailView,

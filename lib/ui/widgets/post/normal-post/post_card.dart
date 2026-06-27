@@ -575,7 +575,7 @@ class _CardPostState extends State<CardPost> {
           onTap: _openDetail,
           child: Container(
             margin: EdgeInsets.only(
-              bottom: widget.isDetailView ? 0 : 18,
+              bottom: widget.isDetailView ? 0 : 15,
             ),
             decoration: BoxDecoration(
               gradient: LinearGradient(

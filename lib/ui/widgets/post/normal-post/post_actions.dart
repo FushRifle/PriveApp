@@ -146,15 +146,12 @@ class PostActions extends StatelessWidget {
 
   String _formatCount(int count) {
     if (count <= 0) return '0';
-
     if (count >= 1000000) {
       return '${(count / 1000000).toStringAsFixed(1)}M';
     }
-
     if (count >= 1000) {
       return '${(count / 1000).toStringAsFixed(1)}K';
     }
-
     return count.toString();
   }
 }
@@ -193,7 +190,7 @@ class _ResponsiveAction extends StatelessWidget {
 
     final verticalPadding = compact ? 9.0 : 11.0;
     final iconSize = compact ? 19.0 : 20.0;
-    final fontSize = compact ? 12.0 : 13.0;
+    final fontSize = compact ? 13.5 : 13.5;
     final radius = compact ? 12.0 : 14.0;
 
     return Material(
@@ -256,8 +253,8 @@ class _ResponsiveAction extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: color,
-                      fontWeight: FontWeight.w600,
+                      color: AppColors.text,
+                      fontWeight: FontWeight.bold,
                       fontSize: fontSize,
                     ),
                   ),

@@ -13,7 +13,7 @@ class AppColors {
   static const Color lightColorHover = Color(0xFF111111);
   static const Color lightColorPress = Color(0xFF222222);
   static const Color lightBackgroundFocus = Color(0xFFE0E0E0);
-  static const Color lightCard = Color(0xFFFFFFFF); // Deep white
+  static const Color lightCard = Color(0xFFF2F2F7);
   static const Color lightCardBackground = Color(0xFFFFFFFF); // Deep white
   static const Color lightCardBorder = Color(0xFFEEEEEE);
   static const Color lightGray10 = Color(0xFF1C1C1E);

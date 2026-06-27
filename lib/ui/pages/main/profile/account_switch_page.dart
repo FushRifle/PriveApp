@@ -364,7 +364,7 @@ class _AccountSwitchPageState extends State<AccountSwitchPage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
               ],
               _Header(
                 count: _profiles.length,
@@ -471,18 +471,19 @@ class _Header extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  count == 0
-                      ? 'No linked profiles available'
-                      : '$count linked profile${count == 1 ? '' : 's'}',
+                  //count == 0
+                    //  ? 'No linked profiles available'
+                      //: '$count linked profile${count == 1 ? '' : 's'}',
+                      'Coming Soon.',
                   style: AppTheme.greyTextStyle.copyWith(fontSize: 13),
                 ),
               ],
             ),
           ),
-          IconButton.filled(
-            onPressed: onCreate,
-            icon: const Icon(Icons.add_rounded),
-          ),
+         // IconButton.filled(
+           // onPressed: onCreate,
+            //icon: const Icon(Icons.add_rounded),
+          //),
         ],
       ),
     );

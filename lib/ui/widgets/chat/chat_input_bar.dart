@@ -241,11 +241,10 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
   void _showAttachmentMenu() {
     _focusNode.unfocus();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: isDark ? AppColors.darkCard : AppColors.white,
+      backgroundColor: AppColors.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -423,9 +422,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                 height: 48,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? AppColors.darkBackgroundPress
-                      : AppColors.inputLightBackground,
+                  color: AppColors.cardColor,
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: Row(
@@ -435,7 +432,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                       style: TextStyle(
                         color: AppColors.red,
                         fontSize: 13,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(width: 10),

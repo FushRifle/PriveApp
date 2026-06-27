@@ -201,9 +201,9 @@ class _PostUserInfo extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: AppTheme.blackTextStyle.copyWith(
-                  fontSize: 14,
-                  color: AppColors.secondary,
-                  fontWeight: FontWeight.w800,
+                  fontSize: 13.5,
+                  color: AppColors.text,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
@@ -284,7 +284,7 @@ class _TypeBadge extends StatelessWidget {
       child: Text(
         value,
         style: AppTheme.blackTextStyle.copyWith(
-          color: AppColors.text,
+          color: AppColors.secondary,
           fontSize: 10,
           fontWeight: FontWeight.w500,
         ),
