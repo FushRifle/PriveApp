@@ -73,11 +73,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           return BlocBuilder<SettingsBloc, SettingsState>(
             builder: (context, settingsState) {
               return Scaffold(
-                backgroundColor: isDark
-                    ? AppColors.darkBackground
-                    : AppColors.settingsLightBackground,
+                backgroundColor: AppColors.background,
                 appBar: AppBar(
-                  
                   backgroundColor: AppColors.transparent,
                   elevation: 0,
                   centerTitle: true,
@@ -91,8 +88,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   title: Text(
                     'Settings',
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 18,
                       color: AppColors.text,
                     ),
                   ),
@@ -381,14 +378,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         ],
                         isDark,
                       ),
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 20),
                       GestureDetector(
                         onTap: _showLogoutDialog,
                         child: Container(
                           width: double.infinity,
                           height: 58,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(20),
                             color: AppColors.redColor.withOpacity(0.08),
                             border: Border.all(
                               color: AppColors.redColor.withOpacity(0.2),

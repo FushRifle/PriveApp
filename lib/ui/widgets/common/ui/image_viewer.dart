@@ -47,7 +47,7 @@ class _ImageViewerState extends State<ImageViewer> {
                   fit: BoxFit.contain,
                   placeholder: (context, url) => const Center(
                     child: CircularProgressIndicator(
-                      color: AppColors.primary,
+                      color: AppColors.secondary,
                     ),
                   ),
                   errorWidget: (context, url, error) => const Center(
@@ -95,11 +95,7 @@ class _ImageViewerState extends State<ImageViewer> {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.black.withOpacity(0.72),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppColors.white.withOpacity(0.08),
-                    ),
+                    color: AppColors.transparent.withOpacity(0.72),
                   ),
                   child: Text(
                     widget.caption!,
@@ -250,7 +246,7 @@ class _CircleActionButton extends StatelessWidget {
         color: AppColors.black.withOpacity(0.55),
         shape: BoxShape.circle,
         border: Border.all(
-          color: AppColors.white.withOpacity(0.10),
+          color: AppColors.primary.withOpacity(0.10),
         ),
       ),
       child: Center(
@@ -260,7 +256,7 @@ class _CircleActionButton extends StatelessWidget {
                 height: 16,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: AppColors.white,
+                  color: AppColors.secondary,
                 ),
               )
             : Icon(

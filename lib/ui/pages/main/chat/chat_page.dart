@@ -1011,19 +1011,19 @@ class _ChatPageState extends State<ChatPage>
     }
 
     if (wallpaperAsset == null) {
-      return BoxDecoration(color: AppColors.backgroundColor);
+      return BoxDecoration(color: AppColors.background);
     }
 
     return BoxDecoration(
-      color: AppColors.backgroundColor,
+      color: AppColors.background,
       image: DecorationImage(
         image: AssetImage(wallpaperAsset),
+        colorFilter: ColorFilter.mode(
+          AppColors.black.withOpacity(isDark ? 0.32 : 0.12),
+          BlendMode.darken,
+        ),
         fit: BoxFit.cover,
         filterQuality: FilterQuality.high,
-        colorFilter: ColorFilter.mode(
-          (isDark ? AppColors.black : AppColors.white).withOpacity(0.10),
-          BlendMode.srcOver,
-        ),
       ),
     );
   }

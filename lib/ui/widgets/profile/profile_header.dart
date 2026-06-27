@@ -192,14 +192,7 @@ class ProfileHeaderCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.card,
                 borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: AppColors.border.withOpacity(0.45)),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.shadow.withOpacity(0.12),
-                    blurRadius: 22,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
+                border: Border.all(color: AppColors.transparent),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -337,7 +330,7 @@ class ProfileIdentityRow extends StatelessWidget {
           profile.displayName ?? 'User',
           textAlign: TextAlign.center,
           style: AppTheme.blackTextStyle.copyWith(
-            fontSize: 22,
+            fontSize: 17,
             fontWeight: FontWeight.w900,
             letterSpacing: -0.3,
           ),
@@ -356,7 +349,8 @@ class ProfileIdentityRow extends StatelessWidget {
               Text(
                 handle != null ? '@$handle' : profile.ageText,
                 style: AppTheme.greyTextStyle.copyWith(
-                  fontSize: 14,
+                  fontSize: 12,
+                  color: AppColors.secondary,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -445,9 +439,9 @@ class ProfileInfoChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.backgroundColor.withOpacity(0.92),
+        color: AppColors.card.withOpacity(0.82),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: AppColors.border.withOpacity(0.7)),
       ),
@@ -748,10 +742,10 @@ class ProfileActionRow extends StatelessWidget {
             runSpacing: 12,
             children: [
               SizedBox(
-                width: isCompact ? 120 : 140,
+                width: isCompact ? 80 : 90,
                 child: ProfileActionButton(
                   text: 'EDIT',
-                  backgroundColor: AppColors.backgroundColor,
+                  backgroundColor: AppColors.card,
                   textColor: AppColors.primary,
                   hasBorder: true,
                   onTap: () {
@@ -766,7 +760,7 @@ class ProfileActionRow extends StatelessWidget {
               ),
               ProfileIconActionButton(
                 icon: Icons.settings_outlined,
-                color: AppColors.text,
+                color: AppColors.primary,
                 onTap: () =>
                     Navigator.pushNamed(context, NamedRoutes.settingsScreen),
               ),
@@ -913,7 +907,6 @@ class ProfileIconActionButton extends StatelessWidget {
 
 class ProfileStickyTabBar extends StatelessWidget {
   final TabController tabController;
-
   const ProfileStickyTabBar({
     super.key,
     required this.tabController,
@@ -922,13 +915,13 @@ class ProfileStickyTabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const topPadding = 10.0;
-    const bottomPadding = 6.0;
+    const bottomPadding = 8.0;
     final tabBar = TabBar(
       controller: tabController,
-      indicatorColor: AppColors.primary,
-      indicatorWeight: 3,
+      indicatorColor: AppColors.secondary,
+      indicatorWeight: 4,
       indicatorSize: TabBarIndicatorSize.label,
-      labelColor: AppColors.primary,
+      labelColor: AppColors.secondary,
       unselectedLabelColor: AppColors.textSecondary,
       splashFactory: NoSplash.splashFactory,
       overlayColor: WidgetStatePropertyAll<Color>(AppColors.transparent),

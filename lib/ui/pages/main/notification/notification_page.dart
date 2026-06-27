@@ -24,6 +24,16 @@ class _NotificationPageState extends State<NotificationPage> {
   @override
   void initState() {
     super.initState();
+    final cached = _notificationService.getCachedNotifications();
+    final cachedItems = (cached?['notifications'] as List? ?? const [])
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+    if (cachedItems.isNotEmpty) {
+      _notifications = cachedItems;
+      _groupedNotifications = _groupNotifications(cachedItems);
+      _isLoading = false;
+    }
     _loadNotifications();
   }
 
@@ -32,6 +42,7 @@ class _NotificationPageState extends State<NotificationPage> {
       final response = await _notificationService.getNotifications(
         page: 1,
         pageSize: 20,
+        forceRefresh: true,
       );
 
       if (!mounted) return;

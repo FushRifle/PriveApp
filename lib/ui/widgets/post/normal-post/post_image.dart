@@ -1,7 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/core/models/feeds_models.dart';
-import 'package:clique/ui/widgets/ui/image_viewer.dart';
+import 'package:clique/ui/widgets/common/ui/image_viewer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -44,7 +44,7 @@ class PostImage extends StatelessWidget {
                 imageUrl: imageUrl,
                 caption: post.content.trim().isNotEmpty ? post.content : null,
               );
-            },
+            }, 
           ),
         );
       },

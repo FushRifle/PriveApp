@@ -49,14 +49,11 @@ class _RegisterPageState extends State<RegisterPage> {
           if (state.status == AuthStatus.authenticated) {
             Navigator.pushNamedAndRemoveUntil(
               context,
-              NamedRoutes.homeScreen,
+              NamedRoutes.onboardingScreen,
               (route) => false,
             );
-          } else if (state.status == AuthStatus.verificationRequired) {
-            _showSnack(
-              state.error ?? 'Check your email to verify your account.',
-              isError: false,
-            );
+            // Email verification is intentionally disabled for the current
+            // signup flow. New accounts continue through onboarding instead.
           } else if (state.status == AuthStatus.error && state.error != null) {
             _showSnack(state.error!);
             context.read<AuthBloc>().add(const ClearAuthError());
@@ -174,9 +171,6 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
           ),
           const SizedBox(height: 16),
-          if (state.status == AuthStatus.verificationRequired &&
-              state.error != null)
-            _buildVerificationBox(state),
           Row(
             children: [
               GestureDetector(

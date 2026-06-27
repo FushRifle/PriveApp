@@ -875,7 +875,7 @@ class _HomeAppBarState extends State<_HomeAppBar> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppTheme.blackTextStyle.copyWith(
-                            color: widget.palette.text,
+                            color: AppColors.secondary,
                             fontSize: titleFontSize,
                             fontWeight: FontWeight.w900,
                             letterSpacing: -0.5,
@@ -887,8 +887,8 @@ class _HomeAppBarState extends State<_HomeAppBar> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: AppTheme.greyTextStyle.copyWith(
-                              color: widget.palette.mutedText,
-                              fontSize: 13,
+                              color: AppColors.text,
+                              fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -924,7 +924,7 @@ class _HomeAppBarState extends State<_HomeAppBar> {
                           Icon(
                             Icons.notifications_outlined,
                             color: AppColors.white,
-                            size: isCompact ? 20 : 22,
+                            size: isCompact ? 22 : 24,
                           ),
                           FutureBuilder<Map<String, dynamic>>(
                             future: _notificationsFuture,

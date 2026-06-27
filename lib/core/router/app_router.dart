@@ -91,7 +91,9 @@ class AppRouter {
 
       case NamedRoutes.onboardingScreen:
         return _page(
-          const OnboardingPage(),
+          const OnboardingPage(
+            completionRoute: NamedRoutes.demographicScreen,
+          ),
         );
 
       case NamedRoutes.demographicScreen:

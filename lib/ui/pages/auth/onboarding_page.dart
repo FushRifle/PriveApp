@@ -276,8 +276,18 @@ class _IntroArtwork extends StatelessWidget {
       child: AspectRatio(
         aspectRatio: 0.88,
         child: Container(
+          padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(28),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white.withOpacity(0.22),
+                accent.withOpacity(0.55),
+                Colors.white.withOpacity(0.05),
+              ],
+            ),
             boxShadow: [
               BoxShadow(
                 color: accent.withOpacity(0.2),
@@ -292,7 +302,7 @@ class _IntroArtwork extends StatelessWidget {
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(23),
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -314,6 +324,14 @@ class _IntroArtwork extends StatelessWidget {
                       ],
                       stops: const [0.0, 0.4, 0.75, 1.0],
                     ),
+                  ),
+                ),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.12),
+                    ),
+                    borderRadius: BorderRadius.circular(23),
                   ),
                 ),
                 // Badge chip

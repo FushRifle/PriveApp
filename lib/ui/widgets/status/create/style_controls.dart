@@ -25,14 +25,6 @@ class StyleControls extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            _InfoBadge(
-              icon: Icons.text_fields_rounded,
-              label: '$textLength chars',
-            ),
-          ],
-        ),
         const SizedBox(height: 14),
         GridView.count(
           crossAxisCount: 5,
@@ -87,6 +79,7 @@ class StyleControls extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _InfoBadge extends StatelessWidget {
   final IconData icon;
   final String label;

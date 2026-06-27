@@ -125,7 +125,7 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-    _slideAnimations = List.generate(3, (index) {
+    _slideAnimations = List.generate(1, (index) {
       return Tween<double>(begin: 20, end: 0).animate(
         CurvedAnimation(
           parent: _fadeController,
@@ -234,11 +234,7 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
                     onPageChanged: (page) =>
                         setState(() => _currentPage = page),
                     physics: const BouncingScrollPhysics(),
-                    children: [
-                      _buildBasicInfoStep(),
-                      _buildProfileStep(),
-                      _buildInterestsStep(),
-                    ],
+                    children: [_buildBasicInfoStep()],
                   ),
                 ),
                 _buildBottomButtons(isLoading),
@@ -281,7 +277,7 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
   Widget _buildPageIndicator() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(3, (index) {
+      children: List.generate(1, (index) {
         return AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           margin: const EdgeInsets.symmetric(horizontal: 6),
@@ -326,12 +322,6 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
           _buildCoverSection(),
           const SizedBox(height: 16),
           _buildDisplayNameField(),
-          const SizedBox(height: 16),
-          _buildDateOfBirthField(),
-          const SizedBox(height: 16),
-          _buildGenderSection(),
-          const SizedBox(height: 16),
-          _buildLookingForSection(),
           const SizedBox(height: 16),
           _buildLocationField(),
           const SizedBox(height: 80),
@@ -555,7 +545,9 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
       title: 'Location',
       child: TextField(
         controller: _locationController,
-        style: const TextStyle(fontSize: 16,),
+        style: const TextStyle(
+          fontSize: 16,
+        ),
         decoration: InputDecoration(
           hintText: 'City, Country',
           hintStyle: AppTheme.greyTextStyle.copyWith(fontSize: 14),
@@ -914,7 +906,7 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
                           ),
                         )
                       : Text(
-                          _currentPage == 2 ? 'Complete' : 'Continue',
+                          'Complete setup',
                           style: AppTheme.whiteTextStyle.copyWith(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
@@ -940,30 +932,11 @@ class _OnboardingDemographicPageState extends State<OnboardingDemographicPage>
   }
 
   void _goToNextPage() {
-    if (_currentPage == 0) {
-      if (_displayNameController.text.isEmpty ||
-          _selectedDateOfBirth == null ||
-          _selectedGender.isEmpty ||
-          _selectedLookingFor.isEmpty) {
-        _showSnack('Please fill all required fields');
-        return;
-      }
-    }
-
-    if (_currentPage == 2) {
-      if (_selectedInterests.length < 3) {
-        _showSnack('Please select at least 3 interests');
-        return;
-      }
-      _saveDemographicInfo();
+    if (_displayNameController.text.trim().isEmpty) {
+      _showSnack('Please enter a display name');
       return;
     }
-
-    setState(() => _currentPage++);
-    _pageController.nextPage(
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeOutCubic,
-    );
+    _saveDemographicInfo();
   }
 
   Future<void> _skipOnboarding() async {

@@ -341,7 +341,8 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
 
   Widget _buildSoundTile() {
     return ListTile(
-      leading: const Icon(Icons.volume_up, color: AppColors.secondary, size: 24),
+      leading:
+          const Icon(Icons.volume_up, color: AppColors.secondary, size: 24),
       title: Text('Notification Sound',
           style: AppTheme.blackTextStyle
               .copyWith(fontWeight: FontWeight.w500, fontSize: 15)),
@@ -388,7 +389,8 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
 
   Widget _buildPinSwitch() {
     return SwitchListTile(
-      secondary: const Icon(Icons.push_pin, color: AppColors.secondary, size: 24),
+      secondary:
+          const Icon(Icons.push_pin, color: AppColors.secondary, size: 24),
       title: Text('Pin Chat',
           style: AppTheme.blackTextStyle
               .copyWith(fontWeight: FontWeight.w500, fontSize: 15)),
@@ -458,7 +460,9 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
       leading: Icon(Icons.delete_outline, color: AppColors.red, size: 24),
       title: Text('Clear conversation',
           style: AppTheme.blackTextStyle.copyWith(
-              fontWeight: FontWeight.w500, fontSize: 15, color: AppColors.text)),
+              fontWeight: FontWeight.w500,
+              fontSize: 15,
+              color: AppColors.text)),
       subtitle: Text('Remove this conversation history',
           style: AppTheme.greyTextStyle.copyWith(fontSize: 12)),
       onTap: _clearChat,
@@ -471,7 +475,9 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
       leading: Icon(Icons.block, color: AppColors.red, size: 24),
       title: Text('Block ${widget.userName}',
           style: AppTheme.blackTextStyle.copyWith(
-              fontWeight: FontWeight.w500, fontSize: 15, color: AppColors.text)),
+              fontWeight: FontWeight.w500,
+              fontSize: 15,
+              color: AppColors.text)),
       subtitle: Text('Block this user',
           style: AppTheme.greyTextStyle.copyWith(fontSize: 12)),
       onTap: _blockUser,
@@ -516,7 +522,8 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
     );
   }
 
-  Widget _buildDivider() => Divider(height: 1, indent: 56, color: AppColors.divider);
+  Widget _buildDivider() =>
+      Divider(height: 1, indent: 56, color: AppColors.divider);
 
   void _showWallpaperPicker() {
     showModalBottomSheet(
@@ -781,6 +788,20 @@ class _WallpaperOptionCard extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               _preview(),
+              if (wallpaper.isImage)
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        AppColors.transparent,
+                        AppColors.black.withOpacity(0.12),
+                        AppColors.black.withOpacity(0.48),
+                      ],
+                    ),
+                  ),
+                ),
               if (isSelected)
                 Container(
                   color: AppColors.card.withOpacity(0.2),

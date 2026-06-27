@@ -23,7 +23,11 @@ class ChatWallpapers {
   const ChatWallpapers._();
 
   static const images = <ChatWallpaper>[
-    ChatWallpaper(id: 'default', name: 'Default', category: 'Images'),
+    ChatWallpaper(
+      id: 'default',
+      name: 'Default',
+      category: 'Images',
+    ),
     ChatWallpaper(
       id: 'palms',
       name: 'Palms',

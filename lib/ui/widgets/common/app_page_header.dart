@@ -32,7 +32,7 @@ class AppPageHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final background = isDark ? AppColors.darkBackground : AppColors.white;
+    final background = AppColors.background;
     final text = isDark ? AppColors.white : AppColors.black;
     final muted = isDark ? AppColors.white.withOpacity(0.65) : AppColors.grey;
     final border =
@@ -44,7 +44,7 @@ class AppPageHeader extends StatelessWidget {
     return Container(
       padding: EdgeInsets.fromLTRB(
         16,
-        MediaQuery.paddingOf(context).top + 20,
+        MediaQuery.paddingOf(context).top + 16,
         16,
         12,
       ),
@@ -64,7 +64,7 @@ class AppPageHeader extends StatelessWidget {
               icon: leadingIcon,
               background: background,
               text: text,
-              size: 44,
+              size: 40,
             ),
           ),
           const SizedBox(width: 14),
@@ -78,8 +78,8 @@ class AppPageHeader extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: AppTheme.blackTextStyle.copyWith(
                     color: text,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w900,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 Text(
@@ -88,7 +88,7 @@ class AppPageHeader extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: AppTheme.greyTextStyle.copyWith(
                     color: muted,
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: FontWeight.bold,
                   ),
                 ),

@@ -161,14 +161,14 @@ class AuthService {
         );
       }
 
-      // Most production Supabase projects require email confirmation. That is
-      // a successful account creation, but not an authenticated session yet.
-      if (session == null || user.confirmedAt == null) {
+      // Email confirmation is temporarily disabled in the app signup flow.
+      // A session is still required because onboarding uses authenticated APIs.
+      if (session == null) {
         return AuthResult(
           success: false,
           needsVerification: true,
-          error:
-              'Account created. Check your email to verify your account before signing in.',
+          error: 'Account created, but no session was returned. Disable email '
+              'confirmation in Supabase while verification is paused.',
         );
       }
 

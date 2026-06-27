@@ -186,10 +186,10 @@ class _ProfileSavedPostsTabState extends State<ProfileSavedPostsTab> {
         itemBuilder: (context, index) {
           if (index >= _savedPosts.length) {
             return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
+              padding: EdgeInsets.symmetric(vertical: 18),
               child: Center(
                 child: CircularProgressIndicator(
-                  color: AppColors.primary,
+                  color: AppColors.secondary,
                   strokeWidth: 2,
                 ),
               ),

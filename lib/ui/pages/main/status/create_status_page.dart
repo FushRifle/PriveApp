@@ -76,8 +76,6 @@ class _CreateStatusPageState extends State<CreateStatusPage>
     super.initState();
     _textController.addListener(_onComposerChanged);
     _hashtagController.addListener(_onComposerChanged);
-
-    // Initialize animation controller
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
@@ -433,15 +431,15 @@ class _CreateStatusPageState extends State<CreateStatusPage>
       ),
       child: InkWell(
         borderRadius: const BorderRadius.horizontal(
-          left: Radius.circular(16),
-          right: Radius.circular(16),
+          left: Radius.circular(12),
+          right: Radius.circular(12),
         ),
         onTap: _toggleComposerOptions,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOut,
-          width: 34,
-          height: 70,
+          width: 40,
+          height: 80,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             borderRadius: const BorderRadius.horizontal(

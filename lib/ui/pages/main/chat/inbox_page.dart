@@ -26,12 +26,16 @@ class _InboxPageState extends State<InboxPage> {
   final ChatService _chatService = ChatService();
   InboxFilter _filter = InboxFilter.all;
   String _query = '';
+  bool _showInitialShimmer = true;
 
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_handleSearchChanged);
     _loadConversations();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _showInitialShimmer = false);
+    });
   }
 
   @override
@@ -67,7 +71,7 @@ class _InboxPageState extends State<InboxPage> {
     );
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundColor,
+      backgroundColor: AppColors.background,
       body: Column(
         children: [
           AppPageHeader(
@@ -117,7 +121,9 @@ class _InboxPageState extends State<InboxPage> {
                   final hasCachedOrLiveConversations =
                       allConversations.isNotEmpty;
 
-                  if (state.conversationsStatus == ChatStatus.loading &&
+                  if ((_showInitialShimmer ||
+                          state.conversationsStatus == ChatStatus.initial ||
+                          state.conversationsStatus == ChatStatus.loading) &&
                       !hasCachedOrLiveConversations) {
                     return const InboxLoadingShimmer();
                   }

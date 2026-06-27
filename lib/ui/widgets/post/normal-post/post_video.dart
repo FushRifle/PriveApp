@@ -1,7 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/core/models/feeds_models.dart';
-import 'package:clique/ui/widgets/ui/video_viewer.dart';
+import 'package:clique/ui/widgets/common/ui/video_viewer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';

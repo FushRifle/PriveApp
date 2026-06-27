@@ -5,8 +5,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
 import 'package:clique/ui/widgets/chat/audio_message_bubble.dart';
-import 'package:clique/ui/widgets/ui/image_viewer.dart';
-import 'package:clique/ui/widgets/ui/video_viewer.dart';
+import 'package:clique/ui/widgets/common/ui/image_viewer.dart';
+import 'package:clique/ui/widgets/common/ui/video_viewer.dart';
 
 class MessageBubble extends StatelessWidget {
   final MessageModel message;
