@@ -4,16 +4,19 @@ import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:clique/core/services/auth/auth_service.dart';
 import 'package:clique/core/services/notification/push_notification_service.dart';
+import 'package:flutter/foundation.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  final AuthService _authService = AuthService();
+  final AuthService _authService;
 
   bool _isCheckingAuth = false;
 
-  AuthBloc() : super(const AuthState()) {
+  AuthBloc({AuthService? authService})
+      : _authService = authService ?? AuthService(),
+        super(const AuthState()) {
     on<SignInRequested>(_onSignInRequested);
     on<SignUpRequested>(_onSignUpRequested);
     on<SignOutRequested>(_onSignOutRequested);
@@ -169,17 +172,43 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
 
     try {
-      final isAuthenticated = await _authService.isAuthenticated();
-      final token = await _authService.getToken();
-      final user = await _authService.getCurrentUser();
+      final result = await _authService.restoreSession();
 
-      if (isAuthenticated && token != null) {
+      if (result.success && result.token != null) {
         emit(
           state.copyWith(
             status: AuthStatus.authenticated,
             isAuthenticated: true,
-            token: token,
-            user: user,
+            token: result.token,
+            user: result.user,
+            isLoading: false,
+            clearError: true,
+          ),
+        );
+      } else {
+        emit(
+          state.copyWith(
+            status: AuthStatus.unauthenticated,
+            isAuthenticated: false,
+            clearToken: true,
+            clearUser: true,
+            isLoading: false,
+          ),
+        );
+      }
+    } catch (error) {
+      final fallback = _authService.currentSessionFallback();
+      debugPrint(
+        '{"event":"auth_status_check_failed","error_type":"${error.runtimeType}","has_fallback":${fallback != null}}',
+      );
+
+      if (fallback != null && fallback.token != null) {
+        emit(
+          state.copyWith(
+            status: AuthStatus.authenticated,
+            isAuthenticated: true,
+            token: fallback.token,
+            user: fallback.user ?? state.user,
             isLoading: false,
           ),
         );
@@ -228,16 +257,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(state.copyWith(status: AuthStatus.loading, isLoading: true));
     await Future.delayed(const Duration(seconds: 1));
-    final isAuthenticated = await _authService.isAuthenticated();
-    if (isAuthenticated) {
-      final token = await _authService.getToken();
-      final user = await _authService.getCurrentUser();
+    final result = await _authService.restoreSession();
+    if (result.success && result.token != null) {
       emit(
         state.copyWith(
           status: AuthStatus.authenticated,
           isAuthenticated: true,
-          token: token,
-          user: user,
+          token: result.token,
+          user: result.user,
           isLoading: false,
           needsVerification: false,
         ),

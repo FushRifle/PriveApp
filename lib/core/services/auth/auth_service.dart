@@ -7,10 +7,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:clique/core/clients/api_service.dart';
 import 'package:clique/core/clients/supabase_client.dart';
 import 'package:clique/core/local_cache/local_cache_service.dart';
+import 'package:clique/core/services/auth/auth_session_manager.dart';
 
 class AuthService {
   final ApiService _api = ApiService();
-  Future<Session?>? _refreshSessionFuture;
+  final AuthSessionManager _sessionManager = AuthSessionManager.instance;
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage(
     aOptions: AndroidOptions(
@@ -49,6 +50,8 @@ class AuthService {
           error: 'Please verify your email before logging in',
         );
       }
+
+      _api.setAuthToken(token);
 
       // Backend sync (optional, don't fail if backend is down)
       try {
@@ -171,6 +174,8 @@ class AuthService {
 
       final token = session.accessToken;
 
+      _api.setAuthToken(token);
+
       return AuthResult(
         success: true,
         token: token,
@@ -224,6 +229,7 @@ class AuthService {
 
   // SIGN OUT
   Future<void> signOut() async {
+    _api.clearAuthToken();
     try {
       await SupabaseConfig.client.auth.signOut();
     } catch (_) {}
@@ -236,7 +242,7 @@ class AuthService {
   // GET CURRENT TOKEN
   Future<String?> getToken() async {
     try {
-      final session = await _getFreshSession();
+      final session = await _sessionManager.getFreshSession();
       return session?.accessToken;
     } catch (e) {
       return null;
@@ -246,7 +252,7 @@ class AuthService {
   // AUTH CHECK
   Future<bool> isAuthenticated() async {
     try {
-      final session = await _getFreshSession();
+      final session = await _sessionManager.getFreshSession();
       return session != null && session.accessToken.isNotEmpty;
     } catch (e) {
       return false;
@@ -270,39 +276,42 @@ class AuthService {
     }
   }
 
-  Future<Session?> _getFreshSession() async {
-    final session = SupabaseConfig.client.auth.currentSession;
-    if (session == null) return null;
+  Future<AuthResult> restoreSession() async {
+    final snapshot = await _sessionManager.restoreSession();
+    if (snapshot == null) {
+      return AuthResult(success: false);
+    }
 
-    final expiresAt = session.expiresAt;
-    if (expiresAt == null) return session;
-
-    final expiresAtDate = DateTime.fromMillisecondsSinceEpoch(
-      expiresAt * 1000,
+    final token = snapshot.session.accessToken;
+    _api.setAuthToken(token);
+    return AuthResult(
+      success: true,
+      token: token,
+      user: _userMap(snapshot.user),
     );
+  }
 
-    if (expiresAtDate.isAfter(DateTime.now().add(const Duration(minutes: 2)))) {
-      return session;
-    }
+  AuthResult? currentSessionFallback() {
+    final snapshot = _sessionManager.currentSnapshot;
+    if (snapshot == null || snapshot.session.accessToken.isEmpty) return null;
 
-    final existingRefresh = _refreshSessionFuture;
-    if (existingRefresh != null) {
-      return existingRefresh;
-    }
+    final token = snapshot.session.accessToken;
+    _api.setAuthToken(token);
+    return AuthResult(
+      success: true,
+      token: token,
+      user: _userMap(snapshot.user),
+    );
+  }
 
-    final refresh = SupabaseConfig.client.auth.refreshSession().then(
-          (response) => response.session,
-        );
-
-    _refreshSessionFuture = refresh;
-
-    try {
-      return await refresh;
-    } finally {
-      if (_refreshSessionFuture == refresh) {
-        _refreshSessionFuture = null;
-      }
-    }
+  Map<String, dynamic>? _userMap(User? user) {
+    if (user == null) return null;
+    return {
+      'id': user.id,
+      'email': user.email,
+      'firstName': user.userMetadata?['first_name'] ?? '',
+      'lastName': user.userMetadata?['last_name'] ?? '',
+    };
   }
 
   // GET SAVED CREDENTIALS

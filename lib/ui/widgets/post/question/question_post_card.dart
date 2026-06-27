@@ -25,12 +25,11 @@ class QuestionPostBody extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              AppColors.primary.withOpacity(0.12),
-              AppColors.secondary.withOpacity(0.08),
+              AppColors.card.withOpacity(0.12),
+              AppColors.card.withOpacity(0.08),
             ],
           ),
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: AppColors.primary.withOpacity(0.18)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,

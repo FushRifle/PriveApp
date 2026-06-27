@@ -1,7 +1,9 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:clique/app/configs/api_config.dart';
-import 'package:clique/core/clients/supabase_client.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:clique/core/services/auth/auth_session_manager.dart';
 
 import 'retrofit_client.dart';
 
@@ -25,7 +27,6 @@ class ApiService {
 
   int _requestId = 0;
 
-  Future<Session?>? _refreshSessionFuture;
   Future<void> _requestQueue = Future<void>.value();
 
   static const Duration _cacheDuration = Duration(seconds: 60);
@@ -81,59 +82,70 @@ class ApiService {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          final session = await _getFreshSession();
+          try {
+            final session = await AuthSessionManager.instance.getFreshSession();
+            final token = session?.accessToken ?? _authToken;
 
-          final token = session?.accessToken ?? _authToken;
+            if (token != null && token.isNotEmpty) {
+              options.headers['Authorization'] = 'Bearer $token';
+            }
 
-          if (token != null && token.isNotEmpty) {
-            options.headers['Authorization'] = 'Bearer $token';
+            _logRequest('api_request_started', options);
+            handler.next(options);
+          } catch (error) {
+            _logRequest(
+              'api_request_auth_preparation_failed',
+              options,
+              fields: {'error_type': error.runtimeType.toString()},
+            );
+            handler.reject(
+              DioException(
+                requestOptions: options,
+                type: DioExceptionType.unknown,
+                error: error,
+              ),
+            );
           }
-
-          handler.next(options);
         },
         onResponse: (response, handler) {
           handler.next(response);
         },
         onError: (error, handler) {
+          if (error.response?.statusCode == 401) {
+            final responseData = error.response?.data;
+            final reason = responseData is Map
+                ? responseData['reason'] ?? responseData['error']
+                : null;
+            _logRequest(
+              'api_request_unauthorized',
+              error.requestOptions,
+              fields: {
+                'status': 401,
+                'backend_request_id':
+                    error.response?.headers.value('x-request-id'),
+                if (reason != null) 'reason': reason.toString(),
+              },
+            );
+          }
           handler.next(error);
         },
       ),
     );
   }
 
-  Future<Session?> _getFreshSession() async {
-    final session = SupabaseConfig.client.auth.currentSession;
-    if (session == null) return null;
-
-    final expiresAt = session.expiresAt;
-    if (expiresAt == null) return session;
-
-    final expiresAtDate = DateTime.fromMillisecondsSinceEpoch(
-      expiresAt * 1000,
+  void _logRequest(
+    String event,
+    RequestOptions options, {
+    Map<String, Object?> fields = const {},
+  }) {
+    debugPrint(
+      jsonEncode({
+        'event': event,
+        'method': options.method,
+        'path': options.path,
+        ...fields,
+      }),
     );
-
-    if (expiresAtDate.isAfter(DateTime.now().add(const Duration(minutes: 2)))) {
-      return session;
-    }
-
-    final existingRefresh = _refreshSessionFuture;
-    if (existingRefresh != null) {
-      return existingRefresh;
-    }
-
-    final refresh = SupabaseConfig.client.auth.refreshSession().then(
-          (response) => response.session,
-        );
-
-    _refreshSessionFuture = refresh;
-
-    try {
-      return await refresh;
-    } finally {
-      if (_refreshSessionFuture == refresh) {
-        _refreshSessionFuture = null;
-      }
-    }
   }
 
   // =========================================================

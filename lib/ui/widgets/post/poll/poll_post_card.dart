@@ -172,14 +172,6 @@ class _PollPostBodyState extends State<PollPostBody> {
         decoration: BoxDecoration(
           color: AppColors.card,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: AppColors.cardBorderColor),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.black.withOpacity(0.04),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
         ),
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),

@@ -9,9 +9,9 @@ import 'package:clique/ui/widgets/post/anonymous/anonymous_post_card.dart';
 import 'package:clique/ui/pages/main/home/edit_post_page.dart';
 import 'package:clique/ui/pages/main/home/post_detail_page.dart';
 import 'package:clique/ui/pages/main/home/repost_page.dart';
+
 import 'package:clique/ui/widgets/post/poll/poll_post_card.dart';
 import 'package:clique/ui/widgets/post/question/question_post_card.dart';
-
 import 'package:clique/ui/widgets/home/custom_bottom_sheet.dart';
 import 'package:clique/ui/widgets/post/normal-post/post_actions.dart';
 import 'package:clique/ui/widgets/post/normal-post/post_footer.dart';
@@ -587,16 +587,6 @@ class _CardPostState extends State<CardPost> {
                 ],
               ),
               borderRadius: BorderRadius.circular(30),
-              border: Border.all(
-                color: AppColors.cardBorderColor.withOpacity(0.58),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.shadowElevated.withOpacity(0.58),
-                  blurRadius: 1,
-                  offset: const Offset(0, 1),
-                ),
-              ],
             ),
             clipBehavior: Clip.antiAlias,
             child: Column(

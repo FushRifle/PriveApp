@@ -11,6 +11,7 @@ import 'package:lottie/lottie.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import 'package:clique/core/services/calls/stream_call_service.dart';
 import 'package:clique/core/services/chat/stream_chat_service.dart';
+import 'package:clique/core/clients/api_service.dart';
 
 import 'package:cloudinary_flutter/cloudinary_context.dart';
 import 'package:cloudinary_url_gen/cloudinary.dart';
@@ -192,6 +193,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
               if (state.status == AuthStatus.authenticated) {
                 PushNotificationService.instance.syncDeviceToken();
                 final token = state.token ?? '';
+                ApiService().setAuthToken(token);
                 StreamCallService.instance.setAuthToken(token);
                 StreamChatService.instance.setAuthToken(token);
                 unawaited(StreamCallService.instance.connect());
@@ -205,6 +207,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
                   ..configureRevenueCat(userID);
               }
               if (state.status == AuthStatus.unauthenticated) {
+                ApiService().clearAuthToken();
                 PushNotificationService.instance.deleteDeviceToken();
                 unawaited(StreamCallService.instance.disconnect());
                 unawaited(StreamChatService.instance.disconnect());

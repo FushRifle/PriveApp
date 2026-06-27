@@ -23,7 +23,6 @@ import local_auth_darwin
 import media_kit_video
 import open_file_mac
 import package_info_plus
-import passkeys_darwin
 import photo_manager
 import purchases_flutter
 import record_macos
@@ -32,7 +31,6 @@ import shared_preferences_foundation
 import sqflite_darwin
 import stream_webrtc_flutter
 import thumblr_macos
-import ua_client_hints
 import url_launcher_macos
 import video_player_avfoundation
 import wakelock_plus
@@ -56,7 +54,6 @@ func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   MediaKitVideoPlugin.register(with: registry.registrar(forPlugin: "MediaKitVideoPlugin"))
   OpenFilePlugin.register(with: registry.registrar(forPlugin: "OpenFilePlugin"))
   FPPPackageInfoPlusPlugin.register(with: registry.registrar(forPlugin: "FPPPackageInfoPlusPlugin"))
-  PasskeysPlugin.register(with: registry.registrar(forPlugin: "PasskeysPlugin"))
   PhotoManagerPlugin.register(with: registry.registrar(forPlugin: "PhotoManagerPlugin"))
   PurchasesFlutterPlugin.register(with: registry.registrar(forPlugin: "PurchasesFlutterPlugin"))
   RecordMacOsPlugin.register(with: registry.registrar(forPlugin: "RecordMacOsPlugin"))
@@ -65,7 +62,6 @@ func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   SqflitePlugin.register(with: registry.registrar(forPlugin: "SqflitePlugin"))
   FlutterWebRTCPlugin.register(with: registry.registrar(forPlugin: "FlutterWebRTCPlugin"))
   ThumblrMacosPlugin.register(with: registry.registrar(forPlugin: "ThumblrMacosPlugin"))
-  UAClientHintsPlugin.register(with: registry.registrar(forPlugin: "UAClientHintsPlugin"))
   UrlLauncherPlugin.register(with: registry.registrar(forPlugin: "UrlLauncherPlugin"))
   VideoPlayerPlugin.register(with: registry.registrar(forPlugin: "VideoPlayerPlugin"))
   WakelockPlusMacosPlugin.register(with: registry.registrar(forPlugin: "WakelockPlusMacosPlugin"))
