@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform, kIsWeb;
+import 'package:clique/app/configs/api_config.dart';
 
 class DefaultFirebaseOptions {
   const DefaultFirebaseOptions._();
@@ -26,19 +27,19 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDbXPeC_w3u4A4d-P45jH6HJcv7n_FHHlI',
-    appId: '1:944145963099:android:4ea14d65cc89fe1e51477e',
-    messagingSenderId: '944145963099',
-    projectId: 'clique-1c416',
-    storageBucket: 'clique-1c416.firebasestorage.app',
+    apiKey: ApiConfig.firebaseAndroidApiKey,
+    appId: ApiConfig.firebaseAndroidAppId,
+    messagingSenderId: ApiConfig.firebaseMessagingSenderId,
+    projectId: ApiConfig.firebaseProjectId,
+    storageBucket: ApiConfig.firebaseStorageBucket,
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCkjEWZUoQgPmZtWKfxDl7o5EYRLQTbSV8',
-    appId: '1:944145963099:ios:114c97aa57876c7e51477e',
-    messagingSenderId: '944145963099',
-    projectId: 'clique-1c416',
-    storageBucket: 'clique-1c416.firebasestorage.app',
-    iosBundleId: 'com.fushinc.clique',
+    apiKey: ApiConfig.firebaseIosApiKey,
+    appId: ApiConfig.firebaseIosAppId,
+    messagingSenderId: ApiConfig.firebaseMessagingSenderId,
+    projectId: ApiConfig.firebaseProjectId,
+    storageBucket: ApiConfig.firebaseStorageBucket,
+    iosBundleId: ApiConfig.firebaseIosBundleId,
   );
 }

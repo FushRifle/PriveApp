@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../firebase_options.dart';
@@ -29,6 +30,17 @@ class PushNotificationService with WidgetsBindingObserver {
   static final PushNotificationService instance = PushNotificationService._();
 
   final NotificationService _notificationService = NotificationService();
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
+
+  static const _androidChannel = AndroidNotificationChannel(
+    'clique_notifications',
+    'Clique notifications',
+    description: 'Messages, social activity, and account notifications.',
+    importance: Importance.max,
+    playSound: true,
+    enableVibration: true,
+  );
 
   StreamSubscription<String>? _tokenRefreshSubscription;
   StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
@@ -68,6 +80,8 @@ class PushNotificationService with WidgetsBindingObserver {
     }
 
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+    await _initializeLocalNotifications();
 
     await FirebaseMessaging.instance
         .setForegroundNotificationPresentationOptions(
@@ -249,9 +263,54 @@ class PushNotificationService with WidgetsBindingObserver {
     }
   }
 
-  void _handleForegroundMessage(RemoteMessage message) {
+  Future<void> _initializeLocalNotifications() async {
+    const settings = InitializationSettings(
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      iOS: DarwinInitializationSettings(
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
+      ),
+    );
+    await _localNotifications.initialize(settings: settings);
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(_androidChannel);
+  }
+
+  Future<void> _handleForegroundMessage(RemoteMessage message) async {
     debugPrint('Foreground push received: ${message.messageId}');
     _cacheIncomingCall(message);
+
+    final notification = message.notification;
+    final title = notification?.title ?? _readString(message.data['title']);
+    final body = notification?.body ?? _readString(message.data['body']);
+    if (title.isEmpty && body.isEmpty) return;
+
+    await _localNotifications.show(
+      id: message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch,
+      title: title,
+      body: body,
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'clique_notifications',
+          'Clique notifications',
+          channelDescription:
+              'Messages, social activity, and account notifications.',
+          importance: Importance.max,
+          priority: Priority.high,
+          playSound: true,
+          enableVibration: true,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: false,
+          presentBadge: false,
+          presentSound: false,
+        ),
+      ),
+      payload: message.data.isEmpty ? null : message.data.toString(),
+    );
   }
 
   void _handleOpenedMessage(RemoteMessage message) {
@@ -295,7 +354,8 @@ class PushNotificationService with WidgetsBindingObserver {
     });
   }
 
-  IncomingCallNotification? _readIncomingCallNotification(RemoteMessage message) {
+  IncomingCallNotification? _readIncomingCallNotification(
+      RemoteMessage message) {
     final data = <String, dynamic>{...message.data};
     final type = _readString(data['type'] ?? data['notificationType']);
     final isCallNotification = type == 'incoming_call' ||
@@ -336,12 +396,18 @@ class PushNotificationService with WidgetsBindingObserver {
 
     return UserInfo(
       id: _readInt(data['callerId'] ?? data['caller_id']),
-      name: _readString(data['callerName'] ?? data['caller_name'] ?? data['name']).isEmpty
-          ? 'User'
-          : _readString(data['callerName'] ?? data['caller_name'] ?? data['name']),
-      username: _readString(data['callerUsername'] ?? data['caller_username'] ?? data['username']),
+      name:
+          _readString(data['callerName'] ?? data['caller_name'] ?? data['name'])
+                  .isEmpty
+              ? 'User'
+              : _readString(
+                  data['callerName'] ?? data['caller_name'] ?? data['name']),
+      username: _readString(data['callerUsername'] ??
+          data['caller_username'] ??
+          data['username']),
       avatar: _readString(data['callerAvatar'] ?? data['caller_avatar']),
-      verified: data['callerVerified'] == true || data['caller_verified'] == true,
+      verified:
+          data['callerVerified'] == true || data['caller_verified'] == true,
     );
   }
 

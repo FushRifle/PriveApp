@@ -1,4 +1,4 @@
-package com.example.clique
+package com.fushinc.clique
 
 import io.flutter.embedding.android.FlutterActivity
 
