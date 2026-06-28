@@ -18,13 +18,22 @@ class RevenueCatService {
     if (_configured && _configuredUserId == appUserId) return true;
 
     await Purchases.setLogLevel(LogLevel.warn);
-    await Purchases.configure(
-      PurchasesConfiguration(apiKey)..appUserID = appUserId,
-    );
+    if (_configured) {
+      await Purchases.logIn(appUserId);
+    } else {
+      await Purchases.configure(
+        PurchasesConfiguration(apiKey)..appUserID = appUserId,
+      );
+    }
 
     _configured = true;
     _configuredUserId = appUserId;
     return true;
+  }
+
+  Future<CustomerInfo?> customerInfo() async {
+    if (!_configured) return null;
+    return Purchases.getCustomerInfo();
   }
 
   Future<List<Package>> getPackages() async {

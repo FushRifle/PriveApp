@@ -73,6 +73,9 @@ class FeatureAccessCubit extends Cubit<FeatureAccessState> {
   Future<void> _configureRevenueCat(String appUserId) async {
     final configured = await _revenueCatService.configure(appUserId: appUserId);
     emit(state.copyWith(isRevenueCatConfigured: configured));
+    if (configured) {
+      await _syncCustomerInfo(await _revenueCatService.customerInfo());
+    }
   }
 
   bool can(String permission) => state.access.can(permission);
