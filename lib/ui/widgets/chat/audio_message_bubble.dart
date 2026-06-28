@@ -112,8 +112,9 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
       constraints: const BoxConstraints(minWidth: 150, maxWidth: 250),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: widget.isMe ? widget.chatColor : AppColors.grey.shade200,
+        color: widget.isMe ? widget.chatColor : AppColors.card,
         borderRadius: BorderRadius.circular(16),
+        border: BoxBorder.all(color: AppColors.cardBorderColor)
       ),
       child: _isLoading
           ? const SizedBox(
@@ -163,8 +164,8 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
                             style: TextStyle(
                               fontSize: 10,
                               color: widget.isMe
-                                  ? AppColors.white70
-                                  : AppColors.grey.shade600,
+                                  ? AppColors.text
+                                  : AppColors.text,
                             ),
                           ),
                           const Spacer(),
@@ -173,8 +174,8 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
                             style: TextStyle(
                               fontSize: 10,
                               color: widget.isMe
-                                  ? AppColors.white70
-                                  : AppColors.grey.shade600,
+                                  ? AppColors.text
+                                  : AppColors.text,
                             ),
                           ),
                         ],

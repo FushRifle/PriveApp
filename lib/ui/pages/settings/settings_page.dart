@@ -451,7 +451,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         );
       },
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           color: AppColors.card,
@@ -527,8 +527,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final fallback = name.isNotEmpty ? name[0].toUpperCase() : 'U';
 
     return Container(
-      width: 48,
-      height: 48,
+      width: 38,
+      height: 38,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: LinearGradient(
@@ -616,12 +616,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     return ListTile(
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 5,
+        horizontal: 10,
+        vertical: 2,
       ),
       leading: Container(
-        width: 42,
-        height: 42,
+        width: 32,
+        height: 32,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           color: AppColors.secondary.withOpacity(0.8),
@@ -662,12 +662,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 4,
+        horizontal: 10,
+        vertical: 2,
       ),
       leading: Container(
-        width: 42,
-        height: 42,
+        width: 32,
+        height: 32,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           color: AppColors.secondary.withOpacity(0.8),
@@ -739,11 +739,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       onChanged: onChanged,
       activeColor: AppColors.primary,
       contentPadding: const EdgeInsets.symmetric(
-        horizontal: 18,
+        horizontal: 10,
       ),
       secondary: Container(
-        width: 42,
-        height: 42,
+        width: 32,
+        height: 32,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
           color: AppColors.secondary.withOpacity(0.8),

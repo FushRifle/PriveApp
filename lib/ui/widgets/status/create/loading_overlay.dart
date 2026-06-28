@@ -53,7 +53,7 @@ class LoadingOverlay extends StatelessWidget {
                         child: CircularProgressIndicator(
                           value: uploadProgress > 0 ? uploadProgress : null,
                           strokeWidth: 3,
-                          color: AppColors.primary,
+                          color: AppColors.secondary,
                           backgroundColor: Colors.white.withOpacity(0.05),
                         ),
                       ),
@@ -77,16 +77,6 @@ class LoadingOverlay extends StatelessWidget {
                       color: Colors.white,
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Your story is being processed',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.5),
-                      fontSize: 13,
-                      height: 1.4,
                     ),
                   ),
                 ],

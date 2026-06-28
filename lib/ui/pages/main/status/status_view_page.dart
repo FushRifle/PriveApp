@@ -1324,7 +1324,7 @@ class _StoryTextBubble extends StatelessWidget {
     required this.maxLines,
     required this.onToggle,
     required this.style,
-    this.textAlign = TextAlign.left,
+    this.textAlign = TextAlign.center,
   });
 
   @override
@@ -1338,62 +1338,63 @@ class _StoryTextBubble extends StatelessWidget {
         final maxHeight =
             MediaQuery.sizeOf(context).height * (maxLines <= 3 ? 0.22 : 0.56);
 
-        return Align(
-          alignment: _alignmentFor(textAlign),
+        return Center(
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              maxWidth: constraints.maxWidth,
+              maxWidth: constraints.maxWidth * 0.9,
               maxHeight: maxHeight,
             ),
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: AppColors.white.withOpacity(0.10),
-                ),
-              ),
-              child: SingleChildScrollView(
-                physics: expanded
-                    ? const BouncingScrollPhysics()
-                    : const NeverScrollableScrollPhysics(),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: _crossAxisFor(textAlign),
-                  children: [
-                    _StoryHashtagText(
+            child: SingleChildScrollView(
+              physics: expanded
+                  ? const BouncingScrollPhysics()
+                  : const NeverScrollableScrollPhysics(),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // WhatsApp style text with background
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.transparent.withOpacity(0.08),
+                    ),
+                    child: _StoryHashtagText(
                       text: text,
-                      textAlign: textAlign,
+                      textAlign: TextAlign.center,
                       maxLines: lineLimit,
                       overflow: expanded
                           ? TextOverflow.visible
                           : TextOverflow.ellipsis,
                       style: style.copyWith(
-                        fontSize: style.fontSize?.clamp(15.0, 28.0),
+                        fontSize: (style.fontSize ?? 14).clamp(15.0, 28.0),
                         height: 1.35,
                         letterSpacing: 0,
                       ),
                     ),
-                    if (shouldOfferMore) ...[
-                      const SizedBox(height: 4),
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: onToggle,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: Text(
-                            expanded ? 'see less' : 'see more',
-                            style: TextStyle(
-                              color: AppColors.text,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                  ),
+                  if (shouldOfferMore) ...[
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: onToggle,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Text(
+                          expanded ? 'Show less' : 'Show more',
+                          style: TextStyle(
+                            color: AppColors.primary.withOpacity(0.6),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.3,
                           ),
                         ),
                       ),
-                    ],
+                    ),
                   ],
-                ),
+                ],
               ),
             ),
           ),
@@ -1401,32 +1402,7 @@ class _StoryTextBubble extends StatelessWidget {
       },
     );
   }
-
-  Alignment _alignmentFor(TextAlign align) {
-    switch (align) {
-      case TextAlign.right:
-        return Alignment.centerRight;
-      case TextAlign.left:
-      case TextAlign.start:
-        return Alignment.centerLeft;
-      default:
-        return Alignment.center;
-    }
-  }
-
-  CrossAxisAlignment _crossAxisFor(TextAlign align) {
-    switch (align) {
-      case TextAlign.right:
-        return CrossAxisAlignment.end;
-      case TextAlign.left:
-      case TextAlign.start:
-        return CrossAxisAlignment.start;
-      default:
-        return CrossAxisAlignment.center;
-    }
-  }
 }
-
 class _StatusVideoPlayer extends StatefulWidget {
   final String url;
   final bool isActive;

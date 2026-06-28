@@ -11,7 +11,8 @@ import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/services/chat/chat_service.dart';
 import 'package:clique/core/services/friends/friends_service.dart';
 import 'package:clique/core/models/profile_view.dart';
-import 'package:clique/ui/widgets/profile/profile_widgets.dart';
+import 'package:clique/ui/widgets/profile/profile_gallery.dart';
+import 'package:clique/ui/widgets/profile/profile_header.dart';
 
 class OtherProfilePage extends StatefulWidget {
   final int userId;
@@ -43,6 +44,7 @@ class _OtherProfilePageState extends State<OtherProfilePage>
   void initState() {
     super.initState();
 
+    // Keep length 2 for only Posts and Media tabs
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_handleTabChanged);
     _scrollController = ScrollController();
@@ -326,7 +328,8 @@ class _OtherProfilePageState extends State<OtherProfilePage>
                   profile: profileState.viewedProfile,
                 );
 
-                return ProfileBody(
+                // Wrap ProfileBody to only show 2 tabs for other users
+                return _OtherProfileBody(
                   isLoading: userState.isLoading ||
                       profileState.viewedStatus == ProfileStatus.loading,
                   error: userState.error ?? profileState.error,
@@ -354,5 +357,148 @@ class _OtherProfilePageState extends State<OtherProfilePage>
     if (value is int) return value;
     if (value is num) return value.toInt();
     return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+}
+
+// Custom wrapper that only shows Posts and Media tabs for other users
+class _OtherProfileBody extends StatelessWidget {
+  final bool isLoading;
+  final String? error;
+  final ProfileView? profile;
+  final bool isOwnProfile;
+  final bool isFollowing;
+  final bool isFollowRequested;
+  final TabController tabController;
+  final ScrollController scrollController;
+  final VoidCallback onRetry;
+  final VoidCallback onToggleFollow;
+  final ValueChanged<ProfileView>? onMessage;
+  final void Function(int userId, ProfileGalleryTabType type) onLoadMoreMedia;
+
+  const _OtherProfileBody({
+    required this.isLoading,
+    required this.error,
+    required this.profile,
+    required this.isOwnProfile,
+    required this.isFollowing,
+    this.isFollowRequested = false,
+    required this.tabController,
+    required this.scrollController,
+    required this.onRetry,
+    required this.onToggleFollow,
+    this.onMessage,
+    required this.onLoadMoreMedia,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading && profile == null) {
+      return const ProfileLoadingState();
+    }
+
+    if (error != null && profile == null) {
+      return ProfileErrorState(message: error!, onRetry: onRetry);
+    }
+
+    final currentProfile = profile;
+    if (currentProfile == null) {
+      return const ProfileLoadingState();
+    }
+
+    final userId =
+        currentProfile.userId != 0 ? currentProfile.userId : currentProfile.id;
+
+    return NestedScrollView(
+      controller: scrollController,
+      physics: const BouncingScrollPhysics(),
+      headerSliverBuilder: (context, innerBoxIsScrolled) {
+        return [
+          ProfileCoverHeader(
+            profile: currentProfile,
+          ),
+          const SliverToBoxAdapter(
+            child: SizedBox(height: 24),
+          ),
+          SliverToBoxAdapter(
+            child: ProfileHeaderCard(
+              profile: currentProfile,
+              isOwnProfile: isOwnProfile,
+              isFollowing: isFollowing,
+              isFollowRequested: isFollowRequested,
+              onToggleFollow: onToggleFollow,
+              onMessage: onMessage,
+              onOpenAccountSwitcher: null,
+              onOpenInsights: null,
+            ),
+          ),
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _StickyTabBarDelegate(
+              tabController: tabController,
+              tabs: const ['Posts', 'Media'],
+            ),
+          ),
+        ];
+      },
+      body: TabBarView(
+        controller: tabController,
+        physics: const BouncingScrollPhysics(),
+        children: [
+          ProfileGalleryTab(
+            userId: userId,
+            type: ProfileGalleryTabType.posts,
+            onLoadMore: () =>
+                onLoadMoreMedia(userId, ProfileGalleryTabType.posts),
+          ),
+          ProfileGalleryTab(
+            userId: userId,
+            type: ProfileGalleryTabType.media,
+            onLoadMore: () =>
+                onLoadMoreMedia(userId, ProfileGalleryTabType.media),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
+  final TabController tabController;
+  final List<String> tabs;
+
+  _StickyTabBarDelegate({
+    required this.tabController,
+    required this.tabs,
+  });
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: TabBar(
+        controller: tabController,
+        tabs: tabs.map((tab) => Tab(text: tab)).toList(),
+        labelColor: AppColors.primary,
+        unselectedLabelColor: AppColors.text.withOpacity(0.5),
+        indicatorColor: AppColors.primary,
+        indicatorWeight: 3,
+      ),
+    );
+  }
+
+  @override
+  double get maxExtent => 48;
+
+  @override
+  double get minExtent => 48;
+
+  @override
+  bool shouldRebuild(covariant _StickyTabBarDelegate oldDelegate) {
+    return tabController != oldDelegate.tabController ||
+        tabs != oldDelegate.tabs;
   }
 }

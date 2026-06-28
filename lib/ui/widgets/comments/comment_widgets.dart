@@ -279,9 +279,9 @@ class _CommentReactionButtonState extends State<CommentReactionButton> {
   @override
   Widget build(BuildContext context) {
     final label = widget.isLiked
-        ? (widget.likes > 0 ? '${widget.likes} Reacted' : 'Reacted')
+        ? (widget.likes > 0 ? '${widget.likes} Reactions' : 'Reaction')
         : widget.isDisliked
-            ? (widget.dislikes > 0 ? '${widget.dislikes} Reacted' : 'Reacted')
+            ? (widget.dislikes > 0 ? '${widget.dislikes} dislikes' : 'dislike')
             : 'React';
 
     return CommentActionChip(
@@ -342,17 +342,6 @@ class CommentActionBar extends StatelessWidget {
           label: replyCount > 0 ? '$replyCount replies' : 'Reply',
           selected: false,
           onTap: onReply,
-        ),
-        Padding(
-          padding: const EdgeInsets.only(left: 4),
-          child: Text(
-            timeLabel,
-            style: AppTheme.greyTextStyle.copyWith(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textHint,
-            ),
-          ),
         ),
       ],
     );
@@ -442,7 +431,7 @@ class CommentVoiceNoteCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.primary.withOpacity(isCompact ? 0.06 : 0.10),
+            AppColors.card.withOpacity(isCompact ? 0.06 : 0.10),
             AppColors.backgroundColor.withOpacity(0.92),
           ],
         ),
@@ -555,7 +544,7 @@ class CommentVoiceNoteCard extends StatelessWidget {
                 style: AppTheme.greyTextStyle.copyWith(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textSecondary,
+                  color: AppColors.text,
                 ),
               ),
               const Spacer(),
@@ -564,7 +553,7 @@ class CommentVoiceNoteCard extends StatelessWidget {
                 style: AppTheme.greyTextStyle.copyWith(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textHint,
+                  color: AppColors.text,
                 ),
               ),
             ],

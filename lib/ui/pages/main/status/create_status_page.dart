@@ -195,10 +195,11 @@ class _CreateStatusPageState extends State<CreateStatusPage>
                     child: SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+                        padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
+                            const SizedBox(height: 20),
                             if (_hasMedia) ...[
                               MediaPreviewWidget(
                                 selectedMediaFile: _selectedMediaFile,

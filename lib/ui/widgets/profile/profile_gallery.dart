@@ -167,7 +167,6 @@ class _ProfileSavedPostsTabState extends State<ProfileSavedPostsTab> {
       return ProfileEmptyState(
         icon: Icons.bookmark_border_rounded,
         message: 'No saved posts yet',
-        subtitle: 'Tap bookmark on a post to keep it here.',
         actionText: 'Refresh',
         onAction: () => _loadSavedPosts(refresh: true),
       );
@@ -233,7 +232,6 @@ class _ProfileDraftsTabState extends State<ProfileDraftsTab> {
       return ProfileEmptyState(
         icon: Icons.drafts_outlined,
         message: 'No post drafts',
-        subtitle: 'Start a post and it will autosave here.',
         actionText: 'Refresh',
         onAction: () => setState(_loadDrafts),
       );

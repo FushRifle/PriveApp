@@ -596,7 +596,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
 
     return Stack(
       children: [
-        const _DetailBackdrop(),
         CustomScrollView(
           controller: _scrollController,
           physics: const BouncingScrollPhysics(),
@@ -607,11 +606,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
             SliverToBoxAdapter(
               child: _PostDetailSurface(
                 post: post,
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: _CommentsHeader(
-                count: _comments.length,
               ),
             ),
             _CommentsSection(
@@ -817,39 +811,6 @@ class _PostAppBar extends StatelessWidget {
   }
 }
 
-class _DetailBackdrop extends StatelessWidget {
-  const _DetailBackdrop();
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned.fill(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: AppColors.background,
-        ),
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: Container(
-            height: 270,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.primary.withOpacity(0.24),
-                  AppColors.secondary.withOpacity(0.18),
-                  AppColors.background.withOpacity(0.0),
-                ],
-                stops: const [0, 0.48, 1],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _PostDetailSurface extends StatelessWidget {
   final FeedPost post;
 
@@ -891,91 +852,6 @@ class _AppBarCircleButton extends StatelessWidget {
           icon,
           color: AppColors.text,
           size: 20,
-        ),
-      ),
-    );
-  }
-}
-
-class _CommentsHeader extends StatelessWidget {
-  final int count;
-
-  const _CommentsHeader({
-    required this.count,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 28, 20, 14),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: AppColors.card.withOpacity(0.78),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: AppColors.cardBorderColor),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.secondary.withOpacity(0.12),
-              ),
-              child: const Icon(
-                Icons.mode_comment_outlined,
-                color: AppColors.secondary,
-                size: 18,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Replies',
-                    style: AppTheme.blackTextStyle.copyWith(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 15,
-                      color: AppColors.text,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    count == 1
-                        ? '1 comment in this thread'
-                        : '$count comments in this thread',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTheme.greyTextStyle.copyWith(
-                      color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w500,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.09),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.primary.withOpacity(0.12)),
-              ),
-              child: Text(
-                'Oldest first',
-                style: AppTheme.greyTextStyle.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 11,
-                ),
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -1053,13 +929,12 @@ class _CommentsSection extends StatelessWidget {
                   padding: EdgeInsets.all(20),
                   child: Center(
                     child: CircularProgressIndicator(
-                      color: AppColors.primary,
+                      color: AppColors.secondary,
                       strokeWidth: 2,
                     ),
                   ),
                 );
               }
-
               return const SizedBox(height: 8);
             }
 
@@ -1230,7 +1105,7 @@ class _CommentComposer extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 4),
                     child: _Avatar(
                       avatar: avatar,
-                      size: 40,
+                      size: 34,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1706,7 +1581,6 @@ class _LoadingScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       body: const Stack(
         children: [
-          _DetailBackdrop(),
           Center(
             child: CircularProgressIndicator(
               color: AppColors.primary,
