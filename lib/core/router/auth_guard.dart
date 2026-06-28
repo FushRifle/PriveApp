@@ -8,10 +8,9 @@ import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/bloc/profile/profile_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 
-import 'package:clique/ui/pages/auth/login_page.dart';
-import 'package:clique/ui/pages/auth/onboarding_page.dart';
+import 'package:clique/ui/pages/auth/authentication_page.dart';
+import 'package:clique/ui/pages/auth/unified_onboarding_page.dart';
 import 'main_wrapper.dart';
-import 'named_routes.dart';
 
 class AuthGuard extends StatefulWidget {
   final VoidCallback? onBootstrapComplete;
@@ -43,7 +42,7 @@ class _AuthGuardState extends State<AuthGuard> {
         }
 
         if (!authState.isAuthenticated || authState.token == null) {
-          return const LoginPage();
+          return const AuthenticationPage();
         }
 
         if (_configuredToken != authState.token) {
@@ -227,9 +226,7 @@ class _BootstrapperState extends State<_Bootstrapper> {
     }
 
     if (!_isOnboarded || !_hasProfile) {
-      return const OnboardingPage(
-        completionRoute: NamedRoutes.demographicScreen,
-      );
+      return const UnifiedOnboardingPage();
     }
 
     return const MainWrapper();

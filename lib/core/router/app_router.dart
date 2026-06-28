@@ -14,9 +14,8 @@ import 'package:clique/bloc/community/community_bloc.dart';
 import 'package:clique/bloc/event/event_bloc.dart';
 import 'package:clique/bloc/feedback/feedback_bloc.dart';
 
-import 'package:clique/ui/pages/auth/demographic_page.dart';
-import 'package:clique/ui/pages/auth/onboarding_page.dart';
-import 'package:clique/ui/pages/auth/register_page.dart';
+import 'package:clique/ui/pages/auth/unified_onboarding_page.dart';
+import 'package:clique/ui/pages/auth/authentication_page.dart';
 import 'package:clique/ui/pages/auth/security/active_sessions_page.dart';
 import 'package:clique/ui/pages/auth/security/change_password_page.dart';
 import 'package:clique/ui/pages/auth/security/lock_screen_page.dart';
@@ -86,19 +85,17 @@ class AppRouter {
 
       case NamedRoutes.registerScreen:
         return _page(
-          const RegisterPage(),
+          const AuthenticationPage(),
         );
 
       case NamedRoutes.onboardingScreen:
         return _page(
-          const OnboardingPage(
-            completionRoute: NamedRoutes.demographicScreen,
-          ),
+          const UnifiedOnboardingPage(),
         );
 
       case NamedRoutes.demographicScreen:
         return _page(
-          const OnboardingDemographicPage(),
+          const UnifiedOnboardingPage(),
         );
 
       case NamedRoutes.onboardingSuccessScreen:

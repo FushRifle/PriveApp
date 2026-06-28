@@ -21,11 +21,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   int _messageRequestId = 0;
   int _sessionGeneration = 0;
   bool _isRefreshingConversations = false;
-  StreamSubscription? _streamEventSubscription;
 
   ChatBloc() : super(const ChatState()) {
     on<LoadConversations>(_onLoadConversations);
     on<RefreshConversations>(_onRefreshConversations);
+    on<LoadMoreConversations>(_onLoadMoreConversations);
     on<LoadConversationInfo>(_onLoadConversationInfo);
     on<LoadMessages>(_onLoadMessages);
     on<SendMessage>(_onSendMessage);
@@ -56,53 +56,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   void setAuthToken(String token) {
     _chatService.setAuthToken(token);
     _userService.setAuthToken(token);
-    unawaited(_bindStreamEvents());
   }
 
   void clearAuthToken() {
     _sessionGeneration++;
-    unawaited(_streamEventSubscription?.cancel());
-    _streamEventSubscription = null;
     _chatService.clearAuthToken();
     _userService.clearAuthToken();
     if (!isClosed) add(ResetChatState());
-  }
-
-  Future<void> _bindStreamEvents() async {
-    try {
-      await _chatService.ensureStreamConnected();
-      if (_streamEventSubscription != null) {
-        return;
-      }
-
-      _streamEventSubscription =
-          _chatService.streamEvents.listen((streamEvent) {
-        switch (streamEvent.type) {
-          case 'message.new':
-          case 'notification.message_new':
-            final activeConversationId = state.activeConversationId;
-            if (activeConversationId != null && activeConversationId > 0) {
-              add(LoadMessages(
-                conversationId: activeConversationId,
-                page: 1,
-                forceRefresh: true,
-                silent: true,
-              ));
-            }
-            add(RefreshConversations());
-            break;
-          case 'message.deleted':
-          case 'notification.mark_read':
-          case 'notification.mark_unread':
-          case 'channel.updated':
-          case 'channel.deleted':
-          case 'member.added':
-          case 'member.removed':
-            add(RefreshConversations());
-            break;
-        }
-      });
-    } catch (_) {}
   }
 
   Future<void> _loadCurrentUserId() async {
@@ -404,6 +364,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       );
       emit(state.copyWith(
         conversations: mergedConversations,
+        conversationsPage: 1,
+        hasMoreConversations: conversations.length >= 30,
         conversationsStatus: ChatStatus.success,
         clearError: true,
       ));
@@ -443,6 +405,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       );
       emit(state.copyWith(
         conversations: mergedConversations,
+        conversationsPage: 1,
+        hasMoreConversations: conversations.length >= 30,
         conversationsStatus: ChatStatus.success,
         clearError: true,
       ));
@@ -453,6 +417,35 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         conversationsStatus: ChatStatus.error,
         error: e.toString(),
       ));
+    } finally {
+      _isRefreshingConversations = false;
+    }
+  }
+
+  Future<void> _onLoadMoreConversations(
+    LoadMoreConversations event,
+    Emitter<ChatState> emit,
+  ) async {
+    if (_isRefreshingConversations || !state.hasMoreConversations) return;
+    _isRefreshingConversations = true;
+    try {
+      final nextPage = state.conversationsPage + 1;
+      final data = await _chatService.getConversations(
+        forceRefresh: true,
+        cacheOwnerId: _currentUserId,
+        page: nextPage,
+      );
+      final fetched = data.map(ConversationModel.fromJson).toList();
+      final merged = _mergeConversations(fetched, state.conversations);
+      emit(state.copyWith(
+        conversations: merged,
+        conversationsPage: nextPage,
+        hasMoreConversations: fetched.length >= 30,
+        conversationsStatus: ChatStatus.success,
+      ));
+      await _persistConversations(merged);
+    } catch (error) {
+      emit(state.copyWith(error: error.toString()));
     } finally {
       _isRefreshingConversations = false;
     }
@@ -1028,10 +1021,17 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
   Future<void> _onLoadChatSettings(
       LoadChatSettings event, Emitter<ChatState> emit) async {
+    await _loadCurrentUserId();
     emit(state.copyWith(settingsStatus: ChatStatus.loading));
     try {
       final data = await _chatService.getChatSettings(event.conversationId);
-      final settings = ChatSettingsModel.fromJson(data);
+      final persistedWallpaper = await _chatService.getPersistedWallpaper(
+        event.conversationId,
+        ownerId: _currentUserId ?? 0,
+      );
+      final settings = ChatSettingsModel.fromJson(data).copyWith(
+        wallpaper: persistedWallpaper,
+      );
       emit(state.copyWith(
         chatSettings: settings,
         settingsStatus: ChatStatus.success,
@@ -1047,6 +1047,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
   Future<void> _onUpdateChatSettings(
       UpdateChatSettings event, Emitter<ChatState> emit) async {
+    await _loadCurrentUserId();
     final current = state.chatSettings;
     final baseSettings = current ??
         ChatSettingsModel(
@@ -1086,6 +1087,14 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       clearError: true,
     ));
 
+    if (event.wallpaper != null) {
+      await _chatService.persistWallpaper(
+        event.conversationId,
+        event.wallpaper!,
+        ownerId: _currentUserId ?? 0,
+      );
+    }
+
     try {
       await _chatService.updateChatSettings(
         event.conversationId,
@@ -1097,7 +1106,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         notificationSound: event.notificationSound,
       );
       add(RefreshConversations());
-      add(LoadChatSettings(conversationId: event.conversationId));
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }
@@ -1205,15 +1213,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     _inFlightMessageKeys.clear();
     _queuedMessageRefreshes.clear();
     _chatService.setCacheOwner(null);
-    _streamEventSubscription?.cancel();
-    _streamEventSubscription = null;
     emit(const ChatState());
-  }
-
-  @override
-  Future<void> close() async {
-    await _streamEventSubscription?.cancel();
-    return super.close();
   }
 
   void _onNewMessageReceived(

@@ -4,6 +4,10 @@ class UserProfile {
   final String username;
   final String email;
   final String? phone;
+  final String? country;
+  final String? countryCode;
+  final String? mobileNumber;
+  final String? gender;
   final int? age;
   final String? occupation;
   final String? bio;
@@ -24,6 +28,10 @@ class UserProfile {
     required this.username,
     required this.email,
     this.phone,
+    this.country,
+    this.countryCode,
+    this.mobileNumber,
+    this.gender,
     this.age,
     this.occupation,
     this.bio,
@@ -46,6 +54,10 @@ class UserProfile {
       username: json['username'] ?? '',
       email: json['email'] ?? '',
       phone: json['phone'],
+      country: json['country'],
+      countryCode: json['countryCode'] ?? json['country_code'],
+      mobileNumber: json['mobileNumber'] ?? json['mobile_number'],
+      gender: json['gender'],
       age: json['age'],
       occupation: json['occupation'],
       bio: json['bio'],
@@ -70,6 +82,10 @@ class UserProfile {
       'username': username,
       'email': email,
       'phone': phone,
+      'country': country,
+      'countryCode': countryCode,
+      'mobileNumber': mobileNumber,
+      'gender': gender,
       'age': age,
       'occupation': occupation,
       'bio': bio,
@@ -92,6 +108,10 @@ class UserProfile {
     String? username,
     String? email,
     String? phone,
+    String? country,
+    String? countryCode,
+    String? mobileNumber,
+    String? gender,
     int? age,
     String? occupation,
     String? bio,
@@ -112,6 +132,10 @@ class UserProfile {
       username: username ?? this.username,
       email: email ?? this.email,
       phone: phone ?? this.phone,
+      country: country ?? this.country,
+      countryCode: countryCode ?? this.countryCode,
+      mobileNumber: mobileNumber ?? this.mobileNumber,
+      gender: gender ?? this.gender,
       age: age ?? this.age,
       occupation: occupation ?? this.occupation,
       bio: bio ?? this.bio,
@@ -144,6 +168,9 @@ class UpdateUserRequest {
   final List<String>? languages;
   final String? avatar;
   final String? coverImage;
+  final String? country;
+  final String? countryCode;
+  final String? mobileNumber;
 
   UpdateUserRequest({
     this.name,
@@ -160,6 +187,9 @@ class UpdateUserRequest {
     this.languages,
     this.avatar,
     this.coverImage,
+    this.country,
+    this.countryCode,
+    this.mobileNumber,
   });
 
   Map<String, dynamic> toJson() {
@@ -178,6 +208,9 @@ class UpdateUserRequest {
     if (languages != null) map['languages'] = languages;
     if (avatar != null) map['avatar'] = avatar;
     if (coverImage != null) map['coverImage'] = coverImage;
+    if (country != null) map['country'] = country;
+    if (countryCode != null) map['countryCode'] = countryCode;
+    if (mobileNumber != null) map['mobileNumber'] = mobileNumber;
     return map;
   }
 }

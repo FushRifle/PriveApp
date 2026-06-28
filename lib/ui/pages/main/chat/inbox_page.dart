@@ -24,6 +24,7 @@ class _InboxPageState extends State<InboxPage> {
   final _refreshIndicatorKey = GlobalKey<RefreshIndicatorState>();
   final TextEditingController _searchController = TextEditingController();
   final ChatService _chatService = ChatService();
+  final ScrollController _scrollController = ScrollController();
   InboxFilter _filter = InboxFilter.all;
   String _query = '';
   bool _showInitialShimmer = true;
@@ -32,6 +33,7 @@ class _InboxPageState extends State<InboxPage> {
   void initState() {
     super.initState();
     _searchController.addListener(_handleSearchChanged);
+    _scrollController.addListener(_handleScroll);
     _loadConversations();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) setState(() => _showInitialShimmer = false);
@@ -43,7 +45,22 @@ class _InboxPageState extends State<InboxPage> {
     _searchController
       ..removeListener(_handleSearchChanged)
       ..dispose();
+    _scrollController
+      ..removeListener(_handleScroll)
+      ..dispose();
     super.dispose();
+  }
+
+  void _handleScroll() {
+    if (!_scrollController.hasClients ||
+        _scrollController.position.extentAfter > 500) {
+      return;
+    }
+    final state = context.read<ChatBloc>().state;
+    if (state.hasMoreConversations &&
+        state.conversationsStatus != ChatStatus.refreshing) {
+      context.read<ChatBloc>().add(LoadMoreConversations());
+    }
   }
 
   void _loadConversations() {
@@ -506,8 +523,12 @@ class _InboxPageState extends State<InboxPage> {
 
   Widget _buildMessageList(List<ChatMessage> conversations) {
     return ListView.builder(
+      key: const PageStorageKey<String>('chat-inbox-list'),
+      controller: _scrollController,
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      physics: const BouncingScrollPhysics(),
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: BouncingScrollPhysics(),
+      ),
       itemCount: conversations.length,
       itemBuilder: (context, index) {
         final message = conversations[index];

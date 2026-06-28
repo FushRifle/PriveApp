@@ -15,6 +15,7 @@ class Profile {
   final String? location;
   final String? work;
   final String? education;
+  final String? country;
   final double? latitude;
   final double? longitude;
   final Map<String, dynamic>? settings;
@@ -39,6 +40,7 @@ class Profile {
     this.location,
     this.work,
     this.education,
+    this.country,
     this.latitude,
     this.longitude,
     this.settings,
@@ -68,6 +70,7 @@ class Profile {
       location: json['location']?.toString(),
       work: json['work']?.toString(),
       education: json['education']?.toString(),
+      country: json['country']?.toString(),
       latitude: json['latitude']?.toDouble(),
       longitude: json['longitude']?.toDouble(),
       settings: json['settings'] as Map<String, dynamic>?,
@@ -100,6 +103,7 @@ class Profile {
         if (location != null) 'location': location,
         if (work != null) 'work': work,
         if (education != null) 'education': education,
+        if (country != null) 'country': country,
         if (latitude != null) 'latitude': latitude,
         if (longitude != null) 'longitude': longitude,
         if (settings != null) 'settings': settings,
@@ -125,6 +129,7 @@ class Profile {
     String? location,
     String? work,
     String? education,
+    String? country,
     double? latitude,
     double? longitude,
     Map<String, dynamic>? settings,
@@ -149,6 +154,7 @@ class Profile {
       location: location ?? this.location,
       work: work ?? this.work,
       education: education ?? this.education,
+      country: country ?? this.country,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       settings: settings ?? this.settings,

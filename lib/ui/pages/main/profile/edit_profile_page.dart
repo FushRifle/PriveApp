@@ -15,6 +15,7 @@ import 'package:clique/bloc/user/user_bloc.dart';
 
 import 'package:clique/core/clients/cloudinary_service.dart';
 import 'package:clique/core/services/media_service.dart';
+import 'package:clique/core/services/profile/profile_service.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({
@@ -29,6 +30,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final CloudinaryService _cloudinaryService = CloudinaryService();
   final ImagePicker _imagePicker = ImagePicker();
   final MediaService _mediaService = MediaService();
+  final ProfileService _profileService = ProfileService();
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
@@ -40,6 +42,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final TextEditingController _workController = TextEditingController();
   final TextEditingController _educationController = TextEditingController();
   final TextEditingController _languagesController = TextEditingController();
+  final TextEditingController _countryController = TextEditingController();
+  final TextEditingController _countryCodeController = TextEditingController();
+  final TextEditingController _mobileNumberController = TextEditingController();
+  final TextEditingController _genderController = TextEditingController();
 
   File? _selectedAvatarFile;
   File? _selectedCoverFile;
@@ -77,6 +83,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _workController.dispose();
     _educationController.dispose();
     _languagesController.dispose();
+    _countryController.dispose();
+    _countryCodeController.dispose();
+    _mobileNumberController.dispose();
+    _genderController.dispose();
 
     super.dispose();
   }
@@ -113,6 +123,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _usernameController.text = _readString(user?['username']) ?? '';
     _phoneController.text = _readString(user?['phone']) ?? '';
     _occupationController.text = _readString(user?['occupation']) ?? '';
+    _countryController.text = _readString(user?['country']) ??
+        _readString(profile?.country) ?? '';
+    _countryCodeController.text =
+        _readString(user?['countryCode'] ?? user?['country_code']) ?? '';
+    _mobileNumberController.text =
+        _readString(user?['mobileNumber'] ?? user?['mobile_number']) ?? '';
+    _genderController.text =
+        _readString(user?['gender']) ?? _readString(profile?.gender) ?? '';
   }
 
   String? _readString(dynamic value) {
@@ -343,8 +361,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     setState(() {
       _isSaving = true;
-      _waitingForProfileSave = true;
-      _waitingForUserSave = true;
+      _waitingForProfileSave = false;
+      _waitingForUserSave = false;
       _profileSaveError = null;
       _userSaveError = null;
     });
@@ -358,34 +376,34 @@ class _EditProfilePageState extends State<EditProfilePage> {
         : null;
 
     try {
-      context.read<ProfileBloc>().add(
-            UpdateProfile(
-              data: {
-                'displayName': _nullableText(_nameController),
-                'bio': _nullableText(_bioController),
-                'location': _nullableText(_locationController),
-                'work': _nullableText(_workController),
-                'education': _nullableText(_educationController),
-                'age': age,
-                'interests': languages,
-              },
-            ),
-          );
-
-      context.read<UserBloc>().add(
-            UpdateUser(
-              name: _nullableText(_nameController),
-              username: _nullableText(_usernameController),
-              phone: _nullableText(_phoneController),
-              age: age,
-              occupation: _nullableText(_occupationController),
-              bio: _nullableText(_bioController),
-              location: _nullableText(_locationController),
-              work: _nullableText(_workController),
-              education: _nullableText(_educationController),
-              languages: languages,
-            ),
-          );
+      await _profileService.updateAccountProfile(
+        user: {
+          'name': _nullableText(_nameController),
+          'username': _nullableText(_usernameController),
+          'phone': _nullableText(_phoneController),
+          'age': age,
+          'occupation': _nullableText(_occupationController),
+          'country': _nullableText(_countryController),
+          'countryCode': _nullableText(_countryCodeController),
+          'mobileNumber': _nullableText(_mobileNumberController),
+          'gender': _nullableText(_genderController),
+        },
+        profile: {
+          'displayName': _nullableText(_nameController),
+          'bio': _nullableText(_bioController),
+          'location': _nullableText(_locationController),
+          'work': _nullableText(_workController),
+          'education': _nullableText(_educationController),
+          'age': age,
+          'interests': languages,
+          'country': _nullableText(_countryController),
+          'gender': _nullableText(_genderController),
+        },
+      );
+      if (!mounted) return;
+      context.read<ProfileBloc>().add(RefreshMyProfile());
+      context.read<UserBloc>().add(RefreshCurrentUser());
+      _onSaveFinished(success: true);
     } catch (e) {
       if (!mounted) return;
 
@@ -626,6 +644,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         workController: _workController,
                         educationController: _educationController,
                         languagesController: _languagesController,
+                        countryController: _countryController,
+                        countryCodeController: _countryCodeController,
+                        mobileNumberController: _mobileNumberController,
+                        genderController: _genderController,
                         enabled: !_isBusy,
                       ),
                       const SizedBox(height: 24),
@@ -917,6 +939,10 @@ class _FormFields extends StatelessWidget {
   final TextEditingController workController;
   final TextEditingController educationController;
   final TextEditingController languagesController;
+  final TextEditingController countryController;
+  final TextEditingController countryCodeController;
+  final TextEditingController mobileNumberController;
+  final TextEditingController genderController;
   final bool enabled;
 
   const _FormFields({
@@ -930,6 +956,10 @@ class _FormFields extends StatelessWidget {
     required this.workController,
     required this.educationController,
     required this.languagesController,
+    required this.countryController,
+    required this.countryCodeController,
+    required this.mobileNumberController,
+    required this.genderController,
     required this.enabled,
   });
 
@@ -960,6 +990,46 @@ class _FormFields extends StatelessWidget {
             label: 'Phone',
             hint: 'Enter phone number',
             keyboardType: TextInputType.phone,
+            enabled: enabled,
+          ),
+          const SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 110,
+                child: _ProfileTextField(
+                  controller: countryCodeController,
+                  label: 'Code',
+                  hint: '+234',
+                  keyboardType: TextInputType.phone,
+                  enabled: enabled,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _ProfileTextField(
+                  controller: mobileNumberController,
+                  label: 'Mobile number',
+                  hint: 'Enter mobile number',
+                  keyboardType: TextInputType.phone,
+                  enabled: enabled,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _ProfileTextField(
+            controller: countryController,
+            label: 'Country',
+            hint: 'Enter your country',
+            enabled: enabled,
+          ),
+          const SizedBox(height: 16),
+          _ProfileTextField(
+            controller: genderController,
+            label: 'Gender',
+            hint: 'Enter your gender',
             enabled: enabled,
           ),
           const SizedBox(height: 16),

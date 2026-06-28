@@ -11,6 +11,7 @@ import 'package:clique/ui/widgets/common/effect_text.dart';
 import 'package:clique/ui/widgets/post/normal-post/post_reaction_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
+import 'package:share_plus/share_plus.dart';
 
 class StatusViewPage extends StatefulWidget {
   final List<Story> stories;
@@ -778,6 +779,26 @@ class _StatusViewPageState extends State<StatusViewPage>
   Widget _buildBottomActions(List<Story> stories) {
     final story = stories[_safeStoryIndex(stories)];
 
+    if (story.isMe) {
+      return Positioned(
+        bottom: 30,
+        left: 16,
+        right: 16,
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: FilledButton.icon(
+            onPressed: () => _shareStory(story),
+            icon: const Icon(Icons.share_outlined),
+            label: const Text('Share'),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.card.withOpacity(.72),
+              foregroundColor: AppColors.white,
+            ),
+          ),
+        ),
+      );
+    }
+
     return Positioned(
       bottom: 30,
       left: 16,
@@ -886,6 +907,14 @@ class _StatusViewPageState extends State<StatusViewPage>
         ],
       ),
     );
+  }
+
+  Future<void> _shareStory(Story story) async {
+    final content = story.content?.trim() ?? '';
+    final text = content.isEmpty
+        ? 'View this status on Clique'
+        : content;
+    await Share.share(text);
   }
 
   Widget _buildReplySentToast() {

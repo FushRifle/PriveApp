@@ -11,6 +11,8 @@ class LoadConversations extends ChatEvent {}
 
 class RefreshConversations extends ChatEvent {}
 
+class LoadMoreConversations extends ChatEvent {}
+
 class LoadConversationInfo extends ChatEvent {
   final int conversationId;
   const LoadConversationInfo({required this.conversationId});

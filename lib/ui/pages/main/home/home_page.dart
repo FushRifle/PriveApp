@@ -9,8 +9,10 @@ import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/services/friends/friends_service.dart';
 import 'package:clique/core/services/user/user_service.dart';
+import 'package:clique/core/services/user/first_home_experience.dart';
 
 import 'package:clique/bloc/home/feed_bloc.dart';
+import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 
@@ -23,6 +25,7 @@ import 'package:clique/ui/pages/main/status/status_page.dart';
 import 'package:clique/ui/pages/main/status/status_view_page.dart';
 
 import 'package:clique/ui/widgets/home/home_feed_shimmer.dart';
+import 'package:clique/ui/widgets/home/people_you_may_know_dialog.dart';
 import 'package:clique/ui/widgets/post/normal-post/repost_card.dart';
 import 'package:clique/ui/widgets/status/status_widget.dart';
 
@@ -118,6 +121,7 @@ class _HomePageState extends State<HomePage>
   bool _initialized = false;
   bool _isLoadingMore = false;
   bool _showJumpToTop = false;
+  bool _checkingFirstHomeExperience = false;
 
   List<_StoryGroup> _cachedGroups = [];
   List<Story> _lastStories = [];
@@ -131,6 +135,27 @@ class _HomePageState extends State<HomePage>
     WidgetsBinding.instance.addObserver(this);
     _initialize();
     _scrollController.addListener(_onScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showFirstHomeExperience();
+    });
+  }
+
+  Future<void> _showFirstHomeExperience() async {
+    if (_checkingFirstHomeExperience || !mounted) return;
+    _checkingFirstHomeExperience = true;
+    try {
+      final authUserId = context.read<AuthBloc>().state.user?['id']?.toString() ?? '';
+      final tracker = const FirstHomeExperience();
+      final pending = await tracker.pendingDisplayCount(authUserId);
+      if (pending == null || !mounted) return;
+      for (var index = 0; index < pending && mounted; index++) {
+        if (!mounted) return;
+        await PeopleYouMayKnowDialog.show(context);
+        await tracker.recordDisplay(authUserId);
+      }
+    } finally {
+      _checkingFirstHomeExperience = false;
+    }
   }
 
   @override

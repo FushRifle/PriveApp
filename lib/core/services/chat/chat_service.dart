@@ -321,6 +321,29 @@ class ChatService {
     });
   }
 
+  Future<String?> getPersistedWallpaper(
+    int conversationId, {
+    required int ownerId,
+  }) async {
+    if (conversationId <= 0 || ownerId <= 0) return null;
+    final box = LocalCacheService.box(HiveCacheKeys.chatBox);
+    final value = box?.get('chat_wallpaper_${ownerId}_$conversationId');
+    final wallpaper = value?.toString().trim();
+    return wallpaper == null || wallpaper.isEmpty ? null : wallpaper;
+  }
+
+  Future<void> persistWallpaper(
+    int conversationId,
+    String wallpaper, {
+    required int ownerId,
+  }) async {
+    if (conversationId <= 0 || ownerId <= 0 || wallpaper.trim().isEmpty) {
+      return;
+    }
+    final key = 'chat_wallpaper_${ownerId}_$conversationId';
+    await _writeHive(key, (box) => box.put(key, wallpaper.trim()));
+  }
+
   CancelToken _createCancelToken(String key) {
     _cancelTokens[key]?.cancel();
 
@@ -552,32 +575,6 @@ class ChatService {
     return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 
-  Future<List<Map<String, dynamic>>> _loadStreamMessages(
-    int conversationId,
-  ) async {
-    final state = await _streamChatService.watchChannel(conversationId);
-    return _mapStreamMessages(
-      state.messages ?? const <stream.Message>[],
-      conversationId,
-      receiverId: _peerUserIdFromState(state),
-    );
-  }
-
-  Future<List<Map<String, dynamic>>> _loadStreamMessagesPage(
-    int conversationId, {
-    required int page,
-  }) async {
-    final state = await _streamChatService.queryChannelMessages(
-      conversationId,
-      page: page,
-    );
-    return _mapStreamMessages(
-      state.messages ?? const <stream.Message>[],
-      conversationId,
-      receiverId: _peerUserIdFromState(state),
-    );
-  }
-
   Future<bool> _deleteStreamMessage(int messageId) async {
     final resolved = await _findStreamMessageByLocalId(messageId);
     final channel = resolved.$1;
@@ -619,110 +616,6 @@ class ChatService {
     return (null, null);
   }
 
-  List<Map<String, dynamic>> _mapStreamMessages(
-      List<stream.Message> messages, int conversationId,
-      {int? receiverId}) {
-    final currentUserId = _streamChatService.currentUserId;
-    final currentUserIdInt = _streamChatService.currentUserIdAsInt();
-    final peerId = receiverId ?? 0;
-
-    final mapped = messages.map((message) {
-      final senderId = _readInt(message.user?.id);
-      final replyParentId = _streamReferenceId(message.parentId);
-      final mediaUrl = _readStreamMediaUrl(message);
-      final messageType = _readStreamMessageType(message, mediaUrl);
-      final isOwn = currentUserId != null && message.user?.id == currentUserId;
-
-      return <String, dynamic>{
-        'id': _streamLocalMessageId(message),
-        'streamMessageId': message.id,
-        'conversationId': conversationId,
-        'senderId': senderId,
-        'receiverId': senderId == currentUserIdInt ? peerId : currentUserIdInt,
-        'message': message.text ?? '',
-        'messageType': messageType,
-        'mediaUrl': mediaUrl,
-        'replyToId': replyParentId > 0 ? replyParentId : null,
-        'replyToMessage': message.quotedMessage?.text,
-        'replyToSender': message.quotedMessage?.user?.name,
-        'isRead': true,
-        'isOwn': isOwn,
-        'createdAt': message.createdAt.toIso8601String(),
-      };
-    }).toList();
-
-    mapped.sort((a, b) {
-      final aTime = DateTime.tryParse(a['createdAt']?.toString() ?? '') ??
-          DateTime.fromMillisecondsSinceEpoch(0);
-      final bTime = DateTime.tryParse(b['createdAt']?.toString() ?? '') ??
-          DateTime.fromMillisecondsSinceEpoch(0);
-      return bTime.compareTo(aTime);
-    });
-
-    return mapped;
-  }
-
-  int _peerUserIdFromState(stream.ChannelState state) {
-    final currentUserId = _streamChatService.currentUserId;
-    final currentUserIdInt = _streamChatService.currentUserIdAsInt();
-
-    for (final member in state.members ?? const <stream.Member>[]) {
-      final memberUser = member.user;
-      if (memberUser == null) {
-        continue;
-      }
-      final userId = _readInt(memberUser.id);
-      if (currentUserId != null && memberUser.id == currentUserId) {
-        continue;
-      }
-      if (userId != 0 && userId != currentUserIdInt) {
-        return userId;
-      }
-    }
-
-    return 0;
-  }
-
-  int _streamLocalMessageId(stream.Message message) {
-    final localId = _readInt(message.extraData['local_message_id']);
-    return localId > 0 ? localId : _streamReferenceId(message.id);
-  }
-
-  int _streamReferenceId(String? id) {
-    if (id == null || id.isEmpty) return 0;
-    if (id.startsWith('db-')) {
-      final databaseId = int.tryParse(id.substring(3));
-      if (databaseId != null && databaseId > 0) return databaseId;
-    }
-    final numericId = int.tryParse(id);
-    return numericId ?? _stableMessageId(id);
-  }
-
-  int _stableMessageId(String id) {
-    if (id.isEmpty) return 0;
-    return id.hashCode;
-  }
-
-  String _readStreamMessageType(stream.Message message, String? mediaUrl) {
-    if (mediaUrl != null && mediaUrl.isNotEmpty) {
-      final attachmentType = message.attachments.isNotEmpty
-          ? message.attachments.first.type
-          : null;
-      return attachmentType ?? 'image';
-    }
-    return 'text';
-  }
-
-  String? _readStreamMediaUrl(stream.Message message) {
-    if (message.attachments.isEmpty) return null;
-
-    final attachment = message.attachments.first;
-    return attachment.assetUrl ??
-        attachment.imageUrl ??
-        attachment.thumbUrl ??
-        attachment.titleLink;
-  }
-
   // =========================
   // Conversations
   // =========================
@@ -730,6 +623,8 @@ class ChatService {
   Future<List<Map<String, dynamic>>> getConversations({
     bool forceRefresh = false,
     int? cacheOwnerId,
+    int page = 1,
+    int pageSize = 30,
   }) async {
     try {
       if (!forceRefresh) {
@@ -741,167 +636,31 @@ class ChatService {
         }
       }
 
-      try {
-        await _streamChatService.connect();
-        final streamConversations = await _loadStreamConversations(
-          cacheOwnerId: cacheOwnerId,
-        );
-        if (streamConversations.isNotEmpty) {
-          await cacheConversations(
-            streamConversations,
-            cacheOwnerId: cacheOwnerId,
-          );
-          return streamConversations;
-        }
-      } catch (_) {
-        // Fall through to the existing REST path.
-      }
-
       final response = await _api.get(
         '/api/chat/conversations',
+        queryParameters: {'page': page, 'pageSize': pageSize},
         forceRefresh: true,
         useCache: false,
       );
 
-      final conversations = response.data is List
-          ? (response.data as List)
+      final raw = response.data is Map
+          ? (response.data['data'] ?? response.data['conversations'])
+          : response.data;
+      final conversations = raw is List
+          ? raw
               .whereType<Map>()
               .map((conversation) => Map<String, dynamic>.from(conversation))
               .toList()
           : <Map<String, dynamic>>[];
 
-      await cacheConversations(
-        conversations,
-        cacheOwnerId: cacheOwnerId,
-      );
+      if (page == 1) {
+        await cacheConversations(conversations, cacheOwnerId: cacheOwnerId);
+      }
 
       return conversations;
     } on DioException catch (e) {
       throw _handleError(e);
     }
-  }
-
-  Future<List<Map<String, dynamic>>> _loadStreamConversations({
-    int? cacheOwnerId,
-  }) async {
-    final currentUserId = _streamChatService.currentUserId;
-    if (currentUserId == null || currentUserId.isEmpty) {
-      return <Map<String, dynamic>>[];
-    }
-
-    final channels = await _streamChatService.client.queryChannelsOnline(
-      filter: stream.Filter.and([
-        stream.Filter.equal('type', 'messaging'),
-        stream.Filter.contains('members', currentUserId),
-      ]),
-      sort: [
-        stream.SortOption<stream.ChannelState>.desc('last_message_at'),
-      ],
-      state: true,
-      watch: true,
-      presence: true,
-      messageLimit: 1,
-    );
-
-    final conversations = channels.map((channel) {
-      final state = channel.state;
-      final members = state?.members ?? const <stream.Member>[];
-      final peer = _findPeerMember(members, currentUserId);
-      final messages = state?.messages;
-      final latestMessage =
-          messages != null && messages.isNotEmpty ? messages.last : null;
-      final unreadCount = (state?.read ?? const <stream.Read>[])
-              .userReadOf(
-                userId: currentUserId,
-              )
-              ?.unreadMessages ??
-          0;
-      final lastMessage = latestMessage?.text ?? '';
-      final lastMessageAt = channel.lastMessageAt ??
-          latestMessage?.createdAt ??
-          channel.createdAt ??
-          DateTime.now();
-
-      return <String, dynamic>{
-        'id': _readInt(channel.id),
-        'userId': _readInt(peer?.user?.id),
-        'name': _readStreamConversationName(peer),
-        'username': _readStreamConversationUsername(peer),
-        'avatar': peer?.user?.image ?? '',
-        'age': 0,
-        'verified': peer?.user?.extraData['verified'] == true,
-        'lastMessage': lastMessage,
-        'lastMessageType': latestMessage != null
-            ? _readStreamMessageType(
-                latestMessage, _readStreamMediaUrl(latestMessage))
-            : 'text',
-        'timestamp': lastMessageAt.toIso8601String(),
-        'unreadCount': unreadCount,
-        'isOnline': peer?.user?.online ?? false,
-        'isTyping': false,
-        'isPinned': channel.isPinned,
-        'isMuted': channel.isMuted,
-        'muteUntil': null,
-        'conversationId': _readInt(channel.id),
-        'channelId': channel.id,
-        'lastMessageId': latestMessage?.id,
-        'lastMessageCreatedAt': latestMessage?.createdAt.toIso8601String(),
-        'cacheOwnerId': cacheOwnerId,
-      };
-    }).toList();
-
-    conversations.sort((a, b) {
-      if ((a['isPinned'] == true) && (b['isPinned'] != true)) return -1;
-      if ((a['isPinned'] != true) && (b['isPinned'] == true)) return 1;
-      final aTime = DateTime.tryParse(a['timestamp']?.toString() ?? '') ??
-          DateTime.fromMillisecondsSinceEpoch(0);
-      final bTime = DateTime.tryParse(b['timestamp']?.toString() ?? '') ??
-          DateTime.fromMillisecondsSinceEpoch(0);
-      return bTime.compareTo(aTime);
-    });
-
-    return conversations;
-  }
-
-  stream.Member? _findPeerMember(
-    List<stream.Member> members,
-    String currentUserId,
-  ) {
-    for (final member in members) {
-      final memberUser = member.user;
-      if (memberUser == null || memberUser.id == currentUserId) {
-        continue;
-      }
-      return member;
-    }
-    return members.isNotEmpty ? members.first : null;
-  }
-
-  String _readStreamConversationName(stream.Member? peer) {
-    final user = peer?.user;
-    if (user == null) return 'User';
-    final name = user.name.trim();
-    if (name.isNotEmpty) return name;
-    final username = _readStreamConversationUsername(peer).trim();
-    if (username.isNotEmpty) return username;
-    return user.id;
-  }
-
-  String _readStreamConversationUsername(stream.Member? peer) {
-    final user = peer?.user;
-    if (user == null) return '';
-
-    final extraUsername = user.extraData['username'];
-    if (extraUsername is String && extraUsername.trim().isNotEmpty) {
-      return extraUsername.trim();
-    }
-
-    final extraHandle = user.extraData['handle'];
-    if (extraHandle is String && extraHandle.trim().isNotEmpty) {
-      return extraHandle.trim();
-    }
-
-    return '';
   }
 
   Future<Map<String, dynamic>> getConversationInfo(
@@ -969,25 +728,6 @@ class ChatService {
 
       if (!forceRefresh && page == 1 && _messagesCache.containsKey(memoryKey)) {
         return _messagesCache[memoryKey]!;
-      }
-
-      try {
-        await _streamChatService.connect();
-        final streamMessages = page == 1
-            ? await _loadStreamMessages(conversationId)
-            : await _loadStreamMessagesPage(
-                conversationId,
-                page: page,
-              );
-
-        if (streamMessages.isNotEmpty) {
-          if (page == 1) {
-            _messagesCache[memoryKey] = streamMessages;
-          }
-          return streamMessages;
-        }
-      } catch (_) {
-        // Fall through to the existing REST path.
       }
 
       if (!forceRefresh && page == 1) {

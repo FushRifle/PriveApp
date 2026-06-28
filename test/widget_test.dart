@@ -1,12 +1,12 @@
 import 'package:clique/bloc/profile/profile_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
-import 'package:clique/ui/pages/auth/demographic_page.dart';
+import 'package:clique/ui/pages/auth/unified_onboarding_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('demographic page can render skip action', (tester) async {
+  testWidgets('unified onboarding starts with name step', (tester) async {
     await tester.pumpWidget(
       MultiBlocProvider(
         providers: [
@@ -18,11 +18,12 @@ void main() {
           ),
         ],
         child: const MaterialApp(
-          home: OnboardingDemographicPage(),
+          home: UnifiedOnboardingPage(),
         ),
       ),
     );
 
-    expect(find.text('Skip'), findsOneWidget);
+    expect(find.text('What should we call you?'), findsOneWidget);
+    expect(find.text('Continue'), findsOneWidget);
   });
 }

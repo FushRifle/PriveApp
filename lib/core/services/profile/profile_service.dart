@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../../clients/api_service.dart';
+import '../../models/onboarding_model.dart';
 
 class ProfileService {
   final ApiService _api = ApiService();
@@ -30,6 +31,36 @@ class ProfileService {
       return _asMap(response.data);
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to update profile');
+    }
+  }
+
+  /// Updates the users and profiles rows in one backend transaction.
+  Future<Map<String, dynamic>> updateAccountProfile({
+    required Map<String, dynamic> user,
+    required Map<String, dynamic> profile,
+  }) async {
+    try {
+      final response = await _api.put(
+        '/api/profiles/me/account',
+        data: {'user': user, 'profile': profile},
+      );
+      return _asMap(response.data);
+    } on DioException catch (e) {
+      throw _handleError(e, 'Failed to update profile');
+    }
+  }
+
+  Future<Map<String, dynamic>> completeOnboarding(
+    OnboardingProfileRequest request,
+  ) async {
+    try {
+      final response = await _api.put(
+        '/api/profiles/me/onboarding',
+        data: request.toJson(),
+      );
+      return _asMap(response.data);
+    } on DioException catch (e) {
+      throw _handleError(e, 'Failed to complete onboarding');
     }
   }
 

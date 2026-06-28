@@ -408,6 +408,8 @@ class ChatState extends Equatable {
 
   final int currentPage;
   final bool hasMoreMessages;
+  final int conversationsPage;
+  final bool hasMoreConversations;
   final int? activeConversationId;
   final String? error;
 
@@ -423,6 +425,8 @@ class ChatState extends Equatable {
     this.userPreferences,
     this.currentPage = 1,
     this.hasMoreMessages = true,
+    this.conversationsPage = 1,
+    this.hasMoreConversations = true,
     this.activeConversationId,
     this.error,
   });
@@ -439,6 +443,8 @@ class ChatState extends Equatable {
     UserPreferencesModel? userPreferences,
     int? currentPage,
     bool? hasMoreMessages,
+    int? conversationsPage,
+    bool? hasMoreConversations,
     int? activeConversationId,
     String? error,
     bool clearError = false,
@@ -455,6 +461,9 @@ class ChatState extends Equatable {
       userPreferences: userPreferences ?? this.userPreferences,
       currentPage: currentPage ?? this.currentPage,
       hasMoreMessages: hasMoreMessages ?? this.hasMoreMessages,
+      conversationsPage: conversationsPage ?? this.conversationsPage,
+      hasMoreConversations:
+          hasMoreConversations ?? this.hasMoreConversations,
       activeConversationId: activeConversationId ?? this.activeConversationId,
       error: clearError ? null : error ?? this.error,
     );
@@ -473,6 +482,8 @@ class ChatState extends Equatable {
         userPreferences,
         currentPage,
         hasMoreMessages,
+        conversationsPage,
+        hasMoreConversations,
         activeConversationId,
         error,
       ];

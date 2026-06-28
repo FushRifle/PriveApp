@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:clique/core/clients/api_service.dart';
 import 'package:clique/core/clients/supabase_client.dart';
 import 'package:clique/core/local_cache/local_cache_service.dart';
@@ -18,6 +19,47 @@ class AuthService {
       encryptedSharedPreferences: true,
     ),
   );
+
+  Future<bool> emailExists(String email) async {
+    final normalizedEmail = email.trim().toLowerCase();
+    try {
+      final response = await _api.post(
+        '/api/auth/email-status',
+        data: {'email': normalizedEmail},
+      );
+      final data = response.data;
+      if (data is Map) {
+        final value = data['exists'] ?? data['registered'];
+        if (value is bool) return value;
+      }
+      throw const FormatException('Invalid email status response');
+    } on DioException catch (e) {
+      throw _readBackendError(
+        e.response?.data,
+        'Unable to check this email. Please try again.',
+      );
+    }
+  }
+
+  Future<AuthResult> signInWithGoogle() async {
+    try {
+      final launched = await SupabaseConfig.client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: 'com.Clique.app://login-callback',
+      );
+      return AuthResult(
+        success: launched,
+        error: launched ? null : 'Unable to start Google sign in.',
+      );
+    } on AuthException catch (e) {
+      return AuthResult(success: false, error: _handleAuthError(e));
+    } catch (_) {
+      return AuthResult(
+        success: false,
+        error: 'Unable to start Google sign in. Please try again.',
+      );
+    }
+  }
 
   // SIGN IN
   Future<AuthResult> signIn(String email, String password) async {
@@ -175,6 +217,9 @@ class AuthService {
       final token = session.accessToken;
 
       _api.setAuthToken(token);
+
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setBool('new_account_${user.id}', true);
 
       return AuthResult(
         success: true,

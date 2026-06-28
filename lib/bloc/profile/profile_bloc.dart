@@ -180,6 +180,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
           location: event.data['location'] ?? currentProfile.location,
           work: event.data['work'] ?? currentProfile.work,
           education: event.data['education'] ?? currentProfile.education,
+          country: event.data['country'] ?? currentProfile.country,
           age: event.data['age'] ?? currentProfile.age,
           photos: event.data['photos'] ?? currentProfile.photos,
         );
