@@ -178,17 +178,26 @@ class _BootstrapperState extends State<_Bootstrapper> {
       if (!mounted) return;
 
       final updatedProfile = profileBloc.state.myProfile;
-
       final hasValidProfile =
           updatedProfile != null && updatedProfile.userId > 0;
+
+      final profileFailed =
+          !hasValidProfile && profileBloc.state.status == ProfileStatus.error;
+      final userFailed = userBloc.state.currentUser == null &&
+          userBloc.state.status == UserStatus.error;
 
       setState(() {
         _hasProfile = hasValidProfile;
         _hasUser = userBloc.state.currentUser != null;
         _isOnboarded = _readOnboarded(userBloc.state.currentUser);
         _loading = false;
+        _error = profileFailed || userFailed
+            ? (userBloc.state.error ??
+                profileBloc.state.error ??
+                'Unable to load your account. Check your connection and retry.')
+            : null;
       });
-      _notifyBootstrapComplete();
+      if (_error == null) _notifyBootstrapComplete();
     } catch (e) {
       if (!mounted) return;
 

@@ -98,7 +98,7 @@ class _EventsPageState extends State<EventsPage>
                 // Search & Filters
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                    padding: const EdgeInsets.fromLTRB(10, 20, 10, 20),
                     child: EventsSearchAndFilters(
                       searchController: _searchController,
                       category: _category,
@@ -112,7 +112,7 @@ class _EventsPageState extends State<EventsPage>
                 if (!isEmpty)
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                      padding: const EdgeInsets.fromLTRB(10, 10, 20, 10),
                       child: EventsSectionLabel(
                         title: 'Featured',
                         subtitle: isInitialLoading

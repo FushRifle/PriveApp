@@ -95,6 +95,7 @@ dependencies:
   curved_navigation_bar: ^1.0.6
   introduction_screen: ^4.0.0
   flutter_local_notifications: ^22.0.1
+  flutter_cache_manager: ^3.4.1
 
 dev_dependencies:
   flutter_test:

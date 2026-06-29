@@ -61,6 +61,26 @@ class AuthService {
     }
   }
 
+  Future<AuthResult> signInWithApple() async {
+    try {
+      final launched = await SupabaseConfig.client.auth.signInWithOAuth(
+        OAuthProvider.apple,
+        redirectTo: 'com.Clique.app://login-callback',
+      );
+      return AuthResult(
+        success: launched,
+        error: launched ? null : 'Unable to start Apple sign in.',
+      );
+    } on AuthException catch (e) {
+      return AuthResult(success: false, error: _handleAuthError(e));
+    } catch (_) {
+      return AuthResult(
+        success: false,
+        error: 'Unable to start Apple sign in. Please try again.',
+      );
+    }
+  }
+
   // SIGN IN
   Future<AuthResult> signIn(String email, String password) async {
     try {

@@ -6,8 +6,9 @@ import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
 import 'package:clique/core/services/chat/chat_service.dart';
-import 'package:clique/ui/pages/main/chat/archived_chat_page.dart';
+import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/ui/pages/main/chat/chat_page.dart';
+
 import 'package:clique/ui/widgets/common/app_page_header.dart';
 import 'package:clique/ui/widgets/chat/inbox/inbox_loading_shimmer.dart';
 import 'package:clique/ui/widgets/chat/inbox/inbox_message_item.dart';
@@ -95,20 +96,10 @@ class _InboxPageState extends State<InboxPage> {
             title: 'Inbox',
             subtitle: 'Chat With Your Clique.',
             leadingIcon: Icons.message_outlined,
-            actionIcon: Icons.archive_rounded,
+            actionIcon: Icons.settings_rounded,
             onActionTap: () {
               HapticFeedback.lightImpact();
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => BlocProvider.value(
-                    value: context.read<ChatBloc>(),
-                    child: const ArchivedChatPage(),
-                  ),
-                ),
-              ).then((_) {
-                if (mounted) setState(() {});
-              });
+              Navigator.pushNamed(context, NamedRoutes.settingsScreen);
             },
           ),
           InboxToolbar(
@@ -279,6 +270,7 @@ class _InboxPageState extends State<InboxPage> {
         : switch (_filter) {
             InboxFilter.unread => 'No unread conversations',
             InboxFilter.pinned => 'No pinned conversations',
+            InboxFilter.archive => 'No archived conversations',
             InboxFilter.all => 'No conversations',
           };
     final subtitle = _query.isNotEmpty
@@ -286,6 +278,7 @@ class _InboxPageState extends State<InboxPage> {
         : switch (_filter) {
             InboxFilter.unread => 'New messages will appear here.',
             InboxFilter.pinned => 'Pin important chats to keep them close.',
+            InboxFilter.archive => 'Archived conversations appear here.',
             InboxFilter.all => 'Start a conversation to see it here.',
           };
 
@@ -344,7 +337,8 @@ class _InboxPageState extends State<InboxPage> {
     }
 
     for (final conv in mergedSource) {
-      if (archivedIds.contains(conv.id)) continue;
+      final isArchived = archivedIds.contains(conv.id);
+      if (_filter == InboxFilter.archive ? !isArchived : isArchived) continue;
       final isBot = conv.name.toLowerCase() == 'clique' ||
           conv.username.toLowerCase() == 'clique';
       final latestCachedMessage = _latestCachedMessage(
@@ -390,6 +384,8 @@ class _InboxPageState extends State<InboxPage> {
           break;
         case InboxFilter.pinned:
           if (!conversation.isPinned) return false;
+          break;
+        case InboxFilter.archive:
           break;
         case InboxFilter.all:
           break;
@@ -539,7 +535,10 @@ class _InboxPageState extends State<InboxPage> {
           onPin: () => _togglePin(message),
           onMute: () => _toggleMute(message),
           onMarkUnread: () => _markUnread(message),
-          onArchive: () => _archiveConversation(message),
+          onArchive: () => _filter == InboxFilter.archive
+              ? _unarchiveConversation(message)
+              : _archiveConversation(message),
+          isArchived: _filter == InboxFilter.archive,
         );
       },
     );
@@ -592,6 +591,23 @@ class _InboxPageState extends State<InboxPage> {
     _showInboxSnack(
       icon: Icons.archive_rounded,
       message: 'Conversation with ${message.name} archived',
+    );
+  }
+
+  Future<void> _unarchiveConversation(ChatMessage message) async {
+    HapticFeedback.mediumImpact();
+    final conversationId = int.tryParse(message.id);
+    if (conversationId == null) return;
+
+    await _chatService.unarchiveConversation(
+      conversationId,
+      cacheOwnerId: _readCurrentUserId(),
+    );
+    if (!mounted) return;
+    setState(() {});
+    _showInboxSnack(
+      icon: Icons.unarchive_rounded,
+      message: 'Conversation with ${message.name} moved to inbox',
     );
   }
 
@@ -703,11 +719,21 @@ class _InboxPageState extends State<InboxPage> {
                   },
                 ),
                 ListTile(
-                  leading: const _ActionIcon(icon: Icons.archive_rounded),
-                  title: const Text('Archive chat'),
+                  leading: _ActionIcon(
+                    icon: _filter == InboxFilter.archive
+                        ? Icons.unarchive_rounded
+                        : Icons.archive_rounded,
+                  ),
+                  title: Text(_filter == InboxFilter.archive
+                      ? 'Move to inbox'
+                      : 'Archive chat'),
                   onTap: () {
                     Navigator.pop(context);
-                    _archiveConversation(message);
+                    if (_filter == InboxFilter.archive) {
+                      _unarchiveConversation(message);
+                    } else {
+                      _archiveConversation(message);
+                    }
                   },
                 ),
               ],

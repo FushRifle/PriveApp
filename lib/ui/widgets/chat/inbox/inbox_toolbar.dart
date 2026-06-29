@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:clique/app/configs/colors.dart';
 
-enum InboxFilter { all, unread, pinned }
+enum InboxFilter { all, unread, pinned, archive }
 
 class InboxToolbar extends StatelessWidget {
   final TextEditingController controller;
@@ -32,6 +32,7 @@ class InboxToolbar extends StatelessWidget {
                   InboxFilter.all => 'All',
                   InboxFilter.unread => 'Unread',
                   InboxFilter.pinned => 'Pinned',
+                  InboxFilter.archive => 'Archive',
                 };
 
                 return Padding(
@@ -116,7 +117,7 @@ class InboxToolbar extends StatelessWidget {
               ),
             ),
           ),
-                    const SizedBox(height: 10),
+          const SizedBox(height: 10),
         ],
       ),
     );

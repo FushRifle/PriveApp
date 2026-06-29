@@ -30,6 +30,7 @@ class _MainWrapperState extends State<MainWrapper>
   late final PageController _pageController;
   late final FeedBloc _feedBloc;
   late final StoriesBloc _storiesBloc;
+  late final ChatBloc _chatBloc;
   int _currentIndex = 0;
   bool _isOpeningCreatePost = false;
   final Set<int> _visitedTabs = {0};
@@ -54,6 +55,12 @@ class _MainWrapperState extends State<MainWrapper>
     _pageController = PageController();
     _feedBloc = FeedBloc();
     _storiesBloc = StoriesBloc();
+    _chatBloc = ChatBloc();
+    final authState = context.read<AuthBloc>().state;
+    if (authState.token != null) {
+      _chatBloc.setAuthToken(authState.token!);
+      _chatBloc.add(LoadConversations());
+    }
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -71,6 +78,7 @@ class _MainWrapperState extends State<MainWrapper>
     _pageController.dispose();
     _feedBloc.close();
     _storiesBloc.close();
+    _chatBloc.close();
     _pulseController.dispose();
     super.dispose();
   }
@@ -162,6 +170,7 @@ class _MainWrapperState extends State<MainWrapper>
       providers: [
         BlocProvider.value(value: _feedBloc),
         BlocProvider.value(value: _storiesBloc),
+        BlocProvider.value(value: _chatBloc),
       ],
       child: PopScope(
         canPop: _currentIndex == 0,
@@ -279,11 +288,22 @@ class _MainWrapperState extends State<MainWrapper>
                                       isSelected: _navBarIndex == 3,
                                       unselectedColor: unselectedColor,
                                     ),
-                                    _buildNavItem(
-                                      icon: Icons.send_rounded,
-                                      navIndex: 4,
-                                      isSelected: _navBarIndex == 4,
-                                      unselectedColor: unselectedColor,
+                                    BlocSelector<ChatBloc, ChatState, int>(
+                                      selector: (state) =>
+                                          state.conversations.fold(
+                                        0,
+                                        (total, conversation) =>
+                                            total + conversation.unreadCount,
+                                      ),
+                                      builder: (context, unreadCount) {
+                                        return _buildNavItem(
+                                          icon: Icons.send_rounded,
+                                          navIndex: 4,
+                                          isSelected: _navBarIndex == 4,
+                                          unselectedColor: unselectedColor,
+                                          badgeCount: unreadCount,
+                                        );
+                                      },
                                     ),
                                   ],
                                 ),
@@ -318,6 +338,7 @@ class _MainWrapperState extends State<MainWrapper>
     required int navIndex,
     required bool isSelected,
     required Color unselectedColor,
+    int badgeCount = 0,
   }) {
     return Expanded(
       child: Center(
@@ -361,10 +382,44 @@ class _MainWrapperState extends State<MainWrapper>
                         ]
                       : [],
                 ),
-                child: Icon(
-                  icon,
-                  size: isSelected ? 25 : 23,
-                  color: isSelected ? AppColors.primary : unselectedColor,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: [
+                    Icon(
+                      icon,
+                      size: isSelected ? 25 : 23,
+                      color: isSelected ? AppColors.primary : unselectedColor,
+                    ),
+                    if (badgeCount > 0)
+                      Positioned(
+                        top: -4,
+                        right: -5,
+                        child: Container(
+                          constraints: const BoxConstraints(minWidth: 17),
+                          height: 17,
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade600,
+                            borderRadius: BorderRadius.circular(9),
+                            border: Border.all(
+                              color: Theme.of(context).scaffoldBackgroundColor,
+                              width: 1.5,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            badgeCount > 99 ? '99+' : '$badgeCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              height: 1,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
@@ -389,64 +444,27 @@ class _ChatTabScope extends StatelessWidget {
   const _ChatTabScope({super.key, required this.child});
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => ChatBloc(),
-      child: Builder(
-        builder: (context) {
-          return BlocListener<AuthBloc, AuthState>(
-            listenWhen: (previous, current) {
-              return previous.status != current.status ||
-                  previous.token != current.token;
-            },
-            listener: (context, state) {
-              final chatBloc = context.read<ChatBloc>();
-              if (state.status == AuthStatus.authenticated &&
-                  state.token != null) {
-                chatBloc.setAuthToken(state.token!);
-              } else if (state.status == AuthStatus.unauthenticated) {
-                chatBloc.clearAuthToken();
-              }
-            },
-            child: _ChatTabBootstrap(child: child),
-          );
-        },
-      ),
+    return Builder(
+      builder: (context) {
+        return BlocListener<AuthBloc, AuthState>(
+          listenWhen: (previous, current) {
+            return previous.status != current.status ||
+                previous.token != current.token;
+          },
+          listener: (context, state) {
+            final chatBloc = context.read<ChatBloc>();
+            if (state.status == AuthStatus.authenticated &&
+                state.token != null) {
+              chatBloc.setAuthToken(state.token!);
+            } else if (state.status == AuthStatus.unauthenticated) {
+              chatBloc.clearAuthToken();
+            }
+          },
+          child: child,
+        );
+      },
     );
   }
-}
-
-class _ChatTabBootstrap extends StatefulWidget {
-  final Widget child;
-
-  const _ChatTabBootstrap({required this.child});
-
-  @override
-  State<_ChatTabBootstrap> createState() => _ChatTabBootstrapState();
-}
-
-class _ChatTabBootstrapState extends State<_ChatTabBootstrap> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _syncAuthToken());
-  }
-
-  void _syncAuthToken() {
-    if (!mounted) return;
-
-    final authState = context.read<AuthBloc>().state;
-    final chatBloc = context.read<ChatBloc>();
-
-    if (authState.status == AuthStatus.authenticated &&
-        authState.token != null) {
-      chatBloc.setAuthToken(authState.token!);
-    } else if (authState.status == AuthStatus.unauthenticated) {
-      chatBloc.clearAuthToken();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) => widget.child;
 }
 
 class _EventTabScope extends StatelessWidget {

@@ -12,6 +12,7 @@ class InboxMessageItem extends StatelessWidget {
   final VoidCallback onMute;
   final VoidCallback onMarkUnread;
   final VoidCallback onArchive;
+  final bool isArchived;
 
   const InboxMessageItem({
     super.key,
@@ -22,6 +23,7 @@ class InboxMessageItem extends StatelessWidget {
     required this.onMute,
     required this.onMarkUnread,
     required this.onArchive,
+    this.isArchived = false,
   });
 
   @override
@@ -55,8 +57,8 @@ class InboxMessageItem extends StatelessWidget {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 28),
         color: AppColors.primary,
-        child: const Icon(
-          Icons.archive_rounded,
+        child: Icon(
+          isArchived ? Icons.unarchive_rounded : Icons.archive_rounded,
           color: AppColors.white,
           size: 22,
         ),

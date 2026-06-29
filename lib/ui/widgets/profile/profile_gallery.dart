@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:lottie/lottie.dart';
 
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
@@ -186,12 +187,7 @@ class _ProfileSavedPostsTabState extends State<ProfileSavedPostsTab> {
           if (index >= _savedPosts.length) {
             return const Padding(
               padding: EdgeInsets.symmetric(vertical: 18),
-              child: Center(
-                child: CircularProgressIndicator(
-                  color: AppColors.secondary,
-                  strokeWidth: 2,
-                ),
-              ),
+              child: ProfileLoadingAnimation(size: 48),
             );
           }
 
@@ -565,12 +561,7 @@ class ProfilePostsTab extends StatelessWidget {
         itemCount: items.length + (isLoadingMore ? 1 : 0),
         itemBuilder: (context, index) {
           if (index >= items.length) {
-            return const Center(
-              child: CircularProgressIndicator(
-                color: AppColors.primary,
-                strokeWidth: 2,
-              ),
-            );
+            return const ProfileLoadingAnimation(size: 48);
           }
           return ProfileGalleryTile(
               gallery: items[index], isVideo: items[index].type == 'video');
@@ -625,12 +616,7 @@ class ProfileMediaGrid extends StatelessWidget {
         itemCount: items.length + (isLoadingMore ? 1 : 0),
         itemBuilder: (context, index) {
           if (index >= items.length) {
-            return const Center(
-              child: CircularProgressIndicator(
-                color: AppColors.primary,
-                strokeWidth: 2,
-              ),
-            );
+            return const ProfileLoadingAnimation(size: 48);
           }
           return ProfileGalleryTile(
             gallery: items[index],
@@ -734,10 +720,23 @@ class ProfileLoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: CircularProgressIndicator(
-        color: AppColors.primary,
-        strokeWidth: 2,
+    return const Center(child: ProfileLoadingAnimation(size: 120));
+  }
+}
+
+class ProfileLoadingAnimation extends StatelessWidget {
+  final double size;
+
+  const ProfileLoadingAnimation({super.key, this.size = 120});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Lottie.asset(
+        'assets/animations/loading.json',
+        repeat: true,
       ),
     );
   }

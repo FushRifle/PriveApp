@@ -9,7 +9,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -102,8 +101,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   ),
                   child: Column(
                     children: [
-                      _buildProfileCard(user, isDark),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 8),
                       _section(
                         'Appearance',
                         [
@@ -437,130 +435,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     return '${minutes.toStringAsFixed(1)} min';
   }
 
-  Widget _buildProfileCard(Map<String, dynamic>? user, bool isDark) {
-    final name = _readUserName(user);
-    final avatar = user?['avatar']?.toString() ?? '';
-    user?['username']?.toString();
-    user?['email']?.toString();
-
-    return GestureDetector(
-      onTap: () {
-        Navigator.pushNamed(
-          context,
-          NamedRoutes.profileScreen,
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          color: AppColors.card,
-          boxShadow: [
-            BoxShadow(
-              blurRadius: 25,
-              offset: const Offset(0, 8),
-              color: AppColors.black.withOpacity(0.04),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            _avatar(
-              avatar,
-              name,
-              isDark,
-            ),
-            const SizedBox(width: 18),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.text,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.primary,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _readUserName(Map<String, dynamic>? user) {
-    final name = user?['name']?.toString();
-    if (name != null && name.trim().isNotEmpty) return name.trim();
-
-    final firstName =
-        user?['firstName']?.toString() ?? user?['first_name']?.toString();
-    final lastName =
-        user?['lastName']?.toString() ?? user?['last_name']?.toString();
-    final fullName = [
-      firstName,
-      lastName,
-    ].where((part) => part != null && part.trim().isNotEmpty).join(' ');
-    if (fullName.trim().isNotEmpty) return fullName.trim();
-
-    final username = user?['username']?.toString();
-    if (username != null && username.trim().isNotEmpty) return username.trim();
-
-    final email = user?['email']?.toString();
-    if (email != null && email.trim().isNotEmpty) return email.trim();
-
-    return 'User';
-  }
-
-  Widget _avatar(
-    String avatar,
-    String name,
-    bool isDark,
-  ) {
-    final fallback = name.isNotEmpty ? name[0].toUpperCase() : 'U';
-
-    return Container(
-      width: 38,
-      height: 38,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: [
-            AppColors.primary,
-            AppColors.secondary,
-          ],
-        ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: avatar.startsWith('http')
-          ? CachedNetworkImage(
-              imageUrl: avatar,
-              fit: BoxFit.cover,
-              errorWidget: (_, __, ___) => _fallbackAvatar(fallback),
-            )
-          : _fallbackAvatar(fallback),
-    );
-  }
-
-  Widget _fallbackAvatar(String text) {
-    return Center(
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: AppColors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 28,
-        ),
-      ),
-    );
-  }
 
   Widget _section(
     String title,

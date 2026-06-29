@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -41,6 +45,13 @@ class ReelItem extends StatefulWidget {
 class _ReelItemState extends State<ReelItem>
     with AutomaticKeepAliveClientMixin {
   static const double _bottomBarSpace = 110.0;
+  static final CacheManager _videoCache = CacheManager(
+    Config(
+      'reelVideoCache',
+      stalePeriod: const Duration(days: 7),
+      maxNrOfCacheObjects: 80,
+    ),
+  );
 
   VideoPlayerController? _videoController;
 
@@ -188,14 +199,25 @@ class _ReelItemState extends State<ReelItem>
     }
 
     try {
-      final controller = VideoPlayerController.networkUrl(
-        Uri.parse(_videoUrl),
-        videoPlayerOptions: VideoPlayerOptions(
-          mixWithOthers: false,
-        ),
-      );
+      final cachedFile =
+          kIsWeb ? null : await _videoCache.getFileFromCache(_videoUrl);
+      final controller = cachedFile != null
+          ? VideoPlayerController.file(
+              cachedFile.file,
+              videoPlayerOptions: VideoPlayerOptions(mixWithOthers: false),
+            )
+          : VideoPlayerController.networkUrl(
+              Uri.parse(_videoUrl),
+              videoPlayerOptions: VideoPlayerOptions(mixWithOthers: false),
+            );
 
       _videoController = controller;
+
+      // Keep first playback streaming immediately while saving the same URL for
+      // the next view and for adjacent reels that Flutter builds ahead of time.
+      if (cachedFile == null && !kIsWeb) {
+        unawaited(_cacheVideo(_videoUrl));
+      }
 
       await controller.initialize();
 
@@ -228,6 +250,14 @@ class _ReelItemState extends State<ReelItem>
         _isInitialized = false;
         _isPlaying = false;
       });
+    }
+  }
+
+  Future<void> _cacheVideo(String url) async {
+    try {
+      await _videoCache.downloadFile(url);
+    } catch (_) {
+      // Playback continues from the network when disk caching is unavailable.
     }
   }
 
@@ -857,11 +887,8 @@ class _ReelItemState extends State<ReelItem>
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
           decoration: BoxDecoration(
-            color: AppColors.black.withOpacity(0.28),
+            color: AppColors.transparent.withOpacity(0.08),
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(
-              color: AppColors.white.withOpacity(0.12),
-            ),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -877,25 +904,25 @@ class _ReelItemState extends State<ReelItem>
                 onTap: _handleLike,
                 onLongPress: _showReactionPicker,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               ActionButton(
                 icon: Icons.mode_comment_outlined,
                 label: formatCount(commentCount < 0 ? 0 : commentCount),
                 onTap: _handleComment,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               ActionButton(
                 icon: Icons.send_rounded,
                 label: formatCount(shareCount < 0 ? 0 : shareCount),
                 onTap: _handleShare,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               ActionButton(
                 icon: Icons.bookmark_border_rounded,
                 label: '',
                 onTap: _saveReel,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               ActionButton(
                 icon: _isReposted
                     ? Icons.repeat_on_rounded
@@ -904,7 +931,7 @@ class _ReelItemState extends State<ReelItem>
                 color: _isReposted ? AppColors.primary : AppColors.white,
                 onTap: _handleRepost,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               ActionButton(
                 icon: Icons.more_horiz,
                 label: '',

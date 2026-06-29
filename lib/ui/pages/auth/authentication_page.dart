@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/core/services/auth/auth_service.dart';
@@ -50,7 +52,7 @@ class _AuthenticationPageState extends State<AuthenticationPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.black,
       extendBodyBehindAppBar: true,
       appBar: _stage == null
           ? null
@@ -67,68 +69,128 @@ class _AuthenticationPageState extends State<AuthenticationPage>
                 icon: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.cardBorderColor.withOpacity(0.1),
+                    color: Colors.black.withOpacity(0.35),
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white.withOpacity(0.25)),
                   ),
-                  child: const Icon(Icons.arrow_back_rounded, size: 20),
+                  child: const Icon(
+                    Icons.arrow_back_rounded,
+                    size: 20,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
-      body: SafeArea(
-        child: BlocConsumer<AuthBloc, AuthState>(
-          listener: (context, state) {
-            if (state.status == AuthStatus.error && state.error != null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Row(
-                    children: [
-                      const Icon(Icons.error_outline,
-                          color: Colors.white, size: 20),
-                      const SizedBox(width: 12),
-                      Expanded(child: Text(state.error!)),
-                    ],
-                  ),
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  margin: const EdgeInsets.all(16),
-                ),
-              );
-              context.read<AuthBloc>().add(const ClearAuthError());
-            }
-          },
-          builder: (context, state) {
-            return Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(32),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 440),
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    switchInCurve: Curves.easeOut,
-                    switchOutCurve: Curves.easeIn,
-                    transitionBuilder: (child, animation) {
-                      return FadeTransition(
-                        opacity: animation,
-                        child: SlideTransition(
-                          position: Tween<Offset>(
-                            begin: const Offset(0.05, 0),
-                            end: Offset.zero,
-                          ).animate(animation),
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: _stage == null
-                        ? _buildMethods(state)
-                        : _buildEmailFlow(state),
-                  ),
-                ),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            'assets/profiles/profile_1.jpeg',
+            fit: BoxFit.cover,
+            alignment: Alignment.topCenter,
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withOpacity(0.32),
+                  Colors.black.withOpacity(0.52),
+                  Colors.black.withOpacity(0.76),
+                ],
+                stops: const [0, 0.48, 1],
               ),
-            );
-          },
-        ),
+            ),
+          ),
+          SafeArea(
+            child: BlocConsumer<AuthBloc, AuthState>(
+              listener: (context, state) {
+                if (state.status == AuthStatus.error && state.error != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Row(
+                        children: [
+                          const Icon(Icons.error_outline,
+                              color: Colors.white, size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(child: Text(state.error!)),
+                        ],
+                      ),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      margin: const EdgeInsets.all(16),
+                    ),
+                  );
+                  context.read<AuthBloc>().add(const ClearAuthError());
+                }
+              },
+              builder: (context, state) {
+                return Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 440),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(28),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                          child: Container(
+                            padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
+                            decoration: BoxDecoration(
+                              color: Colors.transparent,
+                              borderRadius: BorderRadius.circular(28),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.24),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.24),
+                                  blurRadius: 32,
+                                  offset: const Offset(0, 16),
+                                ),
+                              ],
+                            ),
+                            child: Theme(
+                              data: Theme.of(context).copyWith(
+                                textTheme: Theme.of(context).textTheme.apply(
+                                      bodyColor: Colors.white,
+                                      displayColor: Colors.white,
+                                    ),
+                              ),
+                              child: AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 300),
+                                switchInCurve: Curves.easeOut,
+                                switchOutCurve: Curves.easeIn,
+                                transitionBuilder: (child, animation) {
+                                  return FadeTransition(
+                                    opacity: animation,
+                                    child: SlideTransition(
+                                      position: Tween<Offset>(
+                                        begin: const Offset(0.05, 0),
+                                        end: Offset.zero,
+                                      ).animate(animation),
+                                      child: child,
+                                    ),
+                                  );
+                                },
+                                child: _stage == null
+                                    ? _buildMethods(state)
+                                    : _buildEmailFlow(state),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -186,49 +248,57 @@ class _AuthenticationPageState extends State<AuthenticationPage>
         Text(
           'Connect and share with your community',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: AppColors.text.withOpacity(0.6),
+                color: Colors.white.withOpacity(0.72),
               ),
         ),
         const SizedBox(height: 48),
         // Divider with text
         Row(
           children: [
-            Expanded(
-                child:
-                    Divider(color: AppColors.cardBorderColor.withOpacity(0.3))),
+            Expanded(child: Divider(color: Colors.white.withOpacity(0.3))),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                'continue with',
+                'Login or Register',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.text.withOpacity(0.5),
+                      color: Colors.white.withOpacity(0.65),
                       letterSpacing: 1.5,
                     ),
               ),
             ),
-            Expanded(
-                child:
-                    Divider(color: AppColors.cardBorderColor.withOpacity(0.3))),
+            Expanded(child: Divider(color: Colors.white.withOpacity(0.3))),
           ],
         ),
         const SizedBox(height: 24),
         _methodButton(
-          icon: Icons.mail_outline_rounded,
+          icon: Icons.email_outlined,
           label: 'Email',
           onPressed: () => setState(() => _stage = _EmailStage.email),
         ),
-        const SizedBox(height: 14),
-        _methodButton(
-          icon: Icons.g_mobiledata_rounded,
-          label: 'Google',
-          onPressed: state.isLoading ? null : _continueWithGoogle,
+        const SizedBox(height: 22),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _socialButton(
+              icon: Icons.g_mobiledata,
+              tooltip: 'Continue with Google',
+              iconSize: 32,
+              onPressed: state.isLoading ? null : _continueWithGoogle,
+            ),
+            const SizedBox(width: 18),
+            _socialButton(
+              icon: Icons.apple,
+              tooltip: 'Continue with Apple',
+              onPressed: state.isLoading ? null : _continueWithApple,
+            ),
+          ],
         ),
         const SizedBox(height: 32),
         Text(
           'By continuing, you agree to our Terms & Privacy Policy',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.text.withOpacity(0.4),
+                color: Colors.white.withOpacity(0.58),
               ),
         ),
       ],
@@ -273,7 +343,7 @@ class _AuthenticationPageState extends State<AuthenticationPage>
                 ? 'Enter your password for\n${_email.text.trim().toLowerCase()}'
                 : 'We\'ll check if you have an account',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.text.withOpacity(0.6),
+                  color: Colors.white.withOpacity(0.72),
                   height: 1.5,
                 ),
           ),
@@ -297,10 +367,10 @@ class _AuthenticationPageState extends State<AuthenticationPage>
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
                 autofillHints: const [AutofillHints.email],
-                style: const TextStyle(fontSize: 16),
+                style: const TextStyle(fontSize: 16, color: Colors.white),
                 decoration: InputDecoration(
                   labelText: 'Email address',
-                  labelStyle: TextStyle(color: AppColors.text.withOpacity(0.5)),
+                  labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
                   prefixIcon: Container(
                     margin: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
@@ -314,7 +384,7 @@ class _AuthenticationPageState extends State<AuthenticationPage>
                     ),
                   ),
                   filled: true,
-                  fillColor: AppColors.cardBorderColor.withOpacity(0.05),
+                  fillColor: Colors.black.withOpacity(0.22),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                     borderSide: BorderSide.none,
@@ -322,7 +392,7 @@ class _AuthenticationPageState extends State<AuthenticationPage>
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                     borderSide: BorderSide(
-                      color: AppColors.cardBorderColor.withOpacity(0.2),
+                      color: Colors.white.withOpacity(0.24),
                     ),
                   ),
                   focusedBorder: OutlineInputBorder(
@@ -369,10 +439,10 @@ class _AuthenticationPageState extends State<AuthenticationPage>
                 autofillHints: _existingUser
                     ? const [AutofillHints.password]
                     : const [AutofillHints.newPassword],
-                style: const TextStyle(fontSize: 16),
+                style: const TextStyle(fontSize: 16, color: Colors.white),
                 decoration: InputDecoration(
                   labelText: 'Password',
-                  labelStyle: TextStyle(color: AppColors.text.withOpacity(0.5)),
+                  labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
                   prefixIcon: Container(
                     margin: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
@@ -395,11 +465,11 @@ class _AuthenticationPageState extends State<AuthenticationPage>
                       _obscurePassword
                           ? Icons.visibility_outlined
                           : Icons.visibility_off_outlined,
-                      color: AppColors.text.withOpacity(0.5),
+                      color: Colors.white.withOpacity(0.7),
                     ),
                   ),
                   filled: true,
-                  fillColor: AppColors.cardBorderColor.withOpacity(0.05),
+                  fillColor: Colors.black.withOpacity(0.22),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                     borderSide: BorderSide.none,
@@ -407,7 +477,7 @@ class _AuthenticationPageState extends State<AuthenticationPage>
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                     borderSide: BorderSide(
-                      color: AppColors.cardBorderColor.withOpacity(0.2),
+                      color: Colors.white.withOpacity(0.24),
                     ),
                   ),
                   focusedBorder: OutlineInputBorder(
@@ -517,7 +587,7 @@ class _AuthenticationPageState extends State<AuthenticationPage>
       height: 32,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: isActive ? AppColors.primary : AppColors.card,
+        color: isActive ? AppColors.primary : Colors.black.withOpacity(0.22),
         border: Border.all(
           color: isActive
               ? AppColors.secondary
@@ -538,7 +608,7 @@ class _AuthenticationPageState extends State<AuthenticationPage>
             : Text(
                 '$step',
                 style: TextStyle(
-                  color: AppColors.text.withOpacity(0.5),
+                  color: Colors.white.withOpacity(0.7),
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
                 ),
@@ -569,20 +639,48 @@ class _AuthenticationPageState extends State<AuthenticationPage>
         label: Text(
           'Continue with $label',
           style: const TextStyle(
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.bold,
             fontSize: 15,
           ),
         ),
         style: OutlinedButton.styleFrom(
           minimumSize: const Size.fromHeight(56),
-          foregroundColor: AppColors.text,
+          foregroundColor: AppColors.primary,
           side: BorderSide(
-            color: AppColors.cardBorderColor.withOpacity(0.3),
+            color: Colors.white.withOpacity(0.3),
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          backgroundColor: AppColors.cardBorderColor.withOpacity(0.03),
+          backgroundColor: Colors.black.withOpacity(0.18),
+        ),
+      ),
+    );
+  }
+
+  Widget _socialButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback? onPressed,
+    double iconSize = 25,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: SizedBox.square(
+        dimension: 58,
+        child: FilledButton(
+          onPressed: onPressed,
+          style: FilledButton.styleFrom(
+            padding: EdgeInsets.zero,
+            backgroundColor: AppColors.primary,
+            disabledBackgroundColor: AppColors.primary.withOpacity(0.45),
+            foregroundColor: Colors.white,
+            shape: const CircleBorder(
+            ),
+            elevation: 4,
+            shadowColor: Colors.black.withOpacity(0.28),
+          ),
+          child: Icon(icon, size: iconSize, color: Colors.white),
         ),
       ),
     );
@@ -697,6 +795,30 @@ class _AuthenticationPageState extends State<AuthenticationPage>
               const SizedBox(width: 12),
               Expanded(
                 child: Text(result.error ?? 'Google sign in failed.'),
+              ),
+            ],
+          ),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+    }
+  }
+
+  Future<void> _continueWithApple() async {
+    final result = await _authService.signInWithApple();
+    if (!result.success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(result.error ?? 'Apple sign in failed.'),
               ),
             ],
           ),

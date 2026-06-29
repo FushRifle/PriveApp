@@ -120,7 +120,6 @@ class _HomePageState extends State<HomePage>
 
   bool _initialized = false;
   bool _isLoadingMore = false;
-  bool _showJumpToTop = false;
   bool _checkingFirstHomeExperience = false;
 
   List<_StoryGroup> _cachedGroups = [];
@@ -144,7 +143,8 @@ class _HomePageState extends State<HomePage>
     if (_checkingFirstHomeExperience || !mounted) return;
     _checkingFirstHomeExperience = true;
     try {
-      final authUserId = context.read<AuthBloc>().state.user?['id']?.toString() ?? '';
+      final authUserId =
+          context.read<AuthBloc>().state.user?['id']?.toString() ?? '';
       final tracker = const FirstHomeExperience();
       final pending = await tracker.pendingDisplayCount(authUserId);
       if (pending == null || !mounted) return;
@@ -186,13 +186,6 @@ class _HomePageState extends State<HomePage>
     if (!_scrollController.hasClients || _isLoadingMore) return;
 
     final position = _scrollController.position;
-    final shouldShowJump = position.pixels > 1400;
-    if (shouldShowJump != _showJumpToTop && mounted) {
-      setState(() {
-        _showJumpToTop = shouldShowJump;
-      });
-    }
-
     if (position.extentAfter <= 1800) {
       final feedBloc = context.read<FeedBloc>();
       final state = feedBloc.state;
@@ -240,37 +233,21 @@ class _HomePageState extends State<HomePage>
       value: palette.overlayStyle,
       child: Scaffold(
         backgroundColor: palette.background,
-        floatingActionButton: AnimatedSlide(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOut,
-          offset: _showJumpToTop ? Offset.zero : const Offset(0, 0.2),
-          child: AnimatedOpacity(
-            duration: const Duration(milliseconds: 180),
-            opacity: _showJumpToTop ? 1 : 0,
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: _jumpToTop,
-                borderRadius: BorderRadius.circular(999),
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.primary,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withOpacity(0.28),
-                        blurRadius: 18,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.keyboard_double_arrow_up_rounded,
-                    size: 27,
-                    color: AppColors.white,
-                  ),
-                ),
+        floatingActionButton: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: _jumpToTop,
+            borderRadius: BorderRadius.circular(999),
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.transparent,
+              ),
+              child: const Icon(
+                Icons.keyboard_double_arrow_up_rounded,
+                size: 20,
+                color: AppColors.primary,
               ),
             ),
           ),
@@ -1325,7 +1302,6 @@ class _FeedHeader extends StatelessWidget {
           ),
         ],
       ),
-      
     );
   }
 }

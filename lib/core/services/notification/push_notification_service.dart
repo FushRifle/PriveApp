@@ -145,8 +145,12 @@ class PushNotificationService with WidgetsBindingObserver {
       return;
     }
 
-    if (!await _isApnsReady()) {
-      debugPrint('Push token sync deferred: APNS token is not ready yet');
+    _listenForTokenRefresh();
+
+    if (!await _waitForApnsToken()) {
+      debugPrint(
+        'Push token sync deferred: APNS token is still not ready after retries',
+      );
       return;
     }
 
@@ -157,10 +161,32 @@ class PushNotificationService with WidgetsBindingObserver {
 
     await _registerToken(token);
 
+  }
+
+  void _listenForTokenRefresh() {
     _tokenRefreshSubscription ??=
         FirebaseMessaging.instance.onTokenRefresh.listen((token) async {
       await _registerToken(token);
     });
+  }
+
+  Future<bool> _waitForApnsToken() async {
+    if (defaultTargetPlatform != TargetPlatform.iOS &&
+        defaultTargetPlatform != TargetPlatform.macOS) {
+      return true;
+    }
+
+    const maxAttempts = 6;
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      if (await _isApnsReady()) return true;
+      if (attempt == maxAttempts - 1) break;
+
+      final delay = Duration(
+        milliseconds: (400 + (attempt * 200)).clamp(400, 1000),
+      );
+      await Future<void>.delayed(delay);
+    }
+    return false;
   }
 
   Future<bool> _isApnsReady() async {

@@ -202,7 +202,7 @@ class _ProfilePageState extends State<ProfilePage>
     return BlocProvider.value(
       value: _galleryCubit,
       child: Scaffold(
-        backgroundColor: AppColors.backgroundColor,
+        backgroundColor: AppColors.background,
         body: BlocBuilder<UserBloc, UserState>(
           buildWhen: (previous, current) {
             return previous.status != current.status ||
