@@ -40,7 +40,6 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
   Future<void> _initPlayer() async {
     _player = AudioPlayer();
 
-    // Set up listeners
     _playerStateSubscription = _player.playerStateStream.listen((state) {
       if (mounted) {
         setState(() {
@@ -112,10 +111,9 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
       constraints: const BoxConstraints(minWidth: 150, maxWidth: 250),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: widget.isMe ? widget.chatColor : AppColors.card,
-        borderRadius: BorderRadius.circular(16),
-        border: BoxBorder.all(color: AppColors.cardBorderColor)
-      ),
+          color: widget.isMe ? widget.chatColor : AppColors.card,
+          borderRadius: BorderRadius.circular(16),
+          border: BoxBorder.all(color: AppColors.white.withOpacity(0.016))),
       child: _isLoading
           ? const SizedBox(
               height: 50,
@@ -163,9 +161,8 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
                             _formatDuration(_position),
                             style: TextStyle(
                               fontSize: 10,
-                              color: widget.isMe
-                                  ? AppColors.text
-                                  : AppColors.text,
+                              color:
+                                  widget.isMe ? AppColors.text : AppColors.text,
                             ),
                           ),
                           const Spacer(),
@@ -173,9 +170,8 @@ class _AudioMessageBubbleState extends State<AudioMessageBubble> {
                             _formatDuration(_duration),
                             style: TextStyle(
                               fontSize: 10,
-                              color: widget.isMe
-                                  ? AppColors.text
-                                  : AppColors.text,
+                              color:
+                                  widget.isMe ? AppColors.text : AppColors.text,
                             ),
                           ),
                         ],

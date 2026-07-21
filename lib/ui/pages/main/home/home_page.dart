@@ -247,7 +247,7 @@ class _HomePageState extends State<HomePage>
               child: const Icon(
                 Icons.keyboard_double_arrow_up_rounded,
                 size: 20,
-                color: AppColors.primary,
+                color: AppColors.white,
               ),
             ),
           ),
@@ -328,7 +328,7 @@ class _HomePageState extends State<HomePage>
                           ),
                         ),
                         SliverPadding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
                           sliver: SliverList.separated(
                             itemCount: posts.length + (posts.length ~/ 6),
                             separatorBuilder: (_, __) =>

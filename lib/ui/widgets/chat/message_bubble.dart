@@ -336,8 +336,8 @@ class MessageBubble extends StatelessWidget {
         Text(
           _formatTime(message.createdAt),
           style: TextStyle(
-            fontSize: 9,
-            color: isMe ? AppColors.white60 : AppColors.grey.shade500,
+            fontSize: 10,
+            color: isMe ? AppColors.white : AppColors.text,
           ),
         ),
         if (isMe) ...[
@@ -353,12 +353,12 @@ class MessageBubble extends StatelessWidget {
       return const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.schedule, size: 12, color: AppColors.white60),
-          SizedBox(width: 2),
           Text(
             'Sending',
-            style: TextStyle(fontSize: 9, color: AppColors.white60),
+            style: TextStyle(fontSize: 10, color: AppColors.white),
           ),
+          SizedBox(width: 2),
+          Icon(Icons.schedule, size: 12, color: AppColors.white),
         ],
       );
     }
@@ -369,12 +369,12 @@ class MessageBubble extends StatelessWidget {
       return const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.done_all, size: 12, color: AppColors.white70),
-          SizedBox(width: 2),
           Text(
             'Read',
-            style: TextStyle(fontSize: 9, color: AppColors.white70),
+            style: TextStyle(fontSize: 10, color: AppColors.white),
           ),
+          SizedBox(width: 2),
+          Icon(Icons.done_all, size: 12, color: AppColors.white),
         ],
       );
     }
@@ -388,7 +388,7 @@ class MessageBubble extends StatelessWidget {
         Icon(Icons.done, size: 12, color: AppColors.white60),
         SizedBox(width: 2),
         Text(
-          'Sent',
+          'Delivered',
           style: TextStyle(fontSize: 9, color: AppColors.white60),
         ),
       ],

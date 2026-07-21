@@ -87,8 +87,7 @@ class _EventsPageState extends State<EventsPage>
                 SliverToBoxAdapter(
                   child: AppPageHeader(
                     title: 'Events',
-                    subtitle:
-                        'Discover live conversations, meetups, and moments worth showing up for.',
+                    subtitle: 'Discover live conversations and meetups.',
                     leadingIcon: Icons.event_rounded,
                     actionIcon: Icons.add_rounded,
                     onActionTap: _openCreateEvent,
@@ -98,7 +97,7 @@ class _EventsPageState extends State<EventsPage>
                 // Search & Filters
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(10, 20, 10, 20),
+                    padding: const EdgeInsets.fromLTRB(10, 40, 10, 20),
                     child: EventsSearchAndFilters(
                       searchController: _searchController,
                       category: _category,
@@ -112,7 +111,7 @@ class _EventsPageState extends State<EventsPage>
                 if (!isEmpty)
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(10, 10, 20, 10),
+                      padding: const EdgeInsets.fromLTRB(10, 10, 10, 20),
                       child: EventsSectionLabel(
                         title: 'Featured',
                         subtitle: isInitialLoading
@@ -155,7 +154,7 @@ class _EventsPageState extends State<EventsPage>
                   // Featured Event Card
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
                       child: Builder(
                         builder: (context) {
                           final currentFeatured = state.events.first;
@@ -192,7 +191,7 @@ class _EventsPageState extends State<EventsPage>
                   // More Events Section
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+                      padding: const EdgeInsets.fromLTRB(10, 24, 10, 16),
                       child: EventsSectionLabel(
                         title: 'More events',
                         subtitle: remaining.isEmpty
@@ -204,7 +203,7 @@ class _EventsPageState extends State<EventsPage>
 
                   // Remaining Events List
                   SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                    padding: const EdgeInsets.fromLTRB(10, 0, 10, 32),
                     sliver: remaining.isEmpty
                         ? const SliverToBoxAdapter(child: SizedBox.shrink())
                         : SliverList.separated(

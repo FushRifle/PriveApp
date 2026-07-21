@@ -1019,7 +1019,7 @@ class _ChatPageState extends State<ChatPage>
       image: DecorationImage(
         image: AssetImage(wallpaperAsset),
         colorFilter: ColorFilter.mode(
-          AppColors.black.withOpacity(isDark ? 0.32 : 0.12),
+          AppColors.black.withOpacity(isDark ? 0.12 : 0.12),
           BlendMode.darken,
         ),
         fit: BoxFit.cover,
@@ -1056,18 +1056,19 @@ class _DateSeparator extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
             color: isDark
-                ? AppColors.black.withOpacity(0.24)
+                ? AppColors.black.withOpacity(0.54)
                 : AppColors.white.withOpacity(0.82),
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
-              color: isDark ? AppColors.white10 : AppColors.border,
+              color: AppColors.card,
             ),
           ),
           child: Text(
             label,
             style: AppTheme.greyTextStyle.copyWith(
               fontSize: 11,
-              fontWeight: FontWeight.w700,
+              color: AppColors.text,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ),

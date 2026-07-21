@@ -230,19 +230,13 @@ class _MainWrapperState extends State<MainWrapper>
                     clipBehavior: Clip.none,
                     alignment: Alignment.topCenter,
                     children: [
-                      // Blurred navigation bar background (no button inside)
                       DecoratedBox(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black
-                                  .withOpacity(isDarkMode ? 0.28 : 0.12),
-                              blurRadius: 22,
-                              spreadRadius: -4,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
+                          border: Border.all(
+                            color: AppColors.white.withOpacity(0.82),
+                            width: 0.9,
+                          ),
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(24),
