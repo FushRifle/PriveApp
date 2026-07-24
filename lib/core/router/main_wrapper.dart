@@ -26,6 +26,8 @@ class MainWrapper extends StatefulWidget {
 
 class _MainWrapperState extends State<MainWrapper>
     with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
+  static const double _bottomBarHeight = 60;
+
   final PageStorageBucket _bucket = PageStorageBucket();
   late final PageController _pageController;
   late final FeedBloc _feedBloc;
@@ -157,6 +159,11 @@ class _MainWrapperState extends State<MainWrapper>
     }
   }
 
+  double _getContentBottomInset(BuildContext context) {
+    if (!_showBottomBar) return 0;
+    return _getBottomPadding(context) + _bottomBarHeight;
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -180,44 +187,48 @@ class _MainWrapperState extends State<MainWrapper>
         },
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          extendBody: true,
           body: Stack(
             children: [
-              PageStorage(
-                bucket: _bucket,
-                child: PageView(
-                  controller: _pageController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  onPageChanged: (index) {
-                    if (_currentIndex == index) return;
-                    setState(() {
-                      _currentIndex = index;
-                      _visitedTabs.add(index);
-                      _navBarIndex = _pageIndexToNavIndex(index);
-                    });
-                  },
-                  children: [
-                    _DeferredTab(
-                        enabled: _visitedTabs.contains(0),
-                        child:
-                            const HomePage(key: PageStorageKey('home_page'))),
-                    _DeferredTab(
-                        enabled: _visitedTabs.contains(1),
-                        child: ReelsPage(
-                            key: PageStorageKey('reels_page'),
-                            onBack: () => _onTabChanged(0),
-                            isVisible: _currentIndex == 1)),
-                    _DeferredTab(
-                        enabled: _visitedTabs.contains(2),
-                        child: const _EventTabScope(
-                            key: PageStorageKey('events_page'),
-                            child: EventsPage())),
-                    _DeferredTab(
-                        enabled: _visitedTabs.contains(3),
-                        child: const _ChatTabScope(
-                            key: PageStorageKey('inbox_page'),
-                            child: InboxPage())),
-                  ],
+              Positioned.fill(
+                bottom: _getContentBottomInset(context),
+                child: ClipRect(
+                  child: PageStorage(
+                    bucket: _bucket,
+                    child: PageView(
+                      controller: _pageController,
+                      physics: const NeverScrollableScrollPhysics(),
+                      onPageChanged: (index) {
+                        if (_currentIndex == index) return;
+                        setState(() {
+                          _currentIndex = index;
+                          _visitedTabs.add(index);
+                          _navBarIndex = _pageIndexToNavIndex(index);
+                        });
+                      },
+                      children: [
+                        _DeferredTab(
+                            enabled: _visitedTabs.contains(0),
+                            child: const HomePage(
+                                key: PageStorageKey('home_page'))),
+                        _DeferredTab(
+                            enabled: _visitedTabs.contains(1),
+                            child: ReelsPage(
+                                key: PageStorageKey('reels_page'),
+                                onBack: () => _onTabChanged(0),
+                                isVisible: _currentIndex == 1)),
+                        _DeferredTab(
+                            enabled: _visitedTabs.contains(2),
+                            child: const _EventTabScope(
+                                key: PageStorageKey('events_page'),
+                                child: EventsPage())),
+                        _DeferredTab(
+                            enabled: _visitedTabs.contains(3),
+                            child: const _ChatTabScope(
+                                key: PageStorageKey('inbox_page'),
+                                child: InboxPage())),
+                      ],
+                    ),
+                  ),
                 ),
               ),
               // Floating bottom bar with glass effect

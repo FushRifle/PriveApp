@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lottie/lottie.dart';
@@ -172,7 +174,7 @@ class _BootstrapperState extends State<_Bootstrapper> {
       }
 
       if (futures.isNotEmpty) {
-        await Future.wait(futures);
+        await Future.wait(futures).timeout(const Duration(seconds: 20));
       }
 
       if (!mounted) return;
@@ -198,12 +200,14 @@ class _BootstrapperState extends State<_Bootstrapper> {
             : null;
       });
       if (_error == null) _notifyBootstrapComplete();
-    } catch (e) {
+    } catch (error) {
       if (!mounted) return;
 
       setState(() {
         _loading = false;
-        _error = e.toString();
+        _error = error is TimeoutException
+            ? 'Loading your account took too long. Check your connection and try again.'
+            : 'We could not finish loading your account. Please try again.';
       });
     }
   }
@@ -230,6 +234,9 @@ class _BootstrapperState extends State<_Bootstrapper> {
           });
 
           _bootstrap();
+        },
+        onBackToSignIn: () {
+          context.read<AuthBloc>().add(const SignOutRequested());
         },
       );
     }
@@ -288,39 +295,59 @@ class _SplashScreen extends StatelessWidget {
 class _ErrorScreen extends StatelessWidget {
   final String error;
   final VoidCallback onRetry;
+  final VoidCallback onBackToSignIn;
+
   const _ErrorScreen({
     required this.error,
     required this.onRetry,
+    required this.onBackToSignIn,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.error_outline,
-                size: 56,
-                color: Colors.red,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                error,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: onRetry,
-                child: const Text(
-                  'Retry',
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) onBackToSignIn();
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          leading: IconButton(
+            tooltip: 'Back to sign in',
+            onPressed: onBackToSignIn,
+            icon: const Icon(Icons.arrow_back_rounded),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  size: 56,
+                  color: Colors.red,
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                Text(
+                  error,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: onRetry,
+                  child: const Text('Retry'),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: onBackToSignIn,
+                  child: const Text('Back to sign in'),
+                ),
+              ],
+            ),
           ),
         ),
       ),

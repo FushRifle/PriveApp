@@ -24,6 +24,8 @@ class _AuthenticationPageState extends State<AuthenticationPage>
   _EmailStage? _stage;
   bool _existingUser = true;
   bool _obscurePassword = true;
+  String? _emailError;
+  String? _passwordError;
   late final AnimationController _pulseController;
   late final Animation<double> _pulseAnimation;
 
@@ -64,6 +66,8 @@ class _AuthenticationPageState extends State<AuthenticationPage>
                   _stage =
                       _stage == _EmailStage.password ? _EmailStage.email : null;
                   _password.clear();
+                  _emailError = null;
+                  _passwordError = null;
                 }),
                 icon: Container(
                   padding: const EdgeInsets.all(8),
@@ -106,23 +110,8 @@ class _AuthenticationPageState extends State<AuthenticationPage>
             child: BlocConsumer<AuthBloc, AuthState>(
               listener: (context, state) {
                 if (state.status == AuthStatus.error && state.error != null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Row(
-                        children: [
-                          const Icon(Icons.error_outline,
-                              color: Colors.white, size: 20),
-                          const SizedBox(width: 12),
-                          Expanded(child: Text(state.error!)),
-                        ],
-                      ),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      margin: const EdgeInsets.all(16),
-                    ),
-                  );
+                  _applyAuthFieldError(state.error!);
+                  _showErrorMessage(state.error!);
                   context.read<AuthBloc>().add(const ClearAuthError());
                 }
               },
@@ -369,6 +358,7 @@ class _AuthenticationPageState extends State<AuthenticationPage>
                 style: const TextStyle(fontSize: 16, color: Colors.white),
                 decoration: InputDecoration(
                   labelText: 'Email address',
+                  errorText: _emailError,
                   labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
                   prefixIcon: Container(
                     margin: const EdgeInsets.all(8),
@@ -410,12 +400,11 @@ class _AuthenticationPageState extends State<AuthenticationPage>
                     vertical: 18,
                   ),
                 ),
-                validator: (value) {
-                  final email = value?.trim() ?? '';
-                  if (email.length > 254) return 'Email address is too long';
-                  return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)
-                      ? null
-                      : 'Please enter a valid email';
+                validator: _validateEmail,
+                onChanged: (_) {
+                  if (_emailError != null) {
+                    setState(() => _emailError = null);
+                  }
                 },
                 onFieldSubmitted: (_) => _checkEmail(),
               ),
@@ -444,6 +433,7 @@ class _AuthenticationPageState extends State<AuthenticationPage>
                 style: const TextStyle(fontSize: 16, color: Colors.white),
                 decoration: InputDecoration(
                   labelText: 'Password',
+                  errorText: _passwordError,
                   labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
                   prefixIcon: Container(
                     margin: const EdgeInsets.all(8),
@@ -498,13 +488,11 @@ class _AuthenticationPageState extends State<AuthenticationPage>
                     vertical: 18,
                   ),
                 ),
-                validator: (value) {
-                  final length = value?.length ?? 0;
-                  if (length < 8) {
-                    return 'Password must be at least 8 characters';
+                validator: _validatePassword,
+                onChanged: (_) {
+                  if (_passwordError != null) {
+                    setState(() => _passwordError = null);
                   }
-                  if (length > 128) return 'Password is too long';
-                  return null;
                 },
                 onFieldSubmitted: (_) => _submitPassword(),
               ),
@@ -577,6 +565,7 @@ class _AuthenticationPageState extends State<AuthenticationPage>
                   : () => setState(() {
                         _existingUser = !_existingUser;
                         _password.clear();
+                        _passwordError = null;
                       }),
               child: Text(
                 _existingUser
@@ -710,11 +699,55 @@ class _AuthenticationPageState extends State<AuthenticationPage>
   }
 
   void _checkEmail() {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    final error = _validateEmail(_email.text);
+    if (error != null) {
+      setState(() => _emailError = error);
+      _showErrorMessage(error);
+      _formKey.currentState?.validate();
+      return;
+    }
     setState(() {
       _existingUser = true;
       _stage = _EmailStage.password;
+      _emailError = null;
+      _passwordError = null;
     });
+  }
+
+  void _applyAuthFieldError(String message) {
+    final normalized = message.toLowerCase();
+    setState(() {
+      if (normalized.contains('email address') ||
+          normalized.contains('no account') ||
+          normalized.contains('account was found')) {
+        _emailError = message;
+      } else if (normalized.contains('password') ||
+          normalized.contains('credentials')) {
+        _passwordError = message;
+      }
+    });
+  }
+
+  void _showErrorMessage(String message) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white, size: 20),
+              const SizedBox(width: 12),
+              Expanded(child: Text(message)),
+            ],
+          ),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
   }
 
   Future<void> _sendPasswordReset() async {
@@ -735,7 +768,13 @@ class _AuthenticationPageState extends State<AuthenticationPage>
   }
 
   void _submitPassword() {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    final error = _validatePassword(_password.text);
+    if (error != null) {
+      setState(() => _passwordError = error);
+      _showErrorMessage(error);
+      _formKey.currentState?.validate();
+      return;
+    }
     final bloc = context.read<AuthBloc>();
     if (_existingUser) {
       bloc.add(SignInRequested(
@@ -751,6 +790,24 @@ class _AuthenticationPageState extends State<AuthenticationPage>
         lastName: '',
       ));
     }
+  }
+
+  String? _validateEmail(String? value) {
+    final email = value?.trim() ?? '';
+    if (email.isEmpty) return 'Enter your email address.';
+    if (email.length > 254) return 'Email address is too long.';
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+      return 'Invalid email address.';
+    }
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    final length = value?.length ?? 0;
+    if (length == 0) return 'Enter your password.';
+    if (length < 8) return 'Password must be at least 8 characters.';
+    if (length > 128) return 'Password is too long.';
+    return null;
   }
 
   Future<void> _continueWithGoogle() async {

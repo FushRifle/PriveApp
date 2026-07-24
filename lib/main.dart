@@ -268,6 +268,7 @@ class _SecurityGateState extends State<_SecurityGate>
   bool _isUnlocked = false;
   bool _isPrompting = false;
   bool _authGuardReady = false;
+  String? _loadingError;
   int? _lockUserId;
   AppLockSettings? _lockSettings;
   DateTime? _backgroundedAt;
@@ -309,6 +310,7 @@ class _SecurityGateState extends State<_SecurityGate>
   Future<void> _bootstrap({bool forcePrompt = false}) async {
     if (_isPrompting || !_authGuardReady) return;
 
+    _isPrompting = true;
     try {
       final authState = context.read<AuthBloc>().state;
 
@@ -334,9 +336,10 @@ class _SecurityGateState extends State<_SecurityGate>
       final settings = await _resolveAppLockSettings(userId, settingsState);
       if (!mounted) return;
 
-      if (_isLoading) {
-        setState(() => _isLoading = false);
-      }
+      setState(() {
+        _isLoading = false;
+        _loadingError = null;
+      });
 
       if (!settings.enabled) {
         setState(() {
@@ -364,7 +367,6 @@ class _SecurityGateState extends State<_SecurityGate>
         return;
       }
 
-      _isPrompting = true;
       if (!mounted) return;
 
       setState(() {
@@ -379,6 +381,13 @@ class _SecurityGateState extends State<_SecurityGate>
             .then((_) {})
             .catchError((_) {}),
       );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _loadingError =
+            'We could not load your security settings. Please try again.';
+      });
     } finally {
       _isPrompting = false;
     }
@@ -461,6 +470,7 @@ class _SecurityGateState extends State<_SecurityGate>
                 _authGuardReady = false;
                 _isLoading = true;
                 _isUnlocked = false;
+                _loadingError = null;
               });
             } else if (state.status == AuthStatus.unauthenticated) {
               setState(() {
@@ -468,6 +478,7 @@ class _SecurityGateState extends State<_SecurityGate>
                 _isLoading = false;
                 _isUnlocked = true;
                 _lockSettings = null;
+                _loadingError = null;
               });
             }
           },
@@ -489,7 +500,21 @@ class _SecurityGateState extends State<_SecurityGate>
         fit: StackFit.expand,
         children: [
           authGuard,
-          if (_authGuardReady && _isLoading)
+          if (_authGuardReady && _loadingError != null)
+            _SecurityLoadingError(
+              message: _loadingError!,
+              onRetry: () {
+                setState(() {
+                  _loadingError = null;
+                  _isLoading = true;
+                });
+                unawaited(_bootstrap(forcePrompt: true));
+              },
+              onBackToSignIn: () {
+                context.read<AuthBloc>().add(const SignOutRequested());
+              },
+            )
+          else if (_authGuardReady && _isLoading)
             const _SecurityLoadingPlaceholder()
           else if (_authGuardReady && shouldShowUnlockPage)
             AppUnlockPage(
@@ -513,6 +538,7 @@ class _SecurityGateState extends State<_SecurityGate>
       _authGuardReady = true;
       _isLoading = true;
       _isUnlocked = false;
+      _loadingError = null;
     });
     unawaited(_bootstrap(forcePrompt: true));
   }
@@ -561,6 +587,69 @@ class _SecurityLoadingAnimation extends StatelessWidget {
     return Lottie.asset(
       'assets/animations/loading.json',
       repeat: true,
+    );
+  }
+}
+
+class _SecurityLoadingError extends StatelessWidget {
+  const _SecurityLoadingError({
+    required this.message,
+    required this.onRetry,
+    required this.onBackToSignIn,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+  final VoidCallback onBackToSignIn;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) onBackToSignIn();
+      },
+      child: Scaffold(
+        backgroundColor:
+            isDark ? AppColors.darkBackground : AppColors.background,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          leading: IconButton(
+            tooltip: 'Back to sign in',
+            onPressed: onBackToSignIn,
+            icon: const Icon(Icons.arrow_back_rounded),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.error_outline_rounded,
+                  color: Colors.red,
+                  size: 56,
+                ),
+                const SizedBox(height: 16),
+                Text(message, textAlign: TextAlign.center),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: onRetry,
+                  child: const Text('Retry'),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: onBackToSignIn,
+                  child: const Text('Back to sign in'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

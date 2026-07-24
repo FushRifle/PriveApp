@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
@@ -10,6 +11,8 @@ import 'package:clique/core/local_cache/local_cache_service.dart';
 import 'package:clique/core/services/auth/auth_session_manager.dart';
 
 class AuthService {
+  static const Duration _authTimeout = Duration(seconds: 25);
+
   final ApiService _api = ApiService();
   final AuthSessionManager _sessionManager = AuthSessionManager.instance;
 
@@ -65,10 +68,12 @@ class AuthService {
       final normalizedEmail = email.trim().toLowerCase();
 
       // Supabase primary authentication
-      final authResponse = await SupabaseConfig.client.auth.signInWithPassword(
-        email: normalizedEmail,
-        password: password,
-      );
+      final authResponse = await SupabaseConfig.client.auth
+          .signInWithPassword(
+            email: normalizedEmail,
+            password: password,
+          )
+          .timeout(_authTimeout);
 
       final session = authResponse.session;
       final user = authResponse.user;
@@ -113,6 +118,11 @@ class AuthService {
           'lastName': user.userMetadata?['last_name'] ?? '',
         },
       );
+    } on TimeoutException {
+      return AuthResult(
+        success: false,
+        error: 'Sign in took too long. Check your connection and try again.',
+      );
     } on AuthException catch (e) {
       return AuthResult(
         success: false,
@@ -155,7 +165,7 @@ class AuthService {
             trimmedLastName,
           ].where((part) => part.isNotEmpty).join(' '),
         },
-      );
+      ).timeout(_authTimeout);
 
       final session = authResponse.session;
       final user = authResponse.user;
@@ -216,6 +226,11 @@ class AuthService {
           'firstName': trimmedFirstName,
           'lastName': trimmedLastName,
         },
+      );
+    } on TimeoutException {
+      return AuthResult(
+        success: false,
+        error: 'Sign up took too long. Check your connection and try again.',
       );
     } on AuthException catch (e) {
       return AuthResult(
@@ -314,7 +329,8 @@ class AuthService {
   }
 
   Future<AuthResult> restoreSession() async {
-    final snapshot = await _sessionManager.restoreSession();
+    final snapshot =
+        await _sessionManager.restoreSession().timeout(_authTimeout);
     if (snapshot == null) {
       return AuthResult(success: false);
     }
@@ -416,19 +432,40 @@ class AuthService {
   String _handleAuthError(AuthException e) {
     final rawMessage = _readAuthErrorMessage(e.message);
     final message = rawMessage.toLowerCase();
+
+    if (message.contains('invalid email') ||
+        message.contains('email address is invalid') ||
+        message.contains('unable to validate email address')) {
+      return 'Invalid email address.';
+    }
+    if (message.contains('user not found') ||
+        message.contains('no user found') ||
+        message.contains('account not found')) {
+      return 'No account was found for this email.';
+    }
+    if (message.contains('invalid password') ||
+        message.contains('incorrect password') ||
+        message.contains('wrong password')) {
+      return 'Incorrect password.';
+    }
+    // Supabase intentionally uses one response for a missing account and a
+    // wrong password. Keep that ambiguity while still giving useful guidance.
+    if (message.contains('invalid login credentials')) {
+      return 'Incorrect email or password. Check your details and try again.';
+    }
+    if (message.contains('email not confirmed')) {
+      return 'Please verify your email before signing in.';
+    }
     if (message.contains('database error saving new user')) {
       return 'Signup is blocked by backend database setup. Please try again after the server is updated.';
-    }
-    if (rawMessage.contains('Invalid login credentials')) {
-      return 'Invalid email or password';
-    }
-    if (rawMessage.contains('Email not confirmed')) {
-      return 'Please verify your email first';
     }
     if (message.contains('already registered') ||
         message.contains('already exists') ||
         message.contains('user already registered')) {
       return 'An account already exists for this email. Please sign in instead.';
+    }
+    if (message.contains('rate limit') || message.contains('too many')) {
+      return 'Too many attempts. Please wait a moment and try again.';
     }
     if (message.contains('password')) {
       return rawMessage;
@@ -488,7 +525,7 @@ class AuthService {
         'lastName':
             (lastName ?? user.userMetadata?['last_name'] ?? '').toString(),
       },
-    );
+    ).timeout(_authTimeout);
   }
 }
 
