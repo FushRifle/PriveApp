@@ -1,5 +1,5 @@
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
+import 'package:clique/core/local_cache/hive_cache_keys.dart';
+import 'package:clique/core/local_cache/local_cache_service.dart';
 
 class CachedFeedService {
   static const String _postsCacheKey = 'cached_posts';
@@ -8,48 +8,46 @@ class CachedFeedService {
   static const Duration _cacheDuration = Duration(minutes: 5);
 
   Future<void> cachePosts(List<dynamic> posts) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_postsCacheKey, jsonEncode(posts));
-    await prefs.setString(_lastFetchKey, DateTime.now().toIso8601String());
+    final box = LocalCacheService.box(HiveCacheKeys.feedBox);
+    await box?.put(_postsCacheKey, posts);
+    await box?.put(_lastFetchKey, DateTime.now().toIso8601String());
   }
 
   Future<List<dynamic>> getCachedPosts() async {
-    final prefs = await SharedPreferences.getInstance();
-    final String? postsJson = prefs.getString(_postsCacheKey);
-    if (postsJson != null) {
-      return jsonDecode(postsJson);
-    }
-    return [];
+    final value =
+        LocalCacheService.box(HiveCacheKeys.feedBox)?.get(_postsCacheKey);
+    return value is List ? List<dynamic>.from(value) : [];
   }
 
   Future<void> cacheStories(List<dynamic> stories) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_storiesCacheKey, jsonEncode(stories));
+    await LocalCacheService.box(HiveCacheKeys.feedBox)
+        ?.put(_storiesCacheKey, stories);
   }
 
   Future<List<dynamic>> getCachedStories() async {
-    final prefs = await SharedPreferences.getInstance();
-    final String? storiesJson = prefs.getString(_storiesCacheKey);
-    if (storiesJson != null) {
-      return jsonDecode(storiesJson);
-    }
-    return [];
+    final value =
+        LocalCacheService.box(HiveCacheKeys.feedBox)?.get(_storiesCacheKey);
+    return value is List ? List<dynamic>.from(value) : [];
   }
 
   Future<bool> shouldRefetch() async {
-    final prefs = await SharedPreferences.getInstance();
-    final String? lastFetch = prefs.getString(_lastFetchKey);
+    final lastFetch = LocalCacheService.box(HiveCacheKeys.feedBox)
+        ?.get(_lastFetchKey)
+        ?.toString();
     if (lastFetch == null) return true;
 
-    final lastFetchTime = DateTime.parse(lastFetch);
+    final lastFetchTime = DateTime.tryParse(lastFetch);
+    if (lastFetchTime == null) return true;
     final now = DateTime.now();
     return now.difference(lastFetchTime) > _cacheDuration;
   }
 
   Future<void> clearCache() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_postsCacheKey);
-    await prefs.remove(_storiesCacheKey);
-    await prefs.remove(_lastFetchKey);
+    final box = LocalCacheService.box(HiveCacheKeys.feedBox);
+    await box?.deleteAll([
+      _postsCacheKey,
+      _storiesCacheKey,
+      _lastFetchKey,
+    ]);
   }
 }

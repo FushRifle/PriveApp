@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,27 +18,6 @@ class AuthService {
       encryptedSharedPreferences: true,
     ),
   );
-
-  Future<bool> emailExists(String email) async {
-    final normalizedEmail = email.trim().toLowerCase();
-    try {
-      final response = await _api.post(
-        '/api/auth/email-status',
-        data: {'email': normalizedEmail},
-      );
-      final data = response.data;
-      if (data is Map) {
-        final value = data['exists'] ?? data['registered'];
-        if (value is bool) return value;
-      }
-      throw const FormatException('Invalid email status response');
-    } on DioException catch (e) {
-      throw _readBackendError(
-        e.response?.data,
-        'Unable to check this email. Please try again.',
-      );
-    }
-  }
 
   Future<AuthResult> signInWithGoogle() async {
     try {
@@ -106,6 +84,8 @@ class AuthService {
 
       // Check if email is verified
       if (user.confirmedAt == null) {
+        await SupabaseConfig.client.auth.signOut();
+        _api.clearAuthToken();
         return AuthResult(
           success: false,
           needsVerification: true,
@@ -115,18 +95,12 @@ class AuthService {
 
       _api.setAuthToken(token);
 
-      // Backend sync (optional, don't fail if backend is down)
+      // The backend derives identity from the verified Supabase access token.
       try {
-        await _api.post(
-          '/api/auth/signin',
-          data: {
-            'email': normalizedEmail,
-            'password': password,
-          },
-        );
-      } catch (e) {
-        // Log but don't fail - Supabase is the source of truth
-        debugPrint('Backend sync failed: $e');
+        await _bootstrapBackendUser(user);
+      } catch (_) {
+        // Supabase remains the authentication source of truth. Backend calls
+        // will surface their own connectivity error if it is unavailable.
       }
 
       return AuthResult(
@@ -193,36 +167,6 @@ class AuthService {
         );
       }
 
-      // Backend sync creates/correlates the local app user row by Supabase ID.
-      try {
-        await _api.post(
-          '/api/auth/signup',
-          data: {
-            'email': normalizedEmail,
-            'password': password,
-            'firstName': trimmedFirstName,
-            'lastName': trimmedLastName,
-            'supabaseUserId': user.id,
-          },
-        );
-      } on DioException catch (e) {
-        debugPrint('Backend sync failed: $e');
-        return AuthResult(
-          success: false,
-          error: _readBackendError(
-            e.response?.data,
-            'Account created, but profile setup failed. Please try signing in after verifying your email.',
-          ),
-        );
-      } catch (e) {
-        debugPrint('Backend sync failed: $e');
-        return AuthResult(
-          success: false,
-          error:
-              'Account created, but profile setup failed. Please try signing in after verifying your email.',
-        );
-      }
-
       // Email confirmation is temporarily disabled in the app signup flow.
       // A session is still required because onboarding uses authenticated APIs.
       if (session == null) {
@@ -237,6 +181,28 @@ class AuthService {
       final token = session.accessToken;
 
       _api.setAuthToken(token);
+
+      try {
+        await _bootstrapBackendUser(
+          user,
+          firstName: trimmedFirstName,
+          lastName: trimmedLastName,
+        );
+      } on DioException catch (e) {
+        return AuthResult(
+          success: false,
+          error: _readBackendError(
+            e.response?.data,
+            'Account created, but profile setup failed. Please sign in again.',
+          ),
+        );
+      } catch (_) {
+        return AuthResult(
+          success: false,
+          error:
+              'Account created, but profile setup failed. Please sign in again.',
+        );
+      }
 
       final preferences = await SharedPreferences.getInstance();
       await preferences.setBool('new_account_${user.id}', true);
@@ -272,22 +238,28 @@ class AuthService {
   // RESEND VERIFICATION
   Future<bool> resendVerification(String email) async {
     try {
-      final tempPassword = 'Temp_${DateTime.now().millisecondsSinceEpoch}';
-      await SupabaseConfig.client.auth.signUp(
+      await SupabaseConfig.client.auth.resend(
+        type: OtpType.signup,
         email: email.trim().toLowerCase(),
-        password: tempPassword,
         emailRedirectTo: 'com.Clique.app://verify-email',
       );
 
       return true;
-    } on AuthException catch (e) {
-      if (e.message.contains('already registered')) {
-        return false;
-      }
-      debugPrint('Resend verification error: $e');
+    } on AuthException {
       return false;
-    } catch (e) {
-      debugPrint('Failed to resend verification: $e');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> sendPasswordReset(String email) async {
+    try {
+      await SupabaseConfig.client.auth.resetPasswordForEmail(
+        email.trim().toLowerCase(),
+        redirectTo: 'com.Clique.app://reset-password',
+      );
+      return true;
+    } catch (_) {
       return false;
     }
   }
@@ -349,6 +321,12 @@ class AuthService {
 
     final token = snapshot.session.accessToken;
     _api.setAuthToken(token);
+    try {
+      final user = snapshot.user;
+      if (user != null) await _bootstrapBackendUser(user);
+    } catch (_) {
+      // Restoring the local Supabase session must remain usable offline.
+    }
     return AuthResult(
       success: true,
       token: token,
@@ -395,7 +373,7 @@ class AuthService {
       return {
         'rememberMe': true,
         'email': await _storage.read(key: 'email') ?? '',
-        'password': await _storage.read(key: 'password') ?? '',
+        'password': '',
       };
     } catch (e) {
       return {
@@ -420,14 +398,10 @@ class AuthService {
         );
 
         await _storage.write(
-          key: 'password',
-          value: password,
-        );
-
-        await _storage.write(
           key: 'remember_me',
           value: 'true',
         );
+        await _storage.delete(key: 'password');
       } else {
         await _storage.delete(key: 'email');
         await _storage.delete(key: 'password');
@@ -436,9 +410,7 @@ class AuthService {
           value: 'false',
         );
       }
-    } catch (e) {
-      debugPrint('Error saving credentials: $e');
-    }
+    } catch (_) {}
   }
 
   String _handleAuthError(AuthException e) {
@@ -496,7 +468,27 @@ class AuthService {
   }
 
   Future<Object?> verifyEmail(String email, String code) async {
-    return null;
+    return SupabaseConfig.client.auth.verifyOTP(
+      email: email.trim().toLowerCase(),
+      token: code.trim(),
+      type: OtpType.signup,
+    );
+  }
+
+  Future<void> _bootstrapBackendUser(
+    User user, {
+    String? firstName,
+    String? lastName,
+  }) async {
+    await _api.post(
+      '/api/auth/bootstrap',
+      data: {
+        'firstName':
+            (firstName ?? user.userMetadata?['first_name'] ?? '').toString(),
+        'lastName':
+            (lastName ?? user.userMetadata?['last_name'] ?? '').toString(),
+      },
+    );
   }
 }
 

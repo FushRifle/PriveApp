@@ -28,8 +28,6 @@ class AuthState extends Equatable {
 
   final String email;
 
-  final String password;
-
   const AuthState({
     this.status = AuthStatus.initial,
     this.isAuthenticated = false,
@@ -40,7 +38,6 @@ class AuthState extends Equatable {
     this.needsVerification = false,
     this.savedCredentials = const {},
     this.email = '',
-    this.password = '',
   });
 
   // =========================================================
@@ -72,8 +69,6 @@ class AuthState extends Equatable {
     bool? needsVerification,
     Map<String, dynamic>? savedCredentials,
     String? email,
-    String? password,
-    bool clearPassword = false,
   }) {
     return AuthState(
       status: status ?? this.status,
@@ -85,7 +80,6 @@ class AuthState extends Equatable {
       needsVerification: needsVerification ?? this.needsVerification,
       savedCredentials: savedCredentials ?? this.savedCredentials,
       email: email ?? this.email,
-      password: clearPassword ? '' : password ?? this.password,
     );
   }
 
@@ -175,6 +169,5 @@ class AuthState extends Equatable {
         needsVerification,
         savedCredentials,
         email,
-        password,
       ];
 }

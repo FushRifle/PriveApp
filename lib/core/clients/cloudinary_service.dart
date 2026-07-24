@@ -1,15 +1,25 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:clique/core/services/upload/upload_service.dart';
 import 'package:dio/dio.dart';
 import 'package:http_parser/http_parser.dart';
 
 class CloudinaryService {
-  static const String cloudName = 'dug6225go';
-  static const String uploadPreset = 'prive-preset';
-  static const String folder = 'prive_feeds';
   static const int maxRetries = 3;
   static const Duration retryDelay = Duration(seconds: 1);
+  static const Set<String> uploadCategories = {
+    'avatars',
+    'covers',
+    'posts',
+    'feeds',
+    'prive_feeds',
+    'reels',
+    'stories',
+    'chat',
+    'audio',
+    'documents',
+  };
   static const Map<String, int> sizeLimits = {
     'image': 10,
     'video': 100,
@@ -55,16 +65,22 @@ class CloudinaryService {
     ],
   };
 
-  final Dio _dio = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 60),
-      receiveTimeout: const Duration(seconds: 60),
-      sendTimeout: const Duration(seconds: 60),
-      headers: {
-        'Accept': 'application/json',
-      },
-    ),
-  );
+  CloudinaryService({
+    UploadService? uploadService,
+    Dio? uploadClient,
+  })  : _uploadService = uploadService ?? UploadService(),
+        _dio = uploadClient ??
+            Dio(
+              BaseOptions(
+                connectTimeout: const Duration(seconds: 60),
+                receiveTimeout: const Duration(seconds: 60),
+                sendTimeout: const Duration(seconds: 60),
+                headers: {'Accept': 'application/json'},
+              ),
+            );
+
+  final UploadService _uploadService;
+  final Dio _dio;
 
   final Map<String, CancelToken> _uploadTokens = {};
 
@@ -138,7 +154,7 @@ class CloudinaryService {
       resourceType: 'raw',
       customFolder: customFolder,
       onProgress: onProgress,
-      publicId: fileName.split('.').first,
+      uploadFileName: fileName,
     );
   }
 
@@ -152,7 +168,7 @@ class CloudinaryService {
     required String resourceType,
     String? customFolder,
     Function(double)? onProgress,
-    String? publicId,
+    String? uploadFileName,
   }) async {
     await validateFile(file, type);
 
@@ -166,8 +182,10 @@ class CloudinaryService {
           resourceType: resourceType,
           customFolder: customFolder,
           onProgress: onProgress,
-          publicId: publicId,
+          uploadFileName: uploadFileName,
         );
+      } on UploadException {
+        rethrow;
       } catch (e) {
         attempts++;
 
@@ -181,7 +199,7 @@ class CloudinaryService {
       }
     }
 
-    throw Exception('Upload failed');
+    throw const UploadException('Upload failed');
   }
 
   // =========================================================
@@ -194,10 +212,15 @@ class CloudinaryService {
     required String resourceType,
     String? customFolder,
     Function(double)? onProgress,
-    String? publicId,
+    String? uploadFileName,
   }) async {
+    final category = normalizeUploadCategory(customFolder, type);
+    final authorization = await _uploadService.getUploadSignature(
+      folder: category,
+      resourceType: resourceType,
+    );
     final endpoint =
-        'https://api.cloudinary.com/v1_1/$cloudName/$resourceType/upload';
+        'https://api.cloudinary.com/v1_1/${authorization.cloudName}/$resourceType/upload';
 
     final tokenKey = '${file.path}_${DateTime.now().millisecondsSinceEpoch}';
 
@@ -210,15 +233,21 @@ class CloudinaryService {
 
       final multipartFile = await MultipartFile.fromFile(
         file.path,
-        filename: file.path.split('/').last,
+        filename: uploadFileName ?? file.path.split('/').last,
         contentType: mime != null ? MediaType.parse(mime) : null,
       );
 
       final formData = FormData.fromMap({
         'file': multipartFile,
-        'upload_preset': uploadPreset,
-        'folder': customFolder ?? folder,
-        if (publicId != null) 'public_id': publicId,
+        'api_key': authorization.apiKey,
+        'timestamp': authorization.timestamp,
+        'signature': authorization.signature,
+        'upload_preset': authorization.uploadPreset,
+        'folder': authorization.folder,
+        'overwrite': 'false',
+        'unique_filename': 'false',
+        'use_filename': 'false',
+        'use_filename_as_display_name': 'true',
       });
 
       final response = await _dio.post(
@@ -248,13 +277,17 @@ class CloudinaryService {
 
       final error = e.response?.data;
 
-      if (error is Map && error['error'] != null) {
-        throw Exception(
-          error['error']['message'] ?? 'Upload failed',
-        );
+      if (error is Map) {
+        final details = error['error'];
+        final message = details is Map
+            ? details['message']?.toString()
+            : details?.toString();
+        if (message != null && message.trim().isNotEmpty) {
+          throw UploadException(message);
+        }
       }
 
-      throw Exception('Upload failed');
+      throw const UploadException('Upload failed');
     } finally {
       _uploadTokens.remove(tokenKey);
     }
@@ -392,6 +425,22 @@ class CloudinaryService {
     }
 
     return 'unknown';
+  }
+
+  static String normalizeUploadCategory(String? category, String type) {
+    final normalized = category?.trim().toLowerCase();
+    final resolved = normalized == null || normalized.isEmpty
+        ? switch (type) {
+            'audio' => 'audio',
+            'document' => 'documents',
+            _ => 'posts',
+          }
+        : normalized;
+
+    if (!uploadCategories.contains(resolved)) {
+      throw const UploadException('Unsupported upload category');
+    }
+    return resolved;
   }
 
   static String generateTransformedUrl(

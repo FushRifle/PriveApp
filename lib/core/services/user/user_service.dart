@@ -49,8 +49,6 @@ class UserService {
         if (languages != null) 'languages': languages,
         if (avatar != null) 'avatar': avatar,
         if (coverImage != null) 'coverImage': coverImage,
-        if (coverImage != null) 'cover_image': coverImage,
-        if (coverImage != null) 'cover': coverImage,
       };
 
       final response = await _api.put('/api/users/me', data: data);
@@ -246,7 +244,7 @@ class UserService {
         'languages': interests,
       });
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to update profile';
+      throw _handleError(e, 'Failed to update profile');
     }
   }
 
@@ -255,7 +253,7 @@ class UserService {
     try {
       await _api.put('/api/users/onboard');
     } on DioException catch (e) {
-      throw e.response?.data['message'] ?? 'Failed to complete onboarding';
+      throw _handleError(e, 'Failed to complete onboarding');
     }
   }
 
@@ -268,7 +266,7 @@ class UserService {
       return Map<String, dynamic>.from(data);
     }
 
-    throw 'Invalid user response';
+    throw const FormatException('Invalid user response');
   }
 
   String _handleError(DioException e, String fallback) {

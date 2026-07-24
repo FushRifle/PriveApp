@@ -57,6 +57,10 @@ class ApiService {
   // =========================================================
 
   void setAuthToken(String token) {
+    if (_authToken != token) {
+      clearCache();
+      _pendingGetRequests.clear();
+    }
     _authToken = token;
 
     dio.options.headers['Authorization'] = 'Bearer $token';
@@ -159,6 +163,7 @@ class ApiService {
     dynamic data,
   }) {
     return [
+      AuthSessionManager.instance.currentUser?.id ?? 'anonymous',
       method,
       path,
       _stableEncode(queryParameters),
@@ -365,7 +370,10 @@ class ApiService {
       ),
       key,
       'POST',
-    ).whenComplete(() {
+    ).then((response) {
+      clearCache();
+      return response;
+    }).whenComplete(() {
       final trackingKey = trackedToken.trackingKey;
       if (trackingKey != null) {
         _cancelTokens.remove(trackingKey);
@@ -400,7 +408,10 @@ class ApiService {
       ),
       key,
       'PUT',
-    ).whenComplete(() {
+    ).then((response) {
+      clearCache();
+      return response;
+    }).whenComplete(() {
       final trackingKey = trackedToken.trackingKey;
       if (trackingKey != null) {
         _cancelTokens.remove(trackingKey);
@@ -435,7 +446,10 @@ class ApiService {
       ),
       key,
       'PATCH',
-    ).whenComplete(() {
+    ).then((response) {
+      clearCache();
+      return response;
+    }).whenComplete(() {
       final trackingKey = trackedToken.trackingKey;
       if (trackingKey != null) {
         _cancelTokens.remove(trackingKey);
@@ -470,7 +484,10 @@ class ApiService {
       ),
       key,
       'DELETE',
-    ).whenComplete(() {
+    ).then((response) {
+      clearCache();
+      return response;
+    }).whenComplete(() {
       final trackingKey = trackedToken.trackingKey;
       if (trackingKey != null) {
         _cancelTokens.remove(trackingKey);

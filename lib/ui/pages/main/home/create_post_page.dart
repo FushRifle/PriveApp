@@ -396,8 +396,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
   }
 
   void _addPollOption() {
-    final controller =
-        TextEditingController()..addListener(_onComposerChanged);
+    final controller = TextEditingController()..addListener(_onComposerChanged);
     setState(() {
       _pollOptionControllers.add(controller);
     });
@@ -768,11 +767,13 @@ class _CreatePostPageState extends State<CreatePostPage> {
     if (media.type == MediaType.image) {
       url = await _cloudinaryService.uploadImage(
         file,
+        customFolder: 'posts',
         onProgress: _onUploadProgress,
       );
     } else if (media.type == MediaType.video) {
       url = await _cloudinaryService.uploadVideo(
         file,
+        customFolder: 'posts',
         onProgress: _onUploadProgress,
       );
     }
@@ -806,7 +807,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
         .where((post) => !initialPostIds.contains(post.id))
         .toList();
     if (newPosts.isEmpty) {
-      _showSnackBar('Post created, but the feed did not update.', isError: true);
+      _showSnackBar('Post created, but the feed did not update.',
+          isError: true);
       return null;
     }
     return newPosts.first;
@@ -874,7 +876,8 @@ class _Header extends StatelessWidget {
               child: SizedBox(
                 width: 42,
                 height: 42,
-                child: Icon(Icons.close, color: AppColors.blackTextColor, size: 20),
+                child: Icon(Icons.close,
+                    color: AppColors.blackTextColor, size: 20),
               ),
             ),
           ),
@@ -1017,8 +1020,8 @@ class _ComposerSection extends StatelessWidget {
           if (postType == PostComposerType.anonymous) ...[
             const SizedBox(height: 18),
             Text('Anonymous Category',
-                style: AppTheme.blackTextStyle.copyWith(
-                    fontSize: 13, fontWeight: FontWeight.w800)),
+                style: AppTheme.blackTextStyle
+                    .copyWith(fontSize: 13, fontWeight: FontWeight.w800)),
             const SizedBox(height: 10),
             Wrap(
               spacing: 10,
@@ -1157,9 +1160,7 @@ class _ComposerSection extends StatelessWidget {
                   onTap: onPickImage),
               const SizedBox(width: 12),
               _MediaButton(
-                  icon: Icons.camera_alt,
-                  label: 'Camera',
-                  onTap: onPickCamera),
+                  icon: Icons.camera_alt, label: 'Camera', onTap: onPickCamera),
               const SizedBox(width: 12),
               _MediaButton(
                   icon: Icons.videocam, label: 'Video', onTap: onPickVideo),
@@ -1207,8 +1208,8 @@ class _MediaButton extends StatelessWidget {
             Icon(icon, size: 18, color: AppColors.primary),
             const SizedBox(width: 6),
             Text(label,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w600, fontSize: 13)),
+                style:
+                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
           ],
         ),
       ),

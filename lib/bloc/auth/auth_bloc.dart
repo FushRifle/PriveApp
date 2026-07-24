@@ -27,7 +27,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<VerifyEmailRequested>(_onVerifyEmailRequested);
     on<ResendVerificationCode>(_onResendVerificationCode);
     on<UpdateEmail>(_onUpdateEmail);
-    on<UpdatePassword>(_onUpdatePassword);
     add(CheckAuthStatus());
   }
 
@@ -147,6 +146,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(state.copyWith(status: AuthStatus.loading, isLoading: true));
 
+    try {
+      await PushNotificationService.instance.deleteDeviceToken();
+    } catch (_) {}
+    try {
+      await _authService.signOut();
+    } catch (_) {}
+
     emit(
       const AuthState(
         status: AuthStatus.unauthenticated,
@@ -154,9 +160,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         isLoading: false,
       ),
     );
-
-    unawaited(PushNotificationService.instance.deleteDeviceToken());
-    unawaited(_authService.signOut());
   }
 
   Future<void> _onCheckAuthStatus(
@@ -256,9 +259,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(state.copyWith(status: AuthStatus.loading, isLoading: true));
-    await Future.delayed(const Duration(seconds: 1));
-    final result = await _authService.restoreSession();
-    if (result.success && result.token != null) {
+    try {
+      await _authService.verifyEmail(state.email, event.code);
+      final result = await _authService.restoreSession();
+      if (!result.success || result.token == null) {
+        throw StateError('Verification did not create a session');
+      }
+
       emit(
         state.copyWith(
           status: AuthStatus.authenticated,
@@ -267,9 +274,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           user: result.user,
           isLoading: false,
           needsVerification: false,
+          clearError: true,
         ),
       );
-    } else {
+    } catch (_) {
       emit(
         state.copyWith(
           status: AuthStatus.verificationRequired,
@@ -308,9 +316,5 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   void _onUpdateEmail(UpdateEmail event, Emitter<AuthState> emit) {
     emit(state.copyWith(email: event.email));
-  }
-
-  void _onUpdatePassword(UpdatePassword event, Emitter<AuthState> emit) {
-    emit(state.copyWith(password: event.password));
   }
 }

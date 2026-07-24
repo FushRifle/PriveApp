@@ -18,6 +18,7 @@ class LocalCacheService {
     ),
   );
   static const _appLockHiveKey = 'hive_app_lock_cipher_key';
+  static const _encryptedCacheVersionKey = 'hive_cache_encrypted_v1';
 
   static bool get isInitialized => _initialized;
 
@@ -41,13 +42,29 @@ class LocalCacheService {
   static Future<void> _initializeBoxes() async {
     try {
       await Hive.initFlutter();
+      await _migrateUnencryptedCaches();
       final appLockCipher = HiveAesCipher(await _appLockCipherKey());
       await Future.wait([
-        Hive.openBox<dynamic>(HiveCacheKeys.feedBox),
-        Hive.openBox<dynamic>(HiveCacheKeys.metaBox),
-        Hive.openBox<dynamic>(HiveCacheKeys.chatBox),
-        Hive.openBox<dynamic>(HiveCacheKeys.notificationBox),
-        Hive.openBox<dynamic>(HiveCacheKeys.postDraftBox),
+        Hive.openBox<dynamic>(
+          HiveCacheKeys.feedBox,
+          encryptionCipher: appLockCipher,
+        ),
+        Hive.openBox<dynamic>(
+          HiveCacheKeys.metaBox,
+          encryptionCipher: appLockCipher,
+        ),
+        Hive.openBox<dynamic>(
+          HiveCacheKeys.chatBox,
+          encryptionCipher: appLockCipher,
+        ),
+        Hive.openBox<dynamic>(
+          HiveCacheKeys.notificationBox,
+          encryptionCipher: appLockCipher,
+        ),
+        Hive.openBox<dynamic>(
+          HiveCacheKeys.postDraftBox,
+          encryptionCipher: appLockCipher,
+        ),
         Hive.openBox<dynamic>(
           HiveCacheKeys.appLockBox,
           encryptionCipher: appLockCipher,
@@ -91,5 +108,27 @@ class LocalCacheService {
     );
     await _secureStorage.write(key: _appLockHiveKey, value: base64Encode(key));
     return key;
+  }
+
+  static Future<void> _migrateUnencryptedCaches() async {
+    final migrated =
+        await _secureStorage.read(key: _encryptedCacheVersionKey) == 'true';
+    if (migrated) return;
+
+    // These boxes are disposable server-backed caches. Remove the legacy
+    // plaintext copies before reopening them with encryption.
+    for (final boxName in [
+      HiveCacheKeys.feedBox,
+      HiveCacheKeys.metaBox,
+      HiveCacheKeys.chatBox,
+      HiveCacheKeys.notificationBox,
+      HiveCacheKeys.postDraftBox,
+    ]) {
+      await Hive.deleteBoxFromDisk(boxName);
+    }
+    await _secureStorage.write(
+      key: _encryptedCacheVersionKey,
+      value: 'true',
+    );
   }
 }

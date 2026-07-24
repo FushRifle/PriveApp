@@ -23,7 +23,6 @@ class _AuthenticationPageState extends State<AuthenticationPage>
   final _formKey = GlobalKey<FormState>();
   _EmailStage? _stage;
   bool _existingUser = true;
-  bool _checking = false;
   bool _obscurePassword = true;
   late final AnimationController _pulseController;
   late final Animation<double> _pulseAnimation;
@@ -341,7 +340,7 @@ class _AuthenticationPageState extends State<AuthenticationPage>
           Text(
             passwordStage
                 ? 'Enter your password for\n${_email.text.trim().toLowerCase()}'
-                : 'We\'ll check if you have an account',
+                : 'Enter your email, then choose whether to sign in or create an account',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Colors.white.withOpacity(0.72),
                   height: 1.5,
@@ -411,10 +410,13 @@ class _AuthenticationPageState extends State<AuthenticationPage>
                     vertical: 18,
                   ),
                 ),
-                validator: (value) => RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
-                        .hasMatch(value?.trim() ?? '')
-                    ? null
-                    : 'Please enter a valid email',
+                validator: (value) {
+                  final email = value?.trim() ?? '';
+                  if (email.length > 254) return 'Email address is too long';
+                  return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)
+                      ? null
+                      : 'Please enter a valid email';
+                },
                 onFieldSubmitted: (_) => _checkEmail(),
               ),
             )
@@ -496,9 +498,14 @@ class _AuthenticationPageState extends State<AuthenticationPage>
                     vertical: 18,
                   ),
                 ),
-                validator: (value) => (value?.length ?? 0) < 8
-                    ? 'Password must be at least 8 characters'
-                    : null,
+                validator: (value) {
+                  final length = value?.length ?? 0;
+                  if (length < 8) {
+                    return 'Password must be at least 8 characters';
+                  }
+                  if (length > 128) return 'Password is too long';
+                  return null;
+                },
                 onFieldSubmitted: (_) => _submitPassword(),
               ),
             ),
@@ -516,7 +523,7 @@ class _AuthenticationPageState extends State<AuthenticationPage>
               ],
             ),
             child: FilledButton(
-              onPressed: state.isLoading || _checking
+              onPressed: state.isLoading
                   ? null
                   : passwordStage
                       ? _submitPassword
@@ -532,7 +539,7 @@ class _AuthenticationPageState extends State<AuthenticationPage>
               ),
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 200),
-                child: state.isLoading || _checking
+                child: state.isLoading
                     ? const SizedBox(
                         width: 24,
                         height: 24,
@@ -542,12 +549,14 @@ class _AuthenticationPageState extends State<AuthenticationPage>
                               AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
-                    : const Row(
+                    : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            'Continue',
-                            style: TextStyle(
+                            passwordStage
+                                ? (_existingUser ? 'Sign in' : 'Create account')
+                                : 'Continue',
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.5,
@@ -560,21 +569,36 @@ class _AuthenticationPageState extends State<AuthenticationPage>
               ),
             ),
           ),
-          if (!passwordStage) ...[
+          if (passwordStage) ...[
             const SizedBox(height: 24),
-            // Forgot password link for returning users
             TextButton(
-              onPressed: () {
-                // Handle forgot password
-              },
+              onPressed: state.isLoading
+                  ? null
+                  : () => setState(() {
+                        _existingUser = !_existingUser;
+                        _password.clear();
+                      }),
               child: Text(
-                'Forgot your password?',
+                _existingUser
+                    ? 'New to Clique? Create an account'
+                    : 'Already have an account? Sign in',
                 style: TextStyle(
                   color: AppColors.primary.withOpacity(0.8),
                   fontWeight: FontWeight.w500,
                 ),
               ),
             ),
+            if (_existingUser)
+              TextButton(
+                onPressed: state.isLoading ? null : _sendPasswordReset,
+                child: Text(
+                  'Forgot your password?',
+                  style: TextStyle(
+                    color: AppColors.primary.withOpacity(0.8),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
           ],
         ],
       ),
@@ -675,8 +699,7 @@ class _AuthenticationPageState extends State<AuthenticationPage>
             backgroundColor: AppColors.primary,
             disabledBackgroundColor: AppColors.primary.withOpacity(0.45),
             foregroundColor: Colors.white,
-            shape: const CircleBorder(
-            ),
+            shape: const CircleBorder(),
             elevation: 4,
             shadowColor: Colors.black.withOpacity(0.28),
           ),
@@ -686,83 +709,29 @@ class _AuthenticationPageState extends State<AuthenticationPage>
     );
   }
 
-  Future<void> _checkEmail() async {
+  void _checkEmail() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    setState(() => _checking = true);
-    try {
-      final exists = await _authService.emailExists(_email.text);
-      if (!mounted) return;
-      if (!exists) {
-        final create = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            title: const Text(
-              "Create an account?",
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
-            content: const Text(
-              "This email isn't registered yet. Would you like to create a new account?",
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withOpacity(0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: FilledButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  style: FilledButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text('Create account'),
-                ),
-              ),
-            ],
-          ),
-        );
-        if (create != true || !mounted) return;
-      }
-      setState(() {
-        _existingUser = exists;
-        _stage = _EmailStage.password;
-      });
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error_outline, color: Colors.white, size: 20),
-                const SizedBox(width: 12),
-                Expanded(child: Text(error.toString())),
-              ],
-            ),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _checking = false);
-    }
+    setState(() {
+      _existingUser = true;
+      _stage = _EmailStage.password;
+    });
+  }
+
+  Future<void> _sendPasswordReset() async {
+    final sent = await _authService.sendPasswordReset(_email.text);
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          sent
+              ? 'Password reset instructions were sent if the account exists.'
+              : 'Unable to request a password reset. Please try again.',
+        ),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+      ),
+    );
   }
 
   void _submitPassword() {

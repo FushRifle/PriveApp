@@ -65,7 +65,7 @@ class FeedService {
       await _feedCacheService.saveFeedPage(postsResponse);
       return postsResponse;
     } on DioException catch (e) {
-      debugPrint('Get posts error: ${e.response?.data}');
+      _logRequestFailure('get_posts', e);
       final cachedPage = _feedCacheService.readFeedPage(page);
       if (cachedPage != null && cachedPage.posts.isNotEmpty) {
         return cachedPage;
@@ -182,7 +182,7 @@ class FeedService {
 
       return null;
     } on DioException catch (e) {
-      debugPrint('Get post by id error: ${e.response?.data}');
+      _logRequestFailure('get_post_by_id', e);
       if (e.response?.statusCode == 404) {
         try {
           final fallback = await _api.get('/api/posts/$postId');
@@ -225,7 +225,7 @@ class FeedService {
 
       return null;
     } on DioException catch (e) {
-      debugPrint('Get post poll error: ${e.response?.data}');
+      _logRequestFailure('get_post_poll', e);
       return null;
     }
   }
@@ -279,7 +279,7 @@ class FeedService {
       _invalidateFeedCaches();
       return createdPost;
     } on DioException catch (e) {
-      debugPrint('Create post error: ${e.response?.data}');
+      _logRequestFailure('create_post', e);
       throw e.response?.data['message'] ?? 'Failed to create post';
     }
   }
@@ -332,7 +332,7 @@ class FeedService {
       _invalidatePostCaches(postId);
       _api.removeCacheByPath('/api/feed/posts/$postId/poll');
     } on DioException catch (e) {
-      debugPrint('Vote poll error: ${e.response?.data}');
+      _logRequestFailure('vote_poll', e);
       throw e.response?.data['message'] ??
           e.response?.data['error'] ??
           'Failed to vote on poll';
@@ -346,7 +346,7 @@ class FeedService {
       _invalidatePostCaches(postId);
       return response.data;
     } on DioException catch (e) {
-      debugPrint('Like post error: ${e.response?.data}');
+      _logRequestFailure('like_post', e);
       throw e.response?.data['message'] ?? 'Failed to like post';
     }
   }
@@ -358,7 +358,7 @@ class FeedService {
       _invalidatePostCaches(postId);
       return response.data;
     } on DioException catch (e) {
-      debugPrint('Unlike post error: ${e.response?.data}');
+      _logRequestFailure('unlike_post', e);
       throw e.response?.data['message'] ?? 'Failed to unlike post';
     }
   }
@@ -369,7 +369,7 @@ class FeedService {
       _invalidatePostCaches(postId);
       return _readMap(response.data);
     } on DioException catch (e) {
-      debugPrint('Save post error: ${e.response?.data}');
+      _logRequestFailure('save_post', e);
       throw e.response?.data['message'] ??
           e.response?.data['error'] ??
           'Failed to save post';
@@ -382,7 +382,7 @@ class FeedService {
       _invalidatePostCaches(postId);
       return _readMap(response.data);
     } on DioException catch (e) {
-      debugPrint('Unsave post error: ${e.response?.data}');
+      _logRequestFailure('unsave_post', e);
       throw e.response?.data['message'] ??
           e.response?.data['error'] ??
           'Failed to unsave post';
@@ -530,7 +530,7 @@ class FeedService {
       _invalidatePostCaches(postId);
       return _readMap(response.data);
     } on DioException catch (e) {
-      debugPrint('Share post error: ${e.response?.data}');
+      _logRequestFailure('share_post', e);
       throw e.response?.data['message'] ??
           e.response?.data['error'] ??
           'Failed to share post';
@@ -575,7 +575,7 @@ class FeedService {
       _invalidateFeedCaches();
       return repostedPost;
     } on DioException catch (e) {
-      debugPrint('Repost error: ${e.response?.data}');
+      _logRequestFailure('repost', e);
       throw e.response?.data['message'] ??
           e.response?.data['error'] ??
           'Failed to repost';
@@ -610,7 +610,7 @@ class FeedService {
 
       return PostsResponse(posts: [], hasMore: false, page: page);
     } on DioException catch (e) {
-      debugPrint('Hashtag posts error: ${e.response?.data}');
+      _logRequestFailure('hashtag_posts', e);
       throw e.response?.data['message'] ??
           e.response?.data['error'] ??
           'Failed to get hashtag posts';
@@ -655,7 +655,7 @@ class FeedService {
 
       return CommentsResponse(comments: [], hasMore: false, page: page);
     } on DioException catch (e) {
-      debugPrint('Get comments error: ${e.response?.data}');
+      _logRequestFailure('get_comments', e);
       if (page == 1) {
         final cached = _feedCacheService.readComments(postId);
         if (cached != null && cached.comments.isNotEmpty) {
@@ -693,7 +693,7 @@ class FeedService {
       _invalidatePostCaches(postId);
       return Comment.fromJson(_readCommentMap(response.data));
     } on DioException catch (e) {
-      debugPrint('Add comment error: ${e.response?.data}');
+      _logRequestFailure('add_comment', e);
       throw e.response?.data['message'] ?? 'Failed to add comment';
     }
   }
@@ -709,7 +709,7 @@ class FeedService {
       _invalidatePostCaches(postId);
       return Comment.fromJson(_readCommentMap(response.data));
     } on DioException catch (e) {
-      debugPrint('Like comment error: ${e.response?.data}');
+      _logRequestFailure('like_comment', e);
       throw e.response?.data['message'] ?? 'Failed to like comment';
     }
   }
@@ -725,7 +725,7 @@ class FeedService {
       _invalidatePostCaches(postId);
       return Comment.fromJson(_readCommentMap(response.data));
     } on DioException catch (e) {
-      debugPrint('Dislike comment error: ${e.response?.data}');
+      _logRequestFailure('dislike_comment', e);
       throw e.response?.data['message'] ?? 'Failed to dislike comment';
     }
   }
@@ -737,7 +737,7 @@ class FeedService {
       debugPrint('Feed delete: removed post $postId from cache');
       _invalidateFeedCaches();
     } on DioException catch (e) {
-      debugPrint('Delete post error: ${e.response?.data}');
+      _logRequestFailure('delete_post', e);
       throw _readError(e.response?.data, 'Failed to delete post');
     }
   }
@@ -770,7 +770,7 @@ class FeedService {
 
       throw 'Invalid update response';
     } on DioException catch (e) {
-      debugPrint('Update post error: ${e.response?.data}');
+      _logRequestFailure('update_post', e);
       throw e.response?.data['message'] ?? 'Failed to update post';
     }
   }
@@ -829,7 +829,7 @@ class FeedService {
 
       return UserMediaResponse(media: [], hasMore: false, page: page);
     } on DioException catch (e) {
-      debugPrint('Get user media error: ${e.response?.data}');
+      _logRequestFailure('get_user_media', e);
       if (page == 1) {
         final cached = _feedCacheService.readUserMedia(userId, type);
         if (cached != null && cached.media.isNotEmpty) {
@@ -861,7 +861,7 @@ class FeedService {
 
       return 0;
     } on DioException catch (e) {
-      debugPrint('Get user media count error: ${e.response?.data}');
+      _logRequestFailure('get_user_media_count', e);
       return 0;
     }
   }
@@ -888,7 +888,7 @@ class FeedService {
 
       return const [];
     } on DioException catch (e) {
-      debugPrint('Get trending hashtags error: ${e.response?.data}');
+      _logRequestFailure('get_trending_hashtags', e);
       return const [];
     }
   }
@@ -948,6 +948,13 @@ class FeedService {
     }
 
     return fallback;
+  }
+
+  void _logRequestFailure(String operation, DioException error) {
+    debugPrint(
+      'Feed request failed: operation=$operation '
+      'status=${error.response?.statusCode ?? 0} type=${error.type.name}',
+    );
   }
 
   void _invalidatePostCaches(int postId) {

@@ -149,12 +149,6 @@ class _AccountSwitchPageState extends State<AccountSwitchPage> {
               ),
               const SizedBox(height: 14),
               ListTile(
-                leading: const Icon(Icons.link_rounded),
-                title: const Text('Link existing profile'),
-                subtitle: const Text('Use a profile user ID from your account'),
-                onTap: () => Navigator.pop(context, 'link'),
-              ),
-              ListTile(
                 leading: const Icon(Icons.person_add_alt_1_rounded),
                 title: const Text('Create new profile'),
                 subtitle: const Text('Add a fresh profile to this account'),
@@ -166,45 +160,8 @@ class _AccountSwitchPageState extends State<AccountSwitchPage> {
       ),
     );
 
-    if (action == 'link') {
-      await _linkExistingProfile();
-    } else if (action == 'create') {
+    if (action == 'create') {
       await _createProfile();
-    }
-  }
-
-  Future<void> _linkExistingProfile() async {
-    final profileUserId = await showModalBottomSheet<int>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const _LinkProfileSheet(),
-    );
-    if (profileUserId == null || profileUserId <= 0) return;
-
-    setState(() => _isSwitching = true);
-    try {
-      await _userService.linkProfile(profileUserId);
-      await LocalCacheService.clearAll();
-      if (!mounted) return;
-      await _loadProfiles();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profile linked'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString()),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _isSwitching = false);
     }
   }
 
@@ -464,7 +421,7 @@ class _Header extends StatelessWidget {
                 Text(
                   'Linked accounts',
                   style: AppTheme.blackTextStyle.copyWith(
-                    color:  AppColors.text,
+                    color: AppColors.text,
                     fontWeight: AppTheme.bold,
                     fontSize: 15,
                   ),
@@ -472,17 +429,17 @@ class _Header extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   //count == 0
-                    //  ? 'No linked profiles available'
-                      //: '$count linked profile${count == 1 ? '' : 's'}',
-                      'Coming Soon.',
+                  //  ? 'No linked profiles available'
+                  //: '$count linked profile${count == 1 ? '' : 's'}',
+                  'Coming Soon.',
                   style: AppTheme.greyTextStyle.copyWith(fontSize: 13),
                 ),
               ],
             ),
           ),
-         // IconButton.filled(
-           // onPressed: onCreate,
-            //icon: const Icon(Icons.add_rounded),
+          // IconButton.filled(
+          // onPressed: onCreate,
+          //icon: const Icon(Icons.add_rounded),
           //),
         ],
       ),
@@ -732,84 +689,6 @@ class _CreateProfileData {
     required this.username,
     required this.profileType,
   });
-}
-
-class _LinkProfileSheet extends StatefulWidget {
-  const _LinkProfileSheet();
-
-  @override
-  State<_LinkProfileSheet> createState() => _LinkProfileSheetState();
-}
-
-class _LinkProfileSheetState extends State<_LinkProfileSheet> {
-  final _profileIdController = TextEditingController();
-
-  @override
-  void dispose() {
-    _profileIdController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 26),
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Link existing profile',
-                style: AppTheme.blackTextStyle.copyWith(
-                  fontSize: 20,
-                  fontWeight: AppTheme.bold,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Enter the profile user ID to attach it to this account.',
-                style: AppTheme.greyTextStyle.copyWith(fontSize: 13),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _profileIdController,
-                autofocus: true,
-                keyboardType: TextInputType.number,
-                textInputAction: TextInputAction.done,
-                decoration: const InputDecoration(
-                  labelText: 'Profile user ID',
-                  border: OutlineInputBorder(),
-                ),
-                onSubmitted: (_) => _submit(),
-              ),
-              const SizedBox(height: 18),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _submit,
-                  child: const Text('Link profile'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _submit() {
-    final id = int.tryParse(_profileIdController.text.trim()) ?? 0;
-    if (id <= 0) return;
-    Navigator.pop(context, id);
-  }
 }
 
 class _CreateProfileSheet extends StatefulWidget {

@@ -19,7 +19,7 @@ class SignInRequested extends AuthEvent {
   });
 
   @override
-  List<Object?> get props => [email, password, rememberMe];
+  List<Object?> get props => [email, rememberMe];
 }
 
 class SignUpRequested extends AuthEvent {
@@ -36,7 +36,7 @@ class SignUpRequested extends AuthEvent {
   });
 
   @override
-  List<Object?> get props => [email, password, firstName, lastName];
+  List<Object?> get props => [email, firstName, lastName];
 }
 
 class SignOutRequested extends AuthEvent {
@@ -61,6 +61,9 @@ class SaveCredentialsRequested extends AuthEvent {
     required this.password,
     required this.rememberMe,
   });
+
+  @override
+  List<Object?> get props => [email, rememberMe];
 }
 
 class ClearAuthError extends AuthEvent {
@@ -81,10 +84,4 @@ class UpdateEmail extends AuthEvent {
   final String email;
 
   const UpdateEmail({required this.email});
-}
-
-class UpdatePassword extends AuthEvent {
-  final String password;
-
-  const UpdatePassword({required this.password});
 }
