@@ -27,20 +27,37 @@ class EditProfilePage extends StatefulWidget {
 }
 
 class _EditProfilePageState extends State<EditProfilePage> {
+  static const _interestOptions = [
+    'Art',
+    'Business',
+    'Cooking',
+    'Design',
+    'Fashion',
+    'Fitness',
+    'Gaming',
+    'Movies',
+    'Music',
+    'Photography',
+    'Reading',
+    'Sports',
+    'Technology',
+    'Travel',
+  ];
+  static const _genderOptions = [
+    'Female',
+    'Male',
+    'Non-binary',
+    'Prefer not to say',
+  ];
+
   final CloudinaryService _cloudinaryService = CloudinaryService();
   final ImagePicker _imagePicker = ImagePicker();
   final MediaService _mediaService = MediaService();
   final ProfileService _profileService = ProfileService();
 
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _ageController = TextEditingController();
-  final TextEditingController _occupationController = TextEditingController();
   final TextEditingController _bioController = TextEditingController();
-  final TextEditingController _locationController = TextEditingController();
-  final TextEditingController _workController = TextEditingController();
-  final TextEditingController _educationController = TextEditingController();
   final TextEditingController _languagesController = TextEditingController();
   final TextEditingController _countryController = TextEditingController();
   final TextEditingController _countryCodeController = TextEditingController();
@@ -74,14 +91,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _cloudinaryService.cancelAllUploads();
 
     _nameController.dispose();
-    _usernameController.dispose();
-    _phoneController.dispose();
     _ageController.dispose();
-    _occupationController.dispose();
     _bioController.dispose();
-    _locationController.dispose();
-    _workController.dispose();
-    _educationController.dispose();
     _languagesController.dispose();
     _countryController.dispose();
     _countryCodeController.dispose();
@@ -109,9 +120,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
         _readString(profile?.displayName) ?? _readString(user?['name']) ?? '';
 
     _bioController.text = _readString(profile?.bio) ?? '';
-    _locationController.text = _readString(profile?.location) ?? '';
-    _workController.text = _readString(profile?.work) ?? '';
-    _educationController.text = _readString(profile?.education) ?? '';
 
     final age = profile?.age ?? _readInt(user?['age']);
     _ageController.text = age != null && age > 0 ? age.toString() : '';
@@ -120,11 +128,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
       _languagesController.text = profile!.interests.join(', ');
     }
 
-    _usernameController.text = _readString(user?['username']) ?? '';
-    _phoneController.text = _readString(user?['phone']) ?? '';
-    _occupationController.text = _readString(user?['occupation']) ?? '';
-    _countryController.text = _readString(user?['country']) ??
-        _readString(profile?.country) ?? '';
+    _countryController.text =
+        _readString(user?['country']) ?? _readString(profile?.country) ?? '';
     _countryCodeController.text =
         _readString(user?['countryCode'] ?? user?['country_code']) ?? '';
     _mobileNumberController.text =
@@ -351,9 +356,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     final age = int.tryParse(_ageController.text.trim());
 
-    if (_ageController.text.trim().isNotEmpty && age == null) {
+    if (_ageController.text.trim().isNotEmpty &&
+        (age == null || age < 18 || age > 120)) {
       _showSnackBar(
-        'Please enter a valid age',
+        'Please enter a valid age (18+)',
         isError: true,
       );
       return;
@@ -379,10 +385,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       await _profileService.updateAccountProfile(
         user: {
           'name': _nullableText(_nameController),
-          'username': _nullableText(_usernameController),
-          'phone': _nullableText(_phoneController),
           'age': age,
-          'occupation': _nullableText(_occupationController),
           'country': _nullableText(_countryController),
           'countryCode': _nullableText(_countryCodeController),
           'mobileNumber': _nullableText(_mobileNumberController),
@@ -391,9 +394,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
         profile: {
           'displayName': _nullableText(_nameController),
           'bio': _nullableText(_bioController),
-          'location': _nullableText(_locationController),
-          'work': _nullableText(_workController),
-          'education': _nullableText(_educationController),
           'age': age,
           'interests': languages,
           'country': _nullableText(_countryController),
@@ -422,6 +422,22 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final value = controller.text.trim();
 
     return value.isEmpty ? null : value;
+  }
+
+  Set<String> get _selectedInterests => _languagesController.text
+      .split(',')
+      .map((value) => value.trim())
+      .where((value) => value.isNotEmpty)
+      .toSet();
+
+  void _toggleInterest(String interest) {
+    final interests = _selectedInterests;
+    if (!interests.add(interest)) {
+      interests.remove(interest);
+    }
+    setState(() {
+      _languagesController.text = interests.join(', ');
+    });
   }
 
   void _onSaveFinished({
@@ -622,6 +638,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
                   child: Column(
                     children: [
+                      _CoverImageSection(
+                        profile: profile,
+                        selectedCoverFile: _selectedCoverFile,
+                        isUploading: _isUploadingCover,
+                        isDisabled: _isBusy,
+                        onTap: () => _showImagePickerOptions(false),
+                      ),
+                      const SizedBox(height: 24),
                       _ProfilePictureSection(
                         profile: profile,
                         selectedAvatarFile: _selectedAvatarFile,
@@ -635,28 +659,21 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       const SizedBox(height: 24),
                       _FormFields(
                         nameController: _nameController,
-                        usernameController: _usernameController,
-                        phoneController: _phoneController,
                         ageController: _ageController,
-                        occupationController: _occupationController,
                         bioController: _bioController,
-                        locationController: _locationController,
-                        workController: _workController,
-                        educationController: _educationController,
                         languagesController: _languagesController,
                         countryController: _countryController,
                         countryCodeController: _countryCodeController,
                         mobileNumberController: _mobileNumberController,
                         genderController: _genderController,
+                        genderOptions: _genderOptions,
+                        interestOptions: _interestOptions,
+                        selectedInterests: _selectedInterests,
+                        onGenderChanged: (value) {
+                          setState(() => _genderController.text = value);
+                        },
+                        onInterestToggle: _toggleInterest,
                         enabled: !_isBusy,
-                      ),
-                      const SizedBox(height: 24),
-                      _CoverImageSection(
-                        profile: profile,
-                        selectedCoverFile: _selectedCoverFile,
-                        isUploading: _isUploadingCover,
-                        isDisabled: _isBusy,
-                        onTap: () => _showImagePickerOptions(false),
                       ),
                     ],
                   ),
@@ -930,162 +947,293 @@ class _CameraBadge extends StatelessWidget {
 
 class _FormFields extends StatelessWidget {
   final TextEditingController nameController;
-  final TextEditingController usernameController;
-  final TextEditingController phoneController;
   final TextEditingController ageController;
-  final TextEditingController occupationController;
   final TextEditingController bioController;
-  final TextEditingController locationController;
-  final TextEditingController workController;
-  final TextEditingController educationController;
   final TextEditingController languagesController;
   final TextEditingController countryController;
   final TextEditingController countryCodeController;
   final TextEditingController mobileNumberController;
   final TextEditingController genderController;
+  final List<String> genderOptions;
+  final List<String> interestOptions;
+  final Set<String> selectedInterests;
+  final ValueChanged<String> onGenderChanged;
+  final ValueChanged<String> onInterestToggle;
   final bool enabled;
 
   const _FormFields({
     required this.nameController,
-    required this.usernameController,
-    required this.phoneController,
     required this.ageController,
-    required this.occupationController,
     required this.bioController,
-    required this.locationController,
-    required this.workController,
-    required this.educationController,
     required this.languagesController,
     required this.countryController,
     required this.countryCodeController,
     required this.mobileNumberController,
     required this.genderController,
+    required this.genderOptions,
+    required this.interestOptions,
+    required this.selectedInterests,
+    required this.onGenderChanged,
+    required this.onInterestToggle,
     required this.enabled,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
+    return Column(
+      children: [
+        _EditSection(
+          icon: Icons.person_outline_rounded,
+          title: 'About you',
+          subtitle: 'The basics people see on your profile',
+          children: [
+            _ProfileTextField(
+              controller: nameController,
+              label: 'Name',
+              hint: 'What should we call you?',
+              enabled: enabled,
+            ),
+            const SizedBox(height: 16),
+            _ProfileTextField(
+              controller: bioController,
+              label: 'Bio',
+              hint: 'Tell people about you',
+              maxLines: 4,
+              enabled: enabled,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        _EditSection(
+          icon: Icons.badge_outlined,
+          title: 'Demographics',
+          subtitle: 'Keep your profile information up to date',
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _ProfileTextField(
+                    controller: ageController,
+                    label: 'Age',
+                    hint: '18+',
+                    keyboardType: TextInputType.number,
+                    enabled: enabled,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: _ProfileDropdownField(
+                    label: 'Gender',
+                    value: genderOptions.contains(genderController.text)
+                        ? genderController.text
+                        : null,
+                    hint: 'Select',
+                    options: genderOptions,
+                    enabled: enabled,
+                    onChanged: onGenderChanged,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _ProfileTextField(
+              controller: countryController,
+              label: 'Country',
+              hint: 'Where do you live?',
+              enabled: enabled,
+            ),
+            const SizedBox(height: 16),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 105,
+                  child: _ProfileTextField(
+                    controller: countryCodeController,
+                    label: 'Code',
+                    hint: '+234',
+                    keyboardType: TextInputType.phone,
+                    enabled: enabled,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _ProfileTextField(
+                    controller: mobileNumberController,
+                    label: 'Mobile number',
+                    hint: 'Phone number',
+                    keyboardType: TextInputType.phone,
+                    enabled: enabled,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        _EditSection(
+          icon: Icons.interests_outlined,
+          title: 'Interests',
+          subtitle: 'Choose what you want to see more of',
+          children: [
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: interestOptions.map((interest) {
+                final selected = selectedInterests.contains(interest);
+                return FilterChip(
+                  label: Text(interest),
+                  selected: selected,
+                  onSelected:
+                      enabled ? (_) => onInterestToggle(interest) : null,
+                  selectedColor: AppColors.primary.withOpacity(0.16),
+                  checkmarkColor: AppColors.primary,
+                  side: BorderSide(
+                    color: selected ? AppColors.primary : AppColors.border,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _EditSection extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final List<Widget> children;
+
+  const _EditSection({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.children,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _ProfileTextField(
-            controller: nameController,
-            label: 'Name',
-            hint: 'Enter your name',
-            enabled: enabled,
-          ),
-          const SizedBox(height: 16),
-          _ProfileTextField(
-            controller: usernameController,
-            label: 'Username',
-            hint: 'Enter username',
-            enabled: enabled,
-          ),
-          const SizedBox(height: 16),
-          _ProfileTextField(
-            controller: phoneController,
-            label: 'Phone',
-            hint: 'Enter phone number',
-            keyboardType: TextInputType.phone,
-            enabled: enabled,
-          ),
-          const SizedBox(height: 16),
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(
-                width: 110,
-                child: _ProfileTextField(
-                  controller: countryCodeController,
-                  label: 'Code',
-                  hint: '+234',
-                  keyboardType: TextInputType.phone,
-                  enabled: enabled,
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.12),
+                  shape: BoxShape.circle,
                 ),
+                child: Icon(icon, color: AppColors.primary, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _ProfileTextField(
-                  controller: mobileNumberController,
-                  label: 'Mobile number',
-                  hint: 'Enter mobile number',
-                  keyboardType: TextInputType.phone,
-                  enabled: enabled,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTheme.blackTextStyle.copyWith(
+                        fontSize: 16,
+                        fontWeight: AppTheme.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          _ProfileTextField(
-            controller: countryController,
-            label: 'Country',
-            hint: 'Enter your country',
-            enabled: enabled,
-          ),
-          const SizedBox(height: 16),
-          _ProfileTextField(
-            controller: genderController,
-            label: 'Gender',
-            hint: 'Enter your gender',
-            enabled: enabled,
-          ),
-          const SizedBox(height: 16),
-          _ProfileTextField(
-            controller: ageController,
-            label: 'Age',
-            hint: 'Enter your age',
-            keyboardType: TextInputType.number,
-            enabled: enabled,
-          ),
-          const SizedBox(height: 16),
-          _ProfileTextField(
-            controller: occupationController,
-            label: 'Occupation',
-            hint: 'What do you do?',
-            enabled: enabled,
-          ),
-          const SizedBox(height: 16),
-          _ProfileTextField(
-            controller: bioController,
-            label: 'Bio',
-            hint: 'Write a bio...',
-            maxLines: 3,
-            enabled: enabled,
-          ),
-          const SizedBox(height: 16),
-          _ProfileTextField(
-            controller: locationController,
-            label: 'Location',
-            hint: 'Where are you located?',
-            enabled: enabled,
-          ),
-          const SizedBox(height: 16),
-          _ProfileTextField(
-            controller: workController,
-            label: 'Work',
-            hint: 'Where do you work?',
-            enabled: enabled,
-          ),
-          const SizedBox(height: 16),
-          _ProfileTextField(
-            controller: educationController,
-            label: 'Education',
-            hint: 'Where did you study?',
-            enabled: enabled,
-          ),
-          const SizedBox(height: 16),
-          _ProfileTextField(
-            controller: languagesController,
-            label: 'Languages',
-            hint: 'English, French, Spanish...',
-            maxLines: 2,
-            enabled: enabled,
-          ),
+          const SizedBox(height: 18),
+          ...children,
         ],
       ),
+    );
+  }
+}
+
+class _ProfileDropdownField extends StatelessWidget {
+  final String label;
+  final String? value;
+  final String hint;
+  final List<String> options;
+  final bool enabled;
+  final ValueChanged<String> onChanged;
+
+  const _ProfileDropdownField({
+    required this.label,
+    required this.value,
+    required this.hint,
+    required this.options,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTheme.blackTextStyle.copyWith(
+            fontWeight: AppTheme.medium,
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: value,
+          isExpanded: true,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: AppColors.background,
+            hintText: hint,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: AppColors.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: AppColors.border),
+            ),
+          ),
+          items: options
+              .map(
+                (option) => DropdownMenuItem(
+                  value: option,
+                  child: Text(option, overflow: TextOverflow.ellipsis),
+                ),
+              )
+              .toList(),
+          onChanged: enabled
+              ? (choice) => choice == null ? null : onChanged(choice)
+              : null,
+        ),
+      ],
     );
   }
 }

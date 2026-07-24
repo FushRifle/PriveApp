@@ -18,7 +18,12 @@ import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
 class CreateReelPage extends StatefulWidget {
   const CreateReelPage({
     super.key,
+    this.initialVideoFile,
+    this.initialCaption = '',
   });
+
+  final File? initialVideoFile;
+  final String initialCaption;
 
   @override
   State<CreateReelPage> createState() => _CreateReelPageState();
@@ -43,6 +48,19 @@ class _CreateReelPageState extends State<CreateReelPage> {
   bool _isPickingVideo = false;
 
   double _uploadProgress = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _captionController.text = widget.initialCaption;
+
+    final initialVideo = widget.initialVideoFile;
+    if (initialVideo != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_setSelectedVideo(initialVideo));
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -592,6 +610,21 @@ class _CreateReelPageState extends State<CreateReelPage> {
 
       if (!mounted || _videoController != controller) {
         await controller.dispose();
+        return;
+      }
+
+      if (controller.value.duration > const Duration(seconds: 60)) {
+        _videoController = null;
+        await controller.dispose();
+        if (!mounted) return;
+        setState(() {
+          _selectedVideoFile = null;
+          _isVideoInitialized = false;
+        });
+        _showSnackBar(
+          'Reels can be up to 60 seconds long. Choose a shorter video.',
+          isError: true,
+        );
         return;
       }
 

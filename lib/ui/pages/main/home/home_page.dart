@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
-import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/services/friends/friends_service.dart';
 import 'package:clique/core/services/user/user_service.dart';
@@ -124,6 +123,7 @@ class _HomePageState extends State<HomePage>
 
   List<_StoryGroup> _cachedGroups = [];
   List<Story> _lastStories = [];
+  late final Future<List<_SuggestedUser>> _suggestionsFuture;
 
   @override
   bool get wantKeepAlive => true;
@@ -132,6 +132,7 @@ class _HomePageState extends State<HomePage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _suggestionsFuture = _loadSuggestions();
     _initialize();
     _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -234,19 +235,17 @@ class _HomePageState extends State<HomePage>
       child: Scaffold(
         backgroundColor: palette.background,
         floatingActionButton: Material(
-          color: Colors.transparent,
+          color: AppColors.primary,
+          shape: const CircleBorder(),
+          clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: _jumpToTop,
-            borderRadius: BorderRadius.circular(999),
-            child: Container(
-              padding: const EdgeInsets.all(14),
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.transparent,
-              ),
-              child: const Icon(
+            customBorder: const CircleBorder(),
+            child: const SizedBox.square(
+              dimension: 32,
+              child: Icon(
                 Icons.keyboard_double_arrow_up_rounded,
-                size: 20,
+                size: 18,
                 color: AppColors.white,
               ),
             ),
@@ -261,7 +260,7 @@ class _HomePageState extends State<HomePage>
             onRefresh: _refresh,
             child: CustomScrollView(
               controller: _scrollController,
-              cacheExtent: 1000,
+              cacheExtent: 400,
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ),
@@ -294,7 +293,7 @@ class _HomePageState extends State<HomePage>
                         previous.hasMorePosts != current.hasMorePosts;
                   },
                   builder: (context, state) {
-                    final posts = _buildBalancedFeed(state.posts);
+                    final posts = state.posts;
 
                     if (state.postsStatus == FeedStatus.loading &&
                         posts.isEmpty) {
@@ -337,6 +336,7 @@ class _HomePageState extends State<HomePage>
                               if ((index + 1) % 7 == 0) {
                                 return _PeopleYouMayKnowCard(
                                   palette: palette,
+                                  suggestions: _suggestionsFuture,
                                 );
                               }
 
@@ -365,9 +365,25 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  List<FeedPost> _buildBalancedFeed(List<FeedPost> posts) {
-    if (posts.isEmpty) return posts;
-    return List<FeedPost>.from(posts);
+  Future<List<_SuggestedUser>> _loadSuggestions() async {
+    final currentUserId = _readInt(
+      context.read<AuthBloc>().state.user?['id'],
+    );
+    final raw = await UserService().getUserSuggestions(limit: 12);
+
+    return raw
+        .map(_SuggestedUser.fromJson)
+        .where((user) => user.id > 0)
+        .where((user) => user.id != currentUserId)
+        .where((user) => !user.isFollowing)
+        .take(10)
+        .toList();
+  }
+
+  int _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   Future<void> _openCreatePost(BuildContext context) async {
@@ -455,9 +471,11 @@ class _HomePageState extends State<HomePage>
 
 class _PeopleYouMayKnowCard extends StatefulWidget {
   final _HomePalette palette;
+  final Future<List<_SuggestedUser>> suggestions;
 
   const _PeopleYouMayKnowCard({
     required this.palette,
+    required this.suggestions,
   });
 
   @override
@@ -465,32 +483,8 @@ class _PeopleYouMayKnowCard extends StatefulWidget {
 }
 
 class _PeopleYouMayKnowCardState extends State<_PeopleYouMayKnowCard> {
-  final UserService _userService = UserService();
   final FriendsService _friendsService = FriendsService();
-  late Future<List<_SuggestedUser>> _future;
   final Set<int> _following = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _future = _loadSuggestions();
-  }
-
-  Future<List<_SuggestedUser>> _loadSuggestions() async {
-    final currentUser = context.read<UserBloc>().state.currentUser;
-    final currentUserId = _readInt(currentUser?['id']);
-    final raw = await _userService.getUserSuggestions(limit: 12);
-
-    final suggestions = raw
-        .map(_SuggestedUser.fromJson)
-        .where((user) => user.id > 0)
-        .where((user) => user.id != currentUserId)
-        .where((user) => !user.isFollowing)
-        .take(10)
-        .toList();
-
-    return suggestions;
-  }
 
   Future<void> _follow(_SuggestedUser user) async {
     if (_following.contains(user.id)) return;
@@ -521,7 +515,7 @@ class _PeopleYouMayKnowCardState extends State<_PeopleYouMayKnowCard> {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<_SuggestedUser>>(
-      future: _future,
+      future: widget.suggestions,
       builder: (context, snapshot) {
         final suggestions = snapshot.data ?? const <_SuggestedUser>[];
         if (suggestions.isEmpty) {
@@ -606,12 +600,6 @@ class _PeopleYouMayKnowCardState extends State<_PeopleYouMayKnowCard> {
         );
       },
     );
-  }
-
-  int _readInt(dynamic value) {
-    if (value is int) return value;
-    if (value is num) return value.toInt();
-    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 }
 

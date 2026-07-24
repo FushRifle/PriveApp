@@ -8,11 +8,13 @@ import 'package:flutter/material.dart';
 class PostMedia extends StatelessWidget {
   final FeedPost post;
   final bool isDetailView;
+  final bool isActive;
 
   const PostMedia({
     super.key,
     required this.post,
     this.isDetailView = false,
+    this.isActive = true,
   });
 
   @override
@@ -51,6 +53,7 @@ class PostMedia extends StatelessWidget {
                     'video' => PostVideo(
                         post: post,
                         attachment: attachment,
+                        isActive: isActive,
                       ),
                     'document' || 'file' || 'pdf' => PostDocument(
                         post: post,

@@ -9,11 +9,13 @@ import 'package:video_player/video_player.dart';
 class PostVideo extends StatefulWidget {
   final FeedPost post;
   final Attachment attachment;
+  final bool isActive;
 
   const PostVideo({
     super.key,
     required this.post,
     required this.attachment,
+    this.isActive = true,
   });
 
   @override
@@ -35,16 +37,26 @@ class _PostVideoState extends State<PostVideo>
   void initState() {
     super.initState();
 
-    _initializeVideo();
+    if (widget.isActive) {
+      _initializeVideo();
+    }
   }
 
   @override
   void didUpdateWidget(covariant PostVideo oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (oldWidget.attachment.url != widget.attachment.url) {
+    final urlChanged = oldWidget.attachment.url != widget.attachment.url;
+
+    if (urlChanged) {
       _disposeController();
+      if (widget.isActive) {
+        _initializeVideo();
+      }
+    } else if (!oldWidget.isActive && widget.isActive) {
       _initializeVideo();
+    } else if (oldWidget.isActive && !widget.isActive) {
+      _disposeController();
     }
   }
 

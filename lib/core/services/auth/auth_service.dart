@@ -12,6 +12,9 @@ import 'package:clique/core/services/auth/auth_session_manager.dart';
 
 class AuthService {
   static const Duration _authTimeout = Duration(seconds: 25);
+  // Email verification is intentionally paused while the app is in testing.
+  // Keep authentication session-based; do not route users through an OTP UI.
+  static const bool _requireEmailVerification = false;
 
   final ApiService _api = ApiService();
   final AuthSessionManager _sessionManager = AuthSessionManager.instance;
@@ -87,8 +90,7 @@ class AuthService {
 
       final token = session.accessToken;
 
-      // Check if email is verified
-      if (user.confirmedAt == null) {
+      if (_requireEmailVerification && user.confirmedAt == null) {
         await SupabaseConfig.client.auth.signOut();
         _api.clearAuthToken();
         return AuthResult(
@@ -177,24 +179,41 @@ class AuthService {
         );
       }
 
-      // Email confirmation is temporarily disabled in the app signup flow.
-      // A session is still required because onboarding uses authenticated APIs.
-      if (session == null) {
+      var activeSession = session;
+      var activeUser = user;
+
+      // During testing, complete registration silently by acquiring the session
+      // immediately. This succeeds when email confirmation is disabled in
+      // Supabase and avoids exposing a verification step in the app.
+      if (activeSession == null && !_requireEmailVerification) {
+        final signInResponse = await SupabaseConfig.client.auth
+            .signInWithPassword(
+              email: normalizedEmail,
+              password: password,
+            )
+            .timeout(_authTimeout);
+        activeSession = signInResponse.session;
+        activeUser = signInResponse.user ?? user;
+      }
+
+      if (activeSession == null) {
         return AuthResult(
           success: false,
-          needsVerification: true,
-          error: 'Account created, but no session was returned. Disable email '
-              'confirmation in Supabase while verification is paused.',
+          needsVerification: _requireEmailVerification,
+          error: _requireEmailVerification
+              ? 'Please verify your email before signing in.'
+              : 'Account created, but testing sign-in is unavailable. Disable '
+                  'email confirmation in Supabase for the test environment.',
         );
       }
 
-      final token = session.accessToken;
+      final token = activeSession.accessToken;
 
       _api.setAuthToken(token);
 
       try {
         await _bootstrapBackendUser(
-          user,
+          activeUser,
           firstName: trimmedFirstName,
           lastName: trimmedLastName,
         );
@@ -221,8 +240,8 @@ class AuthService {
         success: true,
         token: token,
         user: {
-          'id': user.id,
-          'email': user.email,
+          'id': activeUser.id,
+          'email': activeUser.email,
           'firstName': trimmedFirstName,
           'lastName': trimmedLastName,
         },

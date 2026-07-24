@@ -1,9 +1,9 @@
 import 'dart:async';
 
+import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/core/models/feeds_models.dart';
-import 'package:clique/core/services/user/user_service.dart';
 import 'package:clique/core/services/home/feed_service.dart';
 import 'package:clique/ui/widgets/post/anonymous/anonymous_post_card.dart';
 import 'package:clique/ui/pages/main/home/edit_post_page.dart';
@@ -39,7 +39,6 @@ class CardPost extends StatefulWidget {
 }
 
 class _CardPostState extends State<CardPost> {
-  final UserService _userService = UserService();
   final FeedService _feedService = FeedService();
   final GlobalKey _likeActionKey = GlobalKey();
   late bool _isLiked;
@@ -58,8 +57,20 @@ class _CardPostState extends State<CardPost> {
   DateTime? _lastViewSyncAt;
   double _visibleFraction = 0;
   bool _isViewRequestInFlight = false;
+  bool _isMediaVisible = false;
 
   bool get _hasMedia => widget.post.attachments.isNotEmpty;
+  bool get _showsVideo {
+    final attachments = widget.post.attachments;
+    final hasImage = attachments.any(
+      (attachment) => attachment.type.toLowerCase() == 'image',
+    );
+    return !hasImage &&
+        attachments.any(
+          (attachment) => attachment.type.toLowerCase() == 'video',
+        );
+  }
+
   bool get _canEditPost =>
       _isOwnPost &&
       DateTime.now().difference(widget.post.createdAt) <=
@@ -70,7 +81,7 @@ class _CardPostState extends State<CardPost> {
     super.initState();
 
     _syncPostState();
-    _loadOwnership();
+    _syncOwnership();
   }
 
   @override
@@ -93,6 +104,8 @@ class _CardPostState extends State<CardPost> {
       _viewSyncTimer?.cancel();
       _visibleFraction = 0;
       _lastViewSyncAt = null;
+      _isMediaVisible = false;
+      _syncOwnership();
     }
   }
 
@@ -122,15 +135,11 @@ class _CardPostState extends State<CardPost> {
     }
   }
 
-  Future<void> _loadOwnership() async {
-    try {
-      final user = await _userService.getCurrentUser();
-      final currentUserId = _readInt(user['id']);
-      if (!mounted || currentUserId <= 0) return;
-      setState(() {
-        _isOwnPost = widget.post.user.id == currentUserId;
-      });
-    } catch (_) {}
+  void _syncOwnership() {
+    final currentUserId = _readInt(
+      context.read<AuthBloc>().state.user?['id'],
+    );
+    _isOwnPost = currentUserId > 0 && widget.post.user.id == currentUserId;
   }
 
   int _readInt(dynamic value) {
@@ -174,6 +183,11 @@ class _CardPostState extends State<CardPost> {
 
   void _onVisibilityChanged(VisibilityInfo info) {
     _visibleFraction = info.visibleFraction;
+    final mediaVisible = _showsVideo && info.visibleFraction > 0.02;
+    if (_isMediaVisible != mediaVisible && mounted) {
+      setState(() => _isMediaVisible = mediaVisible);
+    }
+
     if (_visibleFraction < 0.55) {
       _viewSyncTimer?.cancel();
       _viewSyncTimer = null;
@@ -588,7 +602,7 @@ class _CardPostState extends State<CardPost> {
               ),
               borderRadius: BorderRadius.circular(30),
             ),
-            clipBehavior: Clip.antiAlias,
+            clipBehavior: Clip.hardEdge,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -622,6 +636,7 @@ class _CardPostState extends State<CardPost> {
                   PostMedia(
                     post: widget.post,
                     isDetailView: widget.isDetailView,
+                    isActive: widget.isDetailView || _isMediaVisible,
                   ),
                 PostActions(
                   isLiked: _isLiked,

@@ -186,7 +186,7 @@ class _MainWrapperState extends State<MainWrapper>
           _onTabChanged(0);
         },
         child: Scaffold(
-          backgroundColor: Colors.transparent,
+          backgroundColor: AppColors.background,
           body: Stack(
             children: [
               Positioned.fill(

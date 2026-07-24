@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
+import 'package:clique/bloc/reels/reel_bloc.dart';
 import 'package:clique/core/clients/cloudinary_service.dart';
 import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/core/services/media_service.dart';
@@ -16,6 +17,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
+import 'package:clique/ui/pages/main/reels/create_reel_page.dart';
+
+enum _VideoPostDestination { post, reel }
 
 class CreatePostPage extends StatefulWidget {
   final Map<String, dynamic>? initialDraft;
@@ -219,41 +223,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
         body: SafeArea(
           child: Stack(
             children: [
-              Positioned(
-                top: -90,
-                right: -70,
-                child: Container(
-                  width: 220,
-                  height: 220,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        AppColors.primary.withOpacity(0.12),
-                        AppColors.transparent,
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: -100,
-                left: -80,
-                child: Container(
-                  width: 240,
-                  height: 240,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        AppColors.secondary.withOpacity(0.10),
-                        AppColors.transparent,
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              // Main content
               Column(
                 children: [
                   _Header(
@@ -612,15 +581,29 @@ class _CreatePostPageState extends State<CreatePostPage> {
           maxDuration: const Duration(minutes: 2),
         );
         if (pickedFile == null) return;
+        if (!mounted) return;
+
+        final destination = source == ImageSource.gallery
+            ? await _chooseVideoDestination()
+            : _VideoPostDestination.post;
+        if (destination == null || !mounted) return;
+
+        if (destination == _VideoPostDestination.reel) {
+          await _openReelComposer(pickedFile);
+          return;
+        }
+
         final bytes = kIsWeb ? await pickedFile.readAsBytes() : null;
         if (!mounted) return;
         setState(() {
-          _mediaItems.add(MediaItem(
-            file: kIsWeb ? null : File(pickedFile.path),
-            fileBytes: bytes,
-            fileName: pickedFile.name,
-            type: type,
-          ));
+          _mediaItems.add(
+            MediaItem(
+              file: kIsWeb ? null : File(pickedFile.path),
+              fileBytes: bytes,
+              fileName: pickedFile.name,
+              type: type,
+            ),
+          );
         });
       }
       _scheduleDraftSave();
@@ -629,6 +612,80 @@ class _CreatePostPageState extends State<CreatePostPage> {
     } finally {
       if (mounted) setState(() => _isPicking = false);
     }
+  }
+
+  Future<_VideoPostDestination?> _chooseVideoDestination() {
+    return showModalBottomSheet<_VideoPostDestination>(
+      context: context,
+      backgroundColor: AppColors.cardColor,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'How would you like to share it?',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  leading: const Icon(Icons.post_add_rounded),
+                  title: const Text('Post as post'),
+                  subtitle: const Text('Add the video to your regular post'),
+                  onTap: () => Navigator.pop(
+                    sheetContext,
+                    _VideoPostDestination.post,
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.play_circle_fill_rounded),
+                  title: const Text('Post as reel'),
+                  subtitle: const Text('Open the reel editor with this video'),
+                  onTap: () => Navigator.pop(
+                    sheetContext,
+                    _VideoPostDestination.reel,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _openReelComposer(XFile pickedFile) async {
+    if (kIsWeb) {
+      _showSnackBar(
+        'Posting this video as a reel is not available on web yet.',
+        isError: true,
+      );
+      return;
+    }
+
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        settings: const RouteSettings(name: 'create_reel_from_post_composer'),
+        builder: (_) => BlocProvider(
+          create: (_) => ReelBloc(),
+          child: CreateReelPage(
+            initialVideoFile: File(pickedFile.path),
+            initialCaption: _textController.text.trim(),
+          ),
+        ),
+      ),
+    );
+
+    if (created != true || !mounted) return;
+    await _draftService.deleteDraft(_draftId);
+    if (mounted) Navigator.pop(context, true);
   }
 
   // --- Post Submission -------------------------------------------------------
@@ -983,45 +1040,65 @@ class _ComposerSection extends StatelessWidget {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: EdgeInsets.fromLTRB(
-          16, 20, 16, 24 + MediaQuery.viewInsetsOf(context).bottom),
+        16,
+        4,
+        16,
+        28 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Post type selector
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: PostComposerType.values.map((type) {
-              final selected = type == postType;
-              return ChoiceChip(
-                label: Text(type.label),
-                selected: selected,
-                onSelected: enabled
-                    ? (_) {
-                        HapticFeedback.selectionClick();
-                        onPostTypeChanged(type);
-                      }
-                    : null,
-                labelStyle: TextStyle(
-                  color: selected ? AppColors.white : AppColors.text,
-                  fontWeight: FontWeight.w700,
-                ),
-                selectedColor: AppColors.primary,
-                backgroundColor: AppColors.cardColor,
-                side: BorderSide(color: AppColors.cardBorderColor),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(999)),
-              );
-            }).toList(),
+          Text(
+            'Choose a format',
+            style: AppTheme.greyTextStyle.copyWith(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-          // Anonymous category (only if applicable)
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 46,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: PostComposerType.values.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final type = PostComposerType.values[index];
+                final selected = type == postType;
+                return ChoiceChip(
+                  label: Text(type.label),
+                  selected: selected,
+                  onSelected: enabled
+                      ? (_) {
+                          HapticFeedback.selectionClick();
+                          onPostTypeChanged(type);
+                        }
+                      : null,
+                  labelStyle: TextStyle(
+                    color: selected ? AppColors.white : AppColors.text,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  selectedColor: AppColors.primary,
+                  backgroundColor: AppColors.cardColor,
+                  side: BorderSide(color: AppColors.cardBorderColor),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                );
+              },
+            ),
+          ),
           if (postType == PostComposerType.anonymous) ...[
-            const SizedBox(height: 18),
-            Text('Anonymous Category',
-                style: AppTheme.blackTextStyle
-                    .copyWith(fontSize: 13, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 14),
+            Text(
+              'Anonymous category',
+              style: AppTheme.blackTextStyle.copyWith(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
             const SizedBox(height: 10),
             Wrap(
               spacing: 10,
@@ -1048,48 +1125,166 @@ class _ComposerSection extends StatelessWidget {
                   ),
                   side: BorderSide(color: AppColors.cardBorderColor),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(999)),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
                 );
               }).toList(),
             ),
           ],
-          const SizedBox(height: 20),
-          // Main text field
-          TokenSuggestionField(
-            controller: textController,
-            enabled: enabled,
-            suggestionsBuilder: suggestionsBuilder,
-            minLines: 4,
-            maxLines: null,
-            style: AppTheme.blackTextStyle.copyWith(
-                fontSize: 16, height: 1.42, fontWeight: FontWeight.w500),
-            decoration: InputDecoration(
-              hintText: _composerHint(postType),
-              hintStyle: AppTheme.greyTextStyle.copyWith(
-                  fontSize: 16,
-                  color: AppColors.textSecondary.withOpacity(0.55)),
-              border: InputBorder.none,
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+            decoration: BoxDecoration(
+              color: AppColors.cardColor,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppColors.cardBorderColor),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TokenSuggestionField(
+                  controller: textController,
+                  enabled: enabled,
+                  suggestionsBuilder: suggestionsBuilder,
+                  minLines: 6,
+                  maxLines: null,
+                  style: AppTheme.blackTextStyle.copyWith(
+                    fontSize: 16,
+                    height: 1.42,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: _composerHint(postType),
+                    hintStyle: AppTheme.greyTextStyle.copyWith(
+                      fontSize: 16,
+                      color: AppColors.textSecondary.withOpacity(0.55),
+                    ),
+                    border: InputBorder.none,
+                  ),
+                ),
+                if (postType == PostComposerType.poll) ...[
+                  const SizedBox(height: 14),
+                  _PollComposerPanel(
+                    enabled: enabled,
+                    optionControllers: pollOptionControllers,
+                    expirationHours: pollExpirationHours,
+                    onExpirationHoursChanged: onPollExpirationHoursChanged,
+                    onAddOption: onAddPollOption,
+                    onRemoveOption: onRemovePollOption,
+                  ),
+                ],
+                if (postType == PostComposerType.question) ...[
+                  const SizedBox(height: 14),
+                  _QuestionPromptPanel(enabled: enabled),
+                ],
+                if (mediaItems.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Divider(color: AppColors.cardBorderColor),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 120,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: mediaItems.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        final item = mediaItems[index];
+                        return Stack(
+                          children: [
+                            Container(
+                              width: 100,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: AppColors.cardBorderColor,
+                                ),
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: item.type == MediaType.image
+                                  ? (kIsWeb && item.fileBytes != null
+                                      ? Image.memory(
+                                          item.fileBytes!,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : item.file != null
+                                          ? Image.file(
+                                              item.file!,
+                                              fit: BoxFit.cover,
+                                            )
+                                          : const Icon(Icons.image))
+                                  : const Icon(Icons.videocam, size: 40),
+                            ),
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: GestureDetector(
+                                onTap: () => onRemoveMedia(index),
+                                child: Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.black54,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.close,
+                                    size: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          // Poll panel
-          if (postType == PostComposerType.poll) ...[
-            const SizedBox(height: 14),
-            _PollComposerPanel(
-              enabled: enabled,
-              optionControllers: pollOptionControllers,
-              expirationHours: pollExpirationHours,
-              onExpirationHoursChanged: onPollExpirationHoursChanged,
-              onAddOption: onAddPollOption,
-              onRemoveOption: onRemovePollOption,
+          const SizedBox(height: 16),
+          Text(
+            'Add media',
+            style: AppTheme.greyTextStyle.copyWith(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
             ),
-          ],
-          // Question prompt
-          if (postType == PostComposerType.question) ...[
-            const SizedBox(height: 14),
-            _QuestionPromptPanel(enabled: enabled),
-          ],
-          const SizedBox(height: 12),
-          // Hashtags
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _MediaButton(
+                icon: Icons.photo_library,
+                label: 'Gallery',
+                onTap: onPickImage,
+              ),
+              const SizedBox(width: 12),
+              _MediaButton(
+                icon: Icons.camera_alt,
+                label: 'Camera',
+                onTap: onPickCamera,
+              ),
+              const SizedBox(width: 12),
+              _MediaButton(
+                icon: Icons.videocam,
+                label: 'Video',
+                onTap: onPickVideo,
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Divider(color: AppColors.cardBorderColor),
+          const SizedBox(height: 18),
+          Text(
+            'Topics',
+            style: AppTheme.greyTextStyle.copyWith(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
           _HashtagInput(
             controller: hashtagController,
             hashtags: hashtags,
@@ -1098,73 +1293,6 @@ class _ComposerSection extends StatelessWidget {
             onAddHashtag: onAddHashtag,
             onRemoveHashtag: onRemoveHashtag,
             suggestionsBuilder: suggestionsBuilder,
-          ),
-          const SizedBox(height: 16),
-          // Media attachments (inline thumbnails)
-          if (mediaItems.isNotEmpty) ...[
-            SizedBox(
-              height: 120,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: mediaItems.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (context, index) {
-                  final item = mediaItems[index];
-                  return Stack(
-                    children: [
-                      Container(
-                        width: 100,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.cardBorderColor),
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: item.type == MediaType.image
-                            ? (kIsWeb && item.fileBytes != null
-                                ? Image.memory(item.fileBytes!,
-                                    fit: BoxFit.cover)
-                                : item.file != null
-                                    ? Image.file(item.file!, fit: BoxFit.cover)
-                                    : const Icon(Icons.image))
-                            : const Icon(Icons.videocam, size: 40),
-                      ),
-                      Positioned(
-                        top: 4,
-                        right: 4,
-                        child: GestureDetector(
-                          onTap: () => onRemoveMedia(index),
-                          child: Container(
-                            width: 24,
-                            height: 24,
-                            decoration: const BoxDecoration(
-                              color: Colors.black54,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.close,
-                                size: 16, color: Colors.white),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-          Row(
-            children: [
-              _MediaButton(
-                  icon: Icons.photo_library,
-                  label: 'Gallery',
-                  onTap: onPickImage),
-              const SizedBox(width: 12),
-              _MediaButton(
-                  icon: Icons.camera_alt, label: 'Camera', onTap: onPickCamera),
-              const SizedBox(width: 12),
-              _MediaButton(
-                  icon: Icons.videocam, label: 'Video', onTap: onPickVideo),
-            ],
           ),
         ],
       ),

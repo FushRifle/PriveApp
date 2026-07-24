@@ -481,7 +481,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
     final isActive = _hasText;
     final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surfaceColor = isDark ? AppColors.darkCard : AppColors.white;
+    final surfaceColor = isDark ? AppColors.transparent : AppColors.white;
     final fieldColor =
         isDark ? AppColors.darkBackgroundPress : AppColors.inputLightBackground;
 
@@ -506,14 +506,21 @@ class _ChatInputBarState extends State<ChatInputBar> {
                   children: [
                     Material(
                       color: AppColors.transparent,
+                      shape: const CircleBorder(),
+                      clipBehavior: Clip.antiAlias,
                       child: InkWell(
                         onTap: _showAttachmentMenu,
-                        borderRadius: BorderRadius.circular(24),
+                        customBorder: const CircleBorder(),
                         child: Container(
-                          padding: const EdgeInsets.all(8),
+                          width: 48,
+                          height: 48,
+                          decoration: const BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                          ),
                           child: Icon(
                             Icons.add_circle_outline,
-                            color: AppColors.primary,
+                            color: AppColors.white,
                             size: 26,
                           ),
                         ),

@@ -507,10 +507,18 @@ class _ChatPageState extends State<ChatPage>
                                           ),
                                         );
                                       }
+
                                       final message = messages[index];
                                       return Column(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
+                                          if (_shouldShowDateSeparator(
+                                              messages, index))
+                                            _DateSeparator(
+                                              label: _formatMessageDate(
+                                                message.createdAt,
+                                              ),
+                                            ),
                                           MessageBubble(
                                             message: message,
                                             userAvatar: widget.userAvatar,
@@ -526,13 +534,6 @@ class _ChatPageState extends State<ChatPage>
                                                             .conversationId))
                                                 : null,
                                           ),
-                                          if (_shouldShowDateSeparator(
-                                              messages, index))
-                                            _DateSeparator(
-                                              label: _formatMessageDate(
-                                                message.createdAt,
-                                              ),
-                                            ),
                                         ],
                                       );
                                     },
