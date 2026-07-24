@@ -645,7 +645,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         isDisabled: _isBusy,
                         onTap: () => _showImagePickerOptions(false),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 1),
                       _ProfilePictureSection(
                         profile: profile,
                         selectedAvatarFile: _selectedAvatarFile,

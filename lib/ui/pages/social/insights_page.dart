@@ -15,7 +15,6 @@ class InsightsPage extends StatefulWidget {
 
 class _InsightsPageState extends State<InsightsPage>
     with SingleTickerProviderStateMixin {
-  final List<int> _daysOptions = [7, 14, 30, 60, 90];
   int _selectedChartTab = 0;
 
   @override
@@ -88,8 +87,13 @@ class _InsightsPageState extends State<InsightsPage>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (state.realtimeStats != null)
-                          _buildRealtimeIndicator(state),
+                        _buildPerformanceHero(state),
+                        const SizedBox(height: 24),
+                        _buildSectionTitle(
+                          'Overview',
+                          'A snapshot of your account performance',
+                        ),
+                        const SizedBox(height: 12),
                         _buildOverviewCards(state),
                         const SizedBox(height: 24),
                         _buildChartSection(state),
@@ -117,50 +121,11 @@ class _InsightsPageState extends State<InsightsPage>
   }
 
   Widget _buildHeader() {
-    return BlocBuilder<InsightsBloc, InsightsState>(
-      builder: (context, state) {
-        return AppPageHeader(
-          title: 'Insights',
-          subtitle: 'Last ${state.currentPeriodDays} days',
-          leadingIcon: Icons.arrow_back_ios_new,
-          onLeadingTap: () => Navigator.pop(context),
-          action: PopupMenuButton<int>(
-            icon: Icon(
-              Icons.calendar_today_outlined,
-              color: AppColors.text,
-            ),
-            color: AppColors.cardColor,
-            onSelected: (days) {
-              context
-                  .read<InsightsBloc>()
-                  .add(ChangeInsightsPeriod(days: days));
-            },
-            itemBuilder: (context) => [
-              for (int days in _daysOptions)
-                PopupMenuItem<int>(
-                  value: days,
-                  child: Row(
-                    children: [
-                      Radio<int>(
-                        value: days,
-                        groupValue: state.currentPeriodDays,
-                        onChanged: (_) {
-                          context
-                              .read<InsightsBloc>()
-                              .add(ChangeInsightsPeriod(days: days));
-                          Navigator.pop(context);
-                        },
-                        activeColor: AppColors.primary,
-                      ),
-                      const SizedBox(width: 8),
-                      Text('Last $days days'),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
+    return AppPageHeader(
+      title: 'Insights',
+      subtitle: 'Your performance and audience',
+      leadingIcon: Icons.arrow_back_ios_new,
+      onLeadingTap: () => Navigator.pop(context),
     );
   }
 
@@ -183,36 +148,123 @@ class _InsightsPageState extends State<InsightsPage>
     );
   }
 
-  Widget _buildRealtimeIndicator(InsightsState state) {
+  Widget _buildPerformanceHero(InsightsState state) {
+    final viewers = state.realtimeStats?.onlineViewers ?? 0;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      margin: const EdgeInsets.only(bottom: 16),
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.secondary.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.primary,
+            AppColors.secondary.withOpacity(0.9),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.githubGreen,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: AppColors.white.withOpacity(0.16),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.insights_rounded,
+                  color: AppColors.white,
+                  size: 22,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.white.withOpacity(0.16),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  'Last ${state.currentPeriodDays} days',
+                  style: const TextStyle(
+                    color: AppColors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          Text(
-            'Live: ${state.realtimeStats?.onlineViewers ?? 0} viewers online',
+          const SizedBox(height: 20),
+          const Text(
+            'Performance dashboard',
             style: TextStyle(
-              color: AppColors.text,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+              color: AppColors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
             ),
           ),
+          const SizedBox(height: 5),
+          Text(
+            'See how people discover and interact with your content.',
+            style: TextStyle(
+              color: AppColors.white.withOpacity(0.78),
+              fontSize: 13,
+            ),
+          ),
+          if (state.realtimeStats != null) ...[
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.githubGreen,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '$viewers ${viewers == 1 ? 'viewer' : 'viewers'} online now',
+                  style: const TextStyle(
+                    color: AppColors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title, String subtitle) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: AppTheme.blackTextStyle.copyWith(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          subtitle,
+          style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
+        ),
+      ],
     );
   }
 
@@ -286,59 +338,81 @@ class _InsightsPageState extends State<InsightsPage>
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: AppColors.cardColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: color.withOpacity(0.18)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: AppTheme.blackTextStyle.copyWith(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 4),
           Row(
             children: [
-              Icon(
-                isPositive ? Icons.arrow_upward : Icons.arrow_downward,
-                size: 12,
-                color: isPositive ? AppColors.greenColor : AppColors.redColor,
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.11),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 18),
               ),
-              const SizedBox(width: 2),
-              Text(
-                '${isPositive ? '+' : ''}${change.toStringAsFixed(1)}%',
-                style: TextStyle(
-                  color: isPositive ? AppColors.greenColor : AppColors.redColor,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                decoration: BoxDecoration(
+                  color:
+                      (isPositive ? AppColors.greenColor : AppColors.redColor)
+                          .withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isPositive
+                          ? Icons.arrow_upward_rounded
+                          : Icons.arrow_downward_rounded,
+                      size: 10,
+                      color: isPositive
+                          ? AppColors.greenColor
+                          : AppColors.redColor,
+                    ),
+                    const SizedBox(width: 2),
+                    Text(
+                      '${change.abs().toStringAsFixed(1)}%',
+                      style: TextStyle(
+                        color: isPositive
+                            ? AppColors.greenColor
+                            : AppColors.redColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 14),
+          Text(
+            value,
+            style: AppTheme.blackTextStyle.copyWith(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(title, style: AppTheme.greyTextStyle.copyWith(fontSize: 11)),
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTheme.greyTextStyle.copyWith(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
@@ -352,24 +426,47 @@ class _InsightsPageState extends State<InsightsPage>
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.cardColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Performance Overview',
-            style: AppTheme.blackTextStyle.copyWith(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.11),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.show_chart_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Performance',
+                      style: AppTheme.blackTextStyle.copyWith(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      'Daily activity across your content',
+                      style: AppTheme.greyTextStyle.copyWith(fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           _buildChartTabs(),
@@ -580,49 +677,70 @@ class _InsightsPageState extends State<InsightsPage>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.cardColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.primary.withOpacity(0.13),
+            AppColors.secondary.withOpacity(0.06),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.primary.withOpacity(0.18)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Engagement Rate',
-              style: AppTheme.greyTextStyle.copyWith(fontSize: 14)),
-          const SizedBox(height: 8),
           Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.13),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.bolt_rounded,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Engagement rate',
+                      style: AppTheme.blackTextStyle.copyWith(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      'Previous ${insights.previousEngagementRate.toStringAsFixed(1)}%',
+                      style: AppTheme.greyTextStyle.copyWith(fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
               Text(
                 '${insights.engagementRate.toStringAsFixed(1)}%',
                 style: AppTheme.blackTextStyle.copyWith(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  'vs ${insights.previousEngagementRate.toStringAsFixed(1)}%',
-                  style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
+                  fontSize: 30,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 18),
           LinearProgressIndicator(
-            value: insights.engagementRate / 100,
+            value: (insights.engagementRate / 100).clamp(0.0, 1.0),
             backgroundColor: AppColors.greyColor.withOpacity(0.1),
             valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-            minHeight: 8,
-            borderRadius: BorderRadius.circular(4),
+            minHeight: 9,
+            borderRadius: BorderRadius.circular(999),
           ),
         ],
       ),
@@ -638,22 +756,17 @@ class _InsightsPageState extends State<InsightsPage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Audience',
-            style: AppTheme.blackTextStyle
-                .copyWith(fontSize: 16, fontWeight: FontWeight.bold)),
+        _buildSectionTitle(
+          'Audience',
+          'Who is interacting with your content',
+        ),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: AppColors.cardColor,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.black.withOpacity(0.03),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.border),
           ),
           child: Column(
             children: [
@@ -704,22 +817,17 @@ class _InsightsPageState extends State<InsightsPage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Top Locations',
-            style: AppTheme.blackTextStyle
-                .copyWith(fontSize: 16, fontWeight: FontWeight.bold)),
+        _buildSectionTitle(
+          'Top locations',
+          'Where your audience is based',
+        ),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: AppColors.cardColor,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.black.withOpacity(0.03),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.border),
           ),
           child: Column(
             children: List.generate(
@@ -763,22 +871,17 @@ class _InsightsPageState extends State<InsightsPage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Age Range',
-            style: AppTheme.blackTextStyle
-                .copyWith(fontSize: 16, fontWeight: FontWeight.bold)),
+        _buildSectionTitle(
+          'Age range',
+          'The age distribution of your audience',
+        ),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: AppColors.cardColor,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.black.withOpacity(0.03),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.border),
           ),
           child: Column(
             children: List.generate(
