@@ -253,6 +253,10 @@ class _VideoFallback extends StatelessWidget {
       return CachedNetworkImage(
         imageUrl: image,
         fit: BoxFit.cover,
+        memCacheWidth: 1080,
+        memCacheHeight: 1080,
+        fadeInDuration: Duration.zero,
+        fadeOutDuration: Duration.zero,
         placeholder: (_, __) => _placeholder(),
         errorWidget: (_, __, ___) => _placeholder(),
       );
@@ -266,9 +270,10 @@ class _VideoFallback extends StatelessWidget {
       color: AppColors.black,
       child: Center(
         child: isLoading
-            ? CircularProgressIndicator(
-                color: AppColors.textSecondary,
-                strokeWidth: 2,
+            ? const Icon(
+                Icons.play_circle_outline_rounded,
+                color: AppColors.white24,
+                size: 48,
               )
             : Icon(
                 Icons.video_library_outlined,

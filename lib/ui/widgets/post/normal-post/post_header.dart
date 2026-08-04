@@ -131,6 +131,10 @@ class _PostAvatar extends StatelessWidget {
                 ? CachedNetworkImage(
                     imageUrl: avatar,
                     fit: BoxFit.cover,
+                    memCacheWidth: 144,
+                    memCacheHeight: 144,
+                    fadeInDuration: Duration.zero,
+                    fadeOutDuration: Duration.zero,
                     placeholder: (_, __) => _AvatarFallback(text: fallback),
                     errorWidget: (_, __, ___) =>
                         _AvatarFallback(text: fallback),

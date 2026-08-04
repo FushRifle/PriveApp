@@ -824,13 +824,11 @@ class _CreatePostPageState extends State<CreatePostPage> {
     if (media.type == MediaType.image) {
       url = await _cloudinaryService.uploadImage(
         file,
-        customFolder: 'posts',
         onProgress: _onUploadProgress,
       );
     } else if (media.type == MediaType.video) {
       url = await _cloudinaryService.uploadVideo(
         file,
-        customFolder: 'posts',
         onProgress: _onUploadProgress,
       );
     }

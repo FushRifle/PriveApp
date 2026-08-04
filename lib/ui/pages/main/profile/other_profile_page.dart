@@ -336,8 +336,7 @@ class _OtherProfilePageState extends State<OtherProfilePage>
                   profile: profile,
                   isOwnProfile: false,
                   isFollowing: _isFollowing,
-                  isFollowRequested:
-                      _relationship?.hasPendingRequest ?? false,
+                  isFollowRequested: _relationship?.hasPendingRequest ?? false,
                   tabController: _tabController,
                   scrollController: _scrollController,
                   onRetry: _reloadProfile,
@@ -415,28 +414,37 @@ class _OtherProfileBody extends StatelessWidget {
         return [
           ProfileCoverHeader(
             profile: currentProfile,
+            isOwnProfile: false,
           ),
           const SliverToBoxAdapter(
             child: SizedBox(height: 24),
           ),
           SliverToBoxAdapter(
-            child: ProfileHeaderCard(
-              profile: currentProfile,
-              isOwnProfile: isOwnProfile,
-              isFollowing: isFollowing,
-              isFollowRequested: isFollowRequested,
-              onToggleFollow: onToggleFollow,
-              onMessage: onMessage,
-              onOpenAccountSwitcher: null,
-              onOpenInsights: null,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 760),
+                child: ProfileHeaderCard(
+                  profile: currentProfile,
+                  isOwnProfile: isOwnProfile,
+                  isFollowing: isFollowing,
+                  isFollowRequested: isFollowRequested,
+                  onToggleFollow: onToggleFollow,
+                  onMessage: onMessage,
+                  onOpenAccountSwitcher: null,
+                  onOpenInsights: null,
+                ),
+              ),
             ),
           ),
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _StickyTabBarDelegate(
-              tabController: tabController,
-              tabs: const ['Posts', 'Media'],
-            ),
+          ProfileStickyTabBar(
+            tabController: tabController,
+            tabs: const [
+              ProfileTabItem(label: 'Posts', icon: Icons.grid_view_rounded),
+              ProfileTabItem(
+                label: 'Media',
+                icon: Icons.perm_media_outlined,
+              ),
+            ],
           ),
         ];
       },
@@ -459,46 +467,5 @@ class _OtherProfileBody extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
-  final TabController tabController;
-  final List<String> tabs;
-
-  _StickyTabBarDelegate({
-    required this.tabController,
-    required this.tabs,
-  });
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      child: TabBar(
-        controller: tabController,
-        tabs: tabs.map((tab) => Tab(text: tab)).toList(),
-        labelColor: AppColors.primary,
-        unselectedLabelColor: AppColors.text.withOpacity(0.5),
-        indicatorColor: AppColors.primary,
-        indicatorWeight: 3,
-      ),
-    );
-  }
-
-  @override
-  double get maxExtent => 48;
-
-  @override
-  double get minExtent => 48;
-
-  @override
-  bool shouldRebuild(covariant _StickyTabBarDelegate oldDelegate) {
-    return tabController != oldDelegate.tabController ||
-        tabs != oldDelegate.tabs;
   }
 }

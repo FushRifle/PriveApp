@@ -210,7 +210,7 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
     try {
       final audioUrl = await _cloudinaryService.uploadAudio(
         file,
-        customFolder: 'audio',
+        customFolder: 'prive_comments',
       );
       if (!mounted) return;
 

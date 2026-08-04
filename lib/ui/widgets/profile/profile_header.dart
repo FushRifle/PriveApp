@@ -14,10 +14,12 @@ import 'package:clique/ui/pages/main/profile/edit_profile_page.dart';
 
 class ProfileCoverHeader extends StatelessWidget {
   final ProfileView profile;
+  final bool isOwnProfile;
 
   const ProfileCoverHeader({
     super.key,
     required this.profile,
+    required this.isOwnProfile,
   });
 
   @override
@@ -25,17 +27,38 @@ class ProfileCoverHeader extends StatelessWidget {
     final coverUrl = _coverUrl;
 
     return SliverAppBar(
-      expandedHeight: 130,
+      expandedHeight: 184,
       stretch: true,
       pinned: true,
-      backgroundColor: AppColors.black,
+      backgroundColor: AppColors.backgroundColor,
       elevation: 0,
-      leading: IconButton(
-        onPressed: () => Navigator.maybePop(context),
-        icon: Icon(
-          Icons.arrow_back_ios_new,
-          color: AppColors.primary,
-          size: 26,
+      leadingWidth: 64,
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 12, top: 6, bottom: 6),
+        child: Material(
+          color: AppColors.black.withOpacity(0.34),
+          shape: const CircleBorder(),
+          child: IconButton(
+            tooltip: 'Back',
+            onPressed: () => Navigator.maybePop(context),
+            icon: const Icon(
+              Icons.arrow_back_rounded,
+              color: AppColors.white,
+              size: 22,
+            ),
+          ),
+        ),
+      ),
+      titleSpacing: 8,
+      title: Text(
+        isOwnProfile ? 'My profile' : (profile.displayName ?? 'Profile'),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: AppColors.white,
+          fontSize: 16,
+          fontWeight: FontWeight.w800,
+          shadows: [Shadow(color: Color(0x66000000), blurRadius: 8)],
         ),
       ),
       flexibleSpace: FlexibleSpaceBar(
@@ -52,11 +75,11 @@ class ProfileCoverHeader extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    stops: const [0.0, 0.68, 1.0],
+                    stops: const [0.0, 0.55, 1.0],
                     colors: [
-                      AppColors.black.withOpacity(0.28),
+                      AppColors.black.withOpacity(0.46),
                       AppColors.transparent,
-                      AppColors.backgroundColor.withOpacity(0.88),
+                      AppColors.backgroundColor.withOpacity(0.94),
                     ],
                   ),
                 ),
@@ -192,7 +215,14 @@ class ProfileHeaderCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.card,
                 borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: AppColors.transparent),
+                border: Border.all(color: AppColors.border.withOpacity(0.55)),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.shadow.withOpacity(0.5),
+                    blurRadius: 24,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -204,7 +234,10 @@ class ProfileHeaderCard extends StatelessWidget {
                       const SizedBox(height: 68),
                       Positioned(
                         top: -30,
-                        child: ProfileAvatarBubble(profile: profile),
+                        child: ProfileAvatarBubble(
+                          profile: profile,
+                          radius: isCompact ? 50 : 58,
+                        ),
                       ),
                     ],
                   ),
@@ -240,10 +273,12 @@ class ProfileHeaderCard extends StatelessWidget {
 
 class ProfileAvatarBubble extends StatelessWidget {
   final ProfileView profile;
+  final double radius;
 
   const ProfileAvatarBubble({
     super.key,
     required this.profile,
+    this.radius = 58,
   });
 
   @override
@@ -265,10 +300,10 @@ class ProfileAvatarBubble extends StatelessWidget {
         ],
       ),
       child: CircleAvatar(
-        radius: 58,
+        radius: radius,
         backgroundColor: AppColors.card,
         child: CircleAvatar(
-          radius: 54,
+          radius: radius - 4,
           backgroundColor: AppColors.primary.withOpacity(0.1),
           backgroundImage: isOfficial || avatar.isEmpty
               ? null
@@ -329,6 +364,8 @@ class ProfileIdentityRow extends StatelessWidget {
         Text(
           profile.displayName ?? 'User',
           textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
           style: AppTheme.blackTextStyle.copyWith(
             fontSize: 17,
             fontWeight: FontWeight.w900,
@@ -343,26 +380,33 @@ class ProfileIdentityRow extends StatelessWidget {
                   onOpenAccountSwitcher!.call();
                 }
               : null,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                handle != null ? '@$handle' : profile.ageText,
-                style: AppTheme.greyTextStyle.copyWith(
-                  fontSize: 12,
-                  color: AppColors.secondary,
-                  fontWeight: FontWeight.w600,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 320),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    handle != null ? '@$handle' : profile.ageText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTheme.greyTextStyle.copyWith(
+                      fontSize: 12,
+                      color: AppColors.secondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
-              ),
-              if (isOwnProfile && onOpenAccountSwitcher != null) ...[
-                const SizedBox(width: 4),
-                Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  size: 18,
-                  color: AppColors.textSecondary,
-                ),
+                if (isOwnProfile && onOpenAccountSwitcher != null) ...[
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 18,
+                    color: AppColors.textSecondary,
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ],
@@ -438,26 +482,37 @@ class ProfileInfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.card.withOpacity(0.82),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.border.withOpacity(0.7)),
+    final availableWidth = MediaQuery.sizeOf(context).width - 64;
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: availableWidth.clamp(120.0, 420.0).toDouble(),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 13, color: AppColors.textSecondary),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: AppTheme.greyTextStyle.copyWith(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.card.withOpacity(0.82),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: AppColors.border.withOpacity(0.7)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: AppColors.textSecondary),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTheme.greyTextStyle.copyWith(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -857,13 +912,20 @@ class ProfileActionButton extends StatelessWidget {
                 ],
         ),
         child: Center(
-          child: Text(
-            text,
-            style: TextStyle(
-              color: textColor,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.6,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                text,
+                maxLines: 1,
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.6,
+                ),
+              ),
             ),
           ),
         ),
@@ -905,48 +967,115 @@ class ProfileIconActionButton extends StatelessWidget {
   }
 }
 
+class ProfileTabItem {
+  final String label;
+  final IconData icon;
+
+  const ProfileTabItem({required this.label, required this.icon});
+}
+
 class ProfileStickyTabBar extends StatelessWidget {
   final TabController tabController;
+  final List<ProfileTabItem> tabs;
+
   const ProfileStickyTabBar({
     super.key,
     required this.tabController,
+    required this.tabs,
   });
 
   @override
   Widget build(BuildContext context) {
-    const topPadding = 10.0;
-    const bottomPadding = 8.0;
-    final tabBar = TabBar(
-      controller: tabController,
-      indicatorColor: AppColors.secondary,
-      indicatorWeight: 4,
-      indicatorSize: TabBarIndicatorSize.label,
-      labelColor: AppColors.secondary,
-      unselectedLabelColor: AppColors.textSecondary,
-      splashFactory: NoSplash.splashFactory,
-      overlayColor: WidgetStatePropertyAll<Color>(AppColors.transparent),
-      tabs: [
-        const Tab(icon: Icon(Icons.grid_on_rounded), text: 'Posts'),
-        const Tab(icon: Icon(Icons.movie_filter_outlined), text: 'Media'),
-        const Tab(icon: Icon(Icons.bookmark_border_rounded), text: 'Saved'),
-        const Tab(icon: Icon(Icons.drafts_outlined), text: 'Drafts'),
-      ],
-    );
-
     return SliverPersistentHeader(
       pinned: true,
       delegate: ProfileSliverHeaderDelegate(
-        SizedBox(
-          height: tabBar.preferredSize.height + topPadding + bottomPadding,
-          child: Padding(
-            padding: const EdgeInsets.only(
-              top: topPadding,
-              bottom: bottomPadding,
-            ),
-            child: tabBar,
-          ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final showIconAndLabel =
+                tabs.length <= 2 || constraints.maxWidth >= 620;
+            final iconOnly = tabs.length > 2 && constraints.maxWidth < 360;
+
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 760),
+                child: Container(
+                  margin: const EdgeInsets.fromLTRB(12, 9, 12, 7),
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: AppColors.card,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: AppColors.border.withOpacity(0.6),
+                    ),
+                  ),
+                  child: TabBar(
+                    controller: tabController,
+                    dividerColor: AppColors.transparent,
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    indicator: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.2),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    labelColor: AppColors.white,
+                    unselectedLabelColor: AppColors.textSecondary,
+                    labelStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    unselectedLabelStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    splashFactory: NoSplash.splashFactory,
+                    overlayColor: const WidgetStatePropertyAll<Color>(
+                      AppColors.transparent,
+                    ),
+                    tabs: tabs
+                        .map(
+                          (tab) => Tab(
+                            height: 42,
+                            child: Tooltip(
+                              message: tab.label,
+                              child: showIconAndLabel
+                                  ? Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(tab.icon, size: 18),
+                                        const SizedBox(width: 7),
+                                        Flexible(
+                                          child: Text(
+                                            tab.label,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : iconOnly
+                                      ? Icon(tab.icon, size: 20)
+                                      : Text(
+                                          tab.label,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+              ),
+            );
+          },
         ),
-        tabBar.preferredSize.height + topPadding + bottomPadding,
+        62,
       ),
     );
   }

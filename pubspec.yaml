@@ -26,7 +26,7 @@ dependencies:
   # Image & Media
   flutter_blurhash: ^0.9.1
   image_picker: ^1.0.7
-  image_cropper: ^9.1.0
+  image_cropper: ^12.2.1
   mime: ^2.0.0
   fl_chart: ^1.2.0
 
@@ -76,7 +76,7 @@ dependencies:
   simple_animations: ^5.0.2
   equatable: ^2.0.8
   bloc: ^9.2.0
-  open_file: ^3.5.11
+  open_file: ^4.0.0
   file_picker: ^11.0.2 
   url_launcher: ^6.3.2
   share_plus: ^12.0.2

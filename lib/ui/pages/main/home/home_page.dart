@@ -260,7 +260,8 @@ class _HomePageState extends State<HomePage>
             onRefresh: _refresh,
             child: CustomScrollView(
               controller: _scrollController,
-              cacheExtent: 400,
+              cacheExtent: 900,
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ),
@@ -329,6 +330,7 @@ class _HomePageState extends State<HomePage>
                         SliverPadding(
                           padding: const EdgeInsets.symmetric(horizontal: 10),
                           sliver: SliverList.separated(
+                            addAutomaticKeepAlives: false,
                             itemCount: posts.length + (posts.length ~/ 6),
                             separatorBuilder: (_, __) =>
                                 const SizedBox(height: 16),
@@ -718,6 +720,10 @@ class _SuggestionAvatar extends StatelessWidget {
             ? CachedNetworkImage(
                 imageUrl: user.avatar,
                 fit: BoxFit.cover,
+                memCacheWidth: 160,
+                memCacheHeight: 160,
+                fadeInDuration: Duration.zero,
+                fadeOutDuration: Duration.zero,
                 errorWidget: (_, __, ___) => _fallback(fallback),
               )
             : _fallback(fallback),
@@ -1163,6 +1169,10 @@ class _Avatar extends StatelessWidget {
               ? CachedNetworkImage(
                   imageUrl: avatar,
                   fit: BoxFit.cover,
+                  memCacheWidth: (size * 3).round(),
+                  memCacheHeight: (size * 3).round(),
+                  fadeInDuration: Duration.zero,
+                  fadeOutDuration: Duration.zero,
                   placeholder: (_, __) => _fallback(),
                   errorWidget: (_, __, ___) => _fallback(),
                 )

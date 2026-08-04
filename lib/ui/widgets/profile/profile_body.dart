@@ -62,24 +62,42 @@ class ProfileBody extends StatelessWidget {
         return [
           ProfileCoverHeader(
             profile: currentProfile,
+            isOwnProfile: isOwnProfile,
           ),
           const SliverToBoxAdapter(
             child: SizedBox(height: 24),
           ),
           SliverToBoxAdapter(
-            child: ProfileHeaderCard(
-              profile: currentProfile,
-              isOwnProfile: isOwnProfile,
-              isFollowing: isFollowing,
-              isFollowRequested: isFollowRequested,
-              onToggleFollow: onToggleFollow,
-              onMessage: onMessage,
-              onOpenAccountSwitcher: onOpenAccountSwitcher,
-              onOpenInsights: onOpenInsights,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 760),
+                child: ProfileHeaderCard(
+                  profile: currentProfile,
+                  isOwnProfile: isOwnProfile,
+                  isFollowing: isFollowing,
+                  isFollowRequested: isFollowRequested,
+                  onToggleFollow: onToggleFollow,
+                  onMessage: onMessage,
+                  onOpenAccountSwitcher: onOpenAccountSwitcher,
+                  onOpenInsights: onOpenInsights,
+                ),
+              ),
             ),
           ),
           ProfileStickyTabBar(
             tabController: tabController,
+            tabs: const [
+              ProfileTabItem(label: 'Posts', icon: Icons.grid_view_rounded),
+              ProfileTabItem(
+                label: 'Media',
+                icon: Icons.perm_media_outlined,
+              ),
+              ProfileTabItem(
+                label: 'Saved',
+                icon: Icons.bookmark_border_rounded,
+              ),
+              ProfileTabItem(label: 'Drafts', icon: Icons.drafts_outlined),
+            ],
           ),
         ];
       },

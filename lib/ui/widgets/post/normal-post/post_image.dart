@@ -44,7 +44,7 @@ class PostImage extends StatelessWidget {
                 imageUrl: imageUrl,
                 caption: post.content.trim().isNotEmpty ? post.content : null,
               );
-            }, 
+            },
           ),
         );
       },
@@ -52,31 +52,49 @@ class PostImage extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           const ColoredBox(color: AppColors.black),
-          CachedNetworkImage(
-            imageUrl: imageUrl,
-            fit: BoxFit.contain,
-            memCacheWidth: 1080,
-            placeholder: (_, __) {
-              return ColoredBox(
-                color: AppColors.black,
-                child: Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.primary,
-                    strokeWidth: 2,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+              final logicalWidth = constraints.maxWidth.isFinite
+                  ? constraints.maxWidth
+                  : MediaQuery.sizeOf(context).width;
+              final logicalHeight = constraints.maxHeight.isFinite
+                  ? constraints.maxHeight
+                  : logicalWidth;
+              final cacheWidth =
+                  (logicalWidth * pixelRatio).round().clamp(240, 1080);
+              final cacheHeight =
+                  (logicalHeight * pixelRatio).round().clamp(240, 1080);
+
+              return CachedNetworkImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.contain,
+                memCacheWidth: cacheWidth,
+                memCacheHeight: cacheHeight,
+                fadeInDuration: Duration.zero,
+                fadeOutDuration: Duration.zero,
+                placeholder: (_, __) => const ColoredBox(
+                  color: AppColors.black,
+                  child: Center(
+                    child: Icon(
+                      Icons.image_outlined,
+                      size: 34,
+                      color: AppColors.white24,
+                    ),
                   ),
                 ),
-              );
-            },
-            errorWidget: (_, __, ___) {
-              return ColoredBox(
-                color: AppColors.black,
-                child: Center(
-                  child: Icon(
-                    Icons.broken_image_outlined,
-                    size: 42,
-                    color: AppColors.textHint,
-                  ),
-                ),
+                errorWidget: (_, __, ___) {
+                  return ColoredBox(
+                    color: AppColors.black,
+                    child: Center(
+                      child: Icon(
+                        Icons.broken_image_outlined,
+                        size: 42,
+                        color: AppColors.textHint,
+                      ),
+                    ),
+                  );
+                },
               );
             },
           ),

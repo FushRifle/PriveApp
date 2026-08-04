@@ -691,7 +691,6 @@ class _CreateReelPageState extends State<CreateReelPage> {
     try {
       final videoUrl = await _cloudinaryService.uploadVideo(
         file,
-        customFolder: 'reels',
         onProgress: (progress) {
           if (!mounted) return;
 

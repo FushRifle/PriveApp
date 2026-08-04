@@ -549,22 +549,41 @@ class ProfilePostsTab extends StatelessWidget {
         }
         return false;
       },
-      child: GridView.builder(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 32),
-        physics: const BouncingScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
-          childAspectRatio: 0.78,
-        ),
-        itemCount: items.length + (isLoadingMore ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index >= items.length) {
-            return const ProfileLoadingAnimation(size: 48);
-          }
-          return ProfileGalleryTile(
-              gallery: items[index], isVideo: items[index].type == 'video');
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final columnCount = constraints.maxWidth >= 1200
+              ? 6
+              : constraints.maxWidth >= 900
+                  ? 5
+                  : constraints.maxWidth >= 620
+                      ? 4
+                      : 3;
+
+          return GridView.builder(
+            padding: EdgeInsets.fromLTRB(
+              constraints.maxWidth < 360 ? 10 : 14,
+              14,
+              constraints.maxWidth < 360 ? 10 : 14,
+              32,
+            ),
+            physics: const BouncingScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columnCount,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: 0.78,
+            ),
+            itemCount: items.length + (isLoadingMore ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index >= items.length) {
+                return const ProfileLoadingAnimation(size: 48);
+              }
+              return ProfileGalleryTile(
+                gallery: items[index],
+                isVideo: items[index].type == 'video',
+              );
+            },
+          );
         },
       ),
     );
@@ -603,24 +622,42 @@ class ProfileMediaGrid extends StatelessWidget {
         }
         return false;
       },
-      child: GridView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 32),
-        physics: const BouncingScrollPhysics(),
-        cacheExtent: 800,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 14,
-          crossAxisSpacing: 14,
-          childAspectRatio: 0.84,
-        ),
-        itemCount: items.length + (isLoadingMore ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index >= items.length) {
-            return const ProfileLoadingAnimation(size: 48);
-          }
-          return ProfileGalleryTile(
-            gallery: items[index],
-            isVideo: items[index].type == 'video',
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final columnCount = constraints.maxWidth >= 1200
+              ? 5
+              : constraints.maxWidth >= 900
+                  ? 4
+                  : constraints.maxWidth >= 600
+                      ? 3
+                      : 2;
+          final horizontalPadding = constraints.maxWidth < 360 ? 10.0 : 16.0;
+
+          return GridView.builder(
+            padding: EdgeInsets.fromLTRB(
+              horizontalPadding,
+              14,
+              horizontalPadding,
+              32,
+            ),
+            physics: const BouncingScrollPhysics(),
+            cacheExtent: 800,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columnCount,
+              mainAxisSpacing: 14,
+              crossAxisSpacing: 14,
+              childAspectRatio: 0.84,
+            ),
+            itemCount: items.length + (isLoadingMore ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index >= items.length) {
+                return const ProfileLoadingAnimation(size: 48);
+              }
+              return ProfileGalleryTile(
+                gallery: items[index],
+                isVideo: items[index].type == 'video',
+              );
+            },
           );
         },
       ),

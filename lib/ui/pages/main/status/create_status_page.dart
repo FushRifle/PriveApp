@@ -761,7 +761,6 @@ class _CreateStatusPageState extends State<CreateStatusPage>
       final response = _selectedMediaType == 'video'
           ? await _cloudinaryService.uploadVideo(
               mediaFile,
-              customFolder: 'stories',
               onProgress: (progress) {
                 if (!mounted) return;
                 setState(() => _uploadProgress = progress);
@@ -769,7 +768,6 @@ class _CreateStatusPageState extends State<CreateStatusPage>
             )
           : await _cloudinaryService.uploadImage(
               mediaFile,
-              customFolder: 'stories',
               onProgress: (progress) {
                 if (!mounted) return;
                 setState(() => _uploadProgress = progress);

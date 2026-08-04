@@ -492,7 +492,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
     try {
       final url = await _cloudinaryService.uploadImage(
         File(picked.path),
-        customFolder: 'feeds',
+        customFolder: 'prive_events',
       );
 
       if (!mounted) return;

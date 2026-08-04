@@ -237,7 +237,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
     try {
       final audioUrl = await _cloudinaryService.uploadAudio(
         file,
-        customFolder: 'audio',
+        customFolder: 'prive_comments',
       );
       if (!mounted) return;
 
