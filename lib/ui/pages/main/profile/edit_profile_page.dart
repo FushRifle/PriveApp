@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -16,6 +15,7 @@ import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/core/clients/cloudinary_service.dart';
 import 'package:clique/core/services/media_service.dart';
 import 'package:clique/core/services/profile/profile_service.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({
@@ -734,15 +734,16 @@ class _CoverImageSection extends StatelessWidget {
                   fit: BoxFit.cover,
                 )
               else if (coverUrl.isNotEmpty)
-                CachedNetworkImage(
+                AppNetworkImage(
                   imageUrl: coverUrl,
                   fit: BoxFit.cover,
-                  placeholder: (_, __) {
+                  preset: AppNetworkImagePreset.card,
+                  placeholder: (_) {
                     return Container(
                       color: AppColors.greyColor.withOpacity(0.1),
                     );
                   },
-                  errorWidget: (_, __, ___) {
+                  errorBuilder: (_) {
                     return const _CoverPlaceholder();
                   },
                 )
@@ -845,13 +846,14 @@ class _ProfilePictureSection extends StatelessWidget {
                         fit: BoxFit.cover,
                       )
                     : avatar.isNotEmpty
-                        ? CachedNetworkImage(
+                        ? AppNetworkImage(
                             imageUrl: avatar,
                             fit: BoxFit.cover,
-                            placeholder: (_, __) {
+                            preset: AppNetworkImagePreset.avatar,
+                            placeholder: (_) {
                               return _AvatarFallback(initial: initial);
                             },
-                            errorWidget: (_, __, ___) {
+                            errorBuilder: (_) {
                               return _AvatarFallback(initial: initial);
                             },
                           )

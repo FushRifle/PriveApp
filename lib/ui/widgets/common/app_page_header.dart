@@ -1,9 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 
 class AppPageHeader extends StatelessWidget {
   final String title;
@@ -189,11 +189,12 @@ class _HeaderAvatar extends StatelessWidget {
 
     final source = avatar ?? '';
     if (source.startsWith('http')) {
-      return CachedNetworkImage(
+      return AppNetworkImage(
         imageUrl: source,
         fit: BoxFit.cover,
-        placeholder: (_, __) => _fallback(),
-        errorWidget: (_, __, ___) => _fallback(),
+        preset: AppNetworkImagePreset.avatar,
+        placeholder: (_) => _fallback(),
+        errorBuilder: (_) => _fallback(),
       );
     }
 

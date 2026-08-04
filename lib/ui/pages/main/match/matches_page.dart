@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/match/match_bloc.dart';
 import 'package:clique/core/router/named_routes.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 
 class MatchesPage extends StatefulWidget {
   const MatchesPage({super.key});
@@ -396,12 +396,13 @@ class _MatchesPageState extends State<MatchesPage>
 
     if (avatar != null && avatar.isNotEmpty && avatar.startsWith('http')) {
       return ClipOval(
-        child: CachedNetworkImage(
+        child: AppNetworkImage(
           imageUrl: avatar,
           width: size,
           height: size,
           fit: BoxFit.cover,
-          placeholder: (context, url) => Container(
+          preset: AppNetworkImagePreset.avatar,
+          placeholder: (_) => Container(
             width: size,
             height: size,
             color: AppColors.greyColor.withOpacity(0.1),
@@ -412,8 +413,7 @@ class _MatchesPageState extends State<MatchesPage>
               ),
             ),
           ),
-          errorWidget: (context, url, error) =>
-              _avatarFallback(size, fallbackText),
+          errorBuilder: (_) => _avatarFallback(size, fallbackText),
         ),
       );
     }

@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -8,6 +7,7 @@ import 'package:clique/bloc/profile/profile_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/core/local_cache/local_cache_service.dart';
 import 'package:clique/core/services/user/user_service.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 
 class AccountSwitchPage extends StatefulWidget {
   final bool isSheet;
@@ -495,8 +495,13 @@ class _ProfileCard extends StatelessWidget {
             CircleAvatar(
               radius: 24,
               backgroundColor: AppColors.primary.withOpacity(0.12),
-              backgroundImage:
-                  avatar.isNotEmpty ? CachedNetworkImageProvider(avatar) : null,
+              backgroundImage: avatar.isNotEmpty
+                  ? appNetworkImageProvider(
+                      context,
+                      avatar,
+                      logicalWidth: 42,
+                    )
+                  : null,
               child: avatar.isEmpty
                   ? Text(
                       displayName.isNotEmpty

@@ -1,10 +1,10 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/services/friends/friends_service.dart';
 import 'package:clique/core/services/user/user_service.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -589,11 +589,12 @@ class _Avatar extends StatelessWidget {
             width: 58,
             height: 58,
             child: person.avatar.startsWith('http')
-                ? CachedNetworkImage(
+                ? AppNetworkImage(
                     imageUrl: person.avatar,
                     fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) => _fallback(fallback),
-                    placeholder: (_, __) => _fallback(fallback),
+                    preset: AppNetworkImagePreset.avatar,
+                    errorBuilder: (_) => _fallback(fallback),
+                    placeholder: (_) => _fallback(fallback),
                   )
                 : _fallback(fallback),
           ),

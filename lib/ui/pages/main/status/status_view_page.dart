@@ -9,7 +9,7 @@ import 'package:clique/bloc/status/stories_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/ui/widgets/common/effect_text.dart';
 import 'package:clique/ui/widgets/post/normal-post/post_reaction_picker.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 import 'package:video_player/video_player.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -565,7 +565,13 @@ class _StatusViewPageState extends State<StatusViewPage>
 
   ImageProvider _getImageProvider(String imageUrl) {
     if (imageUrl.startsWith('http')) {
-      return CachedNetworkImageProvider(imageUrl);
+      return appNetworkImageProvider(
+        context,
+        imageUrl,
+        preset: AppNetworkImagePreset.fullscreen,
+        logicalWidth: MediaQuery.sizeOf(context).width,
+        logicalHeight: MediaQuery.sizeOf(context).height,
+      );
     }
     return AssetImage(imageUrl);
   }
@@ -711,10 +717,11 @@ class _StatusViewPageState extends State<StatusViewPage>
     }
 
     if (avatarUrl.startsWith('http')) {
-      return CachedNetworkImage(
+      return AppNetworkImage(
         imageUrl: avatarUrl,
         fit: BoxFit.cover,
-        errorWidget: (_, __, ___) => Container(
+        preset: AppNetworkImagePreset.avatar,
+        errorBuilder: (_) => Container(
           color: AppColors.grey,
           child: const Icon(Icons.person, color: AppColors.white, size: 20),
         ),
@@ -911,9 +918,7 @@ class _StatusViewPageState extends State<StatusViewPage>
 
   Future<void> _shareStory(Story story) async {
     final content = story.content?.trim() ?? '';
-    final text = content.isEmpty
-        ? 'View this status on Clique'
-        : content;
+    final text = content.isEmpty ? 'View this status on Clique' : content;
     await Share.share(text);
   }
 
@@ -1403,6 +1408,7 @@ class _StoryTextBubble extends StatelessWidget {
     );
   }
 }
+
 class _StatusVideoPlayer extends StatefulWidget {
   final String url;
   final bool isActive;

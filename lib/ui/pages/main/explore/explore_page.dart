@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:clique/app/configs/colors.dart';
@@ -21,6 +21,19 @@ import 'package:clique/ui/widgets/explore/match_dialog.dart';
 import 'package:clique/ui/widgets/explore/no_more_profiles.dart';
 import 'package:clique/ui/widgets/explore/swipe_cards_stack.dart';
 import 'package:clique/ui/widgets/explore/swipe_feedback_overlay.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
+
+class _SwipeVisualState {
+  final double horizontal;
+  final double vertical;
+  final SwipeDirection direction;
+
+  const _SwipeVisualState({
+    this.horizontal = 0,
+    this.vertical = 0,
+    this.direction = SwipeDirection.none,
+  });
+}
 
 class DiscoverPage extends StatefulWidget {
   const DiscoverPage({
@@ -38,6 +51,8 @@ class _DiscoverPageState extends State<DiscoverPage>
   late final AnimationController _buttonAnimationController;
 
   late final Animation<double> _feedbackAnimation;
+  final ValueNotifier<_SwipeVisualState> _swipeVisual =
+      ValueNotifier<_SwipeVisualState>(const _SwipeVisualState());
   final ChatService _chatService = ChatService();
 
   Offset _dragOffset = Offset.zero;
@@ -115,6 +130,7 @@ class _DiscoverPageState extends State<DiscoverPage>
     _swipeController.dispose();
     _feedbackAnimationController.dispose();
     _buttonAnimationController.dispose();
+    _swipeVisual.dispose();
 
     super.dispose();
   }
@@ -194,11 +210,10 @@ class _DiscoverPageState extends State<DiscoverPage>
       nextVerticalProgress = nextVerticalProgress.clamp(0.0, 1.0);
     }
 
-    setState(() {
-      _swipeDirection = nextDirection;
-      _swipeProgress = nextSwipeProgress.clamp(-1.2, 1.2);
-      _verticalSwipeProgress = nextVerticalProgress.clamp(0.0, 1.2);
-    });
+    _swipeDirection = nextDirection;
+    _swipeProgress = nextSwipeProgress.clamp(-1.2, 1.2);
+    _verticalSwipeProgress = nextVerticalProgress.clamp(0.0, 1.2);
+    _publishSwipeVisual();
   }
 
   void _onPanEnd(
@@ -294,14 +309,13 @@ class _DiscoverPageState extends State<DiscoverPage>
         _swipeController.value,
       );
 
-      setState(() {
-        _swipeProgress = beginHorizontal * (1 - value);
-        _verticalSwipeProgress = beginVertical * (1 - value);
+      _swipeProgress = beginHorizontal * (1 - value);
+      _verticalSwipeProgress = beginVertical * (1 - value);
 
-        if (_swipeProgress.abs() < 0.01 && _verticalSwipeProgress < 0.01) {
-          _swipeDirection = SwipeDirection.none;
-        }
-      });
+      if (_swipeProgress.abs() < 0.01 && _verticalSwipeProgress < 0.01) {
+        _swipeDirection = SwipeDirection.none;
+      }
+      _publishSwipeVisual();
     }
 
     _swipeController.addListener(listener);
@@ -336,9 +350,8 @@ class _DiscoverPageState extends State<DiscoverPage>
 
     final targetVertical = direction == SwipeDirection.up ? 1.15 : 0.0;
 
-    setState(() {
-      _swipeDirection = direction;
-    });
+    _swipeDirection = direction;
+    _publishSwipeVisual();
 
     _swipeController.reset();
 
@@ -349,13 +362,12 @@ class _DiscoverPageState extends State<DiscoverPage>
         _swipeController.value,
       );
 
-      setState(() {
-        _swipeProgress =
-            beginHorizontal + ((targetHorizontal - beginHorizontal) * value);
+      _swipeProgress =
+          beginHorizontal + ((targetHorizontal - beginHorizontal) * value);
 
-        _verticalSwipeProgress =
-            beginVertical + ((targetVertical - beginVertical) * value);
-      });
+      _verticalSwipeProgress =
+          beginVertical + ((targetVertical - beginVertical) * value);
+      _publishSwipeVisual();
     }
 
     _swipeController.addListener(listener);
@@ -444,12 +456,19 @@ class _DiscoverPageState extends State<DiscoverPage>
   void _resetSwipe() {
     if (!mounted) return;
 
-    setState(() {
-      _dragOffset = Offset.zero;
-      _swipeProgress = 0.0;
-      _verticalSwipeProgress = 0.0;
-      _swipeDirection = SwipeDirection.none;
-    });
+    _dragOffset = Offset.zero;
+    _swipeProgress = 0.0;
+    _verticalSwipeProgress = 0.0;
+    _swipeDirection = SwipeDirection.none;
+    _publishSwipeVisual();
+  }
+
+  void _publishSwipeVisual() {
+    _swipeVisual.value = _SwipeVisualState(
+      horizontal: _swipeProgress,
+      vertical: _verticalSwipeProgress,
+      direction: _swipeDirection,
+    );
   }
 
   void _showMatchDialog(
@@ -702,9 +721,7 @@ class _DiscoverPageState extends State<DiscoverPage>
                       SliverToBoxAdapter(
                         child: _SwipeContent(
                           state: state,
-                          swipeProgress: _swipeProgress,
-                          verticalSwipeProgress: _verticalSwipeProgress,
-                          swipeDirection: _swipeDirection,
+                          swipeVisual: _swipeVisual,
                           onPanStart: _onPanStart,
                           onPanUpdate: (details) {
                             _onPanUpdate(details, state);
@@ -777,9 +794,7 @@ class _DiscoverPageState extends State<DiscoverPage>
 
 class _SwipeContent extends StatelessWidget {
   final ExploreState state;
-  final double swipeProgress;
-  final double verticalSwipeProgress;
-  final SwipeDirection swipeDirection;
+  final ValueListenable<_SwipeVisualState> swipeVisual;
   final GestureDragStartCallback onPanStart;
   final GestureDragUpdateCallback onPanUpdate;
   final GestureDragEndCallback onPanEnd;
@@ -787,9 +802,7 @@ class _SwipeContent extends StatelessWidget {
 
   const _SwipeContent({
     required this.state,
-    required this.swipeProgress,
-    required this.verticalSwipeProgress,
-    required this.swipeDirection,
+    required this.swipeVisual,
     required this.onPanStart,
     required this.onPanUpdate,
     required this.onPanEnd,
@@ -816,9 +829,7 @@ class _SwipeContent extends StatelessWidget {
 
         return _SwipeCards(
           state: state,
-          swipeProgress: swipeProgress,
-          verticalSwipeProgress: verticalSwipeProgress,
-          swipeDirection: swipeDirection,
+          swipeVisual: swipeVisual,
           onPanStart: onPanStart,
           onPanUpdate: onPanUpdate,
           onPanEnd: onPanEnd,
@@ -853,9 +864,7 @@ class _SwipeContent extends StatelessWidget {
 
         return _SwipeCards(
           state: state,
-          swipeProgress: swipeProgress,
-          verticalSwipeProgress: verticalSwipeProgress,
-          swipeDirection: swipeDirection,
+          swipeVisual: swipeVisual,
           onPanStart: onPanStart,
           onPanUpdate: onPanUpdate,
           onPanEnd: onPanEnd,
@@ -867,9 +876,7 @@ class _SwipeContent extends StatelessWidget {
 
 class _SwipeCards extends StatelessWidget {
   final ExploreState state;
-  final double swipeProgress;
-  final double verticalSwipeProgress;
-  final SwipeDirection swipeDirection;
+  final ValueListenable<_SwipeVisualState> swipeVisual;
   final GestureDragStartCallback onPanStart;
   final GestureDragUpdateCallback onPanUpdate;
   final GestureDragEndCallback onPanEnd;
@@ -877,9 +884,7 @@ class _SwipeCards extends StatelessWidget {
 
   const _SwipeCards({
     required this.state,
-    required this.swipeProgress,
-    required this.verticalSwipeProgress,
-    required this.swipeDirection,
+    required this.swipeVisual,
     required this.onPanStart,
     required this.onPanUpdate,
     required this.onPanEnd,
@@ -896,12 +901,15 @@ class _SwipeCards extends StatelessWidget {
         onPanStart: onPanStart,
         onPanUpdate: onPanUpdate,
         onPanEnd: onPanEnd,
-        child: SwipeCardsStack(
-          profiles: state.profiles,
-          currentIndex: state.currentIndex,
-          swipeProgress: swipeProgress,
-          verticalSwipeProgress: verticalSwipeProgress,
-          swipeDirection: swipeDirection,
+        child: ValueListenableBuilder<_SwipeVisualState>(
+          valueListenable: swipeVisual,
+          builder: (context, visual, _) => SwipeCardsStack(
+            profiles: state.profiles,
+            currentIndex: state.currentIndex,
+            swipeProgress: visual.horizontal,
+            verticalSwipeProgress: visual.vertical,
+            swipeDirection: visual.direction,
+          ),
         ),
       ),
     );
@@ -963,17 +971,15 @@ class _ProfileDetailSheet extends StatelessWidget {
                         itemBuilder: (context, index) {
                           return ClipRRect(
                             borderRadius: BorderRadius.circular(18),
-                            child: CachedNetworkImage(
+                            child: AppNetworkImage(
                               imageUrl: images[index],
                               width: images.length == 1
                                   ? MediaQuery.sizeOf(context).width - 40
                                   : 220,
                               height: 280,
                               fit: BoxFit.cover,
-                              memCacheWidth: 1200,
-                              memCacheHeight: 1600,
-                              filterQuality: FilterQuality.high,
-                              errorWidget: (_, __, ___) {
+                              preset: AppNetworkImagePreset.card,
+                              errorBuilder: (_) {
                                 return _DetailImageFallback(profile: profile);
                               },
                             ),

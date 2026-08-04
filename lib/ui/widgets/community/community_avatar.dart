@@ -1,8 +1,8 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 
 class CommunityAvatar extends StatelessWidget {
   final String name;
@@ -29,7 +29,11 @@ class CommunityAvatar extends StatelessWidget {
         border: Border.all(color: accentColor.withOpacity(0.16)),
         image: imageUrl.isNotEmpty
             ? DecorationImage(
-                image: CachedNetworkImageProvider(imageUrl),
+                image: appNetworkImageProvider(
+                  context,
+                  imageUrl,
+                  logicalWidth: size,
+                ),
                 fit: BoxFit.cover,
               )
             : null,

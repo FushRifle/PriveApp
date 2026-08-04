@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 
 class UserAvatar extends StatelessWidget {
   final String? avatarUrl;
@@ -37,16 +37,14 @@ class UserAvatar extends StatelessWidget {
             ),
             child: ClipOval(
               child: avatarUrl != null && avatarUrl!.isNotEmpty
-                  ? CachedNetworkImage(
+                  ? AppNetworkImage(
                       imageUrl: avatarUrl!,
                       fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
+                      preset: AppNetworkImagePreset.avatar,
+                      placeholder: (_) => Container(
                         color: Colors.grey[300],
-                        child: const Center(
-                          child: CircularProgressIndicator(),
-                        ),
                       ),
-                      errorWidget: (context, url, error) => _buildInitialsAvatar(),
+                      errorBuilder: (_) => _buildInitialsAvatar(),
                     )
                   : _buildInitialsAvatar(),
             ),
@@ -118,7 +116,7 @@ class UserAvatar extends StatelessWidget {
       Colors.deepOrange,
       Colors.brown,
     ];
-    
+
     int index = name.hashCode.abs() % colors.length;
     return colors[index];
   }

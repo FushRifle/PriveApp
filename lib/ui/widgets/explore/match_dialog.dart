@@ -1,10 +1,10 @@
 import 'package:animate_do/animate_do.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/models/profile_model.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 
 class MatchDialog extends StatelessWidget {
   final ProfileModel profile;
@@ -171,10 +171,11 @@ class MatchDialog extends StatelessWidget {
       ),
       child: ClipOval(
         child: imagePath.startsWith('http')
-            ? CachedNetworkImage(
+            ? AppNetworkImage(
                 imageUrl: imagePath,
                 fit: BoxFit.cover,
-                errorWidget: (_, __, ___) => _profileFallback(),
+                preset: AppNetworkImagePreset.card,
+                errorBuilder: (_) => _profileFallback(),
               )
             : Image.asset(
                 imagePath,

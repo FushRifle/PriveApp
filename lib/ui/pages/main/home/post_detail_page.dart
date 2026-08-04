@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:audio_waveforms/audio_waveforms.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -19,6 +18,7 @@ import 'package:clique/core/services/user/user_service.dart';
 
 import 'package:clique/ui/widgets/comments/comment_widgets.dart';
 import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 import 'package:clique/ui/widgets/post/normal-post/repost_card.dart';
 
 class PostDetailPage extends StatefulWidget {
@@ -1272,13 +1272,14 @@ class _Avatar extends StatelessWidget {
 
     if (avatar.startsWith('http')) {
       return ClipOval(
-        child: CachedNetworkImage(
+        child: AppNetworkImage(
           imageUrl: avatar,
           width: size,
           height: size,
           fit: BoxFit.cover,
-          errorWidget: (_, __, ___) => _fallback(),
-          placeholder: (_, __) => _fallback(),
+          preset: AppNetworkImagePreset.avatar,
+          errorBuilder: (_) => _fallback(),
+          placeholder: (_) => _fallback(),
         ),
       );
     }

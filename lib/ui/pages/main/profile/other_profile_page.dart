@@ -10,6 +10,7 @@ import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/services/chat/chat_service.dart';
 import 'package:clique/core/services/friends/friends_service.dart';
+import 'package:clique/core/services/friends/follow_stats_cache.dart';
 import 'package:clique/core/models/profile_view.dart';
 import 'package:clique/ui/widgets/profile/profile_gallery.dart';
 import 'package:clique/ui/widgets/profile/profile_header.dart';
@@ -197,6 +198,7 @@ class _OtherProfilePageState extends State<OtherProfilePage>
       }
 
       if (!mounted) return;
+      FollowStatsCache.invalidate(userId: widget.userId);
       final relationship =
           await _friendsService.checkRelationship(widget.userId);
       if (!mounted) return;

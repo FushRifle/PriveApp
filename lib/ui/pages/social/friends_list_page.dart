@@ -2,11 +2,11 @@ import 'package:clique/core/services/friends/friends_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/friends/friends_bloc.dart';
 import 'package:clique/core/router/named_routes.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 
 class FriendsListPage extends StatefulWidget {
   final bool isFollowers;
@@ -332,15 +332,16 @@ class _FriendsListPageState extends State<FriendsListPage>
                     ),
                     child: ClipOval(
                       child: friend.avatar != null && friend.avatar!.isNotEmpty
-                          ? CachedNetworkImage(
+                          ? AppNetworkImage(
                               imageUrl: friend.avatar!,
                               fit: BoxFit.cover,
-                              placeholder: (context, url) => Container(
+                              preset: AppNetworkImagePreset.avatar,
+                              placeholder: (_) => Container(
                                 color: AppColors.grey.shade200,
                                 child: const Icon(Icons.person,
                                     color: AppColors.grey),
                               ),
-                              errorWidget: (context, url, error) => Container(
+                              errorBuilder: (_) => Container(
                                 color: AppColors.grey.shade200,
                                 child: const Icon(Icons.person,
                                     color: AppColors.grey),

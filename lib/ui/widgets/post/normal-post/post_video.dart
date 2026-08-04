@@ -1,7 +1,7 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/ui/widgets/common/ui/video_viewer.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
@@ -250,15 +250,12 @@ class _VideoFallback extends StatelessWidget {
     final image = thumbnail;
 
     if (image != null && image.isNotEmpty) {
-      return CachedNetworkImage(
+      return AppNetworkImage(
         imageUrl: image,
         fit: BoxFit.cover,
-        memCacheWidth: 1080,
-        memCacheHeight: 1080,
-        fadeInDuration: Duration.zero,
-        fadeOutDuration: Duration.zero,
-        placeholder: (_, __) => _placeholder(),
-        errorWidget: (_, __, ___) => _placeholder(),
+        preset: AppNetworkImagePreset.card,
+        placeholder: (_) => _placeholder(),
+        errorBuilder: (_) => _placeholder(),
       );
     }
 

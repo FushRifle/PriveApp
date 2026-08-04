@@ -1,8 +1,8 @@
 import 'package:clique/core/models/status_model.dart';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 
 class StatusWidget extends StatelessWidget {
   final String name;
@@ -209,23 +209,14 @@ class StatusWidget extends StatelessWidget {
     }
 
     if (avatar.startsWith('http')) {
-      return CachedNetworkImage(
+      return AppNetworkImage(
         imageUrl: avatar,
         fit: BoxFit.cover,
-        placeholder: (context, url) => Container(
+        preset: AppNetworkImagePreset.avatar,
+        placeholder: (_) => Container(
           color: AppColors.backgroundColor,
-          child: const Center(
-            child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 1.5,
-                color: AppColors.primary,
-              ),
-            ),
-          ),
         ),
-        errorWidget: (context, url, error) => Container(
+        errorBuilder: (_) => Container(
           color: AppColors.backgroundColor,
           child: Icon(Icons.person, color: AppColors.textSecondary, size: 28),
         ),

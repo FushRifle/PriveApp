@@ -10,6 +10,7 @@ part 'chat_event.dart';
 part 'chat_state.dart';
 
 class ChatBloc extends Bloc<ChatEvent, ChatState> {
+  static const int _maxMessagesInMemory = 500;
   final ChatService _chatService = ChatService();
   final UserService _userService = UserService();
 
@@ -290,10 +291,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       );
     });
 
-    return [
+    final sorted = [
       ...delivered,
       ...remainingPending,
     ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return sorted.take(_maxMessagesInMemory).toList(growable: false);
   }
 
   List<MessageModel> _visibleMessagesForConversation(int conversationId) {

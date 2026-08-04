@@ -1,9 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/models/community_model.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 
 class CommunityGroupInfoPage extends StatelessWidget {
   final CommunityGroupModel group;
@@ -32,7 +32,11 @@ class CommunityGroupInfoPage extends StatelessWidget {
               radius: 42,
               backgroundColor: AppColors.secondary.withOpacity(0.13),
               backgroundImage: group.imageUrl.isNotEmpty
-                  ? CachedNetworkImageProvider(group.imageUrl)
+                  ? appNetworkImageProvider(
+                      context,
+                      group.imageUrl,
+                      logicalWidth: 72,
+                    )
                   : null,
               child: group.imageUrl.isEmpty
                   ? const Icon(
@@ -102,7 +106,11 @@ class _MemberTile extends StatelessWidget {
       leading: CircleAvatar(
         backgroundColor: AppColors.primary.withOpacity(0.12),
         backgroundImage: user.avatar.isNotEmpty
-            ? CachedNetworkImageProvider(user.avatar)
+            ? appNetworkImageProvider(
+                context,
+                user.avatar,
+                logicalWidth: 40,
+              )
             : null,
         child: user.avatar.isEmpty
             ? Text(

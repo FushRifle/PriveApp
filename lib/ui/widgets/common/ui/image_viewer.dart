@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -42,15 +42,14 @@ class _ImageViewerState extends State<ImageViewer> {
               child: InteractiveViewer(
                 minScale: 0.5,
                 maxScale: 4.0,
-                child: CachedNetworkImage(
+                child: AppNetworkImage(
                   imageUrl: widget.imageUrl,
                   fit: BoxFit.contain,
-                  placeholder: (context, url) => const Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.secondary,
-                    ),
+                  preset: AppNetworkImagePreset.fullscreen,
+                  placeholder: (_) => const ColoredBox(
+                    color: AppColors.black,
                   ),
-                  errorWidget: (context, url, error) => const Center(
+                  errorBuilder: (_) => const Center(
                     child: Icon(
                       Icons.broken_image,
                       color: AppColors.white54,

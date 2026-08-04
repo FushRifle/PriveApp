@@ -1,9 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/models/event_model.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 
 class EventCard extends StatelessWidget {
   final EventModel event;
@@ -106,7 +106,7 @@ class EventCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  
+
                   // Content Section
                   Padding(
                     padding: EdgeInsets.all(isCompactImage ? 14 : 18),
@@ -153,9 +153,9 @@ class EventCard extends StatelessWidget {
                             ),
                           ],
                         ),
-                        
+
                         const SizedBox(height: 16),
-                        
+
                         // Metadata Chips
                         Wrap(
                           spacing: 8,
@@ -181,9 +181,9 @@ class EventCard extends StatelessWidget {
                               ),
                           ],
                         ),
-                        
+
                         const SizedBox(height: 18),
-                        
+
                         // Action Buttons
                         if (isOwner)
                           FilledButton.icon(
@@ -393,11 +393,12 @@ class _EventImage extends StatelessWidget {
       return SizedBox(
         height: height,
         width: double.infinity,
-        child: CachedNetworkImage(
+        child: AppNetworkImage(
           imageUrl: imageUrl,
           fit: BoxFit.cover,
-          placeholder: (_, __) => _placeholder(height),
-          errorWidget: (_, __, ___) => _placeholder(height),
+          preset: AppNetworkImagePreset.card,
+          placeholder: (_) => _placeholder(height),
+          errorBuilder: (_) => _placeholder(height),
         ),
       );
     }

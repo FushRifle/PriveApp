@@ -97,4 +97,31 @@ void main() {
     expect(merged, hasLength(1));
     expect(merged.single.isRead, isTrue);
   });
+
+  test('mergeMessages retains a bounded window of the newest messages', () {
+    final bloc = ChatBloc();
+    addTearDown(bloc.close);
+
+    final start = DateTime.parse('2026-06-25T12:00:00Z');
+    final messages = List.generate(
+      540,
+      (index) => MessageModel(
+        id: index + 1,
+        conversationId: 7,
+        senderId: 1,
+        receiverId: 2,
+        message: 'message $index',
+        messageType: 'text',
+        isRead: true,
+        isOwn: true,
+        createdAt: start.add(Duration(seconds: index)),
+      ),
+    );
+
+    final merged = bloc.mergeMessagesForTesting(messages);
+
+    expect(merged, hasLength(500));
+    expect(merged.first.id, 540);
+    expect(merged.last.id, 41);
+  });
 }

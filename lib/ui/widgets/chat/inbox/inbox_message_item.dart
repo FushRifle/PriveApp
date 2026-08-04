@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/ui/pages/main/chat/inbox_page.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 
 class InboxMessageItem extends StatelessWidget {
   final ChatMessage message;
@@ -268,18 +268,13 @@ class InboxMessageItem extends StatelessWidget {
     }
 
     if (message.avatar.isNotEmpty && message.avatar.startsWith('http')) {
-      return CachedNetworkImage(
+      return AppNetworkImage(
         imageUrl: message.avatar,
         fit: BoxFit.cover,
-        errorWidget: (_, __, ___) => _avatarFallback(firstLetter),
-        placeholder: (_, __) => Container(
+        preset: AppNetworkImagePreset.avatar,
+        errorBuilder: (_) => _avatarFallback(firstLetter),
+        placeholder: (_) => Container(
           color: AppColors.primary.withOpacity(0.05),
-          child: Center(
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: AppColors.primary.withOpacity(0.3),
-            ),
-          ),
         ),
       );
     }

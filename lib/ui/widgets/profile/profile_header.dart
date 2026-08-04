@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -10,7 +9,9 @@ import 'package:clique/bloc/profile/gallery_profile_cubit.dart';
 import 'package:clique/core/models/profile_view.dart';
 import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/services/friends/friends_service.dart';
+import 'package:clique/core/services/friends/follow_stats_cache.dart';
 import 'package:clique/ui/pages/main/profile/edit_profile_page.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 
 class ProfileCoverHeader extends StatelessWidget {
   final ProfileView profile;
@@ -112,10 +113,11 @@ class ProfileCoverImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CachedNetworkImage(
+    return AppNetworkImage(
       imageUrl: imageUrl,
       fit: BoxFit.cover,
-      placeholder: (_, __) => Container(
+      preset: AppNetworkImagePreset.card,
+      placeholder: (_) => Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -128,7 +130,7 @@ class ProfileCoverImage extends StatelessWidget {
           ),
         ),
       ),
-      errorWidget: (_, __, ___) => const ProfileCoverPlaceholder(),
+      errorBuilder: (_) => const ProfileCoverPlaceholder(),
     );
   }
 }
@@ -307,7 +309,11 @@ class ProfileAvatarBubble extends StatelessWidget {
           backgroundColor: AppColors.primary.withOpacity(0.1),
           backgroundImage: isOfficial || avatar.isEmpty
               ? null
-              : CachedNetworkImageProvider(avatar),
+              : appNetworkImageProvider(
+                  context,
+                  avatar,
+                  logicalWidth: radius * 2,
+                ),
           child: isOfficial
               ? Padding(
                   padding: const EdgeInsets.all(10),
@@ -519,8 +525,6 @@ class ProfileInfoChip extends StatelessWidget {
 }
 
 class ProfileStatsRow extends StatelessWidget {
-  static final FriendsService _friendsService = FriendsService();
-
   final ProfileView profile;
   final bool isOwnProfile;
 
@@ -541,9 +545,10 @@ class ProfileStatsRow extends StatelessWidget {
     }
 
     return FutureBuilder<FollowStats>(
-      future: isOwnProfile
-          ? _friendsService.getFollowStats()
-          : _friendsService.getFollowStatsForUser(userId),
+      future: FollowStatsCache.load(
+        userId: userId,
+        isOwnProfile: isOwnProfile,
+      ),
       builder: (context, snapshot) {
         final stats = snapshot.data;
 

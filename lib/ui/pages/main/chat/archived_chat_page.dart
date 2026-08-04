@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/auth/auth_bloc.dart';
@@ -6,6 +5,7 @@ import 'package:clique/bloc/chat/chat_bloc.dart';
 import 'package:clique/core/services/chat/chat_service.dart';
 import 'package:clique/ui/pages/main/chat/chat_page.dart';
 import 'package:clique/ui/widgets/common/app_page_header.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -259,10 +259,11 @@ class _ArchivedChatTile extends StatelessWidget {
         width: 48,
         height: 48,
         child: conversation.avatar.startsWith('http')
-            ? CachedNetworkImage(
+            ? AppNetworkImage(
                 imageUrl: conversation.avatar,
                 fit: BoxFit.cover,
-                errorWidget: (_, __, ___) => _fallback(fallback),
+                preset: AppNetworkImagePreset.avatar,
+                errorBuilder: (_) => _fallback(fallback),
               )
             : _fallback(fallback),
       ),

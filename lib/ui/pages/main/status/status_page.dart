@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -10,6 +9,7 @@ import 'package:clique/bloc/status/stories_bloc.dart';
 
 import 'package:clique/core/models/status_model.dart';
 import 'package:clique/ui/widgets/common/app_page_header.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 
 import './create_status_page.dart';
 import './status_view_page.dart';
@@ -409,11 +409,12 @@ class _StoryAvatar extends StatelessWidget {
       padding: const EdgeInsets.all(2.6),
       child: ClipOval(
         child: avatar.isNotEmpty && avatar.startsWith('http')
-            ? CachedNetworkImage(
+            ? AppNetworkImage(
                 imageUrl: avatar,
                 fit: BoxFit.cover,
-                placeholder: (_, __) => _fallback(fallback),
-                errorWidget: (_, __, ___) => _fallback(fallback),
+                preset: AppNetworkImagePreset.avatar,
+                placeholder: (_) => _fallback(fallback),
+                errorBuilder: (_) => _fallback(fallback),
               )
             : avatar.isNotEmpty
                 ? Image.asset(

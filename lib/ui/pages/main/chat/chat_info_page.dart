@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 import 'package:clique/core/models/calls.dart';
 import 'package:clique/ui/widgets/call/call_button.dart';
 import 'package:clique/ui/pages/main/chat/call/call_history_screen.dart';
@@ -360,16 +360,14 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
           ),
           child: ClipOval(
             child: avatar.isNotEmpty && avatar.startsWith('http')
-                ? CachedNetworkImage(
+                ? AppNetworkImage(
                     imageUrl: avatar,
                     fit: BoxFit.cover,
-                    fadeInDuration: const Duration(milliseconds: 120),
-                    memCacheWidth: 220,
-                    placeholder: (context, url) => Container(
+                    preset: AppNetworkImagePreset.avatar,
+                    placeholder: (_) => Container(
                       color: AppColors.primary.withOpacity(0.1),
-                      child: const Center(child: CircularProgressIndicator()),
                     ),
-                    errorWidget: (context, url, error) => Container(
+                    errorBuilder: (_) => Container(
                       color: AppColors.primary.withOpacity(0.1),
                       child: Center(
                         child: Text(
@@ -489,14 +487,15 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
           return Expanded(
             child: GestureDetector(
               onTap: () => _showImageViewer(images[index].url),
-              child: Container(
-                height: 80,
-                margin: EdgeInsets.only(right: index < 3 ? 8 : 0),
-                decoration: BoxDecoration(
+              child: Padding(
+                padding: EdgeInsets.only(right: index < 3 ? 8 : 0),
+                child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  image: DecorationImage(
-                      image: CachedNetworkImageProvider(images[index].url),
-                      fit: BoxFit.cover),
+                  child: AppNetworkImage(
+                    imageUrl: images[index].url,
+                    fit: BoxFit.cover,
+                    preset: AppNetworkImagePreset.thumbnail,
+                  ),
                 ),
               ),
             ),
@@ -704,11 +703,10 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                 itemCount: images.length,
                 itemBuilder: (context, index) => GestureDetector(
                   onTap: () => _showImageViewer(images[index].url),
-                  child: CachedNetworkImage(
+                  child: AppNetworkImage(
                     imageUrl: images[index].url,
                     fit: BoxFit.cover,
-                    fadeInDuration: const Duration(milliseconds: 120),
-                    memCacheWidth: 360,
+                    preset: AppNetworkImagePreset.thumbnail,
                   ),
                 ),
               ),
@@ -729,7 +727,11 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
             children: [
               Center(
                   child: InteractiveViewer(
-                      child: CachedNetworkImage(imageUrl: url))),
+                      child: AppNetworkImage(
+                imageUrl: url,
+                fit: BoxFit.contain,
+                preset: AppNetworkImagePreset.fullscreen,
+              ))),
               Positioned(
                   top: 40,
                   right: 16,

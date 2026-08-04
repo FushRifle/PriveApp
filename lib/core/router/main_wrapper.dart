@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -243,76 +242,71 @@ class _MainWrapperState extends State<MainWrapper>
                     children: [
                       DecoratedBox(
                         decoration: BoxDecoration(
+                          color: backgroundColor.withOpacity(
+                            isDarkMode ? 0.96 : 0.94,
+                          ),
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
-                            color: AppColors.white.withOpacity(0.82),
+                            color: isDarkMode
+                                ? Colors.white.withOpacity(0.12)
+                                : Colors.white.withOpacity(0.82),
                             width: 0.9,
                           ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(
+                                isDarkMode ? 0.24 : 0.1,
+                              ),
+                              blurRadius: 18,
+                              offset: const Offset(0, 7),
+                            ),
+                          ],
                         ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(24),
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: backgroundColor.withOpacity(
-                                  isDarkMode ? 0.76 : 0.82,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          child: SizedBox(
+                            height: 50,
+                            child: Row(
+                              children: [
+                                _buildNavItem(
+                                  icon: Icons.home_rounded,
+                                  navIndex: 0,
+                                  isSelected: _navBarIndex == 0,
+                                  unselectedColor: unselectedColor,
                                 ),
-                                borderRadius: BorderRadius.circular(24),
-                                border: Border.all(
-                                  color: isDarkMode
-                                      ? Colors.white.withOpacity(0.12)
-                                      : Colors.white.withOpacity(0.72),
-                                  width: 0.8,
+                                _buildNavItem(
+                                  icon: Icons.play_circle_fill_rounded,
+                                  navIndex: 1,
+                                  isSelected: _navBarIndex == 1,
+                                  unselectedColor: unselectedColor,
                                 ),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              child: SizedBox(
-                                height: 50,
-                                child: Row(
-                                  children: [
-                                    _buildNavItem(
-                                      icon: Icons.home_rounded,
-                                      navIndex: 0,
-                                      isSelected: _navBarIndex == 0,
-                                      unselectedColor: unselectedColor,
-                                    ),
-                                    _buildNavItem(
-                                      icon: Icons.play_circle_fill_rounded,
-                                      navIndex: 1,
-                                      isSelected: _navBarIndex == 1,
-                                      unselectedColor: unselectedColor,
-                                    ),
-                                    const Expanded(child: SizedBox.shrink()),
-                                    _buildNavItem(
-                                      icon: Icons.date_range_rounded,
-                                      navIndex: 3,
-                                      isSelected: _navBarIndex == 3,
-                                      unselectedColor: unselectedColor,
-                                    ),
-                                    BlocSelector<ChatBloc, ChatState, int>(
-                                      selector: (state) =>
-                                          state.conversations.fold(
-                                        0,
-                                        (total, conversation) =>
-                                            total + conversation.unreadCount,
-                                      ),
-                                      builder: (context, unreadCount) {
-                                        return _buildNavItem(
-                                          icon: Icons.send_rounded,
-                                          navIndex: 4,
-                                          isSelected: _navBarIndex == 4,
-                                          unselectedColor: unselectedColor,
-                                          badgeCount: unreadCount,
-                                        );
-                                      },
-                                    ),
-                                  ],
+                                const Expanded(child: SizedBox.shrink()),
+                                _buildNavItem(
+                                  icon: Icons.date_range_rounded,
+                                  navIndex: 3,
+                                  isSelected: _navBarIndex == 3,
+                                  unselectedColor: unselectedColor,
                                 ),
-                              ),
+                                BlocSelector<ChatBloc, ChatState, int>(
+                                  selector: (state) => state.conversations.fold(
+                                    0,
+                                    (total, conversation) =>
+                                        total + conversation.unreadCount,
+                                  ),
+                                  builder: (context, unreadCount) {
+                                    return _buildNavItem(
+                                      icon: Icons.send_rounded,
+                                      navIndex: 4,
+                                      isSelected: _navBarIndex == 4,
+                                      unselectedColor: unselectedColor,
+                                      badgeCount: unreadCount,
+                                    );
+                                  },
+                                ),
+                              ],
                             ),
                           ),
                         ),

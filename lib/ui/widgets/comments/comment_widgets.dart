@@ -1,9 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/ui/widgets/chat/audio_message_bubble.dart';
 import 'package:clique/ui/widgets/post/normal-post/post_reaction_picker.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -33,11 +33,12 @@ class CommentAvatar extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: imageUrl.startsWith('http')
-          ? CachedNetworkImage(
+          ? AppNetworkImage(
               imageUrl: imageUrl,
               fit: BoxFit.cover,
-              placeholder: (_, __) => _fallback(initial),
-              errorWidget: (_, __, ___) => _fallback(initial),
+              preset: AppNetworkImagePreset.avatar,
+              placeholder: (_) => _fallback(initial),
+              errorBuilder: (_) => _fallback(initial),
             )
           : _fallback(initial),
     );

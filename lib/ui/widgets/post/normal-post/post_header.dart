@@ -1,8 +1,8 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/models/feeds_models.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -128,16 +128,12 @@ class _PostAvatar extends StatelessWidget {
                 errorBuilder: (_, __, ___) => _AvatarFallback(text: fallback),
               )
             : avatar.isNotEmpty && avatar.startsWith('http')
-                ? CachedNetworkImage(
+                ? AppNetworkImage(
                     imageUrl: avatar,
                     fit: BoxFit.cover,
-                    memCacheWidth: 144,
-                    memCacheHeight: 144,
-                    fadeInDuration: Duration.zero,
-                    fadeOutDuration: Duration.zero,
-                    placeholder: (_, __) => _AvatarFallback(text: fallback),
-                    errorWidget: (_, __, ___) =>
-                        _AvatarFallback(text: fallback),
+                    preset: AppNetworkImagePreset.avatar,
+                    placeholder: (_) => _AvatarFallback(text: fallback),
+                    errorBuilder: (_) => _AvatarFallback(text: fallback),
                   )
                 : avatar.isNotEmpty
                     ? Image.asset(

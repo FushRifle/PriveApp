@@ -153,6 +153,9 @@ class _ReelsPageState extends State<ReelsPage> {
                                     reel: reels[index],
                                     isActive: widget.isVisible &&
                                         index == _currentIndex,
+                                    shouldPreload: widget.isVisible &&
+                                        (index == _currentIndex ||
+                                            index == _currentIndex + 1),
                                     onNextReel: () {
                                       if (index < reels.length - 1) {
                                         _pageController.nextPage(

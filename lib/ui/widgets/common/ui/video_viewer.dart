@@ -6,8 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:video_player/video_player.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 
 class VideoViewer extends StatefulWidget {
   final String videoUrl;
@@ -125,16 +125,13 @@ class _VideoViewerState extends State<VideoViewer> {
                           ),
                         )
                       : widget.thumbnailUrl != null
-                          ? CachedNetworkImage(
+                          ? AppNetworkImage(
                               imageUrl: widget.thumbnailUrl!,
                               fit: BoxFit.contain,
-                              placeholder: (context, url) => const Center(
-                                child: CircularProgressIndicator(
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                              errorWidget: (context, url, error) =>
-                                  const Center(
+                              preset: AppNetworkImagePreset.fullscreen,
+                              placeholder: (_) =>
+                                  const ColoredBox(color: AppColors.black),
+                              errorBuilder: (_) => const Center(
                                 child: Icon(
                                   Icons.video_library,
                                   color: AppColors.white54,

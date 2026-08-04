@@ -1,8 +1,8 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
 import 'package:clique/core/models/status_model.dart';
 import 'package:clique/ui/widgets/common/effect_text.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 import 'package:clique/ui/widgets/status/story_progress.dart';
 import 'package:clique/ui/widgets/status/story_reply_bar.dart';
 import 'package:clique/ui/widgets/status/story_header.dart';
@@ -559,20 +559,14 @@ class _StoryImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (url.startsWith('http')) {
-      return CachedNetworkImage(
+      return AppNetworkImage(
         imageUrl: url,
         fit: BoxFit.contain,
-        memCacheWidth: 1200,
-        placeholder: (_, __) => const ColoredBox(
+        preset: AppNetworkImagePreset.fullscreen,
+        placeholder: (_) => const ColoredBox(
           color: AppColors.black,
-          child: Center(
-            child: CircularProgressIndicator(
-              color: AppColors.white,
-              strokeWidth: 2,
-            ),
-          ),
         ),
-        errorWidget: (_, __, ___) => const ColoredBox(
+        errorBuilder: (_) => const ColoredBox(
           color: AppColors.black,
           child: Center(
             child: Icon(

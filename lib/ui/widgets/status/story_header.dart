@@ -1,6 +1,6 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/core/models/status_model.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -68,11 +68,12 @@ class _StoryAvatar extends StatelessWidget {
       ),
       child: ClipOval(
         child: avatar.isNotEmpty && avatar.startsWith('http')
-            ? CachedNetworkImage(
+            ? AppNetworkImage(
                 imageUrl: avatar,
                 fit: BoxFit.cover,
-                placeholder: (_, __) => _AvatarFallback(text: fallback),
-                errorWidget: (_, __, ___) => _AvatarFallback(text: fallback),
+                preset: AppNetworkImagePreset.avatar,
+                placeholder: (_) => _AvatarFallback(text: fallback),
+                errorBuilder: (_) => _AvatarFallback(text: fallback),
               )
             : avatar.isNotEmpty
                 ? Image.asset(

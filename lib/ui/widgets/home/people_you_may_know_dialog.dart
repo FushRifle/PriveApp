@@ -1,7 +1,7 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/services/user/user_service.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 import 'package:flutter/material.dart';
 
 class PeopleYouMayKnowDialog extends StatefulWidget {
@@ -16,8 +16,7 @@ class PeopleYouMayKnowDialog extends StatefulWidget {
   }
 
   @override
-  State<PeopleYouMayKnowDialog> createState() =>
-      _PeopleYouMayKnowDialogState();
+  State<PeopleYouMayKnowDialog> createState() => _PeopleYouMayKnowDialogState();
 }
 
 class _PeopleYouMayKnowDialogState extends State<PeopleYouMayKnowDialog> {
@@ -51,18 +50,28 @@ class _PeopleYouMayKnowDialogState extends State<PeopleYouMayKnowDialog> {
               separatorBuilder: (_, __) => const Divider(height: 1),
               itemBuilder: (context, index) {
                 final person = people[index];
-                final id = int.tryParse('${person['id'] ?? person['userId']}') ?? 0;
-                final name = '${person['name'] ?? person['displayName'] ?? 'Clique user'}';
+                final id =
+                    int.tryParse('${person['id'] ?? person['userId']}') ?? 0;
+                final name =
+                    '${person['name'] ?? person['displayName'] ?? 'Clique user'}';
                 final avatar = '${person['avatar'] ?? ''}';
                 return ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: CircleAvatar(
                     backgroundColor: AppColors.primary.withOpacity(.1),
-                    backgroundImage:
-                        avatar.isEmpty ? null : CachedNetworkImageProvider(avatar),
-                    child: avatar.isEmpty ? const Icon(Icons.person_outline) : null,
+                    backgroundImage: avatar.isEmpty
+                        ? null
+                        : appNetworkImageProvider(
+                            context,
+                            avatar,
+                            logicalWidth: 40,
+                          ),
+                    child: avatar.isEmpty
+                        ? const Icon(Icons.person_outline)
+                        : null,
                   ),
-                  title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  title:
+                      Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: id <= 0
                       ? null

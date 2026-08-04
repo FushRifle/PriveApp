@@ -1,9 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/models/profile_model.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 
 class ProfileCard extends StatelessWidget {
   final ProfileModel profile;
@@ -87,17 +87,12 @@ class _ProfileImage extends StatelessWidget {
     }
 
     if (image.startsWith('http')) {
-      return CachedNetworkImage(
+      return AppNetworkImage(
         imageUrl: image,
         fit: BoxFit.cover,
-        memCacheWidth: 1200,
-        memCacheHeight: 1600,
-        maxWidthDiskCache: 1600,
-        maxHeightDiskCache: 2200,
-        filterQuality: FilterQuality.high,
-        fadeInDuration: const Duration(milliseconds: 120),
-        placeholder: (_, __) => _PlaceholderImage(profile: profile),
-        errorWidget: (_, __, ___) => _PlaceholderImage(profile: profile),
+        preset: AppNetworkImagePreset.card,
+        placeholder: (_) => _PlaceholderImage(profile: profile),
+        errorBuilder: (_) => _PlaceholderImage(profile: profile),
       );
     }
 

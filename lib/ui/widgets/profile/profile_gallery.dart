@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -14,6 +13,7 @@ import 'package:clique/core/services/home/feed_service.dart';
 import 'package:clique/core/services/home/post_draft_service.dart';
 import 'package:clique/ui/pages/main/home/create_post_page.dart';
 import 'package:clique/ui/widgets/post/normal-post/repost_card.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 
 enum ProfileGalleryTabType {
   posts,
@@ -682,12 +682,13 @@ class ProfileGalleryTile extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          CachedNetworkImage(
+          AppNetworkImage(
             imageUrl: gallery.image,
             fit: BoxFit.cover,
-            placeholder: (_, __) =>
+            preset: AppNetworkImagePreset.thumbnail,
+            placeholder: (_) =>
                 Container(color: AppColors.greyColor.withOpacity(0.12)),
-            errorWidget: (_, __, ___) => Container(
+            errorBuilder: (_) => Container(
               color: AppColors.greyColor.withOpacity(0.12),
               child:
                   Icon(Icons.broken_image_outlined, color: AppColors.greyColor),

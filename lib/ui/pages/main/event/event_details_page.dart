@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -8,6 +7,7 @@ import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/bloc/event/event_bloc.dart';
 import 'package:clique/core/models/event_model.dart';
 import 'package:clique/ui/pages/main/event/create_event_page.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 
 class EventDetailsPage extends StatelessWidget {
   final EventModel event;
@@ -154,8 +154,10 @@ class EventDetailsPage extends StatelessWidget {
                           backgroundColor: AppColors.primary.withOpacity(0.12),
                           backgroundImage:
                               currentEvent.host?.avatar.isNotEmpty == true
-                                  ? CachedNetworkImageProvider(
+                                  ? appNetworkImageProvider(
+                                      context,
                                       currentEvent.host!.avatar,
+                                      logicalWidth: 48,
                                     )
                                   : null,
                           child: currentEvent.host?.avatar.isEmpty != false
@@ -359,11 +361,12 @@ class _EventHeroImage extends StatelessWidget {
     if (imageUrl.trim().startsWith('http')) {
       return AspectRatio(
         aspectRatio: 16 / 10,
-        child: CachedNetworkImage(
+        child: AppNetworkImage(
           imageUrl: imageUrl,
           fit: BoxFit.cover,
-          placeholder: (_, __) => _placeholder(),
-          errorWidget: (_, __, ___) => _placeholder(),
+          preset: AppNetworkImagePreset.card,
+          placeholder: (_) => _placeholder(),
+          errorBuilder: (_) => _placeholder(),
         ),
       );
     }

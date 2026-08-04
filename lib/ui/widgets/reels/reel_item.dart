@@ -10,6 +10,7 @@ import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/friends/friends_bloc.dart';
 import 'package:clique/bloc/reels/reel_bloc.dart';
 import 'package:clique/core/services/friends/friends_service.dart';
+import 'package:clique/core/services/friends/follow_stats_cache.dart';
 import 'package:clique/core/services/reel/reel_service.dart';
 
 import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
@@ -26,6 +27,7 @@ class ReelItem extends StatefulWidget {
   final Map<String, dynamic> reel;
   final VoidCallback onNextReel;
   final bool isActive;
+  final bool shouldPreload;
   final int index;
   final int currentUserId;
 
@@ -34,6 +36,7 @@ class ReelItem extends StatefulWidget {
     required this.reel,
     required this.onNextReel,
     this.isActive = true,
+    this.shouldPreload = true,
     required this.index,
     required this.currentUserId,
   });
@@ -52,6 +55,11 @@ class _ReelItemState extends State<ReelItem>
       maxNrOfCacheObjects: 80,
     ),
   );
+  static final ValueNotifier<bool> _sharedMute = ValueNotifier<bool>(false);
+  static Future<void>? _muteLoadTask;
+  static final Map<String, Future<FileInfo>> _videoCacheTasks = {};
+  static final Map<String, Relationship> _relationshipCache = {};
+  static final Map<String, Future<Relationship>> _relationshipTasks = {};
 
   VideoPlayerController? _videoController;
 
@@ -98,33 +106,50 @@ class _ReelItemState extends State<ReelItem>
     super.initState();
 
     _syncLocalState();
-    _loadMutePreference();
-    _initializeVideo();
+    _isMuted = _sharedMute.value;
+    _sharedMute.addListener(_handleSharedMuteChanged);
+    _ensureMutePreferenceLoaded();
+    if (widget.shouldPreload) {
+      _initializeVideo();
+    }
     _refreshRelationship();
   }
 
   @override
   void didUpdateWidget(covariant ReelItem oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.isActive != widget.isActive) updateKeepAlive();
 
     if (oldWidget.reel != widget.reel) {
       _syncLocalState();
+      _refreshRelationship();
 
       final oldUrl = oldWidget.reel['videoUrl'] ?? oldWidget.reel['url'];
 
       if (oldUrl != _videoUrl) {
         _disposeController();
-        _initializeVideo();
+        if (widget.shouldPreload) {
+          _initializeVideo();
+        }
       }
     }
 
-    if (oldWidget.isActive != widget.isActive) {
+    if (oldWidget.currentUserId != widget.currentUserId) {
+      _refreshRelationship();
+    }
+
+    if (oldWidget.shouldPreload && !widget.shouldPreload) {
+      _disposeController();
+    } else if (!oldWidget.shouldPreload && widget.shouldPreload) {
+      _initializeVideo();
+    } else if (oldWidget.isActive != widget.isActive) {
       widget.isActive ? _playVideo() : _pauseVideo();
     }
   }
 
   @override
   void dispose() {
+    _sharedMute.removeListener(_handleSharedMuteChanged);
     _disposeController();
 
     super.dispose();
@@ -151,28 +176,43 @@ class _ReelItemState extends State<ReelItem>
   }
 
   Future<void> _refreshRelationship() async {
-    if (_isCurrentUser() || _userId <= 0) return;
+    if (widget.currentUserId <= 0 || _isCurrentUser() || _userId <= 0) return;
 
     try {
-      final relationship = await FriendsService().checkRelationship(_userId);
+      final key = '${widget.currentUserId}:$_userId';
+      final cached = _relationshipCache[key];
+      final relationship = cached ??
+          await _relationshipTasks.putIfAbsent(
+            key,
+            () => FriendsService().checkRelationship(_userId),
+          );
+      _relationshipCache[key] = relationship;
+      _relationshipTasks.remove(key);
       if (!mounted) return;
       setState(() {
         _isFollowing = relationship.isFollowing;
       });
     } catch (_) {
+      _relationshipTasks.remove('${widget.currentUserId}:$_userId');
       // Keep the server-provided reel flag when relationship lookup is unavailable.
     }
   }
 
-  Future<void> _loadMutePreference() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!mounted) return;
-
-    setState(() {
-      _isMuted = prefs.getBool('reels_muted') ?? false;
+  Future<void> _ensureMutePreferenceLoaded() {
+    return _muteLoadTask ??= SharedPreferences.getInstance().then((prefs) {
+      _sharedMute.value = prefs.getBool('reels_muted') ?? false;
     });
+  }
 
-    await _videoController?.setVolume(_isMuted ? 0 : 1);
+  void _handleSharedMuteChanged() {
+    final muted = _sharedMute.value;
+    if (_isMuted == muted) return;
+    if (mounted) {
+      setState(() => _isMuted = muted);
+    } else {
+      _isMuted = muted;
+    }
+    unawaited(_videoController?.setVolume(muted ? 0 : 1));
   }
 
   Future<void> _disposeController() async {
@@ -187,6 +227,7 @@ class _ReelItemState extends State<ReelItem>
   }
 
   Future<void> _initializeVideo() async {
+    if (!widget.shouldPreload || _videoController != null) return;
     if (_videoUrl.isEmpty) {
       if (!mounted) return;
 
@@ -199,8 +240,16 @@ class _ReelItemState extends State<ReelItem>
     }
 
     try {
-      final cachedFile =
+      var cachedFile =
           kIsWeb ? null : await _videoCache.getFileFromCache(_videoUrl);
+      if (cachedFile == null && !kIsWeb && !widget.isActive) {
+        try {
+          cachedFile = await _cacheVideo(_videoUrl);
+        } catch (_) {
+          // Fall back to streaming if preloading cannot populate the cache.
+        }
+      }
+      if (!mounted || !widget.shouldPreload) return;
       final controller = cachedFile != null
           ? VideoPlayerController.file(
               cachedFile.file,
@@ -212,12 +261,6 @@ class _ReelItemState extends State<ReelItem>
             );
 
       _videoController = controller;
-
-      // Keep first playback streaming immediately while saving the same URL for
-      // the next view and for adjacent reels that Flutter builds ahead of time.
-      if (cachedFile == null && !kIsWeb) {
-        unawaited(_cacheVideo(_videoUrl));
-      }
 
       await controller.initialize();
 
@@ -253,12 +296,14 @@ class _ReelItemState extends State<ReelItem>
     }
   }
 
-  Future<void> _cacheVideo(String url) async {
-    try {
-      await _videoCache.downloadFile(url);
-    } catch (_) {
-      // Playback continues from the network when disk caching is unavailable.
-    }
+  Future<FileInfo> _cacheVideo(String url) {
+    return _videoCacheTasks.putIfAbsent(url, () async {
+      try {
+        return await _videoCache.downloadFile(url);
+      } finally {
+        _videoCacheTasks.remove(url);
+      }
+    });
   }
 
   Future<void> _playVideo() async {
@@ -303,12 +348,7 @@ class _ReelItemState extends State<ReelItem>
 
   Future<void> _toggleMute() async {
     final nextMuted = !_isMuted;
-
-    setState(() {
-      _isMuted = nextMuted;
-    });
-
-    await _videoController?.setVolume(nextMuted ? 0 : 1);
+    _sharedMute.value = nextMuted;
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('reels_muted', nextMuted);
@@ -604,6 +644,10 @@ class _ReelItemState extends State<ReelItem>
       } else {
         await FriendsService().unfollowUser(_userId);
       }
+      final relationshipKey = '${widget.currentUserId}:$_userId';
+      _relationshipCache.remove(relationshipKey);
+      _relationshipTasks.remove(relationshipKey);
+      FollowStatsCache.invalidate(userId: _userId);
       if (!mounted) return;
       try {
         context.read<FriendsBloc>().add(LoadFollowStats());

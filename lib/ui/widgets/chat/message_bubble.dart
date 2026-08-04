@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
 import 'package:clique/ui/widgets/chat/audio_message_bubble.dart';
 import 'package:clique/ui/widgets/common/ui/image_viewer.dart';
 import 'package:clique/ui/widgets/common/ui/video_viewer.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 
 class MessageBubble extends StatelessWidget {
   final MessageModel message;
@@ -244,18 +244,17 @@ class MessageBubble extends StatelessWidget {
         onTap: () => _showImageViewer(context, message.mediaUrl!),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: CachedNetworkImage(
+          child: AppNetworkImage(
             imageUrl: message.mediaUrl!,
             height: 180,
             width: double.infinity,
             fit: BoxFit.cover,
-            placeholder: (_, __) => Container(
+            preset: AppNetworkImagePreset.thumbnail,
+            placeholder: (_) => Container(
               height: 180,
               color: AppColors.grey.shade200,
-              child: const Center(
-                  child: CircularProgressIndicator(strokeWidth: 2)),
             ),
-            errorWidget: (_, __, ___) => Container(
+            errorBuilder: (_) => Container(
               height: 180,
               color: AppColors.grey.shade200,
               child: const Center(
@@ -274,18 +273,17 @@ class MessageBubble extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: CachedNetworkImage(
+              child: AppNetworkImage(
                 imageUrl: message.mediaUrl!,
                 height: 180,
                 width: double.infinity,
                 fit: BoxFit.cover,
-                placeholder: (_, __) => Container(
+                preset: AppNetworkImagePreset.thumbnail,
+                placeholder: (_) => Container(
                   height: 180,
                   color: AppColors.grey.shade200,
-                  child: const Center(
-                      child: CircularProgressIndicator(strokeWidth: 2)),
                 ),
-                errorWidget: (_, __, ___) => Container(
+                errorBuilder: (_) => Container(
                   height: 180,
                   color: AppColors.grey.shade200,
                   child: const Center(
@@ -645,7 +643,11 @@ class _Avatar extends StatelessWidget {
     if (userAvatar.startsWith('http')) {
       return CircleAvatar(
         radius: 16,
-        backgroundImage: CachedNetworkImageProvider(userAvatar),
+        backgroundImage: appNetworkImageProvider(
+          context,
+          userAvatar,
+          logicalWidth: 32,
+        ),
       );
     }
 

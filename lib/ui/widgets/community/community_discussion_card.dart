@@ -1,10 +1,10 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/models/community_model.dart';
 import 'package:clique/ui/widgets/common/effect_text.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 
 class CommunityDiscussionCard extends StatelessWidget {
   final DiscussionPostModel post;
@@ -33,8 +33,13 @@ class CommunityDiscussionCard extends StatelessWidget {
           CircleAvatar(
             radius: 18,
             backgroundColor: AppColors.primary.withOpacity(0.12),
-            backgroundImage:
-                avatar.isNotEmpty ? CachedNetworkImageProvider(avatar) : null,
+            backgroundImage: avatar.isNotEmpty
+                ? appNetworkImageProvider(
+                    context,
+                    avatar,
+                    logicalWidth: 40,
+                  )
+                : null,
             child: avatar.isNotEmpty
                 ? null
                 : Text(

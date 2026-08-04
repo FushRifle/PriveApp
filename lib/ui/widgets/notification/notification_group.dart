@@ -1,8 +1,8 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/ui/widgets/notification/notification_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/ui/widgets/common/effect_text.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 
 class NotificationGroupWidget extends StatelessWidget {
   final Map<String, dynamic> notification;
@@ -83,9 +83,8 @@ class NotificationGroupWidget extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 14,
                             height: 1.35,
-                            color: isUnread
-                                ? AppColors.secondary
-                                : AppColors.text,
+                            color:
+                                isUnread ? AppColors.secondary : AppColors.text,
                             fontWeight:
                                 isUnread ? FontWeight.w700 : FontWeight.w400,
                           ),
@@ -216,18 +215,13 @@ class NotificationGroupWidget extends StatelessWidget {
           ),
           child: ClipOval(
             child: avatar.isNotEmpty && avatar.startsWith('http')
-                ? CachedNetworkImage(
+                ? AppNetworkImage(
                     imageUrl: avatar,
                     fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) => _avatarFallback(actorName),
-                    placeholder: (_, __) => Container(
+                    preset: AppNetworkImagePreset.avatar,
+                    errorBuilder: (_) => _avatarFallback(actorName),
+                    placeholder: (_) => Container(
                       color: AppColors.primary.withOpacity(0.05),
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.primary.withOpacity(0.3),
-                        ),
-                      ),
                     ),
                   )
                 : _avatarFallback(actorName),
@@ -323,12 +317,11 @@ class NotificationGroupWidget extends StatelessWidget {
           ),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: CachedNetworkImage(
+        child: AppNetworkImage(
           imageUrl: imageUrl,
           fit: BoxFit.cover,
-          memCacheWidth: 96,
-          memCacheHeight: 96,
-          errorWidget: (context, error, stackTrace) {
+          preset: AppNetworkImagePreset.thumbnail,
+          errorBuilder: (_) {
             return Container(
               decoration: BoxDecoration(
                 color: accent.withOpacity(0.08),
@@ -341,14 +334,8 @@ class NotificationGroupWidget extends StatelessWidget {
               ),
             );
           },
-          placeholder: (_, __) => Container(
+          placeholder: (_) => Container(
             color: accent.withOpacity(0.05),
-            child: Center(
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: accent.withOpacity(0.3),
-              ),
-            ),
           ),
         ),
       ),

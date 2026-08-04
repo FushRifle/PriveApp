@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 
 class ActionButton extends StatelessWidget {
   final IconData icon;
@@ -52,8 +52,8 @@ class ActionButton extends StatelessWidget {
               const SizedBox(height: 3),
               Flexible(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 3, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
@@ -108,11 +108,12 @@ class ProfileAvatar extends StatelessWidget {
       ),
       child: ClipOval(
         child: imageUrl.isNotEmpty && imageUrl.startsWith('http')
-            ? CachedNetworkImage(
+            ? AppNetworkImage(
                 imageUrl: imageUrl,
                 fit: BoxFit.cover,
-                errorWidget: (_, __, ___) => _buildFallback(),
-                placeholder: (_, __) => _buildFallback(),
+                preset: AppNetworkImagePreset.avatar,
+                errorBuilder: (_) => _buildFallback(),
+                placeholder: (_) => _buildFallback(),
               )
             : _buildFallback(),
       ),
@@ -157,11 +158,12 @@ class AudioAvatar extends StatelessWidget {
         ),
       ),
       child: ClipOval(
-        child: CachedNetworkImage(
+        child: AppNetworkImage(
           imageUrl: imageUrl,
           fit: BoxFit.cover,
-          errorWidget: (_, __, ___) => _fallback(),
-          placeholder: (_, __) => _fallback(),
+          preset: AppNetworkImagePreset.avatar,
+          errorBuilder: (_) => _fallback(),
+          placeholder: (_) => _fallback(),
         ),
       ),
     );

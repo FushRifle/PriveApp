@@ -20,7 +20,7 @@ import 'package:clique/ui/pages/main/chat/chat_info_page.dart';
 
 import 'package:clique/ui/widgets/chat/message_bubble.dart';
 import 'package:clique/ui/widgets/chat/chat_input_bar.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 
 class ChatPage extends StatefulWidget {
   final int conversationId;
@@ -453,7 +453,10 @@ class _ChatPageState extends State<ChatPage>
           buildWhen: (previous, current) {
             return previous.activeConversationId !=
                     current.activeConversationId ||
-                previous.messages != current.messages ||
+                !_hasSameMessageStructure(
+                  previous.messages,
+                  current.messages,
+                ) ||
                 previous.messagesStatus != current.messagesStatus ||
                 previous.chatSettings != current.chatSettings;
           },
@@ -482,8 +485,8 @@ class _ChatPageState extends State<ChatPage>
                                 : ListView.builder(
                                     controller: _scrollController,
                                     reverse: true,
-                                    cacheExtent: 1400,
-                                    addAutomaticKeepAlives: true,
+                                    cacheExtent: 800,
+                                    addAutomaticKeepAlives: false,
                                     addRepaintBoundaries: true,
                                     keyboardDismissBehavior:
                                         ScrollViewKeyboardDismissBehavior
@@ -519,20 +522,19 @@ class _ChatPageState extends State<ChatPage>
                                                 message.createdAt,
                                               ),
                                             ),
-                                          MessageBubble(
-                                            message: message,
+                                          _ChatMessageSlot(
+                                            messageKey:
+                                                _messageRenderKey(message),
+                                            fallback: message,
                                             userAvatar: widget.userAvatar,
                                             chatColor: _getChatColor(),
                                             index: index,
-                                            onReply: () =>
-                                                _replyToMessage(message),
-                                            onRetry: message.isPending
-                                                ? () => context
-                                                    .read<ChatBloc>()
-                                                    .add(RetryPendingMessages(
-                                                        conversationId: widget
-                                                            .conversationId))
-                                                : null,
+                                            onReply: _replyToMessage,
+                                            onRetry: () => context
+                                                .read<ChatBloc>()
+                                                .add(RetryPendingMessages(
+                                                    conversationId:
+                                                        widget.conversationId)),
                                           ),
                                         ],
                                       );
@@ -812,7 +814,11 @@ class _ChatPageState extends State<ChatPage>
     if (widget.userAvatar.isNotEmpty && widget.userAvatar.startsWith('http')) {
       return CircleAvatar(
           radius: 18,
-          backgroundImage: CachedNetworkImageProvider(widget.userAvatar));
+          backgroundImage: appNetworkImageProvider(
+            context,
+            widget.userAvatar,
+            logicalWidth: 36,
+          ));
     }
     return CircleAvatar(
       radius: 18,
@@ -1039,6 +1045,72 @@ class _ChatPageState extends State<ChatPage>
     return isDark
         ? 'assets/wallpapers/galaxy.png'
         : 'assets/wallpapers/modern.png';
+  }
+}
+
+String _messageRenderKey(MessageModel message) {
+  final streamId = message.streamMessageId?.trim();
+  if (streamId != null && streamId.isNotEmpty) return 'stream:$streamId';
+  final clientId = message.clientMessageId?.trim();
+  if (clientId != null && clientId.isNotEmpty) return 'client:$clientId';
+  return 'id:${message.id}';
+}
+
+bool _hasSameMessageStructure(
+  List<MessageModel> previous,
+  List<MessageModel> current,
+) {
+  if (identical(previous, current)) return true;
+  if (previous.length != current.length) return false;
+  for (var index = 0; index < previous.length; index++) {
+    if (_messageRenderKey(previous[index]) !=
+        _messageRenderKey(current[index])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+class _ChatMessageSlot extends StatelessWidget {
+  final String messageKey;
+  final MessageModel fallback;
+  final String userAvatar;
+  final Color chatColor;
+  final int index;
+  final ValueChanged<MessageModel> onReply;
+  final VoidCallback onRetry;
+
+  const _ChatMessageSlot({
+    required this.messageKey,
+    required this.fallback,
+    required this.userAvatar,
+    required this.chatColor,
+    required this.index,
+    required this.onReply,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<ChatBloc, ChatState, MessageModel?>(
+      selector: (state) {
+        for (final message in state.messages) {
+          if (_messageRenderKey(message) == messageKey) return message;
+        }
+        return null;
+      },
+      builder: (context, selected) {
+        final message = selected ?? fallback;
+        return MessageBubble(
+          message: message,
+          userAvatar: userAvatar,
+          chatColor: chatColor,
+          index: index,
+          onReply: () => onReply(message),
+          onRetry: message.isPending ? onRetry : null,
+        );
+      },
+    );
   }
 }
 

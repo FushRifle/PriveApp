@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/models/feeds_models.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 
 class PostSection extends StatelessWidget {
   final bool isLoading;
@@ -126,17 +126,15 @@ class _RelatedPost extends StatelessWidget {
           const SizedBox(height: 10),
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: CachedNetworkImage(
+            child: AppNetworkImage(
               imageUrl: imageUrl,
               width: double.infinity,
               fit: BoxFit.cover,
-              placeholder: (_, __) => Container(
+              preset: AppNetworkImagePreset.card,
+              placeholder: (_) => Container(
                 color: AppColors.greyColor.withOpacity(0.1),
-                child: const Center(
-                  child: CircularProgressIndicator(color: AppColors.primary),
-                ),
               ),
-              errorWidget: (_, __, ___) => Container(
+              errorBuilder: (_) => Container(
                 height: 120,
                 color: AppColors.greyColor.withOpacity(0.1),
                 child: const Icon(Icons.image_not_supported_outlined),

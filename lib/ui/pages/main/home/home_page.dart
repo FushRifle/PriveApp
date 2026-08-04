@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -16,6 +15,7 @@ import 'package:clique/bloc/status/stories_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 
 import 'package:clique/core/models/status_model.dart';
+import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/core/services/notification/notification_service.dart';
 
 import 'package:clique/ui/pages/main/status/create_status_page.dart';
@@ -27,6 +27,7 @@ import 'package:clique/ui/widgets/home/home_feed_shimmer.dart';
 import 'package:clique/ui/widgets/home/people_you_may_know_dialog.dart';
 import 'package:clique/ui/widgets/post/normal-post/repost_card.dart';
 import 'package:clique/ui/widgets/status/status_widget.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({
@@ -288,10 +289,15 @@ class _HomePageState extends State<HomePage>
                 ),
                 BlocBuilder<FeedBloc, FeedState>(
                   buildWhen: (previous, current) {
-                    return previous.posts != current.posts ||
-                        previous.postsStatus != current.postsStatus ||
-                        previous.postsError != current.postsError ||
-                        previous.hasMorePosts != current.hasMorePosts;
+                    if (!_hasSamePostStructure(
+                      previous.posts,
+                      current.posts,
+                    )) {
+                      return true;
+                    }
+                    return current.posts.isEmpty &&
+                        (previous.postsStatus != current.postsStatus ||
+                            previous.postsError != current.postsError);
                   },
                   builder: (context, state) {
                     final posts = state.posts;
@@ -345,9 +351,10 @@ class _HomePageState extends State<HomePage>
                               final postIndex = index - (index ~/ 7);
                               final post = posts[postIndex];
 
-                              return RepostCard(
+                              return _FeedPostSlot(
                                 key: ValueKey('post_${post.id}'),
-                                post: post,
+                                postId: post.id,
+                                fallback: post,
                               );
                             },
                           ),
@@ -468,6 +475,39 @@ class _HomePageState extends State<HomePage>
 
     _cachedGroups = groups;
     return groups;
+  }
+}
+
+bool _hasSamePostStructure(List<FeedPost> previous, List<FeedPost> current) {
+  if (identical(previous, current)) return true;
+  if (previous.length != current.length) return false;
+  for (var index = 0; index < previous.length; index++) {
+    if (previous[index].id != current[index].id) return false;
+  }
+  return true;
+}
+
+class _FeedPostSlot extends StatelessWidget {
+  final int postId;
+  final FeedPost fallback;
+
+  const _FeedPostSlot({
+    super.key,
+    required this.postId,
+    required this.fallback,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<FeedBloc, FeedState, FeedPost?>(
+      selector: (state) {
+        for (final post in state.posts) {
+          if (post.id == postId) return post;
+        }
+        return null;
+      },
+      builder: (context, post) => RepostCard(post: post ?? fallback),
+    );
   }
 }
 
@@ -717,14 +757,11 @@ class _SuggestionAvatar extends StatelessWidget {
         width: 54,
         height: 54,
         child: user.avatar.isNotEmpty && user.avatar.startsWith('http')
-            ? CachedNetworkImage(
+            ? AppNetworkImage(
                 imageUrl: user.avatar,
                 fit: BoxFit.cover,
-                memCacheWidth: 160,
-                memCacheHeight: 160,
-                fadeInDuration: Duration.zero,
-                fadeOutDuration: Duration.zero,
-                errorWidget: (_, __, ___) => _fallback(fallback),
+                preset: AppNetworkImagePreset.avatar,
+                errorBuilder: (_) => _fallback(fallback),
               )
             : _fallback(fallback),
       ),
@@ -1166,15 +1203,12 @@ class _Avatar extends StatelessWidget {
         padding: const EdgeInsets.all(2),
         child: ClipOval(
           child: avatar.isNotEmpty && avatar.startsWith('http')
-              ? CachedNetworkImage(
+              ? AppNetworkImage(
                   imageUrl: avatar,
                   fit: BoxFit.cover,
-                  memCacheWidth: (size * 3).round(),
-                  memCacheHeight: (size * 3).round(),
-                  fadeInDuration: Duration.zero,
-                  fadeOutDuration: Duration.zero,
-                  placeholder: (_, __) => _fallback(),
-                  errorWidget: (_, __, ___) => _fallback(),
+                  preset: AppNetworkImagePreset.avatar,
+                  placeholder: (_) => _fallback(),
+                  errorBuilder: (_) => _fallback(),
                 )
               : avatar.isNotEmpty
                   ? Image.asset(

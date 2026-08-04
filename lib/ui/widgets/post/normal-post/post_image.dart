@@ -1,7 +1,7 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/ui/widgets/common/ui/image_viewer.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -52,49 +52,30 @@ class PostImage extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           const ColoredBox(color: AppColors.black),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final pixelRatio = MediaQuery.devicePixelRatioOf(context);
-              final logicalWidth = constraints.maxWidth.isFinite
-                  ? constraints.maxWidth
-                  : MediaQuery.sizeOf(context).width;
-              final logicalHeight = constraints.maxHeight.isFinite
-                  ? constraints.maxHeight
-                  : logicalWidth;
-              final cacheWidth =
-                  (logicalWidth * pixelRatio).round().clamp(240, 1080);
-              final cacheHeight =
-                  (logicalHeight * pixelRatio).round().clamp(240, 1080);
-
-              return CachedNetworkImage(
-                imageUrl: imageUrl,
-                fit: BoxFit.contain,
-                memCacheWidth: cacheWidth,
-                memCacheHeight: cacheHeight,
-                fadeInDuration: Duration.zero,
-                fadeOutDuration: Duration.zero,
-                placeholder: (_, __) => const ColoredBox(
-                  color: AppColors.black,
-                  child: Center(
-                    child: Icon(
-                      Icons.image_outlined,
-                      size: 34,
-                      color: AppColors.white24,
-                    ),
+          AppNetworkImage(
+            imageUrl: imageUrl,
+            fit: BoxFit.contain,
+            preset: AppNetworkImagePreset.card,
+            placeholder: (_) => const ColoredBox(
+              color: AppColors.black,
+              child: Center(
+                child: Icon(
+                  Icons.image_outlined,
+                  size: 34,
+                  color: AppColors.white24,
+                ),
+              ),
+            ),
+            errorBuilder: (_) {
+              return ColoredBox(
+                color: AppColors.black,
+                child: Center(
+                  child: Icon(
+                    Icons.broken_image_outlined,
+                    size: 42,
+                    color: AppColors.textHint,
                   ),
                 ),
-                errorWidget: (_, __, ___) {
-                  return ColoredBox(
-                    color: AppColors.black,
-                    child: Center(
-                      child: Icon(
-                        Icons.broken_image_outlined,
-                        size: 42,
-                        color: AppColors.textHint,
-                      ),
-                    ),
-                  );
-                },
               );
             },
           ),
