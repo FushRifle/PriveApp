@@ -60,6 +60,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           isLoading: false,
           clearError: true,
           needsVerification: false,
+          isNewRegistration: false,
         ),
       );
     } else if (result.needsVerification) {
@@ -80,6 +81,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           isLoading: false,
           error: result.error ?? 'Sign in failed',
           needsVerification: false,
+          isNewRegistration: false,
         ),
       );
     }
@@ -115,6 +117,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           isLoading: false,
           clearError: true,
           needsVerification: false,
+          isNewRegistration: true,
         ),
       );
     } else if (result.needsVerification) {
@@ -186,6 +189,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             user: result.user,
             isLoading: false,
             clearError: true,
+            isNewRegistration: false,
           ),
         );
       } else {
@@ -274,6 +278,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           user: result.user,
           isLoading: false,
           needsVerification: false,
+          isNewRegistration: true,
           clearError: true,
         ),
       );

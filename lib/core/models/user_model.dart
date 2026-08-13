@@ -19,6 +19,8 @@ class UserProfile {
   final String? coverImage;
   final bool verified;
   final bool onboarded;
+  final bool isSeenOnboarding;
+  final bool isSeenDemographics;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -43,6 +45,8 @@ class UserProfile {
     this.coverImage,
     this.verified = false,
     this.onboarded = false,
+    this.isSeenOnboarding = false,
+    this.isSeenDemographics = false,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -70,6 +74,14 @@ class UserProfile {
       coverImage: json['coverImage'],
       verified: json['verified'] ?? false,
       onboarded: json['onboarded'] ?? false,
+      isSeenOnboarding: json['isSeenOnboarding'] ??
+          json['is_seen_onboarding'] ??
+          json['onboarded'] ??
+          false,
+      isSeenDemographics: json['isSeenDemographics'] ??
+          json['is_seen_demographics'] ??
+          json['onboarded'] ??
+          false,
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
     );
@@ -97,6 +109,8 @@ class UserProfile {
       'coverImage': coverImage,
       'verified': verified,
       'onboarded': onboarded,
+      'isSeenOnboarding': isSeenOnboarding,
+      'isSeenDemographics': isSeenDemographics,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -123,6 +137,8 @@ class UserProfile {
     String? coverImage,
     bool? verified,
     bool? onboarded,
+    bool? isSeenOnboarding,
+    bool? isSeenDemographics,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -147,6 +163,8 @@ class UserProfile {
       coverImage: coverImage ?? this.coverImage,
       verified: verified ?? this.verified,
       onboarded: onboarded ?? this.onboarded,
+      isSeenOnboarding: isSeenOnboarding ?? this.isSeenOnboarding,
+      isSeenDemographics: isSeenDemographics ?? this.isSeenDemographics,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

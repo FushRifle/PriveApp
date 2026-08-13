@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/core/services/auth/auth_service.dart';
+import 'package:clique/ui/pages/auth/onboarding_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -329,7 +330,7 @@ class _AuthenticationPageState extends State<AuthenticationPage>
           Text(
             passwordStage
                 ? 'Enter your password for\n${_email.text.trim().toLowerCase()}'
-                : 'Enter your email, then choose whether to sign in or create an account',
+                : 'Enter your email to sign in, or create a new account below',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Colors.white.withOpacity(0.72),
                   height: 1.5,
@@ -515,7 +516,7 @@ class _AuthenticationPageState extends State<AuthenticationPage>
                   ? null
                   : passwordStage
                       ? _submitPassword
-                      : _checkEmail,
+                      : () => _continueWithEmail(existingUser: true),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(56),
                 backgroundColor: AppColors.primary,
@@ -557,26 +558,26 @@ class _AuthenticationPageState extends State<AuthenticationPage>
               ),
             ),
           ),
-          if (passwordStage) ...[
-            const SizedBox(height: 24),
-            TextButton(
-              onPressed: state.isLoading
-                  ? null
-                  : () => setState(() {
-                        _existingUser = !_existingUser;
-                        _password.clear();
-                        _passwordError = null;
-                      }),
-              child: Text(
-                _existingUser
-                    ? 'New to Clique? Create an account'
-                    : 'Already have an account? Sign in',
-                style: TextStyle(
-                  color: AppColors.primary.withOpacity(0.8),
-                  fontWeight: FontWeight.w500,
+          if (!passwordStage) ...[
+            const SizedBox(height: 14),
+            OutlinedButton(
+              onPressed: state.isLoading ? null : _startCreateAccount,
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(54),
+                foregroundColor: Colors.white,
+                side: BorderSide(color: Colors.white.withOpacity(0.42)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
+              child: const Text(
+                'Create account',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
             ),
+          ],
+          if (passwordStage) ...[
+            const SizedBox(height: 24),
             if (_existingUser)
               TextButton(
                 onPressed: state.isLoading ? null : _sendPasswordReset,
@@ -698,7 +699,9 @@ class _AuthenticationPageState extends State<AuthenticationPage>
     );
   }
 
-  void _checkEmail() {
+  void _checkEmail() => _continueWithEmail(existingUser: true);
+
+  void _continueWithEmail({required bool existingUser}) {
     final error = _validateEmail(_email.text);
     if (error != null) {
       setState(() => _emailError = error);
@@ -707,11 +710,28 @@ class _AuthenticationPageState extends State<AuthenticationPage>
       return;
     }
     setState(() {
-      _existingUser = true;
+      _existingUser = existingUser;
       _stage = _EmailStage.password;
       _emailError = null;
       _passwordError = null;
     });
+  }
+
+  Future<void> _startCreateAccount() async {
+    final error = _validateEmail(_email.text);
+    if (error != null) {
+      setState(() => _emailError = error);
+      _showErrorMessage(error);
+      return;
+    }
+
+    final completed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => const OnboardingPage(),
+      ),
+    );
+    if (!mounted || completed != true) return;
+    _continueWithEmail(existingUser: false);
   }
 
   void _applyAuthFieldError(String message) {

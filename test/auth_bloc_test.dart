@@ -3,16 +3,30 @@ import 'package:clique/core/services/auth/auth_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _FakeAuthService extends AuthService {
-  _FakeAuthService({required this.restore, this.fallback});
+  _FakeAuthService({
+    required this.restore,
+    this.fallback,
+    this.signUpResult,
+  });
 
   final Future<AuthResult> Function() restore;
   final AuthResult? fallback;
+  final AuthResult? signUpResult;
 
   @override
   Future<AuthResult> restoreSession() => restore();
 
   @override
   AuthResult? currentSessionFallback() => fallback;
+
+  @override
+  Future<AuthResult> signUp({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+  }) async =>
+      signUpResult ?? AuthResult(success: false);
 }
 
 void main() {
@@ -53,5 +67,34 @@ void main() {
 
     expect(state.isAuthenticated, isFalse);
     expect(state.token, isNull);
+  });
+
+  test('marks the session as a new registration after sign up', () async {
+    final bloc = AuthBloc(
+      authService: _FakeAuthService(
+        restore: () async => AuthResult(success: false),
+        signUpResult: AuthResult(
+          success: true,
+          token: 'new-token',
+          user: const {'id': 'new-user'},
+        ),
+      ),
+    );
+    addTearDown(bloc.close);
+    await bloc.stream.firstWhere(
+      (state) => state.status == AuthStatus.unauthenticated,
+    );
+
+    bloc.add(const SignUpRequested(
+      email: 'new@example.com',
+      password: 'password123',
+      firstName: '',
+      lastName: '',
+    ));
+    final state = await bloc.stream.firstWhere(
+      (state) => state.status == AuthStatus.authenticated,
+    );
+
+    expect(state.isNewRegistration, isTrue);
   });
 }

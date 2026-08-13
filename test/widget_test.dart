@@ -24,6 +24,7 @@ void main() {
     );
 
     expect(find.text('What should we call you?'), findsOneWidget);
+    expect(find.text('Skip for now'), findsOneWidget);
     expect(find.text('Continue'), findsOneWidget);
   });
 }

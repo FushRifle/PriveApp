@@ -28,6 +28,9 @@ class AuthState extends Equatable {
 
   final String email;
 
+  /// True only for the session created by a successful sign-up request.
+  final bool isNewRegistration;
+
   const AuthState({
     this.status = AuthStatus.initial,
     this.isAuthenticated = false,
@@ -38,6 +41,7 @@ class AuthState extends Equatable {
     this.needsVerification = false,
     this.savedCredentials = const {},
     this.email = '',
+    this.isNewRegistration = false,
   });
 
   // =========================================================
@@ -69,6 +73,7 @@ class AuthState extends Equatable {
     bool? needsVerification,
     Map<String, dynamic>? savedCredentials,
     String? email,
+    bool? isNewRegistration,
   }) {
     return AuthState(
       status: status ?? this.status,
@@ -80,6 +85,7 @@ class AuthState extends Equatable {
       needsVerification: needsVerification ?? this.needsVerification,
       savedCredentials: savedCredentials ?? this.savedCredentials,
       email: email ?? this.email,
+      isNewRegistration: isNewRegistration ?? this.isNewRegistration,
     );
   }
 
@@ -169,5 +175,6 @@ class AuthState extends Equatable {
         needsVerification,
         savedCredentials,
         email,
+        isNewRegistration,
       ];
 }

@@ -1,43 +1,48 @@
 class OnboardingProfileRequest {
-  final String name;
-  final String bio;
-  final int age;
-  final String gender;
-  final String country;
-  final String countryCode;
-  final String mobileNumber;
+  final String? name;
+  final String? bio;
+  final int? age;
+  final String? gender;
+  final String? country;
+  final String? countryCode;
+  final String? mobileNumber;
   final List<String> interests;
   final String? lookingFor;
 
   const OnboardingProfileRequest({
-    required this.name,
-    required this.bio,
-    required this.age,
-    required this.gender,
-    required this.country,
-    required this.countryCode,
-    required this.mobileNumber,
-    required this.interests,
+    this.name,
+    this.bio,
+    this.age,
+    this.gender,
+    this.country,
+    this.countryCode,
+    this.mobileNumber,
+    this.interests = const [],
     this.lookingFor,
   });
 
   Map<String, dynamic> toJson() => {
         'user': {
-          'name': name,
-          'age': age,
-          'gender': gender,
-          'country': country,
-          'countryCode': countryCode,
-          'mobileNumber': mobileNumber,
-          'phone': '$countryCode$mobileNumber',
+          if (name != null && name!.isNotEmpty) 'name': name,
+          if (age != null) 'age': age,
+          if (gender != null && gender!.isNotEmpty) 'gender': gender,
+          if (country != null && country!.isNotEmpty) 'country': country,
+          if (countryCode != null && countryCode!.isNotEmpty)
+            'countryCode': countryCode,
+          if (mobileNumber != null && mobileNumber!.isNotEmpty)
+            'mobileNumber': mobileNumber,
+          if (countryCode != null &&
+              mobileNumber != null &&
+              mobileNumber!.isNotEmpty)
+            'phone': '$countryCode$mobileNumber',
         },
         'profile': {
-          'displayName': name,
-          'bio': bio,
-          'age': age,
-          'gender': gender,
-          'country': country,
-          'interests': interests,
+          if (name != null && name!.isNotEmpty) 'displayName': name,
+          if (bio != null && bio!.isNotEmpty) 'bio': bio,
+          if (age != null) 'age': age,
+          if (gender != null && gender!.isNotEmpty) 'gender': gender,
+          if (country != null && country!.isNotEmpty) 'country': country,
+          if (interests.isNotEmpty) 'interests': interests,
           if (lookingFor != null) 'lookingFor': lookingFor,
         },
       };

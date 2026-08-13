@@ -12,6 +12,7 @@ import 'package:clique/bloc/user/user_bloc.dart';
 
 import 'package:clique/ui/pages/auth/authentication_page.dart';
 import 'package:clique/ui/pages/auth/unified_onboarding_page.dart';
+import 'package:clique/core/services/user/user_service.dart';
 import 'main_wrapper.dart';
 
 class AuthGuard extends StatefulWidget {
@@ -65,6 +66,7 @@ class _AuthGuardState extends State<AuthGuard> {
         return _Bootstrapper(
           key: ValueKey(authState.token),
           token: authState.token!,
+          isNewRegistration: authState.isNewRegistration,
           onBootstrapComplete: widget.onBootstrapComplete,
         );
       },
@@ -74,11 +76,13 @@ class _AuthGuardState extends State<AuthGuard> {
 
 class _Bootstrapper extends StatefulWidget {
   final String token;
+  final bool isNewRegistration;
   final VoidCallback? onBootstrapComplete;
 
   const _Bootstrapper({
     super.key,
     required this.token,
+    required this.isNewRegistration,
     this.onBootstrapComplete,
   });
 
@@ -88,9 +92,9 @@ class _Bootstrapper extends StatefulWidget {
 
 class _BootstrapperState extends State<_Bootstrapper> {
   bool _loading = true;
-  bool _hasProfile = false;
-  bool _hasUser = false;
   bool _isOnboarded = false;
+  bool _isSeenOnboarding = false;
+  bool _isSeenDemographics = false;
   String? _error;
   Future<void>? _bootstrapFuture;
   bool _didNotifyBootstrapComplete = false;
@@ -128,35 +132,30 @@ class _BootstrapperState extends State<_Bootstrapper> {
 
       final userBloc = context.read<UserBloc>();
 
-      final profile = profileBloc.state.myProfile;
-
-      _hasProfile = profile != null && profile.userId > 0;
-
       final currentUser = userBloc.state.currentUser;
 
-      _hasUser = currentUser != null;
       _isOnboarded = _readOnboarded(currentUser);
+      _isSeenOnboarding = _readFlag(
+        currentUser,
+        'isSeenOnboarding',
+        fallback: _isOnboarded,
+      );
+      _isSeenDemographics = _readFlag(
+        currentUser,
+        'isSeenDemographics',
+        fallback: _isOnboarded,
+      );
 
       final futures = <Future>[];
 
-      if (!_hasProfile) {
-        futures.add(
-          profileBloc.stream.firstWhere(
-            (state) {
-              return state.status == ProfileStatus.success ||
-                  state.status == ProfileStatus.error;
-            },
-          ),
-        );
-
-        if (profileBloc.state.status != ProfileStatus.loading) {
-          profileBloc.add(
-            LoadMyProfile(),
-          );
-        }
+      // Prime profile state, but optional profile data must never hold up
+      // authentication or registration.
+      if (profileBloc.state.myProfile == null &&
+          profileBloc.state.status != ProfileStatus.loading) {
+        profileBloc.add(LoadMyProfile());
       }
 
-      if (!_hasUser) {
+      if (currentUser == null) {
         futures.add(
           userBloc.stream.firstWhere(
             (state) {
@@ -179,26 +178,36 @@ class _BootstrapperState extends State<_Bootstrapper> {
 
       if (!mounted) return;
 
-      final updatedProfile = profileBloc.state.myProfile;
-      final hasValidProfile =
-          updatedProfile != null && updatedProfile.userId > 0;
-
-      final profileFailed =
-          !hasValidProfile && profileBloc.state.status == ProfileStatus.error;
       final userFailed = userBloc.state.currentUser == null &&
           userBloc.state.status == UserStatus.error;
 
       setState(() {
-        _hasProfile = hasValidProfile;
-        _hasUser = userBloc.state.currentUser != null;
         _isOnboarded = _readOnboarded(userBloc.state.currentUser);
+        _isSeenOnboarding = _readFlag(
+          userBloc.state.currentUser,
+          'isSeenOnboarding',
+          fallback: _isOnboarded,
+        );
+        _isSeenDemographics = _readFlag(
+          userBloc.state.currentUser,
+          'isSeenDemographics',
+          fallback: _isOnboarded,
+        );
         _loading = false;
-        _error = profileFailed || userFailed
+        _error = userFailed
             ? (userBloc.state.error ??
-                profileBloc.state.error ??
                 'Unable to load your account. Check your connection and retry.')
             : null;
       });
+      if (!_isSeenOnboarding || widget.isNewRegistration) {
+        try {
+          await UserService().markOnboardingSeen();
+        } catch (_) {
+          // Progress is optimistic: a transient flag-write failure must not
+          // send a newly registered user backwards in the flow.
+        }
+        if (mounted) setState(() => _isSeenOnboarding = true);
+      }
       if (_error == null) _notifyBootstrapComplete();
     } catch (error) {
       if (!mounted) return;
@@ -241,8 +250,13 @@ class _BootstrapperState extends State<_Bootstrapper> {
       );
     }
 
-    if (!_isOnboarded || !_hasProfile) {
-      return const UnifiedOnboardingPage();
+    if (!_isSeenDemographics) {
+      return UnifiedOnboardingPage(
+        onComplete: () => setState(() {
+          _isSeenDemographics = true;
+          _isOnboarded = true;
+        }),
+      );
     }
 
     return const MainWrapper();
@@ -260,6 +274,19 @@ class _BootstrapperState extends State<_Bootstrapper> {
     }
 
     return false;
+  }
+
+  bool _readFlag(
+    Map<String, dynamic>? user,
+    String camelKey, {
+    required bool fallback,
+  }) {
+    final snakeKey = camelKey.replaceAllMapped(
+        RegExp(r'[A-Z]'), (match) => '_${match[0]!.toLowerCase()}');
+    final value = user?[camelKey] ?? user?[snakeKey];
+    if (value is bool) return value;
+    if (value is String) return value.toLowerCase() == 'true';
+    return fallback;
   }
 }
 

@@ -21,6 +21,18 @@ class UserService {
     }
   }
 
+  Future<void> markOnboardingSeen() => _markFlowStepSeen('onboarding');
+
+  Future<void> markDemographicsSeen() => _markFlowStepSeen('demographics');
+
+  Future<void> _markFlowStepSeen(String step) async {
+    try {
+      await _api.put('/api/users/me/flow/$step');
+    } on DioException catch (e) {
+      throw _handleError(e, 'Failed to update registration progress');
+    }
+  }
+
   Future<Map<String, dynamic>> updateUser({
     String? name,
     String? username,
