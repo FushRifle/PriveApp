@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/core/services/auth/auth_service.dart';
-import 'package:clique/ui/pages/auth/onboarding_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -717,20 +716,13 @@ class _AuthenticationPageState extends State<AuthenticationPage>
     });
   }
 
-  Future<void> _startCreateAccount() async {
+  void _startCreateAccount() {
     final error = _validateEmail(_email.text);
     if (error != null) {
       setState(() => _emailError = error);
       _showErrorMessage(error);
       return;
     }
-
-    final completed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
-        builder: (_) => const OnboardingPage(),
-      ),
-    );
-    if (!mounted || completed != true) return;
     _continueWithEmail(existingUser: false);
   }
 

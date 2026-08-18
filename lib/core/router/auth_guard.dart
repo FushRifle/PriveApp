@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lottie/lottie.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:clique/app/configs/colors.dart';
 
@@ -11,6 +12,7 @@ import 'package:clique/bloc/profile/profile_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 
 import 'package:clique/ui/pages/auth/authentication_page.dart';
+import 'package:clique/ui/pages/auth/onboarding_page.dart';
 import 'package:clique/ui/pages/auth/unified_onboarding_page.dart';
 import 'package:clique/core/services/user/user_service.dart';
 import 'main_wrapper.dart';
@@ -45,7 +47,7 @@ class _AuthGuardState extends State<AuthGuard> {
         }
 
         if (!authState.isAuthenticated || authState.token == null) {
-          return const AuthenticationPage();
+          return const _PreAuthGate();
         }
 
         if (_configuredToken != authState.token) {
@@ -71,6 +73,61 @@ class _AuthGuardState extends State<AuthGuard> {
         );
       },
     );
+  }
+}
+
+class _PreAuthGate extends StatefulWidget {
+  const _PreAuthGate();
+
+  @override
+  State<_PreAuthGate> createState() => _PreAuthGateState();
+}
+
+class _PreAuthGateState extends State<_PreAuthGate> {
+  static const _onboardingSeenKey = 'pre_auth_onboarding_seen_v1';
+
+  bool _loading = true;
+  bool _hasSeenOnboarding = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadOnboardingState();
+  }
+
+  Future<void> _loadOnboardingState() async {
+    var hasSeenOnboarding = false;
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      hasSeenOnboarding = preferences.getBool(_onboardingSeenKey) ?? false;
+    } catch (_) {
+      // A local preference failure should not block access to authentication.
+    }
+    if (!mounted) return;
+    setState(() {
+      _hasSeenOnboarding = hasSeenOnboarding;
+      _loading = false;
+    });
+  }
+
+  Future<void> _completeOnboarding() async {
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setBool(_onboardingSeenKey, true);
+    } catch (_) {
+      // Continue into auth even if the local completion flag cannot be saved.
+    }
+    if (!mounted) return;
+    setState(() => _hasSeenOnboarding = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) return const _SplashScreen();
+    if (!_hasSeenOnboarding) {
+      return OnboardingPage(onComplete: _completeOnboarding);
+    }
+    return const AuthenticationPage();
   }
 }
 

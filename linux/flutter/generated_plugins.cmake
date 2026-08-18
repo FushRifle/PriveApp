@@ -8,7 +8,6 @@ list(APPEND FLUTTER_PLUGIN_LIST
   file_selector_linux
   flutter_secure_storage_linux
   gtk
-  media_kit_video
   open_file_linux
   record_linux
   stream_webrtc_flutter
