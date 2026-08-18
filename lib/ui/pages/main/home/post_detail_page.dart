@@ -727,14 +727,24 @@ class _PostDetailPageState extends State<PostDetailPage> {
     );
   }
 
-  void _deletePost() {
+  Future<void> _deletePost() async {
+    final completer = Completer<void>();
     context.read<FeedBloc>().add(
-          DeleteFeedPost(postId: widget.postId),
+          DeleteFeedPost(
+            postId: widget.postId,
+            completer: completer,
+          ),
         );
 
-    _showSnackBar('Post deleted');
-
-    Navigator.pop(context, true);
+    try {
+      await completer.future;
+      if (!mounted) return;
+      _showSnackBar('Post deleted');
+      Navigator.pop(context, true);
+    } catch (error) {
+      if (!mounted) return;
+      _showSnackBar('Could not delete post: $error');
+    }
   }
 
   void _showSnackBar(String message) {

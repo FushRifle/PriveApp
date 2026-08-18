@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:clique/core/services/reel/reel_service.dart';
@@ -18,6 +20,7 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     on<RefreshReels>(_onRefreshReels);
     on<LoadMoreReels>(_onLoadMoreReels);
     on<CreateReel>(_onCreateReel);
+    on<DeleteReel>(_onDeleteReel);
     on<LikeReel>(_onLikeReel);
     on<UnlikeReel>(_onUnlikeReel);
     on<ShareReel>(_onShareReel);
@@ -218,6 +221,32 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     }
   }
 
+  Future<void> _onDeleteReel(
+    DeleteReel event,
+    Emitter<ReelState> emit,
+  ) async {
+    try {
+      await _reelService.deleteReel(event.reelId);
+      final updatedReels = List<dynamic>.from(state.reels)
+        ..removeWhere(
+          (reel) => reel is Map && _readReelId(reel) == event.reelId,
+        );
+      emit(state.copyWith(
+        reels: updatedReels,
+        status: ReelStatus.success,
+        clearError: true,
+      ));
+      if (event.completer?.isCompleted == false) {
+        event.completer!.complete();
+      }
+    } catch (error) {
+      emit(state.copyWith(error: error.toString()));
+      if (event.completer?.isCompleted == false) {
+        event.completer!.completeError(error);
+      }
+    }
+  }
+
   Future<void> _onLikeReel(
     LikeReel event,
     Emitter<ReelState> emit,
@@ -371,7 +400,7 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
   }
 
   String _readReelId(Map reel) {
-    final id = reel['id'] ?? reel['reelId'] ?? reel['reel_id'];
+    final id = reel['id'] ?? reel['_id'] ?? reel['reelId'] ?? reel['reel_id'];
     return id?.toString() ?? '';
   }
 

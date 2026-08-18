@@ -95,6 +95,7 @@ class _CardPostState extends State<CardPost> {
         oldWidget.post.reposts != widget.post.reposts ||
         oldWidget.post.views != widget.post.views ||
         oldWidget.post.isLiked != widget.post.isLiked ||
+        oldWidget.post.reaction != widget.post.reaction ||
         oldWidget.post.isSaved != widget.post.isSaved ||
         oldWidget.post.isReposted != widget.post.isReposted) {
       _syncPostState();
@@ -125,9 +126,10 @@ class _CardPostState extends State<CardPost> {
     _repostCount = widget.post.reposts;
     _viewCount = widget.post.views;
     if (_isLiked) {
-      _selectedReactionIcon = Icons.favorite_rounded;
-      _selectedReactionColor = AppColors.redAccent;
-      _selectedReactionLabel = 'Love';
+      final reaction = _reactionForLabel(widget.post.reaction);
+      _selectedReactionIcon = reaction.icon;
+      _selectedReactionColor = reaction.color;
+      _selectedReactionLabel = reaction.label;
     } else {
       _selectedReactionIcon = null;
       _selectedReactionColor = null;
@@ -249,7 +251,7 @@ class _CardPostState extends State<CardPost> {
           );
     } else {
       context.read<FeedBloc>().add(
-            LikeFeedPost(postId: widget.post.id),
+            LikeFeedPost(postId: widget.post.id, reaction: 'Love'),
           );
     }
   }
@@ -304,13 +306,22 @@ class _CardPostState extends State<CardPost> {
       }
     });
 
-    if (!wasLiked) {
-      context.read<FeedBloc>().add(
-            LikeFeedPost(postId: widget.post.id),
-          );
-    }
+    context.read<FeedBloc>().add(
+          LikeFeedPost(
+            postId: widget.post.id,
+            reaction: reaction.label,
+          ),
+        );
 
-    _showComingSoon('${reaction.label} reaction added');
+    _showComingSoon('Reacted ${reaction.label}');
+  }
+
+  PostReaction _reactionForLabel(String? label) {
+    final normalized = label?.trim().toLowerCase();
+    return postReactions.firstWhere(
+      (reaction) => reaction.label.toLowerCase() == normalized,
+      orElse: () => postReactions[1],
+    );
   }
 
   void _openComments() {
@@ -546,12 +557,9 @@ class _CardPostState extends State<CardPost> {
               ),
             ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(context);
-                context.read<FeedBloc>().add(
-                      DeleteFeedPost(postId: widget.post.id),
-                    );
-                _showComingSoon('Post deleted');
+                await _deletePost();
               },
               child: Text(
                 'Delete',
@@ -565,6 +573,30 @@ class _CardPostState extends State<CardPost> {
         );
       },
     );
+  }
+
+  Future<void> _deletePost() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final completer = Completer<void>();
+    context.read<FeedBloc>().add(
+          DeleteFeedPost(
+            postId: widget.post.id,
+            completer: completer,
+          ),
+        );
+
+    try {
+      await completer.future;
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('Post deleted')));
+    } catch (error) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Could not delete post: $error')),
+        );
+    }
   }
 
   void _showComingSoon(String message) {

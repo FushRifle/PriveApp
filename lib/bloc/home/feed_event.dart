@@ -66,11 +66,15 @@ class CreateFeedPost extends FeedEvent {
 // Like a post
 class LikeFeedPost extends FeedEvent {
   final int postId;
+  final String reaction;
 
-  const LikeFeedPost({required this.postId});
+  const LikeFeedPost({
+    required this.postId,
+    this.reaction = 'Love',
+  });
 
   @override
-  List<Object?> get props => [postId];
+  List<Object?> get props => [postId, reaction];
 }
 
 // Unlike a post
@@ -238,8 +242,12 @@ class LoadMoreUserMedia extends FeedEvent {
 
 class DeleteFeedPost extends FeedEvent {
   final int postId;
+  final Completer<void>? completer;
 
-  const DeleteFeedPost({required this.postId});
+  const DeleteFeedPost({
+    required this.postId,
+    this.completer,
+  });
 
   @override
   List<Object?> get props => [postId];

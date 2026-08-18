@@ -260,10 +260,11 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     final originalPosts = state.posts;
 
     final updatedPosts = state.posts.map((post) {
-      if (post.id == event.postId && !post.isLiked) {
+      if (post.id == event.postId) {
         return post.copyWith(
           isLiked: true,
-          likes: post.likes + 1,
+          reaction: event.reaction,
+          likes: post.isLiked ? post.likes : post.likes + 1,
         );
       }
 
@@ -279,6 +280,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     try {
       await _feedService.likePost(
         event.postId,
+        reaction: event.reaction,
       );
       await _cachePosts(state.posts);
     } catch (e) {
@@ -302,6 +304,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
         return post.copyWith(
           isLiked: false,
           likes: post.likes > 0 ? post.likes - 1 : 0,
+          clearReaction: true,
         );
       }
 
@@ -1013,6 +1016,9 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
         event.postId,
       );
       await _feedService.removeCachedPost(event.postId);
+      if (event.completer?.isCompleted == false) {
+        event.completer!.complete();
+      }
     } catch (e) {
       emit(
         state.copyWith(
@@ -1020,6 +1026,9 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
           generalError: e.toString(),
         ),
       );
+      if (event.completer?.isCompleted == false) {
+        event.completer!.completeError(e);
+      }
     }
   }
 

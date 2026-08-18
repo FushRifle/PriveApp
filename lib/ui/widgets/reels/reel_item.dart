@@ -68,6 +68,7 @@ class _ReelItemState extends State<ReelItem>
   bool _hasVideoError = false;
   bool _isFollowing = false;
   bool _isFollowBusy = false;
+  bool _isDeleteDialogOpen = false;
   bool _isLiked = false;
   bool _isReposted = false;
   bool _isMuted = true;
@@ -727,11 +728,25 @@ class _ReelItemState extends State<ReelItem>
                   ),
                 ),
                 ListTile(
-                  leading: const Icon(Icons.flag_outlined),
-                  title: const Text('Report'),
+                  leading: Icon(
+                    _isCurrentUser()
+                        ? Icons.delete_outline_rounded
+                        : Icons.flag_outlined,
+                    color: _isCurrentUser() ? AppColors.redColor : null,
+                  ),
+                  title: Text(
+                    _isCurrentUser() ? 'Delete reel' : 'Report',
+                    style: TextStyle(
+                      color: _isCurrentUser() ? AppColors.redColor : null,
+                    ),
+                  ),
                   onTap: () {
                     Navigator.pop(context);
-                    _reportReel();
+                    if (_isCurrentUser()) {
+                      _confirmDeleteReel();
+                    } else {
+                      _reportReel();
+                    }
                   },
                 ),
               ],
@@ -740,8 +755,77 @@ class _ReelItemState extends State<ReelItem>
         );
       },
     );
-    if (widget.isActive) {
+    if (widget.isActive && !_isDeleteDialogOpen) {
       _playVideo();
+    }
+  }
+
+  Future<void> _confirmDeleteReel() async {
+    final reelId = _reelId;
+    if (reelId == null || !mounted) return;
+
+    _isDeleteDialogOpen = true;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Text('Delete reel?'),
+        content: const Text(
+          'This reel will be permanently removed. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(
+              'Delete',
+              style: TextStyle(
+                color: AppColors.redColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    _isDeleteDialogOpen = false;
+
+    if (confirmed != true || !mounted) {
+      if (widget.isActive) _playVideo();
+      return;
+    }
+
+    await _deleteReel(reelId);
+  }
+
+  Future<void> _deleteReel(String reelId) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final completer = Completer<void>();
+    context.read<ReelBloc>().add(
+          DeleteReel(
+            reelId: reelId,
+            completer: completer,
+          ),
+        );
+
+    try {
+      await completer.future;
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('Reel deleted')));
+    } catch (error) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Could not delete reel: $error')),
+        );
+      if (mounted && widget.isActive) _playVideo();
     }
   }
 

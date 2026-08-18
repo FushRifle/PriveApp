@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/models/status_model.dart';
 import 'package:clique/core/services/status/status_services.dart';
@@ -282,7 +284,7 @@ class _StatusViewPageState extends State<StatusViewPage>
         return previous.stories != current.stories;
       },
       listener: (context, state) {
-        if (!mounted || state.stories.isEmpty) return;
+        if (!mounted) return;
 
         final nextStories = List<Story>.from(state.stories);
         if (nextStories.length == _stories.length &&
@@ -1251,11 +1253,31 @@ class _StatusViewPageState extends State<StatusViewPage>
     );
   }
 
-  void _deleteStory(Story story) {
+  Future<void> _deleteStory(Story story) async {
     final bloc = _storiesBlocOrNull();
     if (bloc == null) return;
 
-    bloc.add(DeleteStoryEvent(storyId: story.id));
+    final messenger = ScaffoldMessenger.of(context);
+    final completer = Completer<void>();
+    bloc.add(
+      DeleteStoryEvent(
+        storyId: story.id,
+        completer: completer,
+      ),
+    );
+
+    try {
+      await completer.future;
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('Story deleted')));
+    } catch (error) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Could not delete story: $error')),
+        );
+    }
   }
 
   void _confirmDeleteStory(Story story) {
@@ -1274,9 +1296,9 @@ class _StatusViewPageState extends State<StatusViewPage>
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(dialogContext);
-                _deleteStory(story);
+                await _deleteStory(story);
               },
               child: Text(
                 'Delete',

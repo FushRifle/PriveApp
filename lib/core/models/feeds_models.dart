@@ -12,6 +12,7 @@ class FeedPost {
   final int saves;
   final int reposts;
   final bool isLiked;
+  final String? reaction;
   final bool isSaved;
   final bool isReposted;
   final List<String> hashtags;
@@ -36,6 +37,7 @@ class FeedPost {
     this.saves = 0,
     this.reposts = 0,
     required this.isLiked,
+    this.reaction,
     this.isSaved = false,
     this.isReposted = false,
     this.hashtags = const [],
@@ -80,6 +82,13 @@ class FeedPost {
       saves: _toInt(json['saves'] ?? json['saveCount']),
       reposts: _toInt(json['reposts'] ?? json['repostCount']),
       isLiked: json['isLiked'] == true || json['is_liked'] == true,
+      reaction: _toNullableString(
+        json['reaction'] ??
+            json['myReaction'] ??
+            json['my_reaction'] ??
+            json['reactionType'] ??
+            json['reaction_type'],
+      ),
       isSaved: json['isSaved'] == true || json['is_saved'] == true,
       isReposted: json['isReposted'] == true || json['is_reposted'] == true,
       hashtags: _parseStringList(json['hashtags']),
@@ -123,6 +132,7 @@ class FeedPost {
         'saves': saves,
         'reposts': reposts,
         'isLiked': isLiked,
+        if (reaction != null) 'reaction': reaction,
         'isSaved': isSaved,
         'isReposted': isReposted,
         'hashtags': hashtags,
@@ -148,6 +158,8 @@ class FeedPost {
     int? saves,
     int? reposts,
     bool? isLiked,
+    String? reaction,
+    bool clearReaction = false,
     bool? isSaved,
     bool? isReposted,
     List<String>? hashtags,
@@ -172,6 +184,7 @@ class FeedPost {
       saves: saves ?? this.saves,
       reposts: reposts ?? this.reposts,
       isLiked: isLiked ?? this.isLiked,
+      reaction: clearReaction ? null : reaction ?? this.reaction,
       isSaved: isSaved ?? this.isSaved,
       isReposted: isReposted ?? this.isReposted,
       hashtags: hashtags ?? this.hashtags,
@@ -777,6 +790,11 @@ int? _toIntOrNull(dynamic value) {
   if (value is num) return value.toInt();
   if (value is String) return int.tryParse(value);
   return null;
+}
+
+String? _toNullableString(dynamic value) {
+  final text = value?.toString().trim();
+  return text == null || text.isEmpty ? null : text;
 }
 
 DateTime _parseDateTime(dynamic value) {

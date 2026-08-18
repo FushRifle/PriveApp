@@ -29,6 +29,19 @@ class CreateReel extends ReelEvent {
   List<Object?> get props => [data];
 }
 
+class DeleteReel extends ReelEvent {
+  final String reelId;
+  final Completer<void>? completer;
+
+  const DeleteReel({
+    required this.reelId,
+    this.completer,
+  });
+
+  @override
+  List<Object?> get props => [reelId];
+}
+
 class LikeReel extends ReelEvent {
   final String reelId;
   final int index;

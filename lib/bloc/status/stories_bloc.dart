@@ -166,19 +166,23 @@ class StoriesBloc extends Bloc<StoriesEvent, StoriesState> {
     DeleteStoryEvent event,
     Emitter<StoriesState> emit,
   ) async {
-    final updatedStories = List<Story>.from(state.stories)
-      ..removeWhere((story) => story.id == event.storyId);
-
-    emit(state.copyWith(
-      stories: updatedStories,
-      clearError: true,
-    ));
-
-    unawaited(() async {
-      try {
-        await _statusService.deleteStory(event.storyId);
-      } catch (_) {}
-    }());
+    try {
+      await _statusService.deleteStory(event.storyId);
+      final updatedStories = List<Story>.from(state.stories)
+        ..removeWhere((story) => story.id == event.storyId);
+      emit(state.copyWith(
+        stories: updatedStories,
+        clearError: true,
+      ));
+      if (event.completer?.isCompleted == false) {
+        event.completer!.complete();
+      }
+    } catch (error) {
+      emit(state.copyWith(error: error.toString()));
+      if (event.completer?.isCompleted == false) {
+        event.completer!.completeError(error);
+      }
+    }
   }
 
   Future<void> _onMarkStorySeen(

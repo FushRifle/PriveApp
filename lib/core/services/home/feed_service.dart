@@ -340,9 +340,18 @@ class FeedService {
   }
 
   // Like post
-  Future<Map<String, dynamic>> likePost(int postId) async {
+  Future<Map<String, dynamic>> likePost(
+    int postId, {
+    String reaction = 'Love',
+  }) async {
     try {
-      final response = await _api.post('/api/feed/posts/$postId/like');
+      final response = await _api.post(
+        '/api/feed/posts/$postId/like',
+        data: {
+          'reaction': reaction,
+          'reactionType': reaction,
+        },
+      );
       _invalidatePostCaches(postId);
       return response.data;
     } on DioException catch (e) {

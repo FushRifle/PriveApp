@@ -64,8 +64,12 @@ class UpdateStoryEvent extends StoriesEvent {
 
 class DeleteStoryEvent extends StoriesEvent {
   final String storyId;
+  final Completer<void>? completer;
 
-  const DeleteStoryEvent({required this.storyId});
+  const DeleteStoryEvent({
+    required this.storyId,
+    this.completer,
+  });
 
   @override
   List<Object?> get props => [storyId];
