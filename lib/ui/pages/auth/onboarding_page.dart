@@ -80,18 +80,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   padding: const EdgeInsets.fromLTRB(22, 10, 14, 4),
                   child: Row(
                     children: [
-                      Image.asset(
-                        'assets/icons/clique-new.png',
-                        width: 38,
-                        height: 38,
-                      ),
                       const SizedBox(width: 10),
                       const Text(
-                        'clique',
+                        'Clique',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.secondary,
                           fontSize: 22,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.bold,
                           letterSpacing: -0.7,
                         ),
                       ),
@@ -166,14 +161,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
                               ),
                             ),
                           ),
-                          Text(
-                            '${_page + 1}/${_pages.length}',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.55),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
                         ],
                       ),
                       const SizedBox(height: 18),
@@ -215,11 +202,15 @@ class _OnboardingPageState extends State<OnboardingPage> {
                                           : 'Continue',
                                       style: const TextStyle(
                                         fontSize: 16,
+                                        color: Colors.white,
                                         fontWeight: FontWeight.w800,
                                       ),
                                     ),
                                     const SizedBox(width: 9),
-                                    const Icon(Icons.arrow_forward_rounded),
+                                    const Icon(
+                                      Icons.arrow_forward_rounded,
+                                      color: Colors.white,
+                                    ),
                                   ],
                                 ),
                         ),
@@ -343,7 +334,7 @@ class _OnboardingSlide extends StatelessWidget {
                         child: Icon(
                           item.icon,
                           size: 25,
-                          color: const Color(0xFF11131A),
+                          color: Colors.white,
                         ),
                       ),
                     ),

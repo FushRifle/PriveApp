@@ -220,11 +220,6 @@ class _ResponsiveAction extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(radius),
-            border: Border.all(
-              color: color == AppColors.primary || color == AppColors.redAccent
-                  ? color.withOpacity(0.16)
-                  : AppColors.cardBorderColor,
-            ),
             gradient: color == AppColors.primary || color == AppColors.redAccent
                 ? LinearGradient(
                     begin: Alignment.topLeft,

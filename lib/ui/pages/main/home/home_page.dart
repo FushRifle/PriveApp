@@ -1062,14 +1062,6 @@ class _StoriesSection extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Row(
               children: [
-                Text(
-                  'Stories',
-                  style: AppTheme.blackTextStyle.copyWith(
-                    color: palette.text,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                  ),
-                ),
                 if (isLoading && stories.isNotEmpty) ...[
                   const SizedBox(width: 8),
                   SizedBox(
@@ -1274,7 +1266,7 @@ class _FeedHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Perspectives from your Circle.',
+                  'Your Circle.',
                   style: AppTheme.greyTextStyle.copyWith(
                     color: palette.mutedText,
                     fontSize: 13,
