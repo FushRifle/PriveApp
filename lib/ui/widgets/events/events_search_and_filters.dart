@@ -18,6 +18,8 @@ class EventsSearchAndFilters extends StatelessWidget {
   final String category;
   final ValueChanged<String> onCategoryChanged;
   final VoidCallback onSearch;
+  final ValueChanged<String>? onQueryChanged;
+  final VoidCallback? onClear;
 
   const EventsSearchAndFilters({
     super.key,
@@ -25,6 +27,8 @@ class EventsSearchAndFilters extends StatelessWidget {
     required this.category,
     required this.onCategoryChanged,
     required this.onSearch,
+    this.onQueryChanged,
+    this.onClear,
   });
 
   @override
@@ -32,7 +36,7 @@ class EventsSearchAndFilters extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-       color: AppColors.card,
+        color: AppColors.card,
         borderRadius: BorderRadius.circular(28),
         border: Border.all(color: AppColors.border.withOpacity(0.9)),
         boxShadow: [
@@ -59,6 +63,7 @@ class EventsSearchAndFilters extends StatelessWidget {
                   ),
                   child: TextField(
                     controller: searchController,
+                    onChanged: onQueryChanged,
                     textInputAction: TextInputAction.search,
                     onSubmitted: (_) => onSearch(),
                     decoration: InputDecoration(
@@ -67,7 +72,20 @@ class EventsSearchAndFilters extends StatelessWidget {
                         color: AppColors.textSecondary,
                         fontSize: 14,
                       ),
-                      prefixIcon: const Icon(Icons.search_rounded, size: 22),
+                      prefixIcon: const Icon(Icons.search_rounded, size: 21),
+                      suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: searchController,
+                        builder: (context, value, _) {
+                          if (value.text.trim().isEmpty) {
+                            return const SizedBox.shrink();
+                          }
+                          return IconButton(
+                            tooltip: 'Clear search',
+                            onPressed: onClear,
+                            icon: const Icon(Icons.close_rounded, size: 19),
+                          );
+                        },
+                      ),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -89,7 +107,7 @@ class EventsSearchAndFilters extends StatelessWidget {
                     height: 54,
                     alignment: Alignment.center,
                     child: const Icon(
-                      Icons.tune_rounded,
+                      Icons.arrow_forward_rounded,
                       color: AppColors.white,
                       size: 22,
                     ),
@@ -135,7 +153,8 @@ class _CategoryTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? AppColors.primary.withOpacity(0.14) : AppColors.background,
+      color:
+          selected ? AppColors.primary.withOpacity(0.14) : AppColors.background,
       borderRadius: BorderRadius.circular(999),
       child: InkWell(
         onTap: onTap,

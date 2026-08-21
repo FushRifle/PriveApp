@@ -14,6 +14,7 @@ class EventCard extends StatelessWidget {
   final VoidCallback onLeave;
   final bool isOwner;
   final VoidCallback? onEdit;
+  final bool isBusy;
 
   const EventCard({
     super.key,
@@ -25,6 +26,7 @@ class EventCard extends StatelessWidget {
     required this.onLeave,
     this.isOwner = false,
     this.onEdit,
+    this.isBusy = false,
   });
 
   @override
@@ -33,6 +35,9 @@ class EventCard extends StatelessWidget {
       builder: (context, constraints) {
         final isCompactWidth = constraints.maxWidth < 400;
         final isCompactImage = compact || isCompactWidth;
+        final hasEnded = (event.endsAt ??
+                event.startsAt.add(const Duration(hours: 4)))
+            .isBefore(DateTime.now());
 
         return Material(
           color: Colors.transparent,
@@ -101,6 +106,13 @@ class EventCard extends StatelessWidget {
                                 icon: Icons.lock_outline_rounded,
                                 label: 'Private',
                               ),
+                            if (hasEnded) ...[
+                              if (event.isPrivate) const SizedBox(width: 6),
+                              const _FloatingTag(
+                                icon: Icons.history_rounded,
+                                label: 'Ended',
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -187,7 +199,7 @@ class EventCard extends StatelessWidget {
                         // Action Buttons
                         if (isOwner)
                           FilledButton.icon(
-                            onPressed: onEdit ?? onTap,
+                            onPressed: isBusy ? null : onEdit ?? onTap,
                             icon: const Icon(Icons.edit_outlined, size: 18),
                             label: const Text('Edit Event'),
                             style: FilledButton.styleFrom(
@@ -209,7 +221,11 @@ class EventCard extends StatelessWidget {
                             children: [
                               Expanded(
                                 child: FilledButton(
-                                  onPressed: event.isGoing ? onLeave : onGoing,
+                                  onPressed: isBusy || hasEnded
+                                      ? null
+                                      : event.isGoing
+                                          ? onLeave
+                                          : onGoing,
                                   style: FilledButton.styleFrom(
                                     backgroundColor: event.isGoing
                                         ? AppColors.success.withOpacity(0.12)
@@ -239,7 +255,11 @@ class EventCard extends StatelessWidget {
                                       ),
                                       const SizedBox(width: 6),
                                       Text(
-                                        event.isGoing ? 'Going' : 'RSVP',
+                                        hasEnded
+                                            ? 'Event ended'
+                                            : event.isGoing
+                                                ? 'Going'
+                                                : 'RSVP',
                                         style: const TextStyle(
                                           fontSize: 13.5,
                                           fontWeight: FontWeight.w700,
@@ -252,9 +272,11 @@ class EventCard extends StatelessWidget {
                               const SizedBox(width: 10),
                               Expanded(
                                 child: OutlinedButton(
-                                  onPressed: event.isInterested
-                                      ? onLeave
-                                      : onInterested,
+                                  onPressed: isBusy || hasEnded
+                                      ? null
+                                      : event.isInterested
+                                          ? onLeave
+                                          : onInterested,
                                   style: OutlinedButton.styleFrom(
                                     padding: const EdgeInsets.symmetric(
                                       vertical: 12,

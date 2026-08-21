@@ -40,6 +40,7 @@ class EventBloc extends Bloc<EventEvent, EventState> {
     emit(state.copyWith(
       status:
           nextPage == 1 && !event.silent ? EventStatus.loading : state.status,
+      isLoadingMore: false,
       clearError: true,
       page: nextPage,
       events: state.events,
@@ -92,6 +93,8 @@ class EventBloc extends Bloc<EventEvent, EventState> {
   ) async {
     if (_loadingMore || !state.hasMore) return;
     _loadingMore = true;
+    final requestId = _listRequestId;
+    emit(state.copyWith(isLoadingMore: true, clearError: true));
     try {
       final nextPage = state.page + 1;
       final events = await _service.getEvents(
@@ -100,14 +103,17 @@ class EventBloc extends Bloc<EventEvent, EventState> {
         query: state.query,
         category: state.category,
       );
+      if (requestId != _listRequestId) return;
       emit(state.copyWith(
         events: _dedupe([...state.events, ...events]),
         page: nextPage,
         hasMore: events.length >= _pageSize,
+        isLoadingMore: false,
         clearError: true,
       ));
     } catch (e) {
-      emit(state.copyWith(error: e.toString()));
+      if (requestId != _listRequestId) return;
+      emit(state.copyWith(isLoadingMore: false, error: e.toString()));
     } finally {
       _loadingMore = false;
     }
@@ -194,7 +200,10 @@ class EventBloc extends Bloc<EventEvent, EventState> {
     RsvpEvent event,
     Emitter<EventState> emit,
   ) async {
-    emit(state.copyWith(actionStatus: EventActionStatus.loading));
+    emit(state.copyWith(
+      actionStatus: EventActionStatus.loading,
+      activeEventId: event.eventId,
+    ));
     try {
       final updated = event.status == 'not_going'
           ? await _service.cancelRsvp(event.eventId)
@@ -206,11 +215,13 @@ class EventBloc extends Bloc<EventEvent, EventState> {
           if (item.id != event.eventId) return item;
           return updated;
         }).toList(),
+        clearActiveEventId: true,
         clearError: true,
       ));
     } catch (e) {
       emit(state.copyWith(
         actionStatus: EventActionStatus.error,
+        clearActiveEventId: true,
         error: e.toString(),
       ));
     }

@@ -5,10 +5,14 @@ import 'package:clique/app/configs/theme.dart';
 
 class EventsEmptyState extends StatelessWidget {
   final VoidCallback onCreate;
+  final bool isFiltered;
+  final VoidCallback? onClearFilters;
 
   const EventsEmptyState({
     super.key,
     required this.onCreate,
+    this.isFiltered = false,
+    this.onClearFilters,
   });
 
   @override
@@ -41,15 +45,17 @@ class EventsEmptyState extends StatelessWidget {
                   color: AppColors.primary.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: const Icon(
-                  Icons.event_available_outlined,
+                child: Icon(
+                  isFiltered
+                      ? Icons.search_off_rounded
+                      : Icons.event_available_outlined,
                   color: AppColors.primary,
                   size: 36,
                 ),
               ),
               const SizedBox(height: 18),
               Text(
-                'No events yet',
+                isFiltered ? 'No matching events' : 'No events yet',
                 style: AppTheme.blackTextStyle.copyWith(
                   fontSize: 19,
                   fontWeight: AppTheme.bold,
@@ -57,16 +63,20 @@ class EventsEmptyState extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Create the first event and let people RSVP.',
+                isFiltered
+                    ? 'Try another search or clear the category filter.'
+                    : 'Create the first event and give people something to look forward to.',
                 textAlign: TextAlign.center,
                 style:
                     AppTheme.greyTextStyle.copyWith(fontSize: 13, height: 1.45),
               ),
               const SizedBox(height: 18),
               FilledButton.icon(
-                onPressed: onCreate,
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Create event'),
+                onPressed: isFiltered ? onClearFilters : onCreate,
+                icon: Icon(
+                  isFiltered ? Icons.filter_alt_off_rounded : Icons.add_rounded,
+                ),
+                label: Text(isFiltered ? 'Clear filters' : 'Create event'),
                 style: FilledButton.styleFrom(
                   minimumSize: const Size(double.infinity, 50),
                   shape: RoundedRectangleBorder(

@@ -20,6 +20,8 @@ class EventState extends Equatable {
   final List<EventModel> events;
   final int page;
   final bool hasMore;
+  final bool isLoadingMore;
+  final int? activeEventId;
   final String query;
   final String category;
   final String? error;
@@ -30,6 +32,8 @@ class EventState extends Equatable {
     this.events = const [],
     this.page = 1,
     this.hasMore = true,
+    this.isLoadingMore = false,
+    this.activeEventId,
     this.query = '',
     this.category = '',
     this.error,
@@ -41,6 +45,9 @@ class EventState extends Equatable {
     List<EventModel>? events,
     int? page,
     bool? hasMore,
+    bool? isLoadingMore,
+    int? activeEventId,
+    bool clearActiveEventId = false,
     String? query,
     String? category,
     String? error,
@@ -52,6 +59,9 @@ class EventState extends Equatable {
       events: events ?? this.events,
       page: page ?? this.page,
       hasMore: hasMore ?? this.hasMore,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      activeEventId:
+          clearActiveEventId ? null : activeEventId ?? this.activeEventId,
       query: query ?? this.query,
       category: category ?? this.category,
       error: clearError ? null : error ?? this.error,
@@ -65,6 +75,8 @@ class EventState extends Equatable {
         events,
         page,
         hasMore,
+        isLoadingMore,
+        activeEventId,
         query,
         category,
         error,

@@ -58,7 +58,17 @@ class _CreateEventPageState extends State<CreateEventPage> {
   void initState() {
     super.initState();
     final event = widget.event;
-    if (event == null) return;
+    if (event == null) {
+      final now = DateTime.now();
+      _startsAt = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        now.hour + 2,
+      );
+      _endsAt = _startsAt!.add(const Duration(hours: 2));
+      return;
+    }
 
     _titleController.text = event.title;
     _descriptionController.text = event.description;
@@ -99,18 +109,6 @@ class _CreateEventPageState extends State<CreateEventPage> {
             surfaceTintColor: Colors.transparent,
             elevation: 0,
             title: Text(_isEditing ? 'Edit event' : 'Create event'),
-            actions: [
-              TextButton(
-                onPressed: isSaving ? null : _submit,
-                child: isSaving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(_isEditing ? 'Save' : 'Create'),
-              ),
-            ],
           ),
           body: Container(
             decoration: BoxDecoration(
@@ -130,186 +128,229 @@ class _CreateEventPageState extends State<CreateEventPage> {
                   16,
                   14,
                   16,
-                  24 + MediaQuery.viewInsetsOf(context).bottom,
+                  32,
                 ),
                 children: [
-                  _CreateEventHero(isPrivate: _isPrivate),
-                  const SizedBox(height: 16),
-                  _SectionCard(
-                    title: 'Basics',
-                    subtitle: 'Name, description, location, and cover',
-                    child: Form(
-                      key: _formKey,
+                  Align(
+                    alignment: Alignment.topCenter,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 760),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          TextFormField(
-                            controller: _titleController,
-                            textInputAction: TextInputAction.next,
-                            decoration: const InputDecoration(
-                              labelText: 'Title',
-                              hintText: 'Sunday meetup, Launch party...',
+                          _CreateEventHero(
+                            isPrivate: _isPrivate,
+                            isEditing: _isEditing,
+                          ),
+                          const SizedBox(height: 16),
+                          _SectionCard(
+                            title: 'Basics',
+                            subtitle: 'Name, description, location, and cover',
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  TextFormField(
+                                    controller: _titleController,
+                                    maxLength: 80,
+                                    textInputAction: TextInputAction.next,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Title',
+                                      hintText:
+                                          'Sunday meetup, Launch party...',
+                                      prefixIcon: Icon(Icons.title_rounded),
+                                    ),
+                                    validator: (value) {
+                                      final text = value?.trim() ?? '';
+                                      if (text.length < 3) {
+                                        return 'Use at least 3 characters';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                  const SizedBox(height: 14),
+                                  TextFormField(
+                                    controller: _descriptionController,
+                                    minLines: 4,
+                                    maxLines: 6,
+                                    maxLength: 1000,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Description',
+                                      hintText:
+                                          'Tell people what this event is about.',
+                                      alignLabelWithHint: true,
+                                      prefixIcon: Icon(Icons.notes_rounded),
+                                    ),
+                                    validator: (value) {
+                                      final text = value?.trim() ?? '';
+                                      if (text.length < 12) {
+                                        return 'Add a clearer description';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                  const SizedBox(height: 14),
+                                  TextFormField(
+                                    controller: _locationController,
+                                    textInputAction: TextInputAction.next,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Location',
+                                      hintText:
+                                          'Lagos, Nigeria / Zoom / Rooftop Lounge',
+                                      prefixIcon: Icon(Icons.place_outlined),
+                                    ),
+                                    validator: (value) {
+                                      final text = value?.trim() ?? '';
+                                      if (text.length < 3) {
+                                        return 'Add a location';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                  const SizedBox(height: 14),
+                                  _CoverImageCard(
+                                    imageUrl: _imageController.text.trim(),
+                                    isUploading: _isUploadingCover,
+                                    onTap: _pickCoverImage,
+                                  ),
+                                ],
+                              ),
                             ),
-                            validator: (value) {
-                              final text = value?.trim() ?? '';
-                              if (text.length < 3) {
-                                return 'Use at least 3 characters';
-                              }
-                              return null;
-                            },
                           ),
                           const SizedBox(height: 14),
-                          TextFormField(
-                            controller: _descriptionController,
-                            minLines: 4,
-                            maxLines: 6,
-                            decoration: const InputDecoration(
-                              labelText: 'Description',
-                              hintText: 'Tell people what this event is about.',
-                            ),
-                            validator: (value) {
-                              final text = value?.trim() ?? '';
-                              if (text.length < 12) {
-                                return 'Add a clearer description';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 14),
-                          TextFormField(
-                            controller: _locationController,
-                            textInputAction: TextInputAction.next,
-                            decoration: const InputDecoration(
-                              labelText: 'Location',
-                              hintText:
-                                  'Lagos, Nigeria / Zoom / Rooftop Lounge',
-                            ),
-                            validator: (value) {
-                              final text = value?.trim() ?? '';
-                              if (text.length < 3) {
-                                return 'Add a location';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 14),
-                          _CoverImageCard(
-                            imageUrl: _imageController.text.trim(),
-                            isUploading: _isUploadingCover,
-                            onTap: _pickCoverImage,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  _SectionCard(
-                    title: 'Timing',
-                    subtitle: 'When the event starts and ends',
-                    child: Column(
-                      children: [
-                        _DateTimePickerCard(
-                          label: 'Starts at',
-                          value: _startsAt,
-                          onTap: _pickStartsAt,
-                        ),
-                        const SizedBox(height: 12),
-                        _DateTimePickerCard(
-                          label: 'Ends at',
-                          value: _endsAt,
-                          onTap: _pickEndsAt,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  _SectionCard(
-                    title: 'Audience',
-                    subtitle: 'Who can see and find this event',
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Category',
-                          style: AppTheme.blackTextStyle.copyWith(
-                            fontWeight: AppTheme.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            for (final category in _categories)
-                              ChoiceChip(
-                                selected: _category == category,
-                                label: Text(category),
-                                onSelected: (_) => setState(() {
-                                  _category = category;
-                                }),
-                                selectedColor:
-                                    AppColors.primary.withOpacity(0.12),
-                                backgroundColor: AppColors.background,
-                                shape: StadiumBorder(
-                                  side: BorderSide(
-                                    color: _category == category
-                                        ? AppColors.primary
-                                        : AppColors.border,
+                          _SectionCard(
+                            title: 'Timing',
+                            subtitle: 'When the event starts and ends',
+                            child: Column(
+                              children: [
+                                _DateTimePickerCard(
+                                  label: 'Starts at',
+                                  value: _startsAt,
+                                  onTap: _pickStartsAt,
+                                ),
+                                const SizedBox(height: 12),
+                                _DateTimePickerCard(
+                                  label: 'Ends at',
+                                  value: _endsAt,
+                                  onTap: _pickEndsAt,
+                                ),
+                                const SizedBox(height: 12),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      for (final hours in [1, 2, 3, 4])
+                                        ActionChip(
+                                          avatar: const Icon(
+                                            Icons.timelapse_rounded,
+                                            size: 16,
+                                          ),
+                                          label: Text('$hours hr'),
+                                          onPressed: () => _setDuration(hours),
+                                        ),
+                                    ],
                                   ),
                                 ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        SwitchListTile.adaptive(
-                          contentPadding: EdgeInsets.zero,
-                          value: _isPrivate,
-                          onChanged: (value) =>
-                              setState(() => _isPrivate = value),
-                          title: Text(
-                            'Private event',
-                            style: AppTheme.blackTextStyle.copyWith(
-                              fontWeight: AppTheme.medium,
+                              ],
                             ),
                           ),
-                          subtitle: Text(
-                            'Only invited people can see this event.',
-                            style:
-                                AppTheme.greyTextStyle.copyWith(fontSize: 12),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  FilledButton.icon(
-                    onPressed: isSaving ? null : _submit,
-                    icon: isSaving
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.white,
+                          const SizedBox(height: 14),
+                          _SectionCard(
+                            title: 'Audience',
+                            subtitle: 'Who can see and find this event',
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Category',
+                                  style: AppTheme.blackTextStyle.copyWith(
+                                    fontWeight: AppTheme.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    for (final category in _categories)
+                                      ChoiceChip(
+                                        selected: _category == category,
+                                        label: Text(category),
+                                        onSelected: (_) => setState(() {
+                                          _category = category;
+                                        }),
+                                        selectedColor:
+                                            AppColors.primary.withOpacity(0.12),
+                                        backgroundColor: AppColors.background,
+                                        shape: StadiumBorder(
+                                          side: BorderSide(
+                                            color: _category == category
+                                                ? AppColors.primary
+                                                : AppColors.border,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: AppColors.background,
+                                    borderRadius: BorderRadius.circular(18),
+                                    border: Border.all(color: AppColors.border),
+                                  ),
+                                  child: SwitchListTile.adaptive(
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 4,
+                                    ),
+                                    secondary: Icon(
+                                      _isPrivate
+                                          ? Icons.lock_outline_rounded
+                                          : Icons.public_rounded,
+                                      color: AppColors.primary,
+                                    ),
+                                    value: _isPrivate,
+                                    onChanged: (value) =>
+                                        setState(() => _isPrivate = value),
+                                    title: Text(
+                                      _isPrivate
+                                          ? 'Private event'
+                                          : 'Public event',
+                                      style: AppTheme.blackTextStyle.copyWith(
+                                        fontWeight: AppTheme.medium,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      _isPrivate
+                                          ? 'Only invited people can discover it.'
+                                          : 'Anyone in the community can discover it.',
+                                      style: AppTheme.greyTextStyle.copyWith(
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          )
-                        : const Icon(Icons.event_available_outlined),
-                    label: Text(
-                      isSaving
-                          ? (_isEditing ? 'Saving...' : 'Creating...')
-                          : (_isEditing ? 'Save changes' : 'Create event'),
-                    ),
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 54),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
+                          ),
+                          const SizedBox(height: 18),
+                        ],
                       ),
                     ),
                   ),
                 ],
               ),
             ),
+          ),
+          bottomNavigationBar: _CreateEventActionBar(
+            isSaving: isSaving,
+            isUploading: _isUploadingCover,
+            isEditing: _isEditing,
+            onSubmit: _submit,
           ),
         );
       },
@@ -349,17 +390,16 @@ class _CreateEventPageState extends State<CreateEventPage> {
   }
 
   void _submit() {
+    if (_isUploadingCover) {
+      _showMessage('Wait for the cover image to finish uploading');
+      return;
+    }
     if (_startsAt == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Pick a start time',
-            style: TextStyle(color: AppColors.text),
-          ),
-          backgroundColor: AppColors.card,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      _showMessage('Pick a start time');
+      return;
+    }
+    if (_endsAt != null && !_endsAt!.isAfter(_startsAt!)) {
+      _showMessage('The end time must be after the start time');
       return;
     }
     if (!_formKey.currentState!.validate()) return;
@@ -450,7 +490,31 @@ class _CreateEventPageState extends State<CreateEventPage> {
         DateTime.now().add(const Duration(hours: 4));
     final selected = await _pickDateTime(initial: initial);
     if (selected == null) return;
+    if (_startsAt != null && !selected.isAfter(_startsAt!)) {
+      _showMessage('Choose an end time after the event starts');
+      return;
+    }
     setState(() => _endsAt = selected);
+  }
+
+  void _setDuration(int hours) {
+    final start = _startsAt;
+    if (start == null) {
+      _showMessage('Pick a start time first');
+      return;
+    }
+    HapticFeedback.selectionClick();
+    setState(() => _endsAt = start.add(Duration(hours: hours)));
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: TextStyle(color: AppColors.text)),
+        backgroundColor: AppColors.card,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   Future<DateTime?> _pickDateTime({required DateTime initial}) async {
@@ -517,9 +581,11 @@ class _CreateEventPageState extends State<CreateEventPage> {
 
 class _CreateEventHero extends StatelessWidget {
   final bool isPrivate;
+  final bool isEditing;
 
   const _CreateEventHero({
     required this.isPrivate,
+    required this.isEditing,
   });
 
   @override
@@ -568,7 +634,9 @@ class _CreateEventHero extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Design an event people want to show up for.',
+                  isEditing
+                      ? 'Keep the details clear and up to date.'
+                      : 'Design an event people want to show up for.',
                   style: AppTheme.blackTextStyle.copyWith(
                     fontSize: 18,
                     fontWeight: AppTheme.bold,
@@ -577,7 +645,9 @@ class _CreateEventHero extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Keep the essentials in one place, then publish when the details feel right.',
+                  isEditing
+                      ? 'Changes are reflected anywhere this event appears.'
+                      : 'Keep the essentials in one place, then publish when the details feel right.',
                   style: AppTheme.greyTextStyle.copyWith(
                     fontSize: 12,
                     height: 1.45,
@@ -862,13 +932,13 @@ class _DateTimePickerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(18),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
           color: AppColors.card,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(color: AppColors.border),
         ),
         child: Row(
@@ -895,6 +965,71 @@ class _DateTimePickerCard extends StatelessWidget {
             ),
             const Icon(Icons.calendar_month_outlined, size: 18),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CreateEventActionBar extends StatelessWidget {
+  final bool isSaving;
+  final bool isUploading;
+  final bool isEditing;
+  final VoidCallback onSubmit;
+
+  const _CreateEventActionBar({
+    required this.isSaving,
+    required this.isUploading,
+    required this.isEditing,
+    required this.onSubmit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.card,
+      elevation: 12,
+      shadowColor: AppColors.black.withOpacity(0.12),
+      child: SafeArea(
+        top: false,
+        child: Center(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 760),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              child: FilledButton.icon(
+                onPressed: isSaving || isUploading ? null : onSubmit,
+                icon: isSaving || isUploading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.white,
+                        ),
+                      )
+                    : Icon(
+                        isEditing
+                            ? Icons.check_rounded
+                            : Icons.event_available_outlined,
+                      ),
+                label: Text(
+                  isUploading
+                      ? 'Uploading cover...'
+                      : isSaving
+                          ? (isEditing ? 'Saving changes...' : 'Creating...')
+                          : (isEditing ? 'Save changes' : 'Create event'),
+                ),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 56),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
