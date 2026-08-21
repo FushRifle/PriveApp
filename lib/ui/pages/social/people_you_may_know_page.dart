@@ -5,6 +5,7 @@ import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/core/services/friends/friends_service.dart';
 import 'package:clique/core/services/user/user_service.dart';
 import 'package:clique/ui/widgets/common/app_network_image.dart';
+import 'package:clique/ui/widgets/common/app_page_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -21,6 +22,7 @@ class _PeopleYouMayKnowPageState extends State<PeopleYouMayKnowPage> {
   final FriendsService _friendsService = FriendsService();
   final TextEditingController _searchController = TextEditingController();
   final Set<int> _following = {};
+  final Set<int> _followed = {};
 
   late Future<List<_SuggestedUser>> _future;
   String _query = '';
@@ -74,6 +76,10 @@ class _PeopleYouMayKnowPageState extends State<PeopleYouMayKnowPage> {
     try {
       await _friendsService.followUser(user.id);
       if (!mounted) return;
+      setState(() {
+        _following.remove(user.id);
+        _followed.add(user.id);
+      });
       HapticFeedback.selectionClick();
     } catch (error) {
       if (!mounted) return;
@@ -117,131 +123,131 @@ class _PeopleYouMayKnowPageState extends State<PeopleYouMayKnowPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: AppColors.background,
-        surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          tooltip: 'Back',
-          icon: Icon(Icons.arrow_back_ios_new, color: AppColors.text),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'People you may know',
-          style: AppTheme.blackTextStyle.copyWith(
-            fontSize: 18,
-            fontWeight: FontWeight.w900,
+      body: Column(
+        children: [
+          AppPageHeader(
+            title: 'Discover people',
+            subtitle: 'Build a circle that feels like you',
+            leadingIcon: Icons.arrow_back_ios_new_rounded,
+            onLeadingTap: () => Navigator.pop(context),
           ),
-        ),
-        centerTitle: true,
-      ),
-      body: FutureBuilder<List<_SuggestedUser>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting &&
-              !snapshot.hasData) {
-            return const _LoadingList();
-          }
+          Expanded(
+            child: FutureBuilder<List<_SuggestedUser>>(
+              future: _future,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting &&
+                    !snapshot.hasData) {
+                  return const _LoadingList();
+                }
 
-          if (snapshot.hasError) {
-            return _StateList(
-              icon: Icons.error_outline_rounded,
-              title: 'Could not load suggestions',
-              subtitle: snapshot.error.toString(),
-              onRefresh: _refresh,
-            );
-          }
+                if (snapshot.hasError) {
+                  return _StateList(
+                    icon: Icons.error_outline_rounded,
+                    title: 'Could not load suggestions',
+                    subtitle:
+                        'Check your connection, then pull down or tap below to try again.',
+                    onRefresh: _refresh,
+                  );
+                }
 
-          final suggestions = snapshot.data ?? const <_SuggestedUser>[];
-          final filtered = _filterSuggestions(suggestions);
-          if (suggestions.isEmpty) {
-            return _StateList(
-              icon: Icons.group_add_outlined,
-              title: 'No suggestions right now',
-              subtitle: 'Check back later for more people to follow.',
-              onRefresh: _refresh,
-            );
-          }
+                final suggestions = snapshot.data ?? const <_SuggestedUser>[];
+                final filtered = _filterSuggestions(suggestions);
+                if (suggestions.isEmpty) {
+                  return _StateList(
+                    icon: Icons.group_add_outlined,
+                    title: 'No suggestions right now',
+                    subtitle: 'Check back later for more people to follow.',
+                    onRefresh: _refresh,
+                  );
+                }
 
-          return RefreshIndicator(
-            color: AppColors.primary,
-            onRefresh: _refresh,
-            child: CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(
-                parent: BouncingScrollPhysics(),
-              ),
-              slivers: [
-                SliverToBoxAdapter(
-                  child: _DiscoveryHeader(
-                    totalCount: suggestions.length,
-                    visibleCount: filtered.length,
-                    searchController: _searchController,
-                    onClearSearch: () => _searchController.clear(),
-                  ),
-                ),
-                if (filtered.isEmpty)
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: _InlineEmptyState(
-                      query: _searchController.text.trim(),
+                return RefreshIndicator(
+                  color: AppColors.primary,
+                  onRefresh: _refresh,
+                  child: CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics(),
                     ),
-                  )
-                else
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
-                    sliver: SliverLayoutBuilder(
-                      builder: (context, constraints) {
-                        final wide = constraints.crossAxisExtent >= 680;
-                        if (wide) {
-                          return SliverGrid.builder(
-                            gridDelegate:
-                                const SliverGridDelegateWithMaxCrossAxisExtent(
-                              maxCrossAxisExtent: 360,
-                              mainAxisExtent: 188,
-                              mainAxisSpacing: 12,
-                              crossAxisSpacing: 12,
-                            ),
-                            itemCount: filtered.length,
-                            itemBuilder: (context, index) {
-                              return _SuggestionCard(
-                                person: filtered[index],
-                                followed: _following.contains(
-                                  filtered[index].id,
-                                ),
-                                onOpen: () => _openProfile(filtered[index].id),
-                                onFollow: () {
-                                  HapticFeedback.lightImpact();
-                                  _follow(filtered[index]);
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: _DiscoveryHeader(
+                          totalCount: suggestions.length,
+                          visibleCount: filtered.length,
+                          searchController: _searchController,
+                          onClearSearch: () => _searchController.clear(),
+                        ),
+                      ),
+                      if (filtered.isEmpty)
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: _InlineEmptyState(
+                            query: _searchController.text.trim(),
+                            onClear: () => _searchController.clear(),
+                          ),
+                        )
+                      else
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+                          sliver: SliverLayoutBuilder(
+                            builder: (context, constraints) {
+                              final wide = constraints.crossAxisExtent >= 680;
+                              if (wide) {
+                                return SliverGrid.builder(
+                                  gridDelegate:
+                                      const SliverGridDelegateWithMaxCrossAxisExtent(
+                                    maxCrossAxisExtent: 360,
+                                    mainAxisExtent: 188,
+                                    mainAxisSpacing: 12,
+                                    crossAxisSpacing: 12,
+                                  ),
+                                  itemCount: filtered.length,
+                                  itemBuilder: (context, index) {
+                                    return _SuggestionCard(
+                                      person: filtered[index],
+                                      following: _following.contains(
+                                        filtered[index].id,
+                                      ),
+                                      followed: _followed
+                                          .contains(filtered[index].id),
+                                      onOpen: () =>
+                                          _openProfile(filtered[index].id),
+                                      onFollow: () {
+                                        HapticFeedback.lightImpact();
+                                        _follow(filtered[index]);
+                                      },
+                                    );
+                                  },
+                                );
+                              }
+
+                              return SliverList.separated(
+                                itemCount: filtered.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 12),
+                                itemBuilder: (context, index) {
+                                  final person = filtered[index];
+                                  return _SuggestionCard(
+                                    person: person,
+                                    following: _following.contains(person.id),
+                                    followed: _followed.contains(person.id),
+                                    onOpen: () => _openProfile(person.id),
+                                    onFollow: () {
+                                      HapticFeedback.lightImpact();
+                                      _follow(person);
+                                    },
+                                  );
                                 },
                               );
                             },
-                          );
-                        }
-
-                        return SliverList.separated(
-                          itemCount: filtered.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 12),
-                          itemBuilder: (context, index) {
-                            final person = filtered[index];
-                            return _SuggestionCard(
-                              person: person,
-                              followed: _following.contains(person.id),
-                              onOpen: () => _openProfile(person.id),
-                              onFollow: () {
-                                HapticFeedback.lightImpact();
-                                _follow(person);
-                              },
-                            );
-                          },
-                        );
-                      },
-                    ),
+                          ),
+                        ),
+                    ],
                   ),
-              ],
+                );
+              },
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
@@ -397,12 +403,14 @@ class _DiscoveryHeader extends StatelessWidget {
 
 class _SuggestionCard extends StatelessWidget {
   final _SuggestedUser person;
+  final bool following;
   final bool followed;
   final VoidCallback onOpen;
   final VoidCallback onFollow;
 
   const _SuggestionCard({
     required this.person,
+    required this.following,
     required this.followed,
     required this.onOpen,
     required this.onFollow,
@@ -499,32 +507,59 @@ class _SuggestionCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              SizedBox(
-                width: 104,
-                child: FilledButton(
-                  onPressed: followed ? null : onFollow,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.white,
-                    disabledBackgroundColor: AppColors.primary.withOpacity(
-                      0.12,
-                    ),
-                    disabledForegroundColor: AppColors.primary,
-                    minimumSize: const Size(104, 42),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(13),
-                    ),
-                  ),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(followed ? 'Following' : 'Follow'),
-                  ),
-                ),
+              _FollowButton(
+                following: following,
+                followed: followed,
+                onPressed: onFollow,
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _FollowButton extends StatelessWidget {
+  final bool following;
+  final bool followed;
+  final VoidCallback onPressed;
+
+  const _FollowButton({
+    required this.following,
+    required this.followed,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 96,
+      height: 42,
+      child: FilledButton(
+        onPressed: following || followed ? null : onPressed,
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.white,
+          disabledBackgroundColor: AppColors.primary.withOpacity(0.12),
+          disabledForegroundColor: AppColors.primary,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(13),
+          ),
+        ),
+        child: following
+            ? const SizedBox.square(
+                dimension: 17,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.primary,
+                ),
+              )
+            : FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(followed ? 'Following' : 'Follow'),
+              ),
       ),
     );
   }
@@ -747,6 +782,20 @@ class _StateList extends StatelessWidget {
             textAlign: TextAlign.center,
             style: AppTheme.greyTextStyle.copyWith(fontSize: 13),
           ),
+          const SizedBox(height: 20),
+          FilledButton.icon(
+            onPressed: () => onRefresh(),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.white,
+              minimumSize: const Size(160, 48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+            ),
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Try again'),
+          ),
         ],
       ),
     );
@@ -755,8 +804,9 @@ class _StateList extends StatelessWidget {
 
 class _InlineEmptyState extends StatelessWidget {
   final String query;
+  final VoidCallback onClear;
 
-  const _InlineEmptyState({required this.query});
+  const _InlineEmptyState({required this.query, required this.onClear});
 
   @override
   Widget build(BuildContext context) {
@@ -784,6 +834,12 @@ class _InlineEmptyState extends StatelessWidget {
             'Try a different name, username, bio, or location.',
             textAlign: TextAlign.center,
             style: AppTheme.greyTextStyle.copyWith(fontSize: 13),
+          ),
+          const SizedBox(height: 18),
+          TextButton.icon(
+            onPressed: onClear,
+            icon: const Icon(Icons.close_rounded),
+            label: const Text('Clear search'),
           ),
         ],
       ),

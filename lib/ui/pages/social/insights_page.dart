@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:clique/app/configs/colors.dart';
@@ -26,6 +27,17 @@ class _InsightsPageState extends State<InsightsPage>
   void _loadData() {
     context.read<InsightsBloc>().add(LoadInsights(days: 30));
     context.read<InsightsBloc>().add(LoadRealtimeStats());
+  }
+
+  Future<void> _refreshInsights(int days) async {
+    final bloc = context.read<InsightsBloc>()
+      ..add(RefreshInsights(days: days))
+      ..add(RefreshRealtimeStats());
+    await bloc.stream.firstWhere(
+      (state) =>
+          state.status == InsightsStatus.success ||
+          state.status == InsightsStatus.error,
+    );
   }
 
   String _formatValue(num value) {
@@ -63,9 +75,7 @@ class _InsightsPageState extends State<InsightsPage>
               builder: (context, state) {
                 if (state.status == InsightsStatus.loading &&
                     state.insights == null) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  );
+                  return _buildLoadingWidget();
                 }
 
                 if (state.status == InsightsStatus.error &&
@@ -74,41 +84,52 @@ class _InsightsPageState extends State<InsightsPage>
                 }
 
                 return RefreshIndicator(
-                  onRefresh: () async {
-                    context.read<InsightsBloc>().add(
-                          RefreshInsights(days: state.currentPeriodDays),
-                        );
-                    context.read<InsightsBloc>().add(RefreshRealtimeStats());
-                  },
+                  onRefresh: () => _refreshInsights(state.currentPeriodDays),
                   color: AppColors.primary,
                   child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildPerformanceHero(state),
-                        const SizedBox(height: 24),
-                        _buildSectionTitle(
-                          'Overview',
-                          'A snapshot of your account performance',
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics(),
+                    ),
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 920),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (state.status == InsightsStatus.refreshing)
+                              const Padding(
+                                padding: EdgeInsets.only(bottom: 10),
+                                child: LinearProgressIndicator(
+                                  color: AppColors.primary,
+                                  minHeight: 2,
+                                ),
+                              ),
+                            _buildPerformanceHero(state),
+                            const SizedBox(height: 14),
+                            _buildPeriodSelector(state),
+                            const SizedBox(height: 24),
+                            _buildSectionTitle(
+                              'Overview',
+                              'A snapshot of your account performance',
+                            ),
+                            const SizedBox(height: 12),
+                            _buildOverviewCards(state),
+                            const SizedBox(height: 24),
+                            _buildChartSection(state),
+                            const SizedBox(height: 24),
+                            if (state.insights != null) ...[
+                              _buildEngagementRateCard(state),
+                              const SizedBox(height: 24),
+                              _buildDemographicsSection(state),
+                              const SizedBox(height: 24),
+                              _buildLocationsSection(state),
+                              const SizedBox(height: 24),
+                              _buildAgeRangeSection(state),
+                            ],
+                          ],
                         ),
-                        const SizedBox(height: 12),
-                        _buildOverviewCards(state),
-                        const SizedBox(height: 24),
-                        _buildChartSection(state),
-                        const SizedBox(height: 24),
-                        if (state.insights != null) ...[
-                          _buildEngagementRateCard(state),
-                          const SizedBox(height: 24),
-                          _buildDemographicsSection(state),
-                          const SizedBox(height: 24),
-                          _buildLocationsSection(state),
-                          const SizedBox(height: 24),
-                          _buildAgeRangeSection(state),
-                        ],
-                        const SizedBox(height: 32),
-                      ],
+                      ),
                     ),
                   ),
                 );
@@ -131,20 +152,108 @@ class _InsightsPageState extends State<InsightsPage>
 
   Widget _buildErrorWidget() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, size: 64, color: AppColors.greyColor),
-          const SizedBox(height: 16),
-          Text('Failed to load insights', style: AppTheme.greyTextStyle),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _loadData,
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            child: const Text('Retry'),
-          ),
-        ],
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 76,
+              height: 76,
+              decoration: BoxDecoration(
+                color: AppColors.error.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: const Icon(
+                Icons.query_stats_rounded,
+                size: 34,
+                color: AppColors.error,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Insights are unavailable',
+              style: AppTheme.blackTextStyle.copyWith(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 7),
+            Text(
+              'We couldn’t load your performance data. Check your connection and try again.',
+              textAlign: TextAlign.center,
+              style: AppTheme.greyTextStyle.copyWith(
+                fontSize: 13,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: _loadData,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.white,
+                minimumSize: const Size(160, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+              ),
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Try again'),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildLoadingWidget() {
+    return ListView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+      children: [
+        Container(
+          height: 188,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(24),
+          ),
+        ),
+        const SizedBox(height: 18),
+        Row(
+          children: List.generate(
+            2,
+            (_) => Expanded(
+              child: Container(
+                height: 142,
+                margin: const EdgeInsets.symmetric(horizontal: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.cardColor,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.border),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: List.generate(
+            2,
+            (_) => Expanded(
+              child: Container(
+                height: 142,
+                margin: const EdgeInsets.symmetric(horizontal: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.cardColor,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.border),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -268,64 +377,128 @@ class _InsightsPageState extends State<InsightsPage>
     );
   }
 
+  Widget _buildPeriodSelector(InsightsState state) {
+    const periods = [(7, '7D'), (30, '30D'), (90, '90D')];
+
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            'Reporting period',
+            style: AppTheme.blackTextStyle.copyWith(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: AppColors.cardColor,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: periods.map((period) {
+              final selected = state.currentPeriodDays == period.$1;
+              return Semantics(
+                button: true,
+                selected: selected,
+                label: '${period.$1} days',
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: selected || state.status == InsightsStatus.refreshing
+                      ? null
+                      : () {
+                          HapticFeedback.selectionClick();
+                          context.read<InsightsBloc>().add(
+                                RefreshInsights(days: period.$1),
+                              );
+                        },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 13,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color:
+                          selected ? AppColors.primary : AppColors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      period.$2,
+                      style: TextStyle(
+                        color: selected
+                            ? AppColors.white
+                            : AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildOverviewCards(InsightsState state) {
     final insights = state.insights;
     if (insights == null) return const SizedBox.shrink();
 
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _buildInsightCard(
-                title: 'Total Views',
-                value: _formatValue(insights.totalViews),
-                change: insights.totalViewsChange,
-                isPositive: insights.totalViewsChange >= 0,
-                icon: Icons.visibility,
-                color: AppColors.blue,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildInsightCard(
-                title: 'Engagement',
-                value: _formatValue(insights.totalEngagement),
-                change: insights.totalEngagementChange,
-                isPositive: insights.totalEngagementChange >= 0,
-                icon: Icons.favorite,
-                color: AppColors.redColor,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildInsightCard(
-                title: 'New Followers',
-                value: _formatValue(insights.newFollowers),
-                change: insights.newFollowersChange,
-                isPositive: insights.newFollowersChange >= 0,
-                icon: Icons.person_add,
-                color: AppColors.greenColor,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildInsightCard(
-                title: 'Reach',
-                value: _formatValue(insights.totalReach),
-                change: insights.totalReachChange,
-                isPositive: insights.totalReachChange >= 0,
-                icon: Icons.trending_up,
-                color: AppColors.orange,
-              ),
-            ),
-          ],
-        ),
-      ],
+    final cards = [
+      _buildInsightCard(
+        title: 'Total Views',
+        value: _formatValue(insights.totalViews),
+        change: insights.totalViewsChange,
+        isPositive: insights.totalViewsChange >= 0,
+        icon: Icons.visibility,
+        color: AppColors.blue,
+      ),
+      _buildInsightCard(
+        title: 'Engagement',
+        value: _formatValue(insights.totalEngagement),
+        change: insights.totalEngagementChange,
+        isPositive: insights.totalEngagementChange >= 0,
+        icon: Icons.favorite,
+        color: AppColors.redColor,
+      ),
+      _buildInsightCard(
+        title: 'New Followers',
+        value: _formatValue(insights.newFollowers),
+        change: insights.newFollowersChange,
+        isPositive: insights.newFollowersChange >= 0,
+        icon: Icons.person_add,
+        color: AppColors.greenColor,
+      ),
+      _buildInsightCard(
+        title: 'Reach',
+        value: _formatValue(insights.totalReach),
+        change: insights.totalReachChange,
+        isPositive: insights.totalReachChange >= 0,
+        icon: Icons.trending_up,
+        color: AppColors.orange,
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 760 ? 4 : 2;
+        const spacing = 12.0;
+        final width =
+            (constraints.maxWidth - (spacing * (columns - 1))) / columns;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children:
+              cards.map((card) => SizedBox(width: width, child: card)).toList(),
+        );
+      },
     );
   }
 
@@ -421,6 +594,7 @@ class _InsightsPageState extends State<InsightsPage>
   Widget _buildChartSection(InsightsState state) {
     final insights = state.insights;
     if (insights?.chartData == null) return const SizedBox.shrink();
+    final selectedData = _getSelectedChartData(insights!.chartData);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -471,10 +645,35 @@ class _InsightsPageState extends State<InsightsPage>
           const SizedBox(height: 16),
           _buildChartTabs(),
           const SizedBox(height: 20),
-          SizedBox(
-            height: 220,
-            child: LineChart(_buildChartData(insights!.chartData)),
-          ),
+          if (selectedData.isEmpty)
+            Container(
+              height: 200,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: AppColors.backgroundColor,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.show_chart_rounded,
+                    color: AppColors.textHint,
+                    size: 32,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'No ${_getChartLabel().toLowerCase()} yet',
+                    style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
+                  ),
+                ],
+              ),
+            )
+          else
+            SizedBox(
+              height: 220,
+              child: LineChart(_buildChartData(insights.chartData)),
+            ),
           const SizedBox(height: 16),
           Center(
             child: Row(

@@ -77,9 +77,9 @@ dependencies:
   equatable: ^2.0.8
   bloc: ^9.2.0
   open_file: ^4.0.0
-  file_picker: ^11.0.2 
+  file_picker: ^12.0.0
   url_launcher: ^6.3.2
-  share_plus: ^12.0.2
+  share_plus: ^13.3.0
   audio_waveforms: ^2.0.2
   just_audio: ^0.10.5
   cloudinary: ^1.2.0
@@ -89,7 +89,7 @@ dependencies:
   audioplayers: ^6.7.1
 
   # Voice & Video Calls
-  device_info_plus: ^12.3.0 
+  device_info_plus: ^13.2.0
   stream_video_flutter: ^1.4.0
   stream_video: ^1.4.0
   curved_navigation_bar: ^1.0.6
@@ -108,6 +108,9 @@ dev_dependencies:
 
 dependency_overrides:
   app_links: 7.0.0
+  # Stream Chat 10 still constrains file_picker to v11, but already uses the
+  # static API retained by v12. v12 removes the conflicting DKImagePicker SPM.
+  file_picker: ^12.0.0
 
 flutter:
   uses-material-design: true

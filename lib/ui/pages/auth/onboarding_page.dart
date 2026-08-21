@@ -81,15 +81,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   child: Row(
                     children: [
                       const SizedBox(width: 10),
-                      const Text(
-                        'Clique',
-                        style: TextStyle(
-                          color: AppColors.secondary,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: -0.7,
-                        ),
-                      ),
                       const Spacer(),
                       TextButton(
                         onPressed: _finishing ? null : _finish,

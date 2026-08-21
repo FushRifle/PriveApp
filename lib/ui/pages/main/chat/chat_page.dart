@@ -966,11 +966,9 @@ class _ChatPageState extends State<ChatPage>
   }
 
   Future<void> _pickDocument() async {
-    final result = await FilePicker.pickFiles();
-    final file = result?.files.single;
-    if (file?.path != null) {
-      _sendMedia(File(file!.path!), UploadType.document);
-    }
+    final file = await FilePicker.pickFile();
+    final path = file?.path;
+    if (path != null) _sendMedia(File(path), UploadType.document);
   }
 
   void _startCall(String callType) {

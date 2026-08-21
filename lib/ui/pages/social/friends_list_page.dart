@@ -7,6 +7,7 @@ import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/friends/friends_bloc.dart';
 import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/ui/widgets/common/app_network_image.dart';
+import 'package:clique/ui/widgets/common/app_page_header.dart';
 
 class FriendsListPage extends StatefulWidget {
   final bool isFollowers;
@@ -42,6 +43,34 @@ class _FriendsListPageState extends State<FriendsListPage>
     context.read<FriendsBloc>().add(LoadFollowStats());
   }
 
+  Future<void> _refreshFollowers() async {
+    final bloc = context.read<FriendsBloc>()..add(LoadFollowers());
+    await bloc.stream.firstWhere(
+      (state) =>
+          state.followersStatus == FollowersStatus.success ||
+          state.followersStatus == FollowersStatus.error,
+    );
+  }
+
+  Future<void> _refreshFollowing() async {
+    final bloc = context.read<FriendsBloc>()..add(LoadFollowing());
+    await bloc.stream.firstWhere(
+      (state) =>
+          state.followingStatus == FollowingStatus.success ||
+          state.followingStatus == FollowingStatus.error,
+    );
+  }
+
+  String _formatCount(int count) {
+    if (count >= 1000000) {
+      return '${(count / 1000000).toStringAsFixed(count >= 10000000 ? 0 : 1)}M';
+    }
+    if (count >= 1000) {
+      return '${(count / 1000).toStringAsFixed(count >= 10000 ? 0 : 1)}K';
+    }
+    return '$count';
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -53,50 +82,6 @@ class _FriendsListPageState extends State<FriendsListPage>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
-      appBar: AppBar(
-        backgroundColor: AppColors.cardColor,
-        elevation: 1,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Connections',
-          style: AppTheme.blackTextStyle.copyWith(
-            fontWeight: AppTheme.bold,
-            fontSize: 18,
-          ),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon:
-                const Icon(Icons.person_add_outlined, color: AppColors.primary),
-            onPressed: () {
-              HapticFeedback.lightImpact();
-              Navigator.pushNamed(
-                context,
-                NamedRoutes.peopleYouMayKnowScreen,
-              );
-            },
-          ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: AppColors.primary,
-          indicatorWeight: 3,
-          labelColor: AppColors.text,
-          unselectedLabelColor: AppColors.textSecondary,
-          labelStyle: const TextStyle(
-            fontWeight: FontWeight.w900,
-            fontSize: 13,
-          ),
-          tabs: const [
-            Tab(text: 'FOLLOWERS'),
-            Tab(text: 'FOLLOWING'),
-          ],
-        ),
-      ),
       body: BlocListener<FriendsBloc, FriendsState>(
         listener: (context, state) {
           if (state.error != null) {
@@ -104,6 +89,7 @@ class _FriendsListPageState extends State<FriendsListPage>
               SnackBar(
                 content: Text(state.error!),
                 backgroundColor: AppColors.card,
+                behavior: SnackBarBehavior.floating,
               ),
             );
             context.read<FriendsBloc>().add(ClearFriendsError());
@@ -111,33 +97,18 @@ class _FriendsListPageState extends State<FriendsListPage>
         },
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.cardColor,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  style: AppTheme.blackTextStyle.copyWith(fontSize: 14),
-                  decoration: InputDecoration(
-                    hintText: 'Search friends...',
-                    hintStyle: AppTheme.greyTextStyle.copyWith(fontSize: 14),
-                    prefixIcon: Icon(Icons.search, color: AppColors.greyColor),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                  ),
-                  onChanged: (value) {
-                    setState(() {});
-                  },
-                ),
+            AppPageHeader(
+              title: 'Connections',
+              subtitle: 'The people in your circle',
+              leadingIcon: Icons.arrow_back_ios_new_rounded,
+              onLeadingTap: () => Navigator.pop(context),
+              actionIcon: Icons.person_add_alt_1_rounded,
+              onActionTap: () => Navigator.pushNamed(
+                context,
+                NamedRoutes.peopleYouMayKnowScreen,
               ),
             ),
+            _buildConnectionControls(),
             Expanded(
               child: TabBarView(
                 controller: _tabController,
@@ -153,35 +124,113 @@ class _FriendsListPageState extends State<FriendsListPage>
     );
   }
 
+  Widget _buildConnectionControls() {
+    return BlocBuilder<FriendsBloc, FriendsState>(
+      buildWhen: (previous, current) =>
+          previous.followersTotal != current.followersTotal ||
+          previous.followingTotal != current.followingTotal ||
+          previous.stats != current.stats,
+      builder: (context, state) {
+        final followers = state.stats?.followersCount ?? state.followersTotal;
+        final following = state.stats?.followingCount ?? state.followingTotal;
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: AppColors.cardColor,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: TabBar(
+                  controller: _tabController,
+                  dividerColor: AppColors.transparent,
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  indicator: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  labelColor: AppColors.white,
+                  unselectedLabelColor: AppColors.textSecondary,
+                  labelStyle: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
+                  tabs: [
+                    Tab(text: 'Followers  ${_formatCount(followers)}'),
+                    Tab(text: 'Following  ${_formatCount(following)}'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _searchController,
+                textInputAction: TextInputAction.search,
+                style: AppTheme.blackTextStyle.copyWith(fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Search by name or username',
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  suffixIcon: _searchController.text.trim().isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Clear search',
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {});
+                          },
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                  filled: true,
+                  fillColor: AppColors.cardColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: AppColors.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide:
+                        const BorderSide(color: AppColors.primary, width: 1.5),
+                  ),
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildFollowersList() {
     return BlocBuilder<FriendsBloc, FriendsState>(
       builder: (context, state) {
         if (state.followersStatus == FollowersStatus.loading &&
             state.followers.isEmpty) {
-          return const Center(
-            child: CircularProgressIndicator(color: AppColors.primary),
-          );
+          return const _ConnectionsLoadingList();
         }
 
         final followers = _filterUsers(state.followers);
 
         if (followers.isEmpty &&
             state.followersStatus != FollowersStatus.loading) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.people_outline,
-                  size: 64,
-                  color: AppColors.greyColor.withOpacity(0.5),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'No followers yet',
-                  style: AppTheme.greyTextStyle.copyWith(fontSize: 16),
-                ),
-              ],
+          return _ConnectionEmptyState(
+            searching: _searchController.text.trim().isNotEmpty,
+            query: _searchController.text.trim(),
+            followers: true,
+            onClear: () {
+              _searchController.clear();
+              setState(() {});
+            },
+            onDiscover: () => Navigator.pushNamed(
+              context,
+              NamedRoutes.peopleYouMayKnowScreen,
             ),
           );
         }
@@ -196,20 +245,25 @@ class _FriendsListPageState extends State<FriendsListPage>
             }
             return false;
           },
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: followers.length + (state.followersHasMore ? 1 : 0),
-            itemBuilder: (context, index) {
-              if (index == followers.length) {
-                return const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  ),
-                );
-              }
-              return _buildFriendItem(followers[index]);
-            },
+          child: RefreshIndicator(
+            color: AppColors.primary,
+            onRefresh: _refreshFollowers,
+            child: ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              padding: const EdgeInsets.fromLTRB(16, 2, 16, 32),
+              itemCount: followers.length +
+                  (state.followersStatus == FollowersStatus.loadingMore
+                      ? 1
+                      : 0),
+              itemBuilder: (context, index) {
+                if (index == followers.length) {
+                  return const _InlineLoader();
+                }
+                return _buildFriendItem(followers[index]);
+              },
+            ),
           ),
         );
       },
@@ -221,30 +275,24 @@ class _FriendsListPageState extends State<FriendsListPage>
       builder: (context, state) {
         if (state.followingStatus == FollowingStatus.loading &&
             state.following.isEmpty) {
-          return const Center(
-            child: CircularProgressIndicator(color: AppColors.primary),
-          );
+          return const _ConnectionsLoadingList();
         }
 
         final following = _filterUsers(state.following);
 
         if (following.isEmpty &&
             state.followingStatus != FollowingStatus.loading) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.person_add_outlined,
-                  size: 64,
-                  color: AppColors.greyColor.withOpacity(0.5),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Not following anyone yet',
-                  style: AppTheme.greyTextStyle.copyWith(fontSize: 16),
-                ),
-              ],
+          return _ConnectionEmptyState(
+            searching: _searchController.text.trim().isNotEmpty,
+            query: _searchController.text.trim(),
+            followers: false,
+            onClear: () {
+              _searchController.clear();
+              setState(() {});
+            },
+            onDiscover: () => Navigator.pushNamed(
+              context,
+              NamedRoutes.peopleYouMayKnowScreen,
             ),
           );
         }
@@ -259,20 +307,25 @@ class _FriendsListPageState extends State<FriendsListPage>
             }
             return false;
           },
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: following.length + (state.followingHasMore ? 1 : 0),
-            itemBuilder: (context, index) {
-              if (index == following.length) {
-                return const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  ),
-                );
-              }
-              return _buildFriendItem(following[index]);
-            },
+          child: RefreshIndicator(
+            color: AppColors.primary,
+            onRefresh: _refreshFollowing,
+            child: ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              padding: const EdgeInsets.fromLTRB(16, 2, 16, 32),
+              itemCount: following.length +
+                  (state.followingStatus == FollowingStatus.loadingMore
+                      ? 1
+                      : 0),
+              itemBuilder: (context, index) {
+                if (index == following.length) {
+                  return const _InlineLoader();
+                }
+                return _buildFriendItem(following[index]);
+              },
+            ),
           ),
         );
       },
@@ -296,150 +349,335 @@ class _FriendsListPageState extends State<FriendsListPage>
   Widget _buildFriendItem(FriendUser friend) {
     final isFollowing = friend.isFollowing;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
         color: AppColors.cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () {
-                HapticFeedback.lightImpact();
-                Navigator.pushNamed(
-                  context,
-                  NamedRoutes.otherProfileScreen,
-                  arguments: friend.id,
-                );
-              },
-              child: Row(
-                children: [
-                  // Avatar
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.primary.withOpacity(0.3),
-                        width: 2,
-                      ),
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            HapticFeedback.selectionClick();
+            Navigator.pushNamed(
+              context,
+              NamedRoutes.otherProfileScreen,
+              arguments: friend.id,
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.primary.withOpacity(0.3),
+                      width: 2,
                     ),
-                    child: ClipOval(
-                      child: friend.avatar != null && friend.avatar!.isNotEmpty
-                          ? AppNetworkImage(
-                              imageUrl: friend.avatar!,
-                              fit: BoxFit.cover,
-                              preset: AppNetworkImagePreset.avatar,
-                              placeholder: (_) => Container(
-                                color: AppColors.grey.shade200,
-                                child: const Icon(Icons.person,
-                                    color: AppColors.grey),
-                              ),
-                              errorBuilder: (_) => Container(
-                                color: AppColors.grey.shade200,
-                                child: const Icon(Icons.person,
-                                    color: AppColors.grey),
-                              ),
-                            )
-                          : Container(
+                  ),
+                  child: ClipOval(
+                    child: friend.avatar != null && friend.avatar!.isNotEmpty
+                        ? AppNetworkImage(
+                            imageUrl: friend.avatar!,
+                            fit: BoxFit.cover,
+                            preset: AppNetworkImagePreset.avatar,
+                            placeholder: (_) => Container(
                               color: AppColors.grey.shade200,
-                              child: Center(
-                                child: Text(
-                                  friend.name.isNotEmpty
-                                      ? friend.name[0].toUpperCase()
-                                      : 'U',
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                              child: const Icon(Icons.person,
+                                  color: AppColors.grey),
+                            ),
+                            errorBuilder: (_) => Container(
+                              color: AppColors.grey.shade200,
+                              child: const Icon(Icons.person,
+                                  color: AppColors.grey),
+                            ),
+                          )
+                        : Container(
+                            color: AppColors.grey.shade200,
+                            child: Center(
+                              child: Text(
+                                friend.name.isNotEmpty
+                                    ? friend.name[0].toUpperCase()
+                                    : 'U',
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
-                    ),
+                          ),
                   ),
-                  const SizedBox(width: 12),
-                  // Info
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
                               friend.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: AppTheme.blackTextStyle.copyWith(
-                                fontWeight: AppTheme.bold,
+                                fontWeight: FontWeight.w800,
                                 fontSize: 15,
                               ),
                             ),
-                            if (friend.isVerified) ...[
-                              const SizedBox(width: 4),
-                              Icon(Icons.verified,
-                                  size: 14, color: AppColors.primary),
-                            ],
+                          ),
+                          if (friend.isVerified) ...[
+                            const SizedBox(width: 4),
+                            Icon(Icons.verified,
+                                size: 14, color: AppColors.primary),
                           ],
-                        ),
-                        const SizedBox(height: 2),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '@${friend.username}',
+                        style: AppTheme.greyTextStyle.copyWith(fontSize: 13),
+                      ),
+                      if (friend.bio != null && friend.bio!.isNotEmpty) ...[
+                        const SizedBox(height: 5),
                         Text(
-                          '@${friend.username}',
-                          style: AppTheme.greyTextStyle.copyWith(fontSize: 13),
+                          friend.bio!,
+                          style: AppTheme.greyTextStyle.copyWith(
+                            fontSize: 12,
+                            height: 1.3,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                        if (friend.bio != null && friend.bio!.isNotEmpty) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            friend.bio!,
-                            style: AppTheme.greyTextStyle.copyWith(
-                              fontSize: 11,
-                              overflow: TextOverflow.ellipsis,
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  height: 42,
+                  child: isFollowing
+                      ? OutlinedButton(
+                          onPressed: () {
+                            HapticFeedback.lightImpact();
+                            context.read<FriendsBloc>().add(
+                                  UnfollowUser(userId: friend.id),
+                                );
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.text,
+                            minimumSize: const Size(94, 42),
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            side: BorderSide(color: AppColors.border),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(13),
                             ),
                           ),
-                        ],
-                      ],
-                    ),
-                  ),
+                          child: const Text('Following'),
+                        )
+                      : FilledButton(
+                          onPressed: () {
+                            HapticFeedback.lightImpact();
+                            context.read<FriendsBloc>().add(
+                                  FollowUser(userId: friend.id),
+                                );
+                          },
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: AppColors.white,
+                            minimumSize: const Size(84, 42),
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(13),
+                            ),
+                          ),
+                          child: const Text('Follow'),
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InlineLoader extends StatelessWidget {
+  const _InlineLoader();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 18),
+      child: Center(
+        child: SizedBox.square(
+          dimension: 24,
+          child: CircularProgressIndicator(
+            color: AppColors.primary,
+            strokeWidth: 2.5,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ConnectionsLoadingList extends StatelessWidget {
+  const _ConnectionsLoadingList();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 2, 16, 32),
+      itemCount: 6,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) => Container(
+        height: 86,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.cardColor,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            const _ConnectionSkeleton(width: 56, height: 56, radius: 999),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _ConnectionSkeleton(width: 140, height: 13),
+                  SizedBox(height: 9),
+                  _ConnectionSkeleton(width: 96, height: 11),
                 ],
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-          // Action button
-          GestureDetector(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              if (isFollowing) {
-                context
-                    .read<FriendsBloc>()
-                    .add(UnfollowUser(userId: friend.id));
-              } else {
-                context.read<FriendsBloc>().add(FollowUser(userId: friend.id));
-              }
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            const SizedBox(width: 12),
+            const _ConnectionSkeleton(width: 88, height: 42, radius: 13),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ConnectionSkeleton extends StatelessWidget {
+  final double width;
+  final double height;
+  final double radius;
+
+  const _ConnectionSkeleton({
+    required this.width,
+    required this.height,
+    this.radius = 8,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: AppColors.border.withOpacity(0.55),
+        borderRadius: BorderRadius.circular(radius),
+      ),
+    );
+  }
+}
+
+class _ConnectionEmptyState extends StatelessWidget {
+  final bool searching;
+  final String query;
+  final bool followers;
+  final VoidCallback onClear;
+  final VoidCallback onDiscover;
+
+  const _ConnectionEmptyState({
+    required this.searching,
+    required this.query,
+    required this.followers,
+    required this.onClear,
+    required this.onDiscover,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final title = searching
+        ? 'No matches for “$query”'
+        : followers
+            ? 'Your community starts here'
+            : 'Find people worth following';
+    final subtitle = searching
+        ? 'Try another name or username.'
+        : followers
+            ? 'When people follow you, they’ll appear here.'
+            : 'Discover creators and friends to shape your feed.';
+
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(32, 24, 32, 48),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 76,
+              height: 76,
               decoration: BoxDecoration(
-                color: isFollowing ? AppColors.transparent : AppColors.primary,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: isFollowing ? AppColors.border : AppColors.primary,
-                ),
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(24),
               ),
-              child: Text(
-                isFollowing ? 'Following' : 'Follow',
-                style: TextStyle(
-                  color: isFollowing ? AppColors.text : AppColors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
+              child: Icon(
+                searching ? Icons.manage_search_rounded : Icons.people_rounded,
+                color: AppColors.primary,
+                size: 34,
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 20),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: AppTheme.blackTextStyle.copyWith(
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 7),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: AppTheme.greyTextStyle.copyWith(
+                fontSize: 13,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: searching ? onClear : onDiscover,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.white,
+                minimumSize: const Size(180, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+              ),
+              icon: Icon(
+                searching ? Icons.close_rounded : Icons.person_search_rounded,
+              ),
+              label: Text(searching ? 'Clear search' : 'Discover people'),
+            ),
+          ],
+        ),
       ),
     );
   }

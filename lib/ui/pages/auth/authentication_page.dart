@@ -230,6 +230,7 @@ class _AuthenticationPageState extends State<AuthenticationPage>
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.w800,
                 letterSpacing: -0.5,
+                color: AppColors.text,
               ),
         ),
         const SizedBox(height: 12),
@@ -249,7 +250,7 @@ class _AuthenticationPageState extends State<AuthenticationPage>
               child: Text(
                 'Login or Register',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.white.withOpacity(0.65),
+                      color: AppColors.white.withOpacity(0.65),
                       letterSpacing: 1.5,
                     ),
               ),
@@ -322,6 +323,7 @@ class _AuthenticationPageState extends State<AuthenticationPage>
                 : 'What\'s your email?',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
+                  color: AppColors.white,
                   letterSpacing: -0.5,
                 ),
           ),

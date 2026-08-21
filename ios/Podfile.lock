@@ -2,50 +2,20 @@ PODS:
   - audio_waveforms (0.0.1):
     - Flutter
   - Flutter (1.0.0)
-  - get_thumbnail_video (0.0.1):
-    - Flutter
-    - libwebp
-  - libwebp (1.5.0):
-    - libwebp/demux (= 1.5.0)
-    - libwebp/mux (= 1.5.0)
-    - libwebp/sharpyuv (= 1.5.0)
-    - libwebp/webp (= 1.5.0)
-  - libwebp/demux (1.5.0):
-    - libwebp/webp
-  - libwebp/mux (1.5.0):
-    - libwebp/demux
-  - libwebp/sharpyuv (1.5.0)
-  - libwebp/webp (1.5.0):
-    - libwebp/sharpyuv
-  - media_kit_video (0.0.1):
-    - Flutter
 
 DEPENDENCIES:
   - audio_waveforms (from `.symlinks/plugins/audio_waveforms/ios`)
   - Flutter (from `Flutter`)
-  - get_thumbnail_video (from `.symlinks/plugins/get_thumbnail_video/ios`)
-  - media_kit_video (from `.symlinks/plugins/media_kit_video/ios`)
-
-SPEC REPOS:
-  trunk:
-    - libwebp
 
 EXTERNAL SOURCES:
   audio_waveforms:
     :path: ".symlinks/plugins/audio_waveforms/ios"
   Flutter:
     :path: Flutter
-  get_thumbnail_video:
-    :path: ".symlinks/plugins/get_thumbnail_video/ios"
-  media_kit_video:
-    :path: ".symlinks/plugins/media_kit_video/ios"
 
 SPEC CHECKSUMS:
   audio_waveforms: a6dde7fe7c0ea05f06ffbdb0f7c1b2b2ba6cedcf
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
-  get_thumbnail_video: 1a754d46b860dffefcc57b7290a43089cd5d7e58
-  libwebp: 02b23773aedb6ff1fd38cec7a77b81414c6842a8
-  media_kit_video: f3b0d035d89def15cfbbcf7dc2ae278f201e2f83
 
 PODFILE CHECKSUM: 4b015915ec662986b54bf30ab778da63f7dda016
 
