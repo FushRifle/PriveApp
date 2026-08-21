@@ -20,6 +20,7 @@ class SettingsPage extends ConsumerStatefulWidget {
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   Map<String, dynamic>? _user;
   int? _loadedSettingsUserId;
+  bool _isLoggingOut = false;
 
   bool notificationsEnabled = true;
   bool privateAccount = false;
@@ -102,6 +103,49 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   child: Column(
                     children: [
                       const SizedBox(height: 8),
+                      _section(
+                        'Premium',
+                        [
+                          _tile(
+                            isDark: isDark,
+                            icon: Icons.workspace_premium_rounded,
+                            title: 'Clique Premium',
+                            subtitle: 'Unlock exclusive features',
+                            trailing: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(50),
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    AppColors.primary,
+                                    AppColors.secondary,
+                                  ],
+                                ),
+                              ),
+                              child: const Text(
+                                'PREMIUM',
+                                style: TextStyle(
+                                  color: AppColors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const SubscribePage(),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                        isDark,
+                      ),
                       _section(
                         'Appearance',
                         [
@@ -277,49 +321,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         isDark,
                       ),
                       _section(
-                        'Premium',
-                        [
-                          _tile(
-                            isDark: isDark,
-                            icon: Icons.workspace_premium_rounded,
-                            title: 'Clique Premium',
-                            subtitle: 'Unlock exclusive features',
-                            trailing: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(50),
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    AppColors.primary,
-                                    AppColors.secondary,
-                                  ],
-                                ),
-                              ),
-                              child: const Text(
-                                'PREMIUM',
-                                style: TextStyle(
-                                  color: AppColors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const SubscribePage(),
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                        isDark,
-                      ),
-                      _section(
                         'About',
                         [
                           _tile(
@@ -378,7 +379,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       ),
                       const SizedBox(height: 20),
                       GestureDetector(
-                        onTap: _showLogoutDialog,
+                        onTap: _isLoggingOut ? null : _logout,
                         child: Container(
                           width: double.infinity,
                           height: 58,
@@ -390,14 +391,36 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             ),
                           ),
                           child: Center(
-                            child: Text(
-                              'Logout',
-                              style: TextStyle(
-                                color: AppColors.redColor,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 16,
-                              ),
-                            ),
+                            child: _isLoggingOut
+                                ? Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      SizedBox.square(
+                                        dimension: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: AppColors.redColor,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        'Logging out…',
+                                        style: TextStyle(
+                                          color: AppColors.redColor,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : Text(
+                                    'Logout',
+                                    style: TextStyle(
+                                      color: AppColors.redColor,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16,
+                                    ),
+                                  ),
                           ),
                         ),
                       ),
@@ -434,7 +457,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final minutes = seconds / 60;
     return '${minutes.toStringAsFixed(1)} min';
   }
-
 
   Widget _section(
     String title,
@@ -766,53 +788,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  void _showLogoutDialog() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: isDark ? AppColors.darkCard : AppColors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        title: const Text(
-          'Logout',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        content: const Text(
-          'Are you sure you want to logout?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                color: AppColors.grey.shade600,
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.read<AuthBloc>().add(SignOutRequested());
-            },
-            child: Text(
-              'Logout',
-              style: TextStyle(
-                color: AppColors.redColor,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+  void _logout() {
+    if (_isLoggingOut) return;
+    HapticFeedback.mediumImpact();
+    setState(() => _isLoggingOut = true);
+    context.read<AuthBloc>().add(const SignOutRequested());
   }
 
   int _readInt(dynamic value) {

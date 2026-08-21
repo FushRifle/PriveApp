@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -121,6 +122,7 @@ class _HomePageState extends State<HomePage>
   bool _initialized = false;
   bool _isLoadingMore = false;
   bool _checkingFirstHomeExperience = false;
+  bool _showJumpToTop = false;
 
   List<_StoryGroup> _cachedGroups = [];
   List<Story> _lastStories = [];
@@ -219,11 +221,22 @@ class _HomePageState extends State<HomePage>
   Future<void> _jumpToTop() async {
     if (!_scrollController.hasClients) return;
 
+    if (_showJumpToTop) setState(() => _showJumpToTop = false);
+
     await _scrollController.animateTo(
       0,
       duration: const Duration(milliseconds: 420),
       curve: Curves.easeOutCubic,
     );
+  }
+
+  bool _handleUserScroll(UserScrollNotification notification) {
+    final shouldShow = notification.direction == ScrollDirection.reverse &&
+        notification.metrics.pixels > 120;
+    if (shouldShow != _showJumpToTop && mounted) {
+      setState(() => _showJumpToTop = shouldShow);
+    }
+    return false;
   }
 
   @override
@@ -235,19 +248,27 @@ class _HomePageState extends State<HomePage>
       value: palette.overlayStyle,
       child: Scaffold(
         backgroundColor: palette.background,
-        floatingActionButton: Material(
-          color: AppColors.primary,
-          shape: const CircleBorder(),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: _jumpToTop,
-            customBorder: const CircleBorder(),
-            child: const SizedBox.square(
-              dimension: 32,
-              child: Icon(
-                Icons.keyboard_double_arrow_up_rounded,
-                size: 18,
-                color: AppColors.white,
+        floatingActionButton: AnimatedScale(
+          scale: _showJumpToTop ? 1 : 0,
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutBack,
+          child: IgnorePointer(
+            ignoring: !_showJumpToTop,
+            child: Material(
+              color: AppColors.primary,
+              shape: const CircleBorder(),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: _jumpToTop,
+                customBorder: const CircleBorder(),
+                child: const SizedBox.square(
+                  dimension: 40,
+                  child: Icon(
+                    Icons.keyboard_double_arrow_up_rounded,
+                    size: 21,
+                    color: AppColors.white,
+                  ),
+                ),
               ),
             ),
           ),
@@ -259,114 +280,118 @@ class _HomePageState extends State<HomePage>
             backgroundColor: palette.card,
             edgeOffset: MediaQuery.paddingOf(context).top + 60,
             onRefresh: _refresh,
-            child: CustomScrollView(
-              controller: _scrollController,
-              cacheExtent: 900,
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics(),
-              ),
-              slivers: [
-                SliverToBoxAdapter(
-                  child: _HomeAppBar(palette: palette),
+            child: NotificationListener<UserScrollNotification>(
+              onNotification: _handleUserScroll,
+              child: CustomScrollView(
+                controller: _scrollController,
+                cacheExtent: 900,
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
                 ),
-                SliverToBoxAdapter(
-                  child: BlocBuilder<StoriesBloc, StoriesState>(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: _HomeAppBar(palette: palette),
+                  ),
+                  SliverToBoxAdapter(
+                    child: BlocBuilder<StoriesBloc, StoriesState>(
+                      buildWhen: (previous, current) {
+                        return previous.stories != current.stories ||
+                            previous.status != current.status ||
+                            previous.error != current.error;
+                      },
+                      builder: (context, state) {
+                        return _StoriesSection(
+                          palette: palette,
+                          state: state,
+                          groups: _getGroupedStories(state.stories),
+                          onCreateStory: () => _openCreateStatus(context),
+                        );
+                      },
+                    ),
+                  ),
+                  BlocBuilder<FeedBloc, FeedState>(
                     buildWhen: (previous, current) {
-                      return previous.stories != current.stories ||
-                          previous.status != current.status ||
-                          previous.error != current.error;
+                      if (!_hasSamePostStructure(
+                        previous.posts,
+                        current.posts,
+                      )) {
+                        return true;
+                      }
+                      return current.posts.isEmpty &&
+                          (previous.postsStatus != current.postsStatus ||
+                              previous.postsError != current.postsError);
                     },
                     builder: (context, state) {
-                      return _StoriesSection(
-                        palette: palette,
-                        state: state,
-                        groups: _getGroupedStories(state.stories),
-                        onCreateStory: () => _openCreateStatus(context),
+                      final posts = state.posts;
+
+                      if (state.postsStatus == FeedStatus.loading &&
+                          posts.isEmpty) {
+                        return const SliverToBoxAdapter(
+                          child: HomeFeedLoadingShimmer(),
+                        );
+                      }
+
+                      if (posts.isEmpty) {
+                        return SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: _EmptyFeed(palette: palette),
+                        );
+                      }
+
+                      return SliverMainAxisGroup(
+                        slivers: [
+                          SliverToBoxAdapter(
+                            child: _FeedHeader(
+                              palette: palette,
+                              isRefreshing:
+                                  state.postsStatus == FeedStatus.loading &&
+                                      posts.isEmpty,
+                              onOpenTopics: () {
+                                Navigator.pushNamed(
+                                  context,
+                                  NamedRoutes.topicsScreen,
+                                );
+                              },
+                              onOpenCreate: () => _openCreatePost(context),
+                            ),
+                          ),
+                          SliverPadding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            sliver: SliverList.separated(
+                              addAutomaticKeepAlives: false,
+                              itemCount: posts.length + (posts.length ~/ 6),
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 16),
+                              itemBuilder: (context, index) {
+                                if ((index + 1) % 7 == 0) {
+                                  return _PeopleYouMayKnowCard(
+                                    palette: palette,
+                                    suggestions: _suggestionsFuture,
+                                  );
+                                }
+
+                                final postIndex = index - (index ~/ 7);
+                                final post = posts[postIndex];
+
+                                return _FeedPostSlot(
+                                  key: ValueKey('post_${post.id}'),
+                                  postId: post.id,
+                                  fallback: post,
+                                );
+                              },
+                            ),
+                          ),
+                        ],
                       );
                     },
                   ),
-                ),
-                BlocBuilder<FeedBloc, FeedState>(
-                  buildWhen: (previous, current) {
-                    if (!_hasSamePostStructure(
-                      previous.posts,
-                      current.posts,
-                    )) {
-                      return true;
-                    }
-                    return current.posts.isEmpty &&
-                        (previous.postsStatus != current.postsStatus ||
-                            previous.postsError != current.postsError);
-                  },
-                  builder: (context, state) {
-                    final posts = state.posts;
-
-                    if (state.postsStatus == FeedStatus.loading &&
-                        posts.isEmpty) {
-                      return const SliverToBoxAdapter(
-                        child: HomeFeedLoadingShimmer(),
-                      );
-                    }
-
-                    if (posts.isEmpty) {
-                      return SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: _EmptyFeed(palette: palette),
-                      );
-                    }
-
-                    return SliverMainAxisGroup(
-                      slivers: [
-                        SliverToBoxAdapter(
-                          child: _FeedHeader(
-                            palette: palette,
-                            isRefreshing:
-                                state.postsStatus == FeedStatus.loading &&
-                                    posts.isEmpty,
-                            onOpenTopics: () {
-                              Navigator.pushNamed(
-                                context,
-                                NamedRoutes.topicsScreen,
-                              );
-                            },
-                            onOpenCreate: () => _openCreatePost(context),
-                          ),
-                        ),
-                        SliverPadding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          sliver: SliverList.separated(
-                            addAutomaticKeepAlives: false,
-                            itemCount: posts.length + (posts.length ~/ 6),
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 16),
-                            itemBuilder: (context, index) {
-                              if ((index + 1) % 7 == 0) {
-                                return _PeopleYouMayKnowCard(
-                                  palette: palette,
-                                  suggestions: _suggestionsFuture,
-                                );
-                              }
-
-                              final postIndex = index - (index ~/ 7);
-                              final post = posts[postIndex];
-
-                              return _FeedPostSlot(
-                                key: ValueKey('post_${post.id}'),
-                                postId: post.id,
-                                fallback: post,
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-                const SliverPadding(
-                  padding: EdgeInsets.only(bottom: 100),
-                ),
-              ],
+                  const SliverPadding(
+                    padding: EdgeInsets.only(bottom: 100),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

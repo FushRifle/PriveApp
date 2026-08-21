@@ -14,6 +14,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
 
   UserBloc() : super(const UserState()) {
     on<LoadCurrentUser>(_onLoadCurrentUser);
+    on<HydrateCurrentUser>(_onHydrateCurrentUser);
     on<RefreshCurrentUser>(_onRefreshCurrentUser);
     on<LoadUserById>(_onLoadUserById);
     on<UpdateUser>(_onUpdateUser);
@@ -38,6 +39,18 @@ class UserBloc extends Bloc<UserEvent, UserState> {
   }
 
   bool get hasAuthToken => _hasAuthToken;
+
+  void _onHydrateCurrentUser(
+    HydrateCurrentUser event,
+    Emitter<UserState> emit,
+  ) {
+    emit(state.copyWith(
+      currentUser: Map<String, dynamic>.from(event.user),
+      status: UserStatus.success,
+      isLoading: false,
+      clearError: true,
+    ));
+  }
 
   Future<void> _onLoadCurrentUser(
     LoadCurrentUser event,

@@ -12,6 +12,7 @@ class MediaPreviewWidget extends StatelessWidget {
   final VoidCallback onRemoveMedia;
   final TextEditingController? captionController;
   final TextAlign captionTextAlign;
+  final double captionFontSize;
 
   const MediaPreviewWidget({
     super.key,
@@ -22,6 +23,7 @@ class MediaPreviewWidget extends StatelessWidget {
     required this.onRemoveMedia,
     this.captionController,
     this.captionTextAlign = TextAlign.start,
+    this.captionFontSize = 15,
   });
 
   @override
@@ -187,7 +189,6 @@ class MediaPreviewWidget extends StatelessWidget {
             ),
           ),
         ),
-
         if (captionController != null) ...[
           const SizedBox(height: 24),
           Row(
@@ -204,7 +205,7 @@ class MediaPreviewWidget extends StatelessWidget {
                   textInputAction: TextInputAction.newline,
                   style: TextStyle(
                     color: Theme.of(context).textTheme.bodyLarge?.color,
-                    fontSize: 15,
+                    fontSize: captionFontSize.clamp(15, 32).toDouble(),
                     height: 1.4,
                     fontWeight: FontWeight.w400,
                   ),

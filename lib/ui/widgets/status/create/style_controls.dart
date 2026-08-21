@@ -1,3 +1,4 @@
+import 'package:clique/app/configs/colors.dart';
 import 'package:flutter/material.dart';
 
 class StyleControls extends StatelessWidget {
@@ -25,7 +26,47 @@ class StyleControls extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 14),
+        Row(
+          children: [
+            Text(
+              'Font size',
+              style: TextStyle(
+                color: AppColors.text.withOpacity(0.82),
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              fontSize.round().toString(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+        Slider(
+          value: fontSize.clamp(18, 42).toDouble(),
+          min: 20,
+          max: 42,
+          divisions: 12,
+          activeColor: AppColors.primary,
+          inactiveColor: Colors.white.withOpacity(0.18),
+          onChanged: onFontSizeChanged,
+          onChangeEnd: (_) => onFontSizeChangeEnd(),
+        ),
+        const SizedBox(height: 32),
+        Text(
+          'Background color',
+          style: TextStyle(
+            color: AppColors.text.withOpacity(0.82),
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 12),
         GridView.count(
           crossAxisCount: 5,
           shrinkWrap: true,

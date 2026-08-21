@@ -5,12 +5,14 @@ import 'package:flutter/material.dart';
 class CreateStatusComposerPanel extends StatelessWidget {
   final TextEditingController textController;
   final TextAlign textAlign;
+  final double fontSize;
   final Widget? footer;
 
   const CreateStatusComposerPanel({
     super.key,
     required this.textController,
     required this.textAlign,
+    required this.fontSize,
     this.footer,
   });
 
@@ -38,7 +40,7 @@ class CreateStatusComposerPanel extends StatelessWidget {
                     keyboardType: TextInputType.multiline,
                     style: AppTheme.blackTextStyle.copyWith(
                       color: AppColors.text,
-                      fontSize: 16,
+                      fontSize: fontSize.clamp(18, 42).toDouble(),
                       height: 1.45,
                       fontWeight: FontWeight.w700,
                     ),
@@ -56,7 +58,7 @@ class CreateStatusComposerPanel extends StatelessWidget {
                       enabledBorder: InputBorder.none,
                       disabledBorder: InputBorder.none,
                       isDense: true,
-                      contentPadding: const EdgeInsets.only(top: 4, bottom: 8),
+                      contentPadding: const EdgeInsets.fromLTRB(0, 4, 74, 8),
                     ),
                   ),
                 ),

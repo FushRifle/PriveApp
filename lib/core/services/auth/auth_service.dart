@@ -103,8 +103,9 @@ class AuthService {
       _api.setAuthToken(token);
 
       // The backend derives identity from the verified Supabase access token.
+      Map<String, dynamic>? backendUser;
       try {
-        await _bootstrapBackendUser(user);
+        backendUser = await _bootstrapBackendUser(user);
       } catch (_) {
         // Supabase remains the authentication source of truth. Backend calls
         // will surface their own connectivity error if it is unavailable.
@@ -113,12 +114,7 @@ class AuthService {
       return AuthResult(
         success: true,
         token: token,
-        user: {
-          'id': user.id,
-          'email': user.email,
-          'firstName': user.userMetadata?['first_name'] ?? '',
-          'lastName': user.userMetadata?['last_name'] ?? '',
-        },
+        user: _userMap(user, backendUser: backendUser),
       );
     } on TimeoutException {
       return AuthResult(
@@ -211,8 +207,9 @@ class AuthService {
 
       _api.setAuthToken(token);
 
+      Map<String, dynamic>? backendUser;
       try {
-        await _bootstrapBackendUser(
+        backendUser = await _bootstrapBackendUser(
           activeUser,
           firstName: trimmedFirstName,
           lastName: trimmedLastName,
@@ -239,12 +236,7 @@ class AuthService {
       return AuthResult(
         success: true,
         token: token,
-        user: {
-          'id': activeUser.id,
-          'email': activeUser.email,
-          'firstName': trimmedFirstName,
-          'lastName': trimmedLastName,
-        },
+        user: _userMap(activeUser, backendUser: backendUser),
       );
     } on TimeoutException {
       return AuthResult(
@@ -356,11 +348,11 @@ class AuthService {
 
     final token = snapshot.session.accessToken;
     _api.setAuthToken(token);
-    try {
-      final user = snapshot.user;
-      if (user != null) await _bootstrapBackendUser(user);
-    } catch (_) {
-      // Restoring the local Supabase session must remain usable offline.
+    final user = snapshot.user;
+    if (user != null) {
+      unawaited(
+        _bootstrapBackendUser(user).catchError((_) => null),
+      );
     }
     return AuthResult(
       success: true,
@@ -382,13 +374,19 @@ class AuthService {
     );
   }
 
-  Map<String, dynamic>? _userMap(User? user) {
+  Map<String, dynamic>? _userMap(
+    User? user, {
+    Map<String, dynamic>? backendUser,
+  }) {
     if (user == null) return null;
-    return {
-      'id': user.id,
-      'email': user.email,
-      'firstName': user.userMetadata?['first_name'] ?? '',
-      'lastName': user.userMetadata?['last_name'] ?? '',
+    return <String, dynamic>{
+      ...?backendUser,
+      'authUserId': user.id,
+      'email': backendUser?['email'] ?? user.email,
+      'firstName':
+          backendUser?['firstName'] ?? user.userMetadata?['first_name'] ?? '',
+      'lastName':
+          backendUser?['lastName'] ?? user.userMetadata?['last_name'] ?? '',
     };
   }
 
@@ -531,12 +529,12 @@ class AuthService {
     );
   }
 
-  Future<void> _bootstrapBackendUser(
+  Future<Map<String, dynamic>?> _bootstrapBackendUser(
     User user, {
     String? firstName,
     String? lastName,
   }) async {
-    await _api.post(
+    final response = await _api.post(
       '/api/auth/bootstrap',
       data: {
         'firstName':
@@ -545,6 +543,13 @@ class AuthService {
             (lastName ?? user.userMetadata?['last_name'] ?? '').toString(),
       },
     ).timeout(_authTimeout);
+
+    final data = response.data;
+    if (data is! Map) return null;
+    final profile = data['user'];
+    if (profile is Map<String, dynamic>) return profile;
+    if (profile is Map) return Map<String, dynamic>.from(profile);
+    return null;
   }
 }
 

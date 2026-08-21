@@ -65,7 +65,7 @@ class ProfileBody extends StatelessWidget {
             isOwnProfile: isOwnProfile,
           ),
           const SliverToBoxAdapter(
-            child: SizedBox(height: 24),
+            child: SizedBox(height: 20),
           ),
           SliverToBoxAdapter(
             child: Center(
@@ -105,6 +105,7 @@ class ProfileBody extends StatelessWidget {
         controller: tabController,
         physics: const BouncingScrollPhysics(),
         children: [
+          SizedBox(height: 30),
           ProfileGalleryTab(
             userId: userId,
             type: ProfileGalleryTabType.posts,

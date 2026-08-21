@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 import '../../clients/api_service.dart';
+import '../auth/auth_session_manager.dart';
+import '../cache/current_user_cache_service.dart';
 
 class UserService {
   final ApiService _api = ApiService();
@@ -15,7 +17,9 @@ class UserService {
   Future<Map<String, dynamic>> getCurrentUser() async {
     try {
       final response = await _api.get('/api/users/me');
-      return _asMap(response.data);
+      final user = _asMap(response.data);
+      await _cacheCurrentUser(user);
+      return user;
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to get user');
     }
@@ -64,7 +68,9 @@ class UserService {
       };
 
       final response = await _api.put('/api/users/me', data: data);
-      return _asMap(response.data);
+      final user = _asMap(response.data);
+      await _cacheCurrentUser(user);
+      return user;
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to update user');
     }
@@ -73,9 +79,19 @@ class UserService {
   Future<void> deleteAccount() async {
     try {
       await _api.delete('/api/users/me');
+      final authUserId = AuthSessionManager.instance.currentUser?.id;
+      if (authUserId != null) {
+        await CurrentUserCacheService.delete(authUserId);
+      }
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to delete account');
     }
+  }
+
+  Future<void> _cacheCurrentUser(Map<String, dynamic> user) async {
+    final authUserId = AuthSessionManager.instance.currentUser?.id;
+    if (authUserId == null) return;
+    await CurrentUserCacheService.write(authUserId, user);
   }
 
   Future<Map<String, dynamic>> getUserById(int userId) async {

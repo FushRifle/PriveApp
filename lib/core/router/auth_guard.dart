@@ -15,6 +15,7 @@ import 'package:clique/ui/pages/auth/authentication_page.dart';
 import 'package:clique/ui/pages/auth/onboarding_page.dart';
 import 'package:clique/ui/pages/auth/unified_onboarding_page.dart';
 import 'package:clique/core/services/user/user_service.dart';
+import 'package:clique/core/services/cache/current_user_cache_service.dart';
 import 'main_wrapper.dart';
 
 class AuthGuard extends StatefulWidget {
@@ -68,11 +69,28 @@ class _AuthGuardState extends State<AuthGuard> {
         return _Bootstrapper(
           key: ValueKey(authState.token),
           token: authState.token!,
+          authUserId: _readAuthUserId(authState.user),
+          initialUser: _readBackendUser(authState.user),
           isNewRegistration: authState.isNewRegistration,
           onBootstrapComplete: widget.onBootstrapComplete,
         );
       },
     );
+  }
+
+  String _readAuthUserId(Map<String, dynamic>? user) {
+    final explicit = user?['authUserId']?.toString().trim() ?? '';
+    if (explicit.isNotEmpty) return explicit;
+    final legacy = user?['id'];
+    return legacy is String ? legacy.trim() : '';
+  }
+
+  Map<String, dynamic>? _readBackendUser(Map<String, dynamic>? user) {
+    if (user == null) return null;
+    if (user['id'] is num || user.containsKey('isSeenDemographics')) {
+      return Map<String, dynamic>.from(user)..remove('authUserId');
+    }
+    return null;
   }
 }
 
@@ -133,12 +151,16 @@ class _PreAuthGateState extends State<_PreAuthGate> {
 
 class _Bootstrapper extends StatefulWidget {
   final String token;
+  final String authUserId;
+  final Map<String, dynamic>? initialUser;
   final bool isNewRegistration;
   final VoidCallback? onBootstrapComplete;
 
   const _Bootstrapper({
     super.key,
     required this.token,
+    required this.authUserId,
+    this.initialUser,
     required this.isNewRegistration,
     this.onBootstrapComplete,
   });
@@ -188,8 +210,23 @@ class _BootstrapperState extends State<_Bootstrapper> {
       final profileBloc = context.read<ProfileBloc>();
 
       final userBloc = context.read<UserBloc>();
+      final hasFreshBootstrapUser = widget.initialUser != null;
 
-      final currentUser = userBloc.state.currentUser;
+      var currentUser = userBloc.state.currentUser ?? widget.initialUser;
+
+      if (currentUser == null && widget.authUserId.isNotEmpty) {
+        currentUser = await CurrentUserCacheService.read(widget.authUserId);
+      }
+
+      if (currentUser != null && userBloc.state.currentUser == null) {
+        userBloc.add(HydrateCurrentUser(currentUser));
+      }
+
+      if (currentUser != null && widget.authUserId.isNotEmpty) {
+        unawaited(
+          CurrentUserCacheService.write(widget.authUserId, currentUser),
+        );
+      }
 
       _isOnboarded = _readOnboarded(currentUser);
       _isSeenOnboarding = _readFlag(
@@ -203,8 +240,6 @@ class _BootstrapperState extends State<_Bootstrapper> {
         fallback: _isOnboarded,
       );
 
-      final futures = <Future>[];
-
       // Prime profile state, but optional profile data must never hold up
       // authentication or registration.
       if (profileBloc.state.myProfile == null &&
@@ -213,40 +248,38 @@ class _BootstrapperState extends State<_Bootstrapper> {
       }
 
       if (currentUser == null) {
-        futures.add(
-          userBloc.stream.firstWhere(
-            (state) {
-              return state.status == UserStatus.success ||
-                  state.status == UserStatus.error;
-            },
-          ),
+        final userFuture = userBloc.stream.firstWhere(
+          (state) {
+            return state.status == UserStatus.success ||
+                state.status == UserStatus.error;
+          },
         );
 
         if (userBloc.state.status != UserStatus.loading) {
-          userBloc.add(
-            LoadCurrentUser(),
-          );
+          userBloc.add(LoadCurrentUser());
         }
-      }
-
-      if (futures.isNotEmpty) {
-        await Future.wait(futures).timeout(const Duration(seconds: 20));
+        await userFuture.timeout(const Duration(seconds: 20));
+      } else if (!hasFreshBootstrapUser &&
+          userBloc.state.status != UserStatus.loading &&
+          userBloc.state.status != UserStatus.refreshing) {
+        userBloc.add(RefreshCurrentUser());
       }
 
       if (!mounted) return;
 
-      final userFailed = userBloc.state.currentUser == null &&
-          userBloc.state.status == UserStatus.error;
+      final resolvedUser = userBloc.state.currentUser ?? currentUser;
+      final userFailed =
+          resolvedUser == null && userBloc.state.status == UserStatus.error;
 
       setState(() {
-        _isOnboarded = _readOnboarded(userBloc.state.currentUser);
+        _isOnboarded = _readOnboarded(resolvedUser);
         _isSeenOnboarding = _readFlag(
-          userBloc.state.currentUser,
+          resolvedUser,
           'isSeenOnboarding',
           fallback: _isOnboarded,
         );
         _isSeenDemographics = _readFlag(
-          userBloc.state.currentUser,
+          resolvedUser,
           'isSeenDemographics',
           fallback: _isOnboarded,
         );
@@ -257,13 +290,31 @@ class _BootstrapperState extends State<_Bootstrapper> {
             : null;
       });
       if (!_isSeenOnboarding || widget.isNewRegistration) {
-        try {
-          await UserService().markOnboardingSeen();
-        } catch (_) {
-          // Progress is optimistic: a transient flag-write failure must not
-          // send a newly registered user backwards in the flow.
+        unawaited(
+          UserService().markOnboardingSeen().catchError((_) {
+            // Progress is optimistic: a transient flag-write failure must not
+            // send a newly registered user backwards in the flow.
+          }),
+        );
+        if (mounted) {
+          setState(() => _isSeenOnboarding = true);
+          final updatedUser = Map<String, dynamic>.from(
+            userBloc.state.currentUser ??
+                resolvedUser ??
+                const <String, dynamic>{},
+          )..['isSeenOnboarding'] = true;
+          if (updatedUser.isNotEmpty) {
+            userBloc.add(HydrateCurrentUser(updatedUser));
+            if (widget.authUserId.isNotEmpty) {
+              unawaited(
+                CurrentUserCacheService.write(
+                  widget.authUserId,
+                  updatedUser,
+                ),
+              );
+            }
+          }
         }
-        if (mounted) setState(() => _isSeenOnboarding = true);
       }
       if (_error == null) _notifyBootstrapComplete();
     } catch (error) {

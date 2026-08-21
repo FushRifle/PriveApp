@@ -111,11 +111,6 @@ class _CreateStatusPageState extends State<CreateStatusPage>
     setState(() => _isComposerOptionsOpen = !_isComposerOptionsOpen);
   }
 
-  void _runComposerOption(VoidCallback action) {
-    _closeComposerOptions();
-    action();
-  }
-
   Future<void> _disposePreviewVideoController() async {
     final controller = _previewVideoController;
     _previewVideoController = null;
@@ -201,22 +196,7 @@ class _CreateStatusPageState extends State<CreateStatusPage>
                           children: [
                             const SizedBox(height: 20),
                             if (_hasMedia) ...[
-                              MediaPreviewWidget(
-                                selectedMediaFile: _selectedMediaFile,
-                                selectedMediaType: _selectedMediaType,
-                                isPreviewVideoReady: _isPreviewVideoReady,
-                                previewVideoController: _previewVideoController,
-                                captionController: _textController,
-                                captionTextAlign: _textAlign,
-                                onRemoveMedia: () {
-                                  setState(() {
-                                    _selectedMediaFile = null;
-                                    _selectedMediaType = null;
-                                    _isPreviewVideoReady = false;
-                                  });
-                                  _disposePreviewVideoController();
-                                },
-                              ),
+                              _buildMediaComposer(),
                               const SizedBox(height: 20),
                             ],
                             if (!_hasMedia)
@@ -398,6 +378,7 @@ class _CreateStatusPageState extends State<CreateStatusPage>
       clipBehavior: Clip.none,
       children: [
         Container(
+          constraints: const BoxConstraints(minHeight: 280),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
@@ -411,55 +392,58 @@ class _CreateStatusPageState extends State<CreateStatusPage>
           child: CreateStatusComposerPanel(
             textController: _textController,
             textAlign: _textAlign,
+            fontSize: _fontSize,
           ),
         ),
         Positioned(
-          right: -10,
-          top: 100,
-          child: _buildComposerOptionsTab(),
+          right: 10,
+          top: 8,
+          child: _buildComposerTools(),
         ),
       ],
     );
   }
 
-  Widget _buildComposerOptionsTab() {
-    return Material(
-      color: AppColors.primary,
-      elevation: 8,
-      borderRadius: const BorderRadius.horizontal(
-        left: Radius.circular(16),
-        right: Radius.circular(16),
-      ),
-      child: InkWell(
-        borderRadius: const BorderRadius.horizontal(
-          left: Radius.circular(12),
-          right: Radius.circular(12),
+  Widget _buildMediaComposer() {
+    return Stack(
+      children: [
+        MediaPreviewWidget(
+          selectedMediaFile: _selectedMediaFile,
+          selectedMediaType: _selectedMediaType,
+          isPreviewVideoReady: _isPreviewVideoReady,
+          previewVideoController: _previewVideoController,
+          captionController: _textController,
+          captionTextAlign: _textAlign,
+          captionFontSize: _fontSize,
+          onRemoveMedia: () {
+            setState(() {
+              _selectedMediaFile = null;
+              _selectedMediaType = null;
+              _isPreviewVideoReady = false;
+            });
+            _disposePreviewVideoController();
+          },
         ),
-        onTap: _toggleComposerOptions,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOut,
-          width: 40,
-          height: 80,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: const BorderRadius.horizontal(
-              left: Radius.circular(16),
-              right: Radius.circular(16),
-            ),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.08),
-            ),
-          ),
-          child: Icon(
-            _isComposerOptionsOpen
-                ? Icons.chevron_right_rounded
-                : Icons.chevron_left_rounded,
-            color: Colors.white,
-            size: 30,
-          ),
+        Positioned(
+          right: 10,
+          top: 62,
+          child: _buildComposerTools(),
         ),
-      ),
+      ],
+    );
+  }
+
+  Widget _buildComposerTools() {
+    return CreateStatusComposerTools(
+      onAddMedia: _showMediaPicker,
+      onAddHashtags: _showHashtagSheet,
+      onClearAll: _clearAll,
+      onOpenStyle: _toggleComposerOptions,
+      onTextAlignChanged: (value) {
+        HapticFeedback.selectionClick();
+        setState(() => _textAlign = value);
+      },
+      activeAlignment: _textAlign,
     );
   }
 
@@ -490,7 +474,7 @@ class _CreateStatusPageState extends State<CreateStatusPage>
             final drawerWidth =
                 (constraints.maxWidth * 0.72).clamp(240.0, 300.0);
             final drawerHeight =
-                (constraints.maxHeight * 0.58).clamp(320.0, 480.0);
+                (constraints.maxHeight * 0.48).clamp(300.0, 390.0);
 
             return Align(
               alignment: Alignment.centerRight,
@@ -534,9 +518,9 @@ class _CreateStatusPageState extends State<CreateStatusPage>
                               children: [
                                 Expanded(
                                   child: Text(
-                                    'Tools',
+                                    'Text style',
                                     style: AppTheme.blackTextStyle.copyWith(
-                                      color: Colors.white,
+                                      color: AppColors.text,
                                       fontSize: 17,
                                       fontWeight: FontWeight.w800,
                                     ),
@@ -557,20 +541,6 @@ class _CreateStatusPageState extends State<CreateStatusPage>
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    CreateStatusComposerTools(
-                                      onAddMedia: () =>
-                                          _runComposerOption(_showMediaPicker),
-                                      onAddHashtags: () =>
-                                          _runComposerOption(_showHashtagSheet),
-                                      onClearAll: () =>
-                                          _runComposerOption(_clearAll),
-                                      onTextAlignChanged: (value) =>
-                                          _runComposerOption(() {
-                                        setState(() => _textAlign = value);
-                                      }),
-                                      activeAlignment: _textAlign,
-                                    ),
-                                    const SizedBox(height: 18),
                                     StyleControls(
                                       fontSize: _fontSize,
                                       textLength:

@@ -19,4 +19,5 @@ class HiveCacheKeys {
   static const archivedChatsPrefix = 'archived_chats';
   static const postCommentsPrefix = 'post_comments';
   static const userMediaPrefix = 'user_media';
+  static const currentUserPrefix = 'current_user';
 }

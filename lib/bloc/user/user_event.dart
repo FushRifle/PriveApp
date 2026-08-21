@@ -9,6 +9,15 @@ abstract class UserEvent extends Equatable {
 
 class LoadCurrentUser extends UserEvent {}
 
+class HydrateCurrentUser extends UserEvent {
+  final Map<String, dynamic> user;
+
+  const HydrateCurrentUser(this.user);
+
+  @override
+  List<Object?> get props => [user];
+}
+
 class RefreshCurrentUser extends UserEvent {}
 
 class LoadUserById extends UserEvent {

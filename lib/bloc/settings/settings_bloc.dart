@@ -62,15 +62,35 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
 
     try {
       final settings = await _settingsService.getSettings();
+      var resolvedLock = cachedLock;
+
+      // Never overwrite a local security change that still needs to sync.
+      // Otherwise, refresh the encrypted cache from the server in the
+      // background after cold start has already used the cached decision.
+      if (cachedLock.lastSyncStatus == AppLockSyncStatus.synced) {
+        await _appLockService.cacheLocal(
+          userId: event.userId,
+          biometricEnabled: settings['appLockBiometricEnabled'] as bool? ??
+              cachedLock.biometricEnabled,
+          pinEnabled:
+              settings['appLockPinEnabled'] as bool? ?? cachedLock.pinEnabled,
+          timeoutSeconds: settings['appLockTimeoutSeconds'] as int? ??
+              cachedLock.timeoutSeconds,
+          pin: cachedLock.pin,
+        );
+        resolvedLock = await _appLockService.loadCached(userId: event.userId);
+      } else {
+        unawaited(_appLockService.syncPending(userId: event.userId));
+      }
 
       emit(SettingsState(
         notificationsEnabled: settings['notificationsEnabled'] ?? true,
         privateAccount: settings['privateAccount'] ?? false,
         twoFactorAuth: settings['twoFactorAuth'] ?? false,
-        appLockEnabled: cachedLock.enabled,
-        appLockBiometricEnabled: cachedLock.biometricEnabled,
-        appLockPinEnabled: cachedLock.pinEnabled,
-        appLockTimeoutSeconds: cachedLock.timeoutSeconds,
+        appLockEnabled: resolvedLock.enabled,
+        appLockBiometricEnabled: resolvedLock.biometricEnabled,
+        appLockPinEnabled: resolvedLock.pinEnabled,
+        appLockTimeoutSeconds: resolvedLock.timeoutSeconds,
         language: settings['language']?.toString() ?? 'en',
         videoQuality: settings['videoQuality']?.toString() ?? 'auto',
         theme: settings['theme']?.toString() ?? 'system',

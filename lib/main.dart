@@ -331,9 +331,8 @@ class _SecurityGateState extends State<_SecurityGate>
       final userId = _currentUserId();
       final settingsBloc = context.read<SettingsBloc>();
       settingsBloc.add(LoadSettings(userId: userId, silent: true));
-      final settingsState = settingsBloc.state;
 
-      final settings = await _resolveAppLockSettings(userId, settingsState);
+      final settings = await _resolveAppLockSettings(userId);
       if (!mounted) return;
 
       setState(() {
@@ -348,22 +347,10 @@ class _SecurityGateState extends State<_SecurityGate>
           _lockSettings = settings;
         });
 
-        unawaited(
-          widget.appLockService
-              .load(userId: userId)
-              .then((_) {})
-              .catchError((_) {}),
-        );
         return;
       }
 
       if (_isUnlocked && !forcePrompt) {
-        unawaited(
-          widget.appLockService
-              .load(userId: userId)
-              .then((_) {})
-              .catchError((_) {}),
-        );
         return;
       }
 
@@ -374,13 +361,6 @@ class _SecurityGateState extends State<_SecurityGate>
         _lockSettings = settings;
         _isUnlocked = false;
       });
-
-      unawaited(
-        widget.appLockService
-            .load(userId: userId)
-            .then((_) {})
-            .catchError((_) {}),
-      );
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -393,29 +373,13 @@ class _SecurityGateState extends State<_SecurityGate>
     }
   }
 
-  Future<AppLockSettings> _resolveAppLockSettings(
-    int? userId,
-    SettingsState settingsState,
-  ) async {
+  Future<AppLockSettings> _resolveAppLockSettings(int? userId) async {
     final cached = await widget.appLockService.loadCached(userId: userId);
 
-    // A locally enabled lock must win during cold start. SettingsBloc may
-    // still contain the unscoped/default state while AuthGuard bootstraps.
-    if (cached.enabled) {
-      unawaited(
-        widget.appLockService.load(userId: userId).catchError((_) => cached),
-      );
-      return cached;
-    }
-
-    final mergedCached = _mergeSettingsLock(settingsState, cached);
-
-    try {
-      final remoteOrCached = await widget.appLockService.load(userId: userId);
-      return _mergeSettingsLock(settingsState, remoteOrCached);
-    } catch (_) {
-      return mergedCached;
-    }
+    // Cold start is decided entirely from encrypted local state. The
+    // SettingsBloc request started by _bootstrap refreshes remote values in
+    // the background and its listener reconciles the gate when it completes.
+    return cached;
   }
 
   AppLockSettings _mergeSettingsLock(
