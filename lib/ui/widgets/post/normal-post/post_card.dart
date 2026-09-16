@@ -615,6 +615,12 @@ class _CardPostState extends State<CardPost> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor =
+        isDark ? const Color(0xFF121B25) : const Color(0xFFFCFDFE);
+    final borderColor =
+        isDark ? const Color(0xFF2A3746) : const Color(0xFFD9E1E8);
+
     return VisibilityDetector(
       key: ValueKey('post_visibility_${widget.post.id}'),
       onVisibilityChanged: _onVisibilityChanged,
@@ -623,20 +629,32 @@ class _CardPostState extends State<CardPost> {
         onTap: _openDetail,
         child: Container(
           margin: EdgeInsets.only(
-            bottom: widget.isDetailView ? 0 : 15,
+            bottom: 0,
           ),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColors.cardColor.withOpacity(0.80),
-                AppColors.cardColor,
-              ],
+            color: cardColor,
+            borderRadius: BorderRadius.circular(
+              widget.isDetailView ? 26 : 22,
             ),
-            borderRadius: BorderRadius.circular(30),
+            border: Border.all(
+              color: borderColor.withOpacity(isDark ? 0.34 : 0.52),
+            ),
+            boxShadow: widget.isDetailView
+                ? null
+                : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(isDark ? 0.18 : 0.055),
+                      blurRadius: 20,
+                      offset: const Offset(0, 7),
+                    ),
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.018),
+                      blurRadius: 5,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
           ),
-          clipBehavior: Clip.hardEdge,
+          clipBehavior: Clip.antiAlias,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -726,14 +744,7 @@ class _PostOptionsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.cardColor,
-            AppColors.backgroundColor.withOpacity(0.96),
-          ],
-        ),
+        color: AppColors.cardColor,
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(32),
         ),

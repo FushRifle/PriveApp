@@ -16,6 +16,10 @@ class RepostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor =
+        isDark ? const Color(0xFF121B25) : const Color(0xFFFCFDFE);
+
     if (!post.isReposted) {
       return CardPost(
         post: post,
@@ -24,23 +28,31 @@ class RepostCard extends StatelessWidget {
     }
 
     return Container(
-      margin: EdgeInsets.only(bottom: isDetailView ? 0 : 18, top: 10),
+      margin: EdgeInsets.zero,
       decoration: BoxDecoration(
-        color: AppColors.cardColor,
-        borderRadius: BorderRadius.circular(30),
+        color: cardColor,
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: AppColors.primary.withOpacity(0.22),
-          width: 1.1,
+          color: AppColors.primary.withOpacity(0.10),
         ),
+        boxShadow: isDetailView
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.18 : 0.055),
+                  blurRadius: 20,
+                  offset: const Offset(0, 7),
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            margin: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
             decoration: BoxDecoration(
-              color: AppColors.teal.withOpacity(0.4),
+              color: AppColors.teal.withOpacity(isDark ? 0.14 : 0.10),
               borderRadius: BorderRadius.circular(999),
             ),
             child: Row(
@@ -48,22 +60,22 @@ class RepostCard extends StatelessWidget {
               children: [
                 Icon(
                   Icons.repeat_rounded,
-                  color: AppColors.text,
-                  size: 16,
+                  color: AppColors.secondary,
+                  size: 14,
                 ),
                 const SizedBox(width: 5),
                 Text(
                   'Reposted',
                   style: TextStyle(
-                    color: AppColors.text,
-                    fontSize: 10,
+                    color: AppColors.textSecondary,
+                    fontSize: 9.5,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 10,),
+          const SizedBox(height: 4),
           CardPost(
             post: post,
             isDetailView: isDetailView,

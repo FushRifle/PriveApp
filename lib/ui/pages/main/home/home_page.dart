@@ -21,7 +21,6 @@ import 'package:clique/core/services/notification/notification_service.dart';
 
 import 'package:clique/ui/pages/main/status/create_status_page.dart';
 import 'package:clique/ui/pages/main/home/create_post_page.dart';
-import 'package:clique/ui/pages/main/status/status_page.dart';
 import 'package:clique/ui/pages/main/status/status_view_page.dart';
 
 import 'package:clique/ui/widgets/home/home_feed_shimmer.dart';
@@ -75,12 +74,12 @@ class _HomePalette {
 
     return _HomePalette(
       isDark: isDark,
-      background: theme.scaffoldBackgroundColor,
-      card: scheme.surface,
-      elevatedCard: isDark ? const Color(0xFF1E2633) : AppColors.white,
+      background: isDark ? const Color(0xFF0B1118) : const Color(0xFFF3F6F9),
+      card: isDark ? const Color(0xFF121B25) : const Color(0xFFFCFDFE),
+      elevatedCard: isDark ? const Color(0xFF17222E) : const Color(0xFFFFFFFF),
       border: isDark
-          ? AppColors.darkCardBorder.withOpacity(0.5)
-          : AppColors.lightCardBorder.withOpacity(0.5),
+          ? const Color(0xFF2A3746).withOpacity(0.62)
+          : const Color(0xFFD9E1E8).withOpacity(0.72),
       text: scheme.onSurface,
       mutedText:
           isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
@@ -88,8 +87,8 @@ class _HomePalette {
       primary: scheme.primary,
       secondary: scheme.secondary,
       shadow: isDark
-          ? Colors.black.withOpacity(0.25)
-          : Colors.grey.withOpacity(0.08),
+          ? Colors.black.withOpacity(0.24)
+          : const Color(0xFF243B53).withOpacity(0.07),
       overlayStyle: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
@@ -273,124 +272,141 @@ class _HomePageState extends State<HomePage>
             ),
           ),
         ),
-        body: SafeArea(
-          top: false,
-          child: RefreshIndicator(
-            color: AppColors.secondary,
-            backgroundColor: palette.card,
-            edgeOffset: MediaQuery.paddingOf(context).top + 60,
-            onRefresh: _refresh,
-            child: NotificationListener<UserScrollNotification>(
-              onNotification: _handleUserScroll,
-              child: CustomScrollView(
-                controller: _scrollController,
-                cacheExtent: 900,
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                physics: const BouncingScrollPhysics(
-                  parent: AlwaysScrollableScrollPhysics(),
-                ),
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: _HomeAppBar(palette: palette),
+        body: DecoratedBox(
+          decoration: BoxDecoration(
+            color: palette.background,
+          ),
+          child: SafeArea(
+            top: false,
+            child: RefreshIndicator(
+              color: AppColors.secondary,
+              backgroundColor: palette.card,
+              edgeOffset: MediaQuery.paddingOf(context).top + 60,
+              onRefresh: _refresh,
+              child: NotificationListener<UserScrollNotification>(
+                onNotification: _handleUserScroll,
+                child: CustomScrollView(
+                  controller: _scrollController,
+                  cacheExtent: 900,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
                   ),
-                  SliverToBoxAdapter(
-                    child: BlocBuilder<StoriesBloc, StoriesState>(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: _HomeContentWidth(
+                        child: _HomeAppBar(palette: palette),
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: _HomeContentWidth(
+                        child: BlocBuilder<StoriesBloc, StoriesState>(
+                          buildWhen: (previous, current) {
+                            return previous.stories != current.stories ||
+                                previous.status != current.status ||
+                                previous.error != current.error;
+                          },
+                          builder: (context, state) {
+                            return _StoriesSection(
+                              palette: palette,
+                              groups: _getGroupedStories(state.stories),
+                              onCreateStory: () => _openCreateStatus(context),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: _HomeContentWidth(
+                        child: _HomeComposer(
+                          palette: palette,
+                          onCreatePost: () => _openCreatePost(context),
+                          onCreateStory: () => _openCreateStatus(context),
+                        ),
+                      ),
+                    ),
+                    BlocBuilder<FeedBloc, FeedState>(
                       buildWhen: (previous, current) {
-                        return previous.stories != current.stories ||
-                            previous.status != current.status ||
-                            previous.error != current.error;
+                        if (!_hasSamePostStructure(
+                          previous.posts,
+                          current.posts,
+                        )) {
+                          return true;
+                        }
+                        return current.posts.isEmpty &&
+                            (previous.postsStatus != current.postsStatus ||
+                                previous.postsError != current.postsError);
                       },
                       builder: (context, state) {
-                        return _StoriesSection(
-                          palette: palette,
-                          state: state,
-                          groups: _getGroupedStories(state.stories),
-                          onCreateStory: () => _openCreateStatus(context),
+                        final posts = state.posts;
+
+                        if (state.postsStatus == FeedStatus.loading &&
+                            posts.isEmpty) {
+                          return const SliverToBoxAdapter(
+                            child: _HomeContentWidth(
+                              child: HomeFeedLoadingShimmer(),
+                            ),
+                          );
+                        }
+
+                        if (posts.isEmpty) {
+                          return SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: _HomeContentWidth(
+                              child: _EmptyFeed(
+                                palette: palette,
+                                onCreatePost: () => _openCreatePost(context),
+                                onFindPeople: () => Navigator.pushNamed(
+                                  context,
+                                  NamedRoutes.peopleYouMayKnowScreen,
+                                ),
+                              ),
+                            ),
+                          );
+                        }
+
+                        return SliverMainAxisGroup(
+                          slivers: [
+                            SliverPadding(
+                              padding: const EdgeInsets.fromLTRB(10, 2, 10, 0),
+                              sliver: SliverList.separated(
+                                addAutomaticKeepAlives: false,
+                                itemCount: posts.length + (posts.length ~/ 6),
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 10),
+                                itemBuilder: (context, index) {
+                                  if ((index + 1) % 7 == 0) {
+                                    return _HomeContentWidth(
+                                      child: _PeopleYouMayKnowCard(
+                                        palette: palette,
+                                        suggestions: _suggestionsFuture,
+                                      ),
+                                    );
+                                  }
+
+                                  final postIndex = index - (index ~/ 7);
+                                  final post = posts[postIndex];
+
+                                  return _HomeContentWidth(
+                                    child: _FeedPostSlot(
+                                      key: ValueKey('post_${post.id}'),
+                                      postId: post.id,
+                                      fallback: post,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
                         );
                       },
                     ),
-                  ),
-                  BlocBuilder<FeedBloc, FeedState>(
-                    buildWhen: (previous, current) {
-                      if (!_hasSamePostStructure(
-                        previous.posts,
-                        current.posts,
-                      )) {
-                        return true;
-                      }
-                      return current.posts.isEmpty &&
-                          (previous.postsStatus != current.postsStatus ||
-                              previous.postsError != current.postsError);
-                    },
-                    builder: (context, state) {
-                      final posts = state.posts;
-
-                      if (state.postsStatus == FeedStatus.loading &&
-                          posts.isEmpty) {
-                        return const SliverToBoxAdapter(
-                          child: HomeFeedLoadingShimmer(),
-                        );
-                      }
-
-                      if (posts.isEmpty) {
-                        return SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: _EmptyFeed(palette: palette),
-                        );
-                      }
-
-                      return SliverMainAxisGroup(
-                        slivers: [
-                          SliverToBoxAdapter(
-                            child: _FeedHeader(
-                              palette: palette,
-                              isRefreshing:
-                                  state.postsStatus == FeedStatus.loading &&
-                                      posts.isEmpty,
-                              onOpenTopics: () {
-                                Navigator.pushNamed(
-                                  context,
-                                  NamedRoutes.topicsScreen,
-                                );
-                              },
-                              onOpenCreate: () => _openCreatePost(context),
-                            ),
-                          ),
-                          SliverPadding(
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
-                            sliver: SliverList.separated(
-                              addAutomaticKeepAlives: false,
-                              itemCount: posts.length + (posts.length ~/ 6),
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(height: 16),
-                              itemBuilder: (context, index) {
-                                if ((index + 1) % 7 == 0) {
-                                  return _PeopleYouMayKnowCard(
-                                    palette: palette,
-                                    suggestions: _suggestionsFuture,
-                                  );
-                                }
-
-                                final postIndex = index - (index ~/ 7);
-                                final post = posts[postIndex];
-
-                                return _FeedPostSlot(
-                                  key: ValueKey('post_${post.id}'),
-                                  postId: post.id,
-                                  fallback: post,
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  const SliverPadding(
-                    padding: EdgeInsets.only(bottom: 100),
-                  ),
-                ],
+                    const SliverPadding(
+                      padding: EdgeInsets.only(bottom: 100),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -584,22 +600,25 @@ class _PeopleYouMayKnowCardState extends State<_PeopleYouMayKnowCard> {
     return FutureBuilder<List<_SuggestedUser>>(
       future: widget.suggestions,
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _SuggestionLoadingCard(palette: widget.palette);
+        }
         final suggestions = snapshot.data ?? const <_SuggestedUser>[];
         if (suggestions.isEmpty) {
           return const SizedBox.shrink();
         }
 
         return Container(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 13),
           decoration: BoxDecoration(
             color: widget.palette.card,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: widget.palette.border),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: widget.palette.border.withOpacity(0.6)),
             boxShadow: [
               BoxShadow(
                 color: widget.palette.shadow,
-                blurRadius: 18,
-                offset: const Offset(0, 8),
+                blurRadius: 14,
+                offset: const Offset(0, 5),
               ),
             ],
           ),
@@ -609,13 +628,27 @@ class _PeopleYouMayKnowCardState extends State<_PeopleYouMayKnowCard> {
               Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      'People you may know',
-                      style: TextStyle(
-                        color: widget.palette.text,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Grow your circle',
+                          style: TextStyle(
+                            color: widget.palette.text,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'People you may vibe with',
+                          style: TextStyle(
+                            color: widget.palette.mutedText,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   IconButton(
@@ -641,14 +674,14 @@ class _PeopleYouMayKnowCardState extends State<_PeopleYouMayKnowCard> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               SizedBox(
-                height: 178,
+                height: 158,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
                   itemCount: suggestions.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
                   itemBuilder: (context, index) {
                     final user = suggestions[index];
                     final followed = _following.contains(user.id);
@@ -666,6 +699,57 @@ class _PeopleYouMayKnowCardState extends State<_PeopleYouMayKnowCard> {
           ),
         );
       },
+    );
+  }
+}
+
+class _SuggestionLoadingCard extends StatelessWidget {
+  final _HomePalette palette;
+
+  const _SuggestionLoadingCard({required this.palette});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 210,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: palette.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: palette.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 142,
+            height: 16,
+            decoration: BoxDecoration(
+              color: palette.border,
+              borderRadius: BorderRadius.circular(99),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: Row(
+              children: [
+                for (var index = 0; index < 3; index++) ...[
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: palette.elevatedCard,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: palette.border),
+                      ),
+                    ),
+                  ),
+                  if (index != 2) const SizedBox(width: 10),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -688,77 +772,85 @@ class _SuggestionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 142,
+      width: 128,
       child: Material(
         color: palette.elevatedCard,
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           onTap: onOpenProfile,
           borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              children: [
-                _SuggestionAvatar(user: user),
-                const SizedBox(height: 10),
-                Text(
-                  user.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: palette.text,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13,
-                  ),
-                ),
-                Text(
-                  user.username.isEmpty ? 'View profile' : '@${user.username}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: palette.mutedText,
-                    fontSize: 11,
-                  ),
-                ),
-                const Spacer(),
-                if (user.mutualConnections > 0)
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: palette.border),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                children: [
+                  _SuggestionAvatar(user: user),
+                  const SizedBox(height: 7),
                   Text(
-                    '${user.mutualConnections} mutual',
+                    user.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: palette.subtleText,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
+                      color: palette.text,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
                     ),
                   ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  height: 32,
-                  child: ElevatedButton(
-                    onPressed: followed ? null : onFollow,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: palette.primary,
-                      foregroundColor: AppColors.white,
-                      disabledBackgroundColor: palette.border,
-                      disabledForegroundColor: palette.mutedText,
-                      padding: EdgeInsets.zero,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                  Text(
+                    user.username.isEmpty
+                        ? 'View profile'
+                        : '@${user.username}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: palette.mutedText,
+                      fontSize: 11,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (user.mutualConnections > 0)
+                    Text(
+                      '${user.mutualConnections} mutual',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: palette.subtleText,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    child: Text(
-                      followed ? 'Following' : 'Follow',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
+                  const SizedBox(height: 6),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 30,
+                    child: ElevatedButton(
+                      onPressed: followed ? null : onFollow,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: palette.primary,
+                        foregroundColor: AppColors.white,
+                        disabledBackgroundColor: palette.border,
+                        disabledForegroundColor: palette.mutedText,
+                        padding: EdgeInsets.zero,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        followed ? 'Following' : 'Follow',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -779,8 +871,8 @@ class _SuggestionAvatar extends StatelessWidget {
 
     return ClipOval(
       child: SizedBox(
-        width: 54,
-        height: 54,
+        width: 48,
+        height: 48,
         child: user.avatar.isNotEmpty && user.avatar.startsWith('http')
             ? AppNetworkImage(
                 imageUrl: user.avatar,
@@ -852,6 +944,151 @@ class _SuggestedUser {
   }
 }
 
+class _HomeContentWidth extends StatelessWidget {
+  final Widget child;
+
+  const _HomeContentWidth({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 680),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _HomeComposer extends StatelessWidget {
+  final _HomePalette palette;
+  final VoidCallback onCreatePost;
+  final VoidCallback onCreateStory;
+
+  const _HomeComposer({
+    required this.palette,
+    required this.onCreatePost,
+    required this.onCreateStory,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<UserBloc, UserState, Map<String, dynamic>?>(
+      selector: (state) => state.currentUser,
+      builder: (context, user) {
+        final avatar = user?['avatar']?.toString() ?? '';
+        final name =
+            user?['name']?.toString() ?? user?['username']?.toString() ?? 'You';
+        final fallback =
+            name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'U';
+
+        return Container(
+          margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: palette.elevatedCard,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: palette.border.withOpacity(0.7)),
+            boxShadow: [
+              BoxShadow(
+                color: palette.shadow,
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              _Avatar(
+                palette: palette,
+                avatar: avatar,
+                fallback: fallback,
+                size: 36,
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Material(
+                  color: palette.background,
+                  borderRadius: BorderRadius.circular(14),
+                  child: InkWell(
+                    onTap: onCreatePost,
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      height: 40,
+                      padding: const EdgeInsets.symmetric(horizontal: 13),
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Start a post…',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: palette.mutedText,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 5),
+              _ComposerAction(
+                icon: Icons.add_photo_alternate_outlined,
+                label: 'Add media',
+                color: palette.primary,
+                onTap: onCreatePost,
+              ),
+              _ComposerAction(
+                icon: Icons.auto_stories_outlined,
+                label: 'Add story',
+                color: palette.secondary,
+                onTap: onCreateStory,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ComposerAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ComposerAction({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: label,
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onTap();
+          },
+          customBorder: const CircleBorder(),
+          child: SizedBox.square(
+            dimension: 40,
+            child: Icon(icon, color: color, size: 20),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _HomeAppBar extends StatefulWidget {
   static final NotificationService _notificationService = NotificationService();
 
@@ -894,147 +1131,104 @@ class _HomeAppBarState extends State<_HomeAppBar> {
             name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'U';
         final topInset = MediaQuery.paddingOf(context).top;
 
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final isCompact = constraints.maxWidth < 390;
-            final avatarSize = isCompact ? 40.0 : 44.0;
-            final titleFontSize = isCompact ? 21.0 : 24.0;
-
-            return Container(
-              padding: EdgeInsets.fromLTRB(
-                isCompact ? 14 : 16,
-                topInset + (isCompact ? 12 : 16),
-                isCompact ? 14 : 16,
-                12,
+        final firstName = name.trim().split(RegExp(r'\s+')).first;
+        return Container(
+          padding: EdgeInsets.fromLTRB(12, topInset + 10, 12, 12),
+          child: Row(
+            children: [
+              Container(
+                width: 35,
+                height: 35,
+                decoration: BoxDecoration(
+                  color: widget.palette.primary,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: widget.palette.primary.withOpacity(0.2),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.people_alt_rounded,
+                  color: AppColors.white,
+                  size: 19,
+                ),
               ),
-              color: widget.palette.background,
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      Navigator.pushNamed(context, NamedRoutes.profileScreen);
-                    },
-                    child: _Avatar(
-                      palette: widget.palette,
-                      avatar: avatar,
-                      fallback: fallback,
-                      size: avatarSize,
-                    ),
-                  ),
-                  SizedBox(width: isCompact ? 10 : 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Clique',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTheme.blackTextStyle.copyWith(
-                            color: AppColors.secondary,
-                            fontSize: titleFontSize,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        if (!isCompact)
-                          Text(
-                            'Your Vibe, Your Clique.',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTheme.greyTextStyle.copyWith(
-                              color: AppColors.text,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      Navigator.pushNamed(
-                        context,
-                        NamedRoutes.notificationScreen,
-                      );
-                    },
-                    child: Container(
-                      width: isCompact ? 40 : 44,
-                      height: isCompact ? 40 : 44,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: widget.palette.border),
-                        boxShadow: [
-                          BoxShadow(
-                            color: widget.palette.shadow,
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Icon(
-                            Icons.notifications_outlined,
-                            color: AppColors.white,
-                            size: isCompact ? 22 : 24,
-                          ),
-                          FutureBuilder<Map<String, dynamic>>(
-                            future: _notificationsFuture,
-                            builder: (context, snapshot) {
-                              final count = _readInt(
-                                snapshot.data?['unreadCount'],
-                              );
-                              if (count <= 0) {
-                                return const SizedBox.shrink();
-                              }
-
-                              return Positioned(
-                                top: 2,
-                                right: 2,
-                                child: Container(
-                                  constraints: const BoxConstraints(
-                                    minWidth: 20,
-                                    minHeight: 20,
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.white,
-                                    borderRadius: BorderRadius.circular(9),
-                                    border: Border.all(
-                                      color: widget.palette.elevatedCard,
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      count > 99 ? '99+' : '$count',
-                                      style: const TextStyle(
-                                        color: AppColors.black,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ],
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Clique',
+                      maxLines: 1,
+                      style: AppTheme.blackTextStyle.copyWith(
+                        color: widget.palette.text,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
                       ),
                     ),
-                  ),
-                ],
+                    Text(
+                      '${_greeting()}, $firstName',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: widget.palette.mutedText,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            );
-          },
+              _HeaderAction(
+                palette: widget.palette,
+                icon: Icons.search_rounded,
+                tooltip: 'Search Clique',
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  NamedRoutes.searchScreen,
+                ),
+              ),
+              const SizedBox(width: 4),
+              FutureBuilder<Map<String, dynamic>>(
+                future: _notificationsFuture,
+                builder: (context, snapshot) {
+                  return _HeaderAction(
+                    palette: widget.palette,
+                    icon: Icons.notifications_none_rounded,
+                    tooltip: 'Notifications',
+                    badgeCount: _readInt(snapshot.data?['unreadCount']),
+                    onTap: () => Navigator.pushNamed(
+                      context,
+                      NamedRoutes.notificationScreen,
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 5),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.pushNamed(context, NamedRoutes.profileScreen);
+                  },
+                  customBorder: const CircleBorder(),
+                  child: _Avatar(
+                    palette: widget.palette,
+                    avatar: avatar,
+                    fallback: fallback,
+                    size: 38,
+                  ),
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -1045,141 +1239,172 @@ class _HomeAppBarState extends State<_HomeAppBar> {
     if (value is num) return value.toInt();
     return int.tryParse(value?.toString() ?? '') ?? 0;
   }
+
+  String _greeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
 }
 
-class _StoriesSection extends StatelessWidget {
+class _HeaderAction extends StatelessWidget {
   final _HomePalette palette;
-  final StoriesState state;
-  final List<_StoryGroup> groups;
-  final VoidCallback onCreateStory;
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+  final int badgeCount;
 
-  const _StoriesSection({
+  const _HeaderAction({
     required this.palette,
-    required this.state,
-    required this.groups,
-    required this.onCreateStory,
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+    this.badgeCount = 0,
   });
 
   @override
   Widget build(BuildContext context) {
-    final stories = state.stories;
-    final isLoading = state.status == StoriesStatus.loading;
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 6, 12, 14),
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: palette.card,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: palette.border),
-        boxShadow: [
-          BoxShadow(
-            color: palette.shadow,
-            blurRadius: 20,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Row(
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(13),
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            onTap();
+          },
+          borderRadius: BorderRadius.circular(13),
+          child: SizedBox(
+            width: 40,
+            height: 40,
+            child: Stack(
+              alignment: Alignment.center,
               children: [
-                if (isLoading && stories.isNotEmpty) ...[
-                  const SizedBox(width: 8),
-                  SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(
-                      color: palette.primary,
-                      strokeWidth: 2,
-                    ),
-                  ),
-                ],
-                const Spacer(),
-                if (stories.isNotEmpty)
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => BlocProvider.value(
-                            value: context.read<StoriesBloc>(),
-                            child: const StatusPage(stories: []),
-                          ),
+                Icon(
+                  icon,
+                  color: palette.text,
+                  size: 21,
+                ),
+                if (badgeCount > 0)
+                  Positioned(
+                    top: 5,
+                    right: 5,
+                    child: Container(
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 3),
+                      decoration: BoxDecoration(
+                        color: palette.secondary,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: palette.elevatedCard),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        badgeCount > 9 ? '9+' : '$badgeCount',
+                        style: const TextStyle(
+                          color: AppColors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.w900,
                         ),
-                      );
-                    },
-                    child: Text(
-                      'See All',
-                      style: AppTheme.greyTextStyle.copyWith(
-                        color: palette.primary,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
                       ),
                     ),
                   ),
               ],
             ),
           ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 88,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              itemCount: groups.length + 1,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  return BlocSelector<UserBloc, UserState, String>(
-                    selector: (state) =>
-                        state.currentUser?['avatar']?.toString() ?? '',
-                    builder: (context, avatar) {
-                      return StatusWidget(
-                        name: 'Add Story',
-                        avatar: avatar,
-                        isAddStatus: true,
-                        statusCount: 0,
-                        hasUnviewed: false,
-                        onTap: onCreateStory,
-                      );
-                    },
-                  );
-                }
+        ),
+      ),
+    );
+  }
+}
 
-                final group = groups[index - 1];
+class _StoriesSection extends StatelessWidget {
+  final _HomePalette palette;
+  final List<_StoryGroup> groups;
+  final VoidCallback onCreateStory;
 
-                return RepaintBoundary(
-                  child: StatusWidget(
-                    name: group.user.name,
-                    avatar: group.user.avatar,
-                    statusCount: group.stories.length,
-                    hasUnviewed: group.hasUnseen,
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => BlocProvider.value(
-                            value: context.read<StoriesBloc>(),
-                            child: StatusViewPage(
-                              stories: group.stories,
-                              initialIndex: 0,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
+  const _StoriesSection({
+    required this.palette,
+    required this.groups,
+    required this.onCreateStory,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      decoration: BoxDecoration(
+        color: palette.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: palette.border.withOpacity(0.46)),
+        boxShadow: [
+          BoxShadow(
+            color: palette.shadow,
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
+      ),
+      child: SizedBox(
+        height: 74,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          itemCount: groups.length + 1,
+          separatorBuilder: (_, __) => const SizedBox(width: 10),
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return BlocSelector<UserBloc, UserState, String>(
+                selector: (state) =>
+                    state.currentUser?['avatar']?.toString() ?? '',
+                builder: (context, avatar) {
+                  return StatusWidget(
+                    name: 'Add Story',
+                    avatar: avatar,
+                    isAddStatus: true,
+                    statusCount: 0,
+                    hasUnviewed: false,
+                    compact: true,
+                    onTap: onCreateStory,
+                  );
+                },
+              );
+            }
+
+            final group = groups[index - 1];
+
+            return RepaintBoundary(
+              child: StatusWidget(
+                name: group.user.name,
+                avatar: group.user.avatar,
+                statusCount: group.stories.length,
+                hasUnviewed: group.hasUnseen,
+                compact: true,
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BlocProvider.value(
+                        value: context.read<StoriesBloc>(),
+                        child: StatusViewPage(
+                          stories: group.stories,
+                          initialIndex: 0,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -1257,133 +1482,45 @@ class _Avatar extends StatelessWidget {
   }
 }
 
-class _FeedHeader extends StatelessWidget {
-  final _HomePalette palette;
-  final bool isRefreshing;
-  final VoidCallback onOpenTopics;
-  final VoidCallback onOpenCreate;
-
-  const _FeedHeader({
-    required this.palette,
-    required this.isRefreshing,
-    required this.onOpenTopics,
-    required this.onOpenCreate,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 10, 18, 24),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Feeds',
-                  style: AppTheme.blackTextStyle.copyWith(
-                    color: palette.text,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Your Circle.',
-                  style: AppTheme.greyTextStyle.copyWith(
-                    color: palette.mutedText,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (isRefreshing) ...[
-            SizedBox(
-              width: 14,
-              height: 14,
-              child: CircularProgressIndicator(
-                color: palette.primary,
-                strokeWidth: 2,
-              ),
-            ),
-            const SizedBox(width: 12),
-          ],
-          InkWell(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              onOpenTopics();
-            },
-            borderRadius: BorderRadius.circular(18),
-            child: Container(
-              height: 38,
-              padding: const EdgeInsets.symmetric(horizontal: 13),
-              decoration: BoxDecoration(
-                color: palette.secondary.withOpacity(
-                  palette.isDark ? 0.18 : 0.08,
-                ),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: palette.secondary.withOpacity(0.18)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.local_fire_department_rounded,
-                    color: palette.secondary,
-                    size: 19,
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    'Topics',
-                    style: AppTheme.greyTextStyle.copyWith(
-                      color: palette.secondary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _EmptyFeed extends StatelessWidget {
   final _HomePalette palette;
+  final VoidCallback onCreatePost;
+  final VoidCallback onFindPeople;
 
   const _EmptyFeed({
     required this.palette,
+    required this.onCreatePost,
+    required this.onFindPeople,
   });
 
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(12, 8, 12, 120),
+        padding: const EdgeInsets.all(22),
+        decoration: BoxDecoration(
+          color: palette.card,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: palette.border),
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: palette.card,
-                shape: BoxShape.circle,
+                borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: palette.border),
               ),
               child: Icon(
                 Icons.bubble_chart_outlined,
-                size: 40,
+                size: 34,
                 color: palette.subtleText,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 15),
             Text(
               'Quiet in the circle',
               style: AppTheme.blackTextStyle.copyWith(
@@ -1395,12 +1532,31 @@ class _EmptyFeed extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'Be the first to break the ice or refresh the feed to look for updates.',
+              textAlign: TextAlign.center,
               style: AppTheme.greyTextStyle.copyWith(
                 color: palette.mutedText,
                 fontSize: 14,
                 fontWeight: FontWeight.w400,
                 height: 1.4,
               ),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: onCreatePost,
+              icon: const Icon(Icons.edit_rounded, size: 18),
+              label: const Text('Create the first post'),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(double.infinity, 46),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextButton.icon(
+              onPressed: onFindPeople,
+              icon: const Icon(Icons.people_outline_rounded, size: 18),
+              label: const Text('Find people to follow'),
             ),
           ],
         ),

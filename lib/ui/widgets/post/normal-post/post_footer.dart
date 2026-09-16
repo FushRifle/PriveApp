@@ -28,7 +28,7 @@ class PostFooter extends StatelessWidget {
         14,
         isTextOnly ? 4 : 0,
         14,
-        8,
+        9,
       ),
       child: EffectText(
         text: content,
@@ -36,8 +36,8 @@ class PostFooter extends StatelessWidget {
         overflow:
             maxLines == null ? TextOverflow.visible : TextOverflow.ellipsis,
         style: AppTheme.blackTextStyle.copyWith(
-          fontSize: isTextOnly ? 16 : 14,
-          height: 1.45,
+          fontSize: isTextOnly ? 15.5 : 14,
+          height: 1.42,
           fontWeight: isTextOnly ? FontWeight.w500 : FontWeight.w400,
         ),
       ),

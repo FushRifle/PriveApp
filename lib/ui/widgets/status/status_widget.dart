@@ -11,6 +11,7 @@ class StatusWidget extends StatelessWidget {
   final bool isAddStatus;
   final int statusCount;
   final bool hasUnviewed;
+  final bool compact;
 
   const StatusWidget({
     super.key,
@@ -20,6 +21,7 @@ class StatusWidget extends StatelessWidget {
     this.isAddStatus = false,
     this.statusCount = 0,
     this.hasUnviewed = false,
+    this.compact = false,
   });
 
   factory StatusWidget.fromStoryUser({
@@ -35,6 +37,7 @@ class StatusWidget extends StatelessWidget {
       statusCount: statusCount,
       hasUnviewed: hasUnviewed,
       isAddStatus: false,
+      compact: false,
     );
   }
 
@@ -46,6 +49,7 @@ class StatusWidget extends StatelessWidget {
       isAddStatus: true,
       statusCount: 0,
       hasUnviewed: false,
+      compact: false,
     );
   }
 
@@ -53,15 +57,17 @@ class StatusWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasActiveStories = isAddStatus || statusCount > 0;
     final ringColor = !hasActiveStories ? AppColors.border : null;
-    final avatarSize = (MediaQuery.sizeOf(context).width * 0.15).clamp(
-      56.0,
-      64.0,
-    );
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final compactSurface =
+        isDark ? const Color(0xFF121B25) : const Color(0xFFFCFDFE);
+    final avatarSize = compact
+        ? 50.0
+        : (MediaQuery.sizeOf(context).width * 0.15).clamp(56.0, 64.0);
 
     return Material(
       color: AppColors.transparent,
       child: SizedBox(
-        width: avatarSize + 10,
+        width: avatarSize + (compact ? 8 : 10),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(18),
@@ -90,7 +96,8 @@ class StatusWidget extends StatelessWidget {
                         padding: const EdgeInsets.all(2),
                         child: ClipOval(
                           child: Container(
-                            color: AppColors.cardColor,
+                            color:
+                                compact ? compactSurface : AppColors.cardColor,
                             child: _buildAvatar(),
                           ),
                         ),
@@ -107,7 +114,9 @@ class StatusWidget extends StatelessWidget {
                             color: AppColors.primary,
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: AppColors.cardColor,
+                              color: compact
+                                  ? compactSurface
+                                  : AppColors.cardColor,
                               width: 1.6,
                             ),
                           ),
@@ -134,7 +143,9 @@ class StatusWidget extends StatelessWidget {
                             color: AppColors.primary,
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: AppColors.cardColor,
+                              color: compact
+                                  ? compactSurface
+                                  : AppColors.cardColor,
                               width: 1.6,
                             ),
                           ),
@@ -147,11 +158,11 @@ class StatusWidget extends StatelessWidget {
                       ),
                   ],
                 ),
-                const SizedBox(height: 5),
+                SizedBox(height: compact ? 3 : 5),
                 Text(
                   isAddStatus ? 'Your Story' : name,
                   style: AppTheme.blackTextStyle.copyWith(
-                    fontSize: 10,
+                    fontSize: compact ? 9.5 : 10,
                     fontWeight: hasUnviewed ? FontWeight.w700 : FontWeight.w500,
                   ),
                   maxLines: 1,

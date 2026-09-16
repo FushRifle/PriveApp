@@ -29,7 +29,7 @@ class PostHeader extends StatelessWidget {
     final canOpenProfile = post.user.id > 0 && !post.isAnonymousPost;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 12, 10, 10),
+      padding: const EdgeInsets.fromLTRB(14, 12, 8, 8),
       child: Row(
         children: [
           Expanded(
@@ -54,7 +54,7 @@ class PostHeader extends StatelessWidget {
                     name: name,
                     isOfficial: post.isAIPost,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: _PostUserInfo(
                       name: name,
@@ -76,7 +76,7 @@ class PostHeader extends StatelessWidget {
               },
               icon: Icon(
                 Icons.more_horiz_rounded,
-                color: AppColors.primary,
+                color: AppColors.textSecondary,
               ),
             ),
         ],
@@ -101,8 +101,8 @@ class _PostAvatar extends StatelessWidget {
     final fallback = name.isNotEmpty ? name[0].toUpperCase() : 'U';
 
     return Container(
-      width: 46,
-      height: 46,
+      width: 42,
+      height: 42,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: const LinearGradient(
@@ -114,8 +114,8 @@ class _PostAvatar extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: AppColors.primary.withOpacity(0.18),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -201,7 +201,7 @@ class _PostUserInfo extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: AppTheme.blackTextStyle.copyWith(
-                  fontSize: 13.5,
+                  fontSize: 14,
                   color: AppColors.text,
                   fontWeight: FontWeight.bold,
                 ),
@@ -221,20 +221,34 @@ class _PostUserInfo extends StatelessWidget {
             ],
           ],
         ),
-        const SizedBox(height: 3),
-        Wrap(
-          spacing: 8,
-          runSpacing: 6,
+        const SizedBox(height: 2),
+        Row(
           children: [
+            Icon(
+              Icons.public_rounded,
+              size: 11,
+              color: AppColors.textSecondary,
+            ),
+            const SizedBox(width: 4),
             Text(
               time,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppTheme.greyTextStyle.copyWith(
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.w500,
               ),
             ),
+            const SizedBox(width: 7),
+            Container(
+              width: 3,
+              height: 3,
+              decoration: BoxDecoration(
+                color: AppColors.textSecondary.withOpacity(0.6),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 7),
             _TypeBadge(label: badge),
           ],
         ),
@@ -276,7 +290,7 @@ class _TypeBadge extends StatelessWidget {
     final value = label.trim().isEmpty ? 'Post' : label;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
       decoration: BoxDecoration(
         color: AppColors.transparent,
         borderRadius: BorderRadius.circular(999),
@@ -285,7 +299,7 @@ class _TypeBadge extends StatelessWidget {
         value,
         style: AppTheme.blackTextStyle.copyWith(
           color: AppColors.secondary,
-          fontSize: 10,
+          fontSize: 9,
           fontWeight: FontWeight.w500,
         ),
       ),

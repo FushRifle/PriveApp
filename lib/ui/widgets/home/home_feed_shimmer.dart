@@ -8,19 +8,19 @@ class HomeFeedLoadingShimmer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Shimmer.fromColors(
-      baseColor: AppColors.card,
-      highlightColor: AppColors.secondary.withOpacity(0.25),
+      baseColor: isDark ? const Color(0xFF121B25) : const Color(0xFFE7EDF2),
+      highlightColor:
+          isDark ? const Color(0xFF213040) : const Color(0xFFF9FBFC),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 100),
+        padding: const EdgeInsets.fromLTRB(10, 4, 10, 100),
         child: Column(
           children: [
-            _StoryRailSkeleton(),
-            const SizedBox(height: 20),
             ...List.generate(
               4,
               (index) => Padding(
-                padding: EdgeInsets.only(bottom: index == 3 ? 0 : 18),
+                padding: EdgeInsets.only(bottom: index == 3 ? 0 : 10),
                 child: _FeedCardSkeleton(),
               ),
             ),
@@ -31,56 +31,19 @@ class HomeFeedLoadingShimmer extends StatelessWidget {
   }
 }
 
-class _StoryRailSkeleton extends StatelessWidget {
-  const _StoryRailSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 96,
-          height: 18,
-          decoration: BoxDecoration(
-            color: AppColors.card,
-            borderRadius: BorderRadius.circular(999),
-          ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 96,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: 6,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, index) {
-              return Container(
-                width: 68,
-                decoration: BoxDecoration(
-                  color: AppColors.card,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _FeedCardSkeleton extends StatelessWidget {
   const _FeedCardSkeleton();
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surface = isDark ? const Color(0xFF121B25) : const Color(0xFFFCFDFE);
+    final border = isDark ? const Color(0xFF2A3746) : const Color(0xFFD9E1E8);
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: AppColors.border.withOpacity(0.3)),
+        color: surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: border.withOpacity(0.4)),
         boxShadow: [
           BoxShadow(
             color: AppColors.shadow.withOpacity(0.05),
@@ -93,17 +56,17 @@ class _FeedCardSkeleton extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
             child: Row(
               children: [
                 Container(
-                  width: 46,
-                  height: 46,
+                  width: 42,
+                  height: 42,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.card,
+                    color: surface,
                     border: Border.all(
-                      color: AppColors.border.withOpacity(0.35),
+                      color: border.withOpacity(0.4),
                     ),
                   ),
                 ),
@@ -116,7 +79,7 @@ class _FeedCardSkeleton extends StatelessWidget {
                         width: 150,
                         height: 14,
                         decoration: BoxDecoration(
-                          color: AppColors.card,
+                          color: surface,
                           borderRadius: BorderRadius.circular(999),
                         ),
                       ),
@@ -125,7 +88,7 @@ class _FeedCardSkeleton extends StatelessWidget {
                         width: 96,
                         height: 10,
                         decoration: BoxDecoration(
-                          color: AppColors.card,
+                          color: surface,
                           borderRadius: BorderRadius.circular(999),
                         ),
                       ),
@@ -137,7 +100,7 @@ class _FeedCardSkeleton extends StatelessWidget {
                   width: 44,
                   height: 12,
                   decoration: BoxDecoration(
-                    color: AppColors.card,
+                    color: surface,
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
@@ -145,16 +108,16 @@ class _FeedCardSkeleton extends StatelessWidget {
             ),
           ),
           Container(
-            height: 260,
+            height: 220,
             width: double.infinity,
             decoration: BoxDecoration(
-              color: AppColors.card,
+              color: surface,
               border: Border(
                 top: BorderSide(
-                  color: AppColors.border.withOpacity(0.25),
+                  color: border.withOpacity(0.32),
                 ),
                 bottom: BorderSide(
-                  color: AppColors.border.withOpacity(0.25),
+                  color: border.withOpacity(0.32),
                 ),
               ),
             ),
@@ -168,7 +131,7 @@ class _FeedCardSkeleton extends StatelessWidget {
                   width: double.infinity,
                   height: 12,
                   decoration: BoxDecoration(
-                    color: AppColors.card,
+                    color: surface,
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
@@ -177,7 +140,7 @@ class _FeedCardSkeleton extends StatelessWidget {
                   width: 210,
                   height: 12,
                   decoration: BoxDecoration(
-                    color: AppColors.card,
+                    color: surface,
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
@@ -194,7 +157,7 @@ class _FeedCardSkeleton extends StatelessWidget {
                       width: 76,
                       height: 18,
                       decoration: BoxDecoration(
-                        color: AppColors.card,
+                        color: surface,
                         borderRadius: BorderRadius.circular(999),
                       ),
                     ),
@@ -214,13 +177,16 @@ class _Dot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surface = isDark ? const Color(0xFF121B25) : const Color(0xFFFCFDFE);
+    final border = isDark ? const Color(0xFF2A3746) : const Color(0xFFD9E1E8);
     return Container(
       width: 28,
       height: 28,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: AppColors.card,
-        border: Border.all(color: AppColors.border.withOpacity(0.35)),
+        color: surface,
+        border: Border.all(color: border.withOpacity(0.4)),
       ),
     );
   }
