@@ -27,11 +27,13 @@ import 'package:visibility_detector/visibility_detector.dart';
 class CardPost extends StatefulWidget {
   final FeedPost post;
   final bool isDetailView;
+  final bool showOuterDividers;
 
   const CardPost({
     super.key,
     required this.post,
     this.isDetailView = false,
+    this.showOuterDividers = true,
   });
 
   @override
@@ -633,28 +635,18 @@ class _CardPostState extends State<CardPost> {
           ),
           decoration: BoxDecoration(
             color: cardColor,
-            borderRadius: BorderRadius.circular(
-              widget.isDetailView ? 26 : 22,
-            ),
-            border: Border.all(
-              color: borderColor.withOpacity(isDark ? 0.34 : 0.52),
-            ),
-            boxShadow: widget.isDetailView
-                ? null
-                : [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(isDark ? 0.18 : 0.055),
-                      blurRadius: 20,
-                      offset: const Offset(0, 7),
+            border: widget.showOuterDividers
+                ? Border(
+                    top: BorderSide(
+                      color: borderColor.withOpacity(isDark ? 0.22 : 0.34),
                     ),
-                    BoxShadow(
-                      color: AppColors.primary.withOpacity(0.018),
-                      blurRadius: 5,
-                      offset: const Offset(0, 1),
+                    bottom: BorderSide(
+                      color: borderColor.withOpacity(isDark ? 0.22 : 0.34),
                     ),
-                  ],
+                  )
+                : null,
           ),
-          clipBehavior: Clip.antiAlias,
+          clipBehavior: Clip.hardEdge,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

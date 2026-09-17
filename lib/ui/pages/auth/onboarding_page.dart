@@ -17,7 +17,6 @@ class OnboardingPage extends StatefulWidget {
 
 class _OnboardingPageState extends State<OnboardingPage> {
   static const _background = Color(0xFF0B0D14);
-  static const _cardRadius = 32.0;
 
   final _controller = PageController();
   int _page = 0;
@@ -28,7 +27,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
     String eyebrow,
     String title,
     String body,
-    IconData icon,
     Color accent,
   })>[
     (
@@ -36,7 +34,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
       eyebrow: 'CREATE',
       title: 'Share what feels real',
       body: 'Post stories, reels, and everyday moments worth remembering.',
-      icon: Icons.auto_awesome_rounded,
       accent: AppColors.primary,
     ),
     (
@@ -44,7 +41,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
       eyebrow: 'DISCOVER',
       title: 'Find your kind of people',
       body: 'Explore communities, events, and conversations without the noise.',
-      icon: Icons.people_alt_rounded,
       accent: AppColors.secondary,
     ),
     (
@@ -52,7 +48,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
       eyebrow: 'CONNECT',
       title: 'Keep the good energy going',
       body: 'React, reply, save, and come back to the moments that matter.',
-      icon: Icons.forum_rounded,
       accent: Color(0xFFFFB86B),
     ),
   ];
@@ -72,141 +67,161 @@ class _OnboardingPageState extends State<OnboardingPage> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          const _OnboardingBackdrop(),
+          PageView.builder(
+            controller: _controller,
+            physics: const BouncingScrollPhysics(),
+            itemCount: _pages.length,
+            onPageChanged: (page) => setState(() => _page = page),
+            itemBuilder: (context, index) => _OnboardingSlide(
+              image: _pages[index].image,
+              accent: _pages[index].accent,
+            ),
+          ),
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0x8A071019),
+                  Color(0x18071019),
+                  Color(0x66071019),
+                  Color(0xF2071019),
+                ],
+                stops: [0, 0.34, 0.62, 1],
+              ),
+            ),
+          ),
           SafeArea(
             child: Column(
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(22, 10, 14, 4),
-                  child: Row(
-                    children: [
-                      const SizedBox(width: 10),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: _finishing ? null : _finish,
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: Colors.white.withOpacity(0.08),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 18,
-                            vertical: 11,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                            side: BorderSide(
-                              color: Colors.white.withOpacity(0.12),
-                            ),
-                          ),
-                        ),
-                        child: const Text(
-                          'Skip',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ],
-                  ),
+                _OnboardingHeader(
+                  page: _page,
+                  pageCount: _pages.length,
+                  onSkip: _finishing ? null : _finish,
+                  accent: item.accent,
                 ),
-                Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final compact = constraints.maxHeight < 650;
-                      return PageView.builder(
-                        controller: _controller,
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: _pages.length,
-                        onPageChanged: (page) => setState(() => _page = page),
-                        itemBuilder: (context, index) {
-                          return _OnboardingSlide(
-                            item: _pages[index],
-                            compact: compact,
-                            radius: _cardRadius,
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
+                const Spacer(),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 10, 24, 24),
-                  child: Column(
-                    children: [
-                      Row(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Material(
+                    color: _background.withOpacity(0.78),
+                    elevation: 5,
+                    shadowColor: Colors.black.withOpacity(0.22),
+                    borderRadius: BorderRadius.circular(26),
+                    clipBehavior: Clip.antiAlias,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Expanded(
-                            child: Row(
-                              children: List.generate(
-                                _pages.length,
-                                (index) => AnimatedContainer(
-                                  duration: const Duration(milliseconds: 220),
-                                  curve: Curves.easeOut,
-                                  width: index == _page ? 30 : 8,
-                                  height: 8,
-                                  margin: const EdgeInsets.only(right: 7),
-                                  decoration: BoxDecoration(
-                                    color: index == _page
-                                        ? item.accent
-                                        : Colors.white.withOpacity(0.18),
-                                    borderRadius: BorderRadius.circular(20),
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 240),
+                            transitionBuilder: (child, animation) =>
+                                FadeTransition(
+                              opacity: animation,
+                              child: SlideTransition(
+                                position: Tween<Offset>(
+                                  begin: const Offset(0.04, 0),
+                                  end: Offset.zero,
+                                ).animate(animation),
+                                child: child,
+                              ),
+                            ),
+                            child: Column(
+                              key: ValueKey(_page),
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.eyebrow,
+                                  style: TextStyle(
+                                    color: item.accent,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1.9,
                                   ),
                                 ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  item.title,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 27,
+                                    height: 1.08,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: -0.8,
+                                  ),
+                                ),
+                                const SizedBox(height: 9),
+                                Text(
+                                  item.body,
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.66),
+                                    fontSize: 13.5,
+                                    height: 1.45,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          FilledButton(
+                            onPressed: _finishing
+                                ? null
+                                : _page == _pages.length - 1
+                                    ? _finish
+                                    : _next,
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size.fromHeight(52),
+                              backgroundColor: item.accent,
+                              disabledBackgroundColor:
+                                  item.accent.withOpacity(0.5),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
                               ),
+                              elevation: 0,
+                            ),
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 180),
+                              child: _finishing
+                                  ? const SizedBox.square(
+                                      key: ValueKey('loading'),
+                                      dimension: 21,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.3,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Row(
+                                      key: ValueKey(_page),
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          _page == _pages.length - 1
+                                              ? 'Join Clique'
+                                              : 'Continue',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        const Icon(
+                                          Icons.arrow_forward_rounded,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
+                                      ],
+                                    ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 18),
-                      FilledButton(
-                        onPressed: _finishing
-                            ? null
-                            : _page == _pages.length - 1
-                                ? _finish
-                                : _next,
-                        style: FilledButton.styleFrom(
-                          minimumSize: const Size.fromHeight(58),
-                          backgroundColor: item.accent,
-                          foregroundColor: const Color(0xFF11131A),
-                          disabledBackgroundColor: item.accent.withOpacity(0.5),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 180),
-                          child: _finishing
-                              ? const SizedBox.square(
-                                  key: ValueKey('loading'),
-                                  dimension: 22,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.4,
-                                    color: Color(0xFF11131A),
-                                  ),
-                                )
-                              : Row(
-                                  key: ValueKey(_page),
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      _page == _pages.length - 1
-                                          ? 'Get started'
-                                          : 'Continue',
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 9),
-                                    const Icon(
-                                      Icons.arrow_forward_rounded,
-                                      color: Colors.white,
-                                    ),
-                                  ],
-                                ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ],
@@ -239,208 +254,131 @@ class _OnboardingPageState extends State<OnboardingPage> {
 }
 
 class _OnboardingSlide extends StatelessWidget {
-  final ({
-    String image,
-    String eyebrow,
-    String title,
-    String body,
-    IconData icon,
-    Color accent,
-  }) item;
-  final bool compact;
-  final double radius;
+  final String image;
+  final Color accent;
 
   const _OnboardingSlide({
-    required this.item,
-    required this.compact,
-    required this.radius,
+    required this.image,
+    required this.accent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      image,
+      fit: BoxFit.cover,
+      alignment: Alignment.center,
+      errorBuilder: (_, __, ___) => ColoredBox(
+        color: const Color(0xFF111923),
+        child: Center(
+          child: Image.asset(
+            'assets/icons/clique-new.png',
+            width: 84,
+            height: 84,
+            color: accent.withOpacity(0.8),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OnboardingHeader extends StatelessWidget {
+  final int page;
+  final int pageCount;
+  final Color accent;
+  final VoidCallback? onSkip;
+
+  const _OnboardingHeader({
+    required this.page,
+    required this.pageCount,
+    required this.accent,
+    required this.onSkip,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(20, compact ? 8 : 16, 20, 8),
-      child: Column(
+      padding: const EdgeInsets.fromLTRB(16, 10, 12, 0),
+      child: Row(
         children: [
+          const SizedBox(width: 8),
           Expanded(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(radius),
-                boxShadow: [
-                  BoxShadow(
-                    color: item.accent.withOpacity(0.16),
-                    blurRadius: 34,
-                    offset: const Offset(0, 18),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(radius),
-                clipBehavior: Clip.antiAlias,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.asset(
-                      item.image,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => ColoredBox(
-                        color: item.accent.withOpacity(0.15),
-                        child: Icon(
-                          item.icon,
-                          color: item.accent,
-                          size: 72,
-                        ),
-                      ),
-                    ),
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            Colors.black.withOpacity(0.06),
-                            Colors.black.withOpacity(0.68),
-                          ],
-                          stops: const [0, 0.52, 1],
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      left: 20,
-                      bottom: 20,
-                      child: Container(
-                        padding: const EdgeInsets.all(13),
-                        decoration: BoxDecoration(
-                          color: item.accent,
-                          borderRadius: BorderRadius.circular(18),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.24),
-                              blurRadius: 18,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          item.icon,
-                          size: 25,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          SizedBox(height: compact ? 12 : 18),
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.fromLTRB(
-              22,
-              compact ? 16 : 20,
-              22,
-              compact ? 17 : 22,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.065),
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: Colors.white.withOpacity(0.11)),
-            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  item.eyebrow,
-                  style: TextStyle(
-                    color: item.accent,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 2.1,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  item.title,
+                const Text(
+                  'Clique',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: compact ? 23 : 27,
-                    height: 1.1,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.7,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                    shadows: [Shadow(color: Colors.black45, blurRadius: 8)],
                   ),
                 ),
-                const SizedBox(height: 9),
                 Text(
-                  item.body,
+                  'Your people. Your moments.',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.66),
-                    fontSize: compact ? 13 : 14,
-                    height: 1.45,
+                    color: Colors.white.withOpacity(0.72),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    shadows: const [
+                      Shadow(color: Colors.black54, blurRadius: 6),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _OnboardingBackdrop extends StatelessWidget {
-  const _OnboardingBackdrop();
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF15101B),
-            Color(0xFF0B0D14),
-            Color(0xFF091516),
-          ],
-          stops: [0, 0.52, 1],
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            top: -120,
-            right: -100,
-            child: _Glow(color: AppColors.primary, size: 270),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withOpacity(0.12)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(
+                pageCount,
+                (index) => AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  width: index == page ? 17 : 5,
+                  height: 5,
+                  margin: EdgeInsets.only(
+                    right: index == pageCount - 1 ? 0 : 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: index == page
+                        ? accent
+                        : Colors.white.withOpacity(0.34),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ),
+            ),
           ),
-          Positioned(
-            bottom: -130,
-            left: -110,
-            child: _Glow(color: AppColors.secondary, size: 290),
+          const SizedBox(width: 6),
+          TextButton(
+            onPressed: onSkip,
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.white,
+              backgroundColor: Colors.black.withOpacity(0.3),
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: Colors.white.withOpacity(0.12)),
+              ),
+            ),
+            child: const Text(
+              'Skip',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _Glow extends StatelessWidget {
-  final Color color;
-  final double size;
-
-  const _Glow({required this.color, required this.size});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(
-          colors: [color.withOpacity(0.16), color.withOpacity(0)],
-        ),
       ),
     );
   }

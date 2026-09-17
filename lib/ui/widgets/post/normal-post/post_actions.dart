@@ -66,7 +66,7 @@ class PostActions extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          Icons.insights_rounded,
+                          Icons.insights_outlined,
                           size: 12,
                           color: AppColors.textSecondary.withOpacity(0.75),
                         ),

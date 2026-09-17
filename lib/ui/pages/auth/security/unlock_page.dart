@@ -5,6 +5,7 @@ import 'package:local_auth/local_auth.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/bloc/settings/settings_bloc.dart';
 import 'package:clique/core/services/security/app_lock_service.dart';
+import 'package:clique/ui/pages/auth/auth_design.dart';
 
 class AppUnlockPage extends StatefulWidget {
   final bool isLoading;
@@ -200,50 +201,95 @@ class _AppUnlockPageState extends State<AppUnlockPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final palette = AuthPalette.of(context);
     final showSpinner = widget.isLoading || _isVerifying;
     final showBiometric =
         widget.settings?.biometricEnabled == true && _isBiometricAvailable;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBackground : AppColors.background,
+      backgroundColor: palette.background,
       body: SafeArea(
         child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(22, 24, 22, 30),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
+              constraints: const BoxConstraints(maxWidth: 400),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    width: 92,
-                    height: 92,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.12),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.primary.withOpacity(0.35),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 28,
+                        height: 28,
+                        clipBehavior: Clip.antiAlias,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(9),
+                        ),
+                        child: Image.asset(
+                          'assets/icons/clique-new.png',
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => ColoredBox(
+                            color: palette.primary,
+                            child: const Icon(
+                              Icons.hub_rounded,
+                              color: AppColors.white,
+                              size: 15,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                    child: const Icon(
-                      Icons.lock_rounded,
-                      color: AppColors.primary,
-                      size: 42,
-                    ),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Clique',
+                        style: TextStyle(
+                          color: palette.text,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.4,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 28),
-                  Text(
-                    'App locked',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      color: AppColors.text,
-                      fontWeight: FontWeight.w700,
+                  Container(
+                    width: 76,
+                    height: 76,
+                    decoration: BoxDecoration(
+                      color: palette.primary.withOpacity(
+                        palette.isDark ? 0.17 : 0.1,
+                      ),
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    child: Icon(
+                      Icons.lock_rounded,
+                      color: palette.primary,
+                      size: 34,
                     ),
                   ),
-                  const SizedBox(height: 26),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Welcome back',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      color: palette.text,
+                      fontSize: 25,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.6,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Enter your 4-digit PIN to unlock Clique',
+                    style: TextStyle(
+                      color: palette.muted,
+                      fontSize: 12.5,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
                   _PinDots(pinLength: _pin.length),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 10),
                   SizedBox(
                     height: 22,
                     child: showSpinner
@@ -261,13 +307,16 @@ class _AppUnlockPageState extends State<AppUnlockPage> {
                             ),
                           ),
                   ),
-                  const SizedBox(height: 22),
-                  _UnlockKeypad(
-                    enabled: !widget.isLoading && !_isVerifying,
-                    showBiometric: showBiometric,
-                    onDigit: _addDigit,
-                    onBackspace: _removeDigit,
-                    onBiometric: _verifyBiometric,
+                  const SizedBox(height: 14),
+                  AuthSectionCard(
+                    padding: const EdgeInsets.all(12),
+                    child: _UnlockKeypad(
+                      enabled: !widget.isLoading && !_isVerifying,
+                      showBiometric: showBiometric,
+                      onDigit: _addDigit,
+                      onBackspace: _removeDigit,
+                      onBiometric: _verifyBiometric,
+                    ),
                   ),
                 ],
               ),
@@ -286,6 +335,7 @@ class _PinDots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AuthPalette.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(
@@ -295,10 +345,10 @@ class _PinDots extends StatelessWidget {
           height: 14,
           margin: const EdgeInsets.symmetric(horizontal: 7),
           decoration: BoxDecoration(
-            color: index < pinLength ? AppColors.primary : AppColors.card,
+            color: index < pinLength ? palette.primary : palette.inputSurface,
             shape: BoxShape.circle,
             border: Border.all(
-              color: AppColors.primary.withOpacity(0.45),
+              color: index < pinLength ? palette.primary : palette.border,
             ),
           ),
         ),
@@ -324,6 +374,7 @@ class _UnlockKeypad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AuthPalette.of(context);
     const keys = [
       '1',
       '2',
@@ -358,8 +409,8 @@ class _UnlockKeypad extends StatelessWidget {
             child: Icon(
               Icons.fingerprint_rounded,
               color: showBiometric
-                  ? AppColors.primary
-                  : AppColors.text.withOpacity(0.22),
+                  ? palette.primary
+                  : palette.subtle.withOpacity(0.5),
               size: 34,
             ),
           );
@@ -371,7 +422,7 @@ class _UnlockKeypad extends StatelessWidget {
             onTap: onBackspace,
             child: Icon(
               Icons.backspace_outlined,
-              color: AppColors.text,
+              color: palette.text,
               size: 24,
             ),
           );
@@ -383,7 +434,7 @@ class _UnlockKeypad extends StatelessWidget {
           child: Text(
             key,
             style: TextStyle(
-              color: AppColors.text,
+              color: palette.text,
               fontSize: 28,
               fontWeight: FontWeight.w700,
             ),
@@ -407,12 +458,13 @@ class _UnlockKey extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AuthPalette.of(context);
     return Material(
-      color: AppColors.card,
-      borderRadius: BorderRadius.circular(18),
+      color: palette.inputSurface,
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         child: Center(
           child: Opacity(
             opacity: enabled ? 1 : 0.35,

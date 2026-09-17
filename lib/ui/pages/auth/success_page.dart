@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:clique/app/configs/colors.dart';
-import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/router/named_routes.dart';
+import 'package:clique/ui/pages/auth/auth_design.dart';
 
 class OnboardingSuccessPage extends StatefulWidget {
   const OnboardingSuccessPage({super.key});
@@ -51,112 +50,111 @@ class _OnboardingSuccessPageState extends State<OnboardingSuccessPage>
 
   @override
   Widget build(BuildContext context) {
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: AppColors.transparent,
-        statusBarIconBrightness: Brightness.light,
-      ),
-    );
-
+    final palette = AuthPalette.of(context);
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.primary,
-              AppColors.secondary,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Animated checkmark
-              AnimatedBuilder(
-                animation: _animationController,
-                builder: (context, child) {
-                  return Transform.scale(
-                    scale: _scaleAnimation.value,
-                    child: Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        color: AppColors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.black.withOpacity(0.2),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
+      backgroundColor: palette.background,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 430),
+              child: AuthSectionCard(
+                padding: const EdgeInsets.fromLTRB(24, 36, 24, 28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedBuilder(
+                      animation: _animationController,
+                      builder: (context, child) => Transform.scale(
+                        scale: _scaleAnimation.value,
+                        child: child,
+                      ),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            width: 94,
+                            height: 94,
+                            decoration: BoxDecoration(
+                              color: palette.secondary.withOpacity(
+                                palette.isDark ? 0.15 : 0.1,
+                              ),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          Container(
+                            width: 68,
+                            height: 68,
+                            decoration: BoxDecoration(
+                              color: palette.secondary,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: palette.secondary.withOpacity(0.24),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.check_rounded,
+                              size: 36,
+                              color: AppColors.white,
+                            ),
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.check_rounded,
-                        size: 60,
-                        color: AppColors.primary,
+                    ),
+                    const SizedBox(height: 26),
+                    FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: Column(
+                        children: [
+                          Text(
+                            'You’re all set',
+                            style: TextStyle(
+                              color: palette.text,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.8,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Your Clique profile is ready. Your people and moments are waiting.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: palette.muted,
+                              fontSize: 13.5,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 40),
-
-              // Animated text
-              AnimatedBuilder(
-                animation: _animationController,
-                builder: (context, child) {
-                  return Opacity(
-                    opacity: _fadeAnimation.value,
-                    child: Column(
-                      children: [
-                        Text(
-                          'Welcome to Clique!',
-                          style: AppTheme.whiteTextStyle.copyWith(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Your profile is ready\nto shine',
-                          textAlign: TextAlign.center,
-                          style: AppTheme.whiteTextStyle.copyWith(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w400,
-                            height: 1.4,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: 28),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(99),
+                      child: LinearProgressIndicator(
+                        minHeight: 4,
+                        color: palette.primary,
+                        backgroundColor: palette.inputSurface,
+                      ),
                     ),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 60),
-
-              // Loading indicator
-              const CircularProgressIndicator(
-                color: AppColors.white,
-                strokeWidth: 2,
-              ),
-
-              const SizedBox(height: 16),
-
-              Text(
-                'Taking you home...',
-                style: AppTheme.whiteTextStyle.copyWith(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
+                    const SizedBox(height: 12),
+                    Text(
+                      'Opening your home feed…',
+                      style: TextStyle(
+                        color: palette.subtle,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),

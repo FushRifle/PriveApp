@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:clique/app/configs/colors.dart';
-import 'package:clique/app/configs/theme.dart';
+import 'package:clique/ui/pages/auth/auth_design.dart';
 
 class ActiveSessionsPage extends StatefulWidget {
   const ActiveSessionsPage({super.key});
@@ -40,11 +40,16 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
   ];
 
   void _logoutSession(int index) {
+    final palette = AuthPalette.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        title: const Text('Logout Session'),
+        backgroundColor: palette.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: Text(
+          'End this session?',
+          style: TextStyle(color: palette.text, fontWeight: FontWeight.w800),
+        ),
         content: Text(
             'Are you sure you want to logout from ${_sessions[index]['device']}?'),
         actions: [
@@ -73,11 +78,16 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
   }
 
   void _logoutAllSessions() {
+    final palette = AuthPalette.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        title: const Text('Logout All Devices'),
+        backgroundColor: palette.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: Text(
+          'End other sessions?',
+          style: TextStyle(color: palette.text, fontWeight: FontWeight.w800),
+        ),
         content: const Text(
             'This will log you out from all devices including this one. You will need to sign in again.'),
         actions: [
@@ -108,134 +118,130 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    return Scaffold(
-      backgroundColor:
-          isDarkMode ? AppColors.darkBackground : AppColors.lightBackground,
-      appBar: AppBar(
-        backgroundColor: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new,
-              color: isDarkMode ? AppColors.white : AppColors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Active Sessions',
-          style: TextStyle(
-            color: isDarkMode ? AppColors.white : AppColors.black,
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
-          ),
-        ),
-        centerTitle: true,
-        actions: [
-          TextButton(
+    final palette = AuthPalette.of(context);
+    return AuthPageScaffold(
+      title: 'Active sessions',
+      subtitle: 'Review where your Clique account is currently signed in.',
+      icon: Icons.devices_rounded,
+      scrollable: false,
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: TextButton(
             onPressed: _sessions.length > 1 ? _logoutAllSessions : null,
             child: Text(
-              'Logout All',
+              'End others',
               style: TextStyle(
-                  color: _sessions.length > 1
-                      ? AppColors.red
-                      : AppColors.greyColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12),
+                color: _sessions.length > 1 ? AppColors.red : palette.subtle,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
             ),
           ),
-        ],
-      ),
-      body: _isLoading
+        ),
+      ],
+      child: _isLoading
           ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary))
+              child: CircularProgressIndicator(color: AppColors.primary),
+            )
           : ListView.separated(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.zero,
               itemCount: _sessions.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final session = _sessions[index];
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color:
-                        isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: isDarkMode
-                          ? AppColors.darkBorderColor
-                          : AppColors.lightBorderColor.withOpacity(0.5),
-                    ),
-                  ),
+                final isCurrent = session['current'] == true;
+                return AuthSectionCard(
+                  padding: const EdgeInsets.all(14),
                   child: Row(
                     children: [
                       Container(
-                        width: 50,
-                        height: 50,
+                        width: 44,
+                        height: 44,
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
+                          color:
+                              (isCurrent ? palette.secondary : palette.primary)
+                                  .withOpacity(palette.isDark ? 0.16 : 0.1),
+                          borderRadius: BorderRadius.circular(14),
                         ),
                         child: Icon(
                           session['icon'],
-                          color: AppColors.primary,
-                          size: 28,
+                          color:
+                              isCurrent ? palette.secondary : palette.primary,
+                          size: 22,
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               children: [
-                                Text(
-                                  session['device'],
-                                  style: AppTheme.blackTextStyle.copyWith(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
+                                Flexible(
+                                  child: Text(
+                                    session['device'],
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: palette.text,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w800,
+                                    ),
                                   ),
                                 ),
-                                if (session['current'])
+                                if (isCurrent) ...[
+                                  const SizedBox(width: 7),
                                   Container(
-                                    margin: const EdgeInsets.only(left: 8),
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
+                                      horizontal: 7,
+                                      vertical: 3,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: AppColors.primary.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(8),
+                                      color: palette.secondary.withOpacity(
+                                        palette.isDark ? 0.16 : 0.1,
+                                      ),
+                                      borderRadius: BorderRadius.circular(99),
                                     ),
                                     child: Text(
-                                      'Current',
+                                      'This device',
                                       style: TextStyle(
-                                        fontSize: 10,
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.w600,
+                                        color: palette.secondary,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w800,
                                       ),
                                     ),
                                   ),
+                                ],
                               ],
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              session['location'],
-                              style:
-                                  AppTheme.greyTextStyle.copyWith(fontSize: 13),
+                              '${session['location']} · ${session['browser']}',
+                              style: TextStyle(
+                                color: palette.muted,
+                                fontSize: 11.5,
+                              ),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '${session['browser']} • Last active: ${session['lastActive']}',
-                              style:
-                                  AppTheme.greyTextStyle.copyWith(fontSize: 12),
+                              'Last active ${session['lastActive'].toString().toLowerCase()}',
+                              style: TextStyle(
+                                color: palette.subtle,
+                                fontSize: 10.5,
+                              ),
                             ),
                           ],
                         ),
                       ),
-                      if (!session['current'])
+                      if (!isCurrent)
                         IconButton(
-                          icon: Icon(Icons.logout,
-                              color: AppColors.red, size: 20),
+                          tooltip: 'End session',
+                          icon: const Icon(
+                            Icons.logout_rounded,
+                            color: AppColors.red,
+                            size: 19,
+                          ),
                           onPressed: () => _logoutSession(index),
                         ),
                     ],

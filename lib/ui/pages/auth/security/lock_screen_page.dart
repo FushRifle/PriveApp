@@ -8,6 +8,7 @@ import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/bloc/settings/settings_bloc.dart';
 import 'package:clique/bloc/user/user_bloc.dart';
 import 'package:clique/core/services/security/app_lock_service.dart';
+import 'package:clique/ui/pages/auth/auth_design.dart';
 
 class LockScreenPage extends StatefulWidget {
   final int? userId;
@@ -414,30 +415,17 @@ class _LockScreenPageState extends State<LockScreenPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final palette = AuthPalette.of(context);
     final badge = _userBadgeLabel(_resolvedUserId);
 
     return Scaffold(
-      backgroundColor:
-          isDarkMode ? AppColors.darkBackground : AppColors.lightBackground,
+      backgroundColor: palette.background,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: palette.background,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: isDarkMode
-                  ? AppColors.darkCard.withOpacity(0.8)
-                  : Colors.white,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.arrow_back_ios_new,
-              color: isDarkMode ? AppColors.primary : AppColors.primary,
-              size: 24,
-            ),
-          ),
+          icon: Icon(Icons.arrow_back_rounded, color: palette.text),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -453,7 +441,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
 
             // Header Illustration
             Container(
-              margin: const EdgeInsets.only(bottom: 32),
+              margin: const EdgeInsets.only(bottom: 22),
               child: Column(
                 children: [
                   Stack(
@@ -462,51 +450,26 @@ class _LockScreenPageState extends State<LockScreenPage> {
                       Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: AppColors.secondary,
-                          shape: BoxShape.circle,
+                          color: palette.secondary.withOpacity(
+                            palette.isDark ? 0.18 : 0.11,
+                          ),
+                          borderRadius: BorderRadius.circular(24),
                         ),
                         child: Icon(
                           Icons.security_rounded,
-                          color: AppColors.white,
-                          size: 55,
-                        ),
-                      ),
-                      Positioned(
-                        right: -4,
-                        bottom: -4,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isDarkMode
-                                ? AppColors.darkBackground
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(
-                              color: AppColors.primary.withOpacity(0.35),
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
-                                blurRadius: 10,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                        
+                          color: palette.secondary,
+                          size: 40,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Secure Your App',
+                    'App lock',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.text,
+                      color: palette.text,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -516,7 +479,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
                         : 'Lock profile #$badge with your preferred method',
                     style: TextStyle(
                       fontSize: 14,
-                      color: AppColors.text,
+                      color: palette.muted,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -529,13 +492,14 @@ class _LockScreenPageState extends State<LockScreenPage> {
               Container(
                 margin: const EdgeInsets.only(bottom: 20),
                 decoration: BoxDecoration(
-                  color: isDarkMode ? AppColors.darkCard : Colors.white,
-                  borderRadius: BorderRadius.circular(24),
+                  color: palette.surface,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: palette.border.withOpacity(0.7)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
+                      color: palette.shadow,
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
                     ),
                   ],
                 ),
@@ -549,7 +513,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
                               _enableBiometric();
                             }
                           },
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(20),
                     child: Padding(
                       padding: const EdgeInsets.all(20),
                       child: Column(
@@ -559,18 +523,15 @@ class _LockScreenPageState extends State<LockScreenPage> {
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      AppColors.primary,
-                                      AppColors.primary.withOpacity(0.7),
-                                    ],
+                                  color: palette.primary.withOpacity(
+                                    palette.isDark ? 0.16 : 0.1,
                                   ),
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(14),
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.fingerprint,
-                                  color: Colors.white,
-                                  size: 28,
+                                  color: palette.primary,
+                                  size: 25,
                                 ),
                               ),
                               const SizedBox(width: 16),
@@ -590,9 +551,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
                                       'Use fingerprint or face recognition',
                                       style: TextStyle(
                                         fontSize: 13,
-                                        color: isDarkMode
-                                            ? AppColors.greyTextColor
-                                            : AppColors.lightColor,
+                                        color: palette.muted,
                                       ),
                                     ),
                                   ],
@@ -651,20 +610,21 @@ class _LockScreenPageState extends State<LockScreenPage> {
 
             // PIN Section
             Container(
-              margin: const EdgeInsets.only(bottom: 20, top: 20),
+              margin: const EdgeInsets.only(bottom: 12),
               decoration: BoxDecoration(
-                color: isDarkMode ? AppColors.darkCard : Colors.white,
-                borderRadius: BorderRadius.circular(26),
+                color: palette.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: palette.border.withOpacity(0.7)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
+                    color: palette.shadow,
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
                   ),
                 ],
               ),
               child: Padding(
-                padding: const EdgeInsets.all(25),
+                padding: const EdgeInsets.all(18),
                 child: Column(
                   children: [
                     Row(
@@ -672,13 +632,15 @@ class _LockScreenPageState extends State<LockScreenPage> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: AppColors.secondary,
-                            borderRadius: BorderRadius.circular(16),
+                            color: palette.secondary.withOpacity(
+                              palette.isDark ? 0.16 : 0.1,
+                            ),
+                            borderRadius: BorderRadius.circular(14),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.lock_outline,
-                            color: Colors.white,
-                            size: 28,
+                            color: palette.secondary,
+                            size: 24,
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -690,7 +652,6 @@ class _LockScreenPageState extends State<LockScreenPage> {
                                 'PIN Lock',
                                 style: TextStyle(
                                   fontSize: 18,
-                                  
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -740,8 +701,9 @@ class _LockScreenPageState extends State<LockScreenPage> {
               Container(
                 margin: const EdgeInsets.only(bottom: 20),
                 decoration: BoxDecoration(
-                  color: isDarkMode ? AppColors.darkCard : Colors.white,
-                  borderRadius: BorderRadius.circular(24),
+                  color: palette.surface,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: palette.border.withOpacity(0.7)),
                 ),
                 child: ListTile(
                   contentPadding: const EdgeInsets.symmetric(
@@ -760,10 +722,10 @@ class _LockScreenPageState extends State<LockScreenPage> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-               color: AppColors.card,
+                color: palette.surface,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: AppColors.border.withOpacity(0.2),
+                  color: palette.border.withOpacity(0.7),
                   width: 1,
                 ),
               ),
@@ -772,12 +734,14 @@ class _LockScreenPageState extends State<LockScreenPage> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.secondary.withOpacity(0.8),
+                      color: palette.secondary.withOpacity(
+                        palette.isDark ? 0.16 : 0.1,
+                      ),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.info_outline,
-                      color: AppColors.white,
+                      color: palette.secondary,
                       size: 20,
                     ),
                   ),
@@ -788,7 +752,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
                       style: TextStyle(
                         fontSize: 14,
                         height: 1.4,
-                        color: AppColors.text
+                        color: palette.muted,
                       ),
                     ),
                   ),
@@ -813,7 +777,8 @@ class SuccessSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final palette = AuthPalette.of(context);
+    final isDarkMode = palette.isDark;
 
     Future.delayed(const Duration(seconds: 2), () {
       if (context.mounted) {
@@ -824,7 +789,7 @@ class SuccessSheet extends StatelessWidget {
     return Container(
       height: 400,
       decoration: BoxDecoration(
-        color: isDarkMode ? AppColors.darkBackground : Colors.white,
+        color: palette.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
       ),
       child: Column(
@@ -1021,12 +986,13 @@ class _ModernPinSetupSheetState extends State<ModernPinSetupSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final palette = AuthPalette.of(context);
+    final isDarkMode = palette.isDark;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.85,
       decoration: BoxDecoration(
-        color: isDarkMode ? AppColors.darkBackground : Colors.white,
+        color: palette.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
       ),
       child: Column(
@@ -1301,12 +1267,13 @@ class _ModernPinVerifySheetState extends State<ModernPinVerifySheet> {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final palette = AuthPalette.of(context);
+    final isDarkMode = palette.isDark;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.70,
       decoration: BoxDecoration(
-        color: isDarkMode ? AppColors.darkBackground : Colors.white,
+        color: palette.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
       ),
       child: Column(

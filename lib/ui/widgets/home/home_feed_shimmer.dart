@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
-import 'package:clique/app/configs/colors.dart';
-
 class HomeFeedLoadingShimmer extends StatelessWidget {
   const HomeFeedLoadingShimmer({super.key});
 
@@ -10,6 +8,7 @@ class HomeFeedLoadingShimmer extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Shimmer.fromColors(
+      period: const Duration(milliseconds: 750),
       baseColor: isDark ? const Color(0xFF121B25) : const Color(0xFFE7EDF2),
       highlightColor:
           isDark ? const Color(0xFF213040) : const Color(0xFFF9FBFC),
@@ -42,15 +41,10 @@ class _FeedCardSkeleton extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: surface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: border.withOpacity(0.4)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        border: Border(
+          top: BorderSide(color: border.withOpacity(0.3)),
+          bottom: BorderSide(color: border.withOpacity(0.3)),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

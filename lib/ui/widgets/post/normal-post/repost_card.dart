@@ -31,19 +31,10 @@ class RepostCard extends StatelessWidget {
       margin: EdgeInsets.zero,
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: AppColors.primary.withOpacity(0.10),
+        border: Border(
+          top: BorderSide(color: AppColors.border.withOpacity(0.45)),
+          bottom: BorderSide(color: AppColors.border.withOpacity(0.45)),
         ),
-        boxShadow: isDetailView
-            ? null
-            : [
-                BoxShadow(
-                  color: Colors.black.withOpacity(isDark ? 0.18 : 0.055),
-                  blurRadius: 20,
-                  offset: const Offset(0, 7),
-                ),
-              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -79,6 +70,7 @@ class RepostCard extends StatelessWidget {
           CardPost(
             post: post,
             isDetailView: isDetailView,
+            showOuterDividers: false,
           ),
         ],
       ),

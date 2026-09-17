@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:clique/app/configs/colors.dart';
-import 'package:clique/app/configs/theme.dart';
+import 'package:clique/ui/pages/auth/auth_design.dart';
 
 class TwoFactorPage extends StatefulWidget {
   const TwoFactorPage({super.key});
@@ -14,207 +13,188 @@ class _TwoFactorPageState extends State<TwoFactorPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    return Scaffold(
-      backgroundColor:
-          isDarkMode ? AppColors.darkBackground : AppColors.lightBackground,
-      appBar: AppBar(
-        backgroundColor: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new,
-              color: isDarkMode ? AppColors.white : AppColors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Two-Factor Authentication',
-          style: TextStyle(
-            color: isDarkMode ? AppColors.white : AppColors.black,
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: isDarkMode
-                      ? AppColors.darkBorderColor
-                      : AppColors.lightBorderColor.withOpacity(0.5),
+    final palette = AuthPalette.of(context);
+    return AuthPageScaffold(
+      title: 'Two-factor authentication',
+      subtitle: 'Protect your account even if your password is compromised.',
+      icon: Icons.verified_user_rounded,
+      child: Column(
+        children: [
+          AuthSectionCard(
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: (_isEnabled ? palette.secondary : palette.primary)
+                        .withOpacity(palette.isDark ? 0.16 : 0.1),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(
+                    _isEnabled ? Icons.shield_rounded : Icons.shield_outlined,
+                    color: _isEnabled ? palette.secondary : palette.primary,
+                    size: 22,
+                  ),
                 ),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Secure Your Account',
-                              style: AppTheme.blackTextStyle.copyWith(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Add an extra layer of security to your account',
-                              style:
-                                  AppTheme.greyTextStyle.copyWith(fontSize: 14),
-                            ),
-                          ],
+                      Text(
+                        _isEnabled ? 'Protection is on' : 'Protection is off',
+                        style: TextStyle(
+                          color: palette.text,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
-                      Switch(
-                        value: _isEnabled,
-                        onChanged: (value) {
-                          setState(() {
-                            _isEnabled = value;
-                          });
-                          if (value) {
-                            _showSetupDialog();
-                          }
-                        },
-                        activeColor: AppColors.primary,
+                      const SizedBox(height: 3),
+                      Text(
+                        'Require a code from your authenticator when signing in.',
+                        style: TextStyle(
+                          color: palette.muted,
+                          fontSize: 12,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch.adaptive(
+                  value: _isEnabled,
+                  activeColor: palette.secondary,
+                  onChanged: (value) {
+                    setState(() => _isEnabled = value);
+                    if (value) _showSetupDialog();
+                  },
+                ),
+              ],
+            ),
+          ),
+          if (_isEnabled) ...[
+            const SizedBox(height: 12),
+            AuthSectionCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Recovery codes',
+                    style: TextStyle(
+                      color: palette.text,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    'Store these somewhere safe. Each code works once.',
+                    style: TextStyle(
+                      color: palette.muted,
+                      fontSize: 12,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: palette.inputSurface,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Column(
+                      children: [
+                        for (int i = 1; i <= 8; i++)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              children: [
+                                SizedBox(
+                                  width: 28,
+                                  child: Text(
+                                    i.toString().padLeft(2, '0'),
+                                    style: TextStyle(
+                                      color: palette.subtle,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  'XXXX-XXXX-XXXX',
+                                  style: TextStyle(
+                                    color: palette.text,
+                                    fontSize: 12,
+                                    fontFamily: 'monospace',
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.7,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {},
+                          icon: const Icon(Icons.copy_rounded, size: 17),
+                          label: const Text('Copy'),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(44),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(13),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () {},
+                          icon: const Icon(Icons.download_rounded, size: 17),
+                          label: const Text('Download'),
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size.fromHeight(44),
+                            backgroundColor: palette.primary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(13),
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-            if (_isEnabled)
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: isDarkMode
-                        ? AppColors.darkBorderColor
-                        : AppColors.lightBorderColor.withOpacity(0.5),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Backup Codes',
-                      style: AppTheme.blackTextStyle.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Save these backup codes in a safe place. Each code can only be used once.',
-                      style: AppTheme.greyTextStyle.copyWith(fontSize: 14),
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: isDarkMode
-                            ? AppColors.darkBackground
-                            : AppColors.lightBackground,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: isDarkMode
-                              ? AppColors.darkBorderColor
-                              : AppColors.lightBorderColor.withOpacity(0.5),
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          for (int i = 1; i <= 8; i++)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              child: Row(
-                                children: [
-                                  Text(
-                                    i.toString().padLeft(2, '0'),
-                                    style: AppTheme.greyTextStyle
-                                        .copyWith(fontSize: 14),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Text(
-                                    'XXXX-XXXX-XXXX',
-                                    style: AppTheme.blackTextStyle.copyWith(
-                                      fontSize: 14,
-                                      fontFamily: 'monospace',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () {},
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(color: AppColors.primary),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: const Text('Copy Codes'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {},
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: const Text('Download'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
           ],
-        ),
+        ],
       ),
     );
   }
 
   void _showSetupDialog() {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final palette = AuthPalette.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        backgroundColor: palette.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: Text(
-          'Setup 2FA',
-          style: AppTheme.blackTextStyle.copyWith(fontWeight: FontWeight.bold),
+          'Set up two-factor authentication?',
+          style: TextStyle(color: palette.text, fontWeight: FontWeight.w800),
         ),
         content: Text(
-          'Would you like to set up two-factor authentication using an authenticator app?',
-          style: AppTheme.greyTextStyle,
+          'You will connect an authenticator app and save a set of recovery codes.',
+          style: TextStyle(color: palette.muted, height: 1.4),
         ),
         actions: [
           TextButton(
@@ -222,13 +202,13 @@ class _TwoFactorPageState extends State<TwoFactorPage> {
               setState(() => _isEnabled = false);
               Navigator.pop(context);
             },
-            child: Text('Cancel', style: TextStyle(color: AppColors.greyColor)),
+            child: const Text('Not now'),
           ),
-          ElevatedButton(
+          FilledButton(
             onPressed: () {
               Navigator.pop(context);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            style: FilledButton.styleFrom(backgroundColor: palette.primary),
             child: const Text('Set Up'),
           ),
         ],

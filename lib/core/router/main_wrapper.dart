@@ -9,6 +9,7 @@ import 'package:clique/bloc/chat/chat_bloc.dart';
 import 'package:clique/bloc/event/event_bloc.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/bloc/status/stories_bloc.dart';
+import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/ui/pages/main/home/create_post_page.dart';
 
 import 'package:clique/ui/pages/main/chat/inbox_page.dart';
@@ -25,13 +26,12 @@ class MainWrapper extends StatefulWidget {
 
 class _MainWrapperState extends State<MainWrapper>
     with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
-  static const double _bottomBarHeight = 60;
-
   final PageStorageBucket _bucket = PageStorageBucket();
   late final PageController _pageController;
   late final FeedBloc _feedBloc;
   late final StoriesBloc _storiesBloc;
   late final ChatBloc _chatBloc;
+  final HomePageController _homeController = HomePageController();
   int _currentIndex = 0;
   bool _isOpeningCreatePost = false;
   final Set<int> _visitedTabs = {0};
@@ -111,6 +111,12 @@ class _MainWrapperState extends State<MainWrapper>
       return;
     }
 
+    if (navIndex == 0 && _currentIndex == 0) {
+      HapticFeedback.selectionClick();
+      unawaited(_homeController.scrollToTop());
+      return;
+    }
+
     final pageIndex = _navIndexToPageIndex(navIndex);
     _onTabChanged(pageIndex);
   }
@@ -126,7 +132,7 @@ class _MainWrapperState extends State<MainWrapper>
       if (!mounted) return;
       final created = await Navigator.of(context).push<bool>(
         MaterialPageRoute(
-          settings: const RouteSettings(name: 'create_post_from_main_wrapper'),
+          settings: const RouteSettings(name: NamedRoutes.createPostScreen),
           builder: (_) => BlocProvider.value(
             value: _feedBloc,
             child: const CreatePostPage(),
@@ -146,21 +152,16 @@ class _MainWrapperState extends State<MainWrapper>
   double _getBottomPadding(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     if (kIsWeb) {
-      return 8;
+      return 4;
     }
 
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return bottomPadding > 0 ? bottomPadding + 8 : 8;
+      return bottomPadding > 0 ? bottomPadding : 4;
     } else if (defaultTargetPlatform == TargetPlatform.iOS) {
-      return bottomPadding > 0 ? bottomPadding + 4 : 20;
+      return bottomPadding > 0 ? bottomPadding : 6;
     } else {
-      return 8;
+      return 4;
     }
-  }
-
-  double _getContentBottomInset(BuildContext context) {
-    if (!_showBottomBar) return 0;
-    return _getBottomPadding(context) + _bottomBarHeight;
   }
 
   @override
@@ -189,7 +190,6 @@ class _MainWrapperState extends State<MainWrapper>
           body: Stack(
             children: [
               Positioned.fill(
-                bottom: _getContentBottomInset(context),
                 child: ClipRect(
                   child: PageStorage(
                     bucket: _bucket,
@@ -207,8 +207,10 @@ class _MainWrapperState extends State<MainWrapper>
                       children: [
                         _DeferredTab(
                             enabled: _visitedTabs.contains(0),
-                            child: const HomePage(
-                                key: PageStorageKey('home_page'))),
+                            child: HomePage(
+                              key: const PageStorageKey('home_page'),
+                              controller: _homeController,
+                            )),
                         _DeferredTab(
                             enabled: _visitedTabs.contains(1),
                             child: ReelsPage(
@@ -265,10 +267,10 @@ class _MainWrapperState extends State<MainWrapper>
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
-                            vertical: 4,
+                            vertical: 2,
                           ),
                           child: SizedBox(
-                            height: 50,
+                            height: 48,
                             child: Row(
                               children: [
                                 _buildNavItem(
@@ -342,8 +344,8 @@ class _MainWrapperState extends State<MainWrapper>
     return Expanded(
       child: Center(
         child: SizedBox(
-          width: 46,
-          height: 46,
+          width: 44,
+          height: 44,
           child: Material(
             color: Colors.transparent,
             shape: const CircleBorder(),

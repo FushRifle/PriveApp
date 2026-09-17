@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
+import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/bloc/reels/reel_bloc.dart';
 import 'package:clique/core/clients/cloudinary_service.dart';
@@ -16,6 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
 import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
 import 'package:clique/ui/pages/main/reels/create_reel_page.dart';
 
@@ -31,8 +33,7 @@ class CreatePostPage extends StatefulWidget {
 class _CreatePostPageState extends State<CreatePostPage> {
   final TextEditingController _textController =
       HighlightTokenTextEditingController();
-  final TextEditingController _hashtagController =
-      HighlightTokenTextEditingController();
+  final FocusNode _composerFocusNode = FocusNode();
   final List<TextEditingController> _pollOptionControllers = [
     TextEditingController(),
     TextEditingController(),
@@ -46,7 +47,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
   final PostDraftService _draftService = PostDraftService();
 
   final List<MediaItem> _mediaItems = [];
-  final List<String> _hashtags = [];
   final List<String> _trendingHashtags = const [
     'technology',
     'flutter',
@@ -86,7 +86,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
     _draftSaveTimer?.cancel();
     _textController.removeListener(_onComposerChanged);
     _textController.dispose();
-    _hashtagController.dispose();
+    _composerFocusNode.dispose();
     for (final controller in _pollOptionControllers) {
       controller.dispose();
     }
@@ -103,11 +103,19 @@ class _CreatePostPageState extends State<CreatePostPage> {
   void _restoreDraft(Map<String, dynamic>? draft) {
     if (draft == null) return;
 
-    _textController.text = draft['text']?.toString() ?? '';
-    _hashtagController.text = draft['hashtagText']?.toString() ?? '';
-    _hashtags
-      ..clear()
-      ..addAll((draft['hashtags'] as List? ?? const []).map((e) => '$e'));
+    final restoredText = draft['text']?.toString() ?? '';
+    final legacyTags = <String>{
+      ...(draft['hashtags'] as List? ?? const []).map((tag) => '$tag'),
+      ..._extractHashtags(draft['hashtagText']?.toString() ?? ''),
+    };
+    final missingTags = legacyTags
+        .where((tag) =>
+            !restoredText.toLowerCase().contains('#${tag.toLowerCase()}'))
+        .map((tag) => '#$tag')
+        .join(' ');
+    _textController.text = missingTags.isEmpty
+        ? restoredText
+        : '${restoredText.trim()}${restoredText.trim().isEmpty ? '' : '\n\n'}$missingTags';
     _postType = PostComposerType.values.firstWhere(
       (type) => type.name == draft['postType']?.toString(),
       orElse: () => PostComposerType.post,
@@ -145,8 +153,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
     if (_isSubmitting) return;
 
     final hasContent = _textController.text.trim().isNotEmpty ||
-        _hashtagController.text.trim().isNotEmpty ||
-        _hashtags.isNotEmpty ||
         _pollOptions.isNotEmpty ||
         _mediaItems.isNotEmpty;
     if (!hasContent) {
@@ -157,8 +163,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
     await _draftService.upsertDraft({
       'id': _draftId,
       'text': _textController.text,
-      'hashtagText': _hashtagController.text,
-      'hashtags': _hashtags,
       'postType': _postType.name,
       'anonymousCategory': _anonymousCategory,
       'pollExpirationHours': _pollExpirationHours,
@@ -179,8 +183,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
   bool get _hasDraftContent =>
       _textController.text.trim().isNotEmpty ||
-      _hashtagController.text.trim().isNotEmpty ||
-      _hashtags.isNotEmpty ||
       _pollOptions.isNotEmpty ||
       _mediaItems.isNotEmpty;
 
@@ -188,8 +190,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
     if (_isSubmitting || _isPicking) return false;
 
     final hasText = _textController.text.trim().isNotEmpty;
-    final hasTags = _hashtags.isNotEmpty ||
-        _extractHashtags(_hashtagController.text).isNotEmpty;
 
     if (_postType == PostComposerType.poll) {
       return _textController.text.trim().isNotEmpty && _pollOptions.length >= 2;
@@ -197,7 +197,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
     if (_postType == PostComposerType.question) {
       return hasText;
     }
-    return hasText || hasTags || _hasMedia;
+    return hasText || _hasMedia;
   }
 
   List<String> get _pollOptions => _pollOptionControllers
@@ -236,8 +236,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                       postType: _postType,
                       anonymousCategory: _anonymousCategory,
                       textController: _textController,
-                      hashtagController: _hashtagController,
-                      hashtags: _hashtags,
+                      composerFocusNode: _composerFocusNode,
                       mediaItems: _mediaItems,
                       pollOptionControllers: _pollOptionControllers,
                       pollExpirationHours: _pollExpirationHours,
@@ -254,26 +253,28 @@ class _CreatePostPageState extends State<CreatePostPage> {
                       onAnonymousCategoryChanged: (cat) {
                         setState(() => _anonymousCategory = cat);
                       },
-                      onAddHashtag: _addHashtag,
-                      onRemoveHashtag: _removeHashtag,
                       suggestionsBuilder: _suggestTokens,
                       onPollExpirationHoursChanged: (h) {
                         setState(() => _pollExpirationHours = h);
                       },
                       onAddPollOption: _addPollOption,
                       onRemovePollOption: _removePollOption,
-                      onPickImage: () =>
-                          _pickMedia(MediaType.image, ImageSource.gallery),
-                      onPickCamera: () =>
-                          _pickMedia(MediaType.image, ImageSource.camera),
-                      onPickVideo: () =>
-                          _pickMedia(MediaType.video, ImageSource.gallery),
                       onRemoveMedia: (index) {
                         setState(() {
                           _mediaItems.removeAt(index);
                         });
                       },
                     ),
+                  ),
+                  _ComposerToolbar(
+                    enabled: !_isSubmitting && !_isPicking,
+                    onPickImage: () =>
+                        _pickMedia(MediaType.image, ImageSource.gallery),
+                    onPickCamera: () =>
+                        _pickMedia(MediaType.image, ImageSource.camera),
+                    onPickVideo: () =>
+                        _pickMedia(MediaType.video, ImageSource.gallery),
+                    onAddHashtag: _insertHashtagToken,
                   ),
                 ],
               ),
@@ -340,28 +341,26 @@ class _CreatePostPageState extends State<CreatePostPage> {
     }
   }
 
-  void _addHashtag(String rawTag) {
-    final tags = _extractHashtags(rawTag)
-        .where((tag) => !_hashtags.contains(tag))
-        .toList();
+  void _insertHashtagToken() {
+    if (_isSubmitting || _isPicking) return;
 
-    if (tags.isEmpty) {
-      _hashtagController.clear();
-      return;
-    }
+    final value = _textController.value;
+    final selection = value.selection.isValid
+        ? value.selection
+        : TextSelection.collapsed(offset: value.text.length);
+    final start = selection.start.clamp(0, value.text.length);
+    final end = selection.end.clamp(start, value.text.length);
+    final needsSpace = start > 0 &&
+        !RegExp(r'\s').hasMatch(value.text.substring(start - 1, start));
+    final insertion = needsSpace ? ' #' : '#';
+    final updated = value.text.replaceRange(start, end, insertion);
 
+    _textController.value = TextEditingValue(
+      text: updated,
+      selection: TextSelection.collapsed(offset: start + insertion.length),
+    );
+    _composerFocusNode.requestFocus();
     HapticFeedback.selectionClick();
-    setState(() {
-      _hashtags.addAll(tags);
-      _hashtagController.clear();
-    });
-  }
-
-  void _removeHashtag(String tag) {
-    HapticFeedback.selectionClick();
-    setState(() {
-      _hashtags.remove(tag);
-    });
   }
 
   void _addPollOption() {
@@ -411,8 +410,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
     final sourceTags = <String>{
       ..._trendingHashtags,
-      ..._hashtags,
-      ..._extractHashtags(_hashtagController.text),
+      ..._extractHashtags(_textController.text),
     };
 
     final results = sourceTags
@@ -475,21 +473,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
   // --- Content & Hashtags ---------------------------------------------------
   String _contentWithHashtags() {
-    String content = _textController.text.trim();
-    final tags = <String>[
-      ..._hashtags,
-      ..._extractHashtags(_hashtagController.text),
-    ];
-    final uniqueTags = _dedupeTags(tags);
-
-    if (uniqueTags.isNotEmpty) {
-      if (content.isNotEmpty) {
-        content += '\n\n';
-      }
-      content += uniqueTags.map((tag) => '#$tag').join(' ');
-    }
-
-    return content;
+    return _textController.text.trim();
   }
 
   List<String> _extractHashtags(String rawValue) {
@@ -498,15 +482,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
         .map((tag) => tag.replaceAll('#', '').trim().toLowerCase())
         .where((tag) => RegExp(r'^[a-z0-9_]+$').hasMatch(tag))
         .toList();
-  }
-
-  List<String> _dedupeTags(Iterable<String> tags) {
-    final seen = <String>{};
-    final result = <String>[];
-    for (final tag in tags) {
-      if (seen.add(tag)) result.add(tag);
-    }
-    return result;
   }
 
   List<String> _extractMentions(String rawValue) {
@@ -918,69 +893,59 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-      child: Row(
-        children: [
-          Material(
-            color: AppColors.cardColor,
-            shape: const CircleBorder(),
-            child: InkWell(
-              onTap: onBack,
-              customBorder: const CircleBorder(),
-              child: SizedBox(
-                width: 42,
-                height: 42,
-                child: Icon(Icons.close,
-                    color: AppColors.blackTextColor, size: 20),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.backgroundColor,
+        border: Border(
+          bottom: BorderSide(color: AppColors.border.withOpacity(0.65)),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
+        child: Row(
+          children: [
+            IconButton(
+              tooltip: 'Close composer',
+              onPressed: isSubmitting ? null : onBack,
+              icon: const Icon(Icons.close_rounded),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                'Create post',
+                style: AppTheme.blackTextStyle.copyWith(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              'New Post',
-              textAlign: TextAlign.center,
-              style: AppTheme.blackTextStyle.copyWith(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
+            FilledButton(
+              onPressed: canSubmit ? onSubmit : null,
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(76, 38),
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                shape: const StadiumBorder(),
+                elevation: 0,
               ),
-            ),
-          ),
-          const SizedBox(width: 14),
-          GestureDetector(
-            onTap: canSubmit ? onSubmit : null,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              height: 40,
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              decoration: BoxDecoration(
-                color: canSubmit
-                    ? AppColors.primary
-                    : AppColors.dynamicBorder.withOpacity(0.7),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Center(
-                child: isSubmitting
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: AppColors.white),
-                      )
-                    : Text(
-                        'Post',
-                        style: TextStyle(
-                          color: canSubmit
-                              ? AppColors.white
-                              : AppColors.textSecondary,
-                          fontWeight: FontWeight.bold,
-                        ),
+              child: isSubmitting
+                  ? const SizedBox.square(
+                      dimension: 17,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.white,
                       ),
-              ),
+                    )
+                  : const Text(
+                      'Post',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -990,46 +955,34 @@ class _ComposerSection extends StatelessWidget {
   final PostComposerType postType;
   final String anonymousCategory;
   final TextEditingController textController;
-  final TextEditingController hashtagController;
-  final List<String> hashtags;
+  final FocusNode composerFocusNode;
   final List<MediaItem> mediaItems;
   final List<TextEditingController> pollOptionControllers;
   final int pollExpirationHours;
   final bool enabled;
   final ValueChanged<PostComposerType> onPostTypeChanged;
   final ValueChanged<String> onAnonymousCategoryChanged;
-  final ValueChanged<String> onAddHashtag;
-  final ValueChanged<String> onRemoveHashtag;
   final ValueChanged<int> onPollExpirationHoursChanged;
   final VoidCallback onAddPollOption;
   final ValueChanged<int> onRemovePollOption;
   final ComposerTokenSuggestionsBuilder suggestionsBuilder;
-  final VoidCallback onPickImage;
-  final VoidCallback onPickCamera;
-  final VoidCallback onPickVideo;
   final ValueChanged<int> onRemoveMedia;
 
   const _ComposerSection({
     required this.postType,
     required this.anonymousCategory,
     required this.textController,
-    required this.hashtagController,
-    required this.hashtags,
+    required this.composerFocusNode,
     required this.mediaItems,
     required this.pollOptionControllers,
     required this.pollExpirationHours,
     required this.enabled,
     required this.onPostTypeChanged,
     required this.onAnonymousCategoryChanged,
-    required this.onAddHashtag,
-    required this.onRemoveHashtag,
     required this.onPollExpirationHoursChanged,
     required this.onAddPollOption,
     required this.onRemovePollOption,
     required this.suggestionsBuilder,
-    required this.onPickImage,
-    required this.onPickCamera,
-    required this.onPickVideo,
     required this.onRemoveMedia,
   });
 
@@ -1039,260 +992,233 @@ class _ComposerSection extends StatelessWidget {
       physics: const BouncingScrollPhysics(),
       padding: EdgeInsets.fromLTRB(
         16,
-        4,
+        18,
         16,
-        28 + MediaQuery.viewInsetsOf(context).bottom,
+        24 + MediaQuery.viewInsetsOf(context).bottom,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Choose a format',
-            style: AppTheme.greyTextStyle.copyWith(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 46,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: PostComposerType.values.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final type = PostComposerType.values[index];
-                final selected = type == postType;
-                return ChoiceChip(
-                  label: Text(type.label),
-                  selected: selected,
-                  onSelected: enabled
-                      ? (_) {
-                          HapticFeedback.selectionClick();
-                          onPostTypeChanged(type);
-                        }
-                      : null,
-                  labelStyle: TextStyle(
-                    color: selected ? AppColors.white : AppColors.text,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  selectedColor: AppColors.primary,
-                  backgroundColor: AppColors.cardColor,
-                  side: BorderSide(color: AppColors.cardBorderColor),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                );
-              },
-            ),
-          ),
-          if (postType == PostComposerType.anonymous) ...[
-            const SizedBox(height: 14),
-            Text(
-              'Anonymous category',
-              style: AppTheme.blackTextStyle.copyWith(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                'Confession',
-                'Advice',
-                'Relationship',
-                'Rant',
-                'Question'
-              ].map((cat) {
-                final sel = cat.toLowerCase() == anonymousCategory;
-                return FilterChip(
-                  label: Text(cat),
-                  selected: sel,
-                  onSelected: enabled
-                      ? (_) => onAnonymousCategoryChanged(cat.toLowerCase())
-                      : null,
-                  backgroundColor: AppColors.cardColor,
-                  selectedColor: AppColors.primary.withOpacity(0.16),
-                  labelStyle: TextStyle(
-                    color: sel ? AppColors.primary : AppColors.text,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  side: BorderSide(color: AppColors.cardBorderColor),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-          const SizedBox(height: 16),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
-            decoration: BoxDecoration(
-              color: AppColors.cardColor,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppColors.cardBorderColor),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TokenSuggestionField(
-                  controller: textController,
-                  enabled: enabled,
-                  suggestionsBuilder: suggestionsBuilder,
-                  minLines: 6,
-                  maxLines: null,
-                  style: AppTheme.blackTextStyle.copyWith(
-                    fontSize: 16,
-                    height: 1.42,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: _composerHint(postType),
-                    hintStyle: AppTheme.greyTextStyle.copyWith(
-                      fontSize: 16,
-                      color: AppColors.textSecondary.withOpacity(0.55),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 680),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.zero,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TokenSuggestionField(
+                      controller: textController,
+                      focusNode: composerFocusNode,
+                      enabled: enabled,
+                      suggestionsBuilder: suggestionsBuilder,
+                      minLines: 7,
+                      maxLines: null,
+                      style: AppTheme.blackTextStyle.copyWith(
+                        fontSize: 15,
+                        height: 1.5,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: _composerHint(postType),
+                        hintStyle: AppTheme.greyTextStyle.copyWith(
+                          fontSize: 15,
+                          color: AppColors.textSecondary.withOpacity(0.55),
+                        ),
+                        filled: false,
+                        contentPadding: EdgeInsets.zero,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                      ),
                     ),
-                    border: InputBorder.none,
-                  ),
-                ),
-                if (postType == PostComposerType.poll) ...[
-                  const SizedBox(height: 14),
-                  _PollComposerPanel(
-                    enabled: enabled,
-                    optionControllers: pollOptionControllers,
-                    expirationHours: pollExpirationHours,
-                    onExpirationHoursChanged: onPollExpirationHoursChanged,
-                    onAddOption: onAddPollOption,
-                    onRemoveOption: onRemovePollOption,
-                  ),
-                ],
-                if (postType == PostComposerType.question) ...[
-                  const SizedBox(height: 14),
-                  _QuestionPromptPanel(enabled: enabled),
-                ],
-                if (mediaItems.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  Divider(color: AppColors.cardBorderColor),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 120,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: mediaItems.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
-                      itemBuilder: (context, index) {
-                        final item = mediaItems[index];
-                        return Stack(
-                          children: [
-                            Container(
-                              width: 100,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: AppColors.cardBorderColor,
-                                ),
-                              ),
-                              clipBehavior: Clip.antiAlias,
-                              child: item.type == MediaType.image
-                                  ? (kIsWeb && item.fileBytes != null
-                                      ? Image.memory(
-                                          item.fileBytes!,
-                                          fit: BoxFit.cover,
-                                        )
-                                      : item.file != null
-                                          ? Image.file(
-                                              item.file!,
+                    if (postType == PostComposerType.poll) ...[
+                      const SizedBox(height: 14),
+                      _PollComposerPanel(
+                        enabled: enabled,
+                        optionControllers: pollOptionControllers,
+                        expirationHours: pollExpirationHours,
+                        onExpirationHoursChanged: onPollExpirationHoursChanged,
+                        onAddOption: onAddPollOption,
+                        onRemoveOption: onRemovePollOption,
+                      ),
+                    ],
+                    if (postType == PostComposerType.question) ...[
+                      const SizedBox(height: 14),
+                      _QuestionPromptPanel(enabled: enabled),
+                    ],
+                    if (mediaItems.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Divider(color: AppColors.cardBorderColor),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 120,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: mediaItems.length,
+                          separatorBuilder: (_, __) => const SizedBox(width: 8),
+                          itemBuilder: (context, index) {
+                            final item = mediaItems[index];
+                            return Stack(
+                              children: [
+                                Container(
+                                  width: 100,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: AppColors.cardBorderColor,
+                                    ),
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: item.type == MediaType.image
+                                      ? (kIsWeb && item.fileBytes != null
+                                          ? Image.memory(
+                                              item.fileBytes!,
                                               fit: BoxFit.cover,
                                             )
-                                          : const Icon(Icons.image))
-                                  : const Icon(Icons.videocam, size: 40),
-                            ),
-                            Positioned(
-                              top: 4,
-                              right: 4,
-                              child: GestureDetector(
-                                onTap: () => onRemoveMedia(index),
-                                child: Container(
-                                  width: 24,
-                                  height: 24,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.black54,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.close,
-                                    size: 16,
-                                    color: Colors.white,
+                                          : item.file != null
+                                              ? Image.file(
+                                                  item.file!,
+                                                  fit: BoxFit.cover,
+                                                )
+                                              : const Icon(Icons.image))
+                                      : const Icon(Icons.videocam, size: 40),
+                                ),
+                                Positioned(
+                                  top: 4,
+                                  right: 4,
+                                  child: GestureDetector(
+                                    onTap: () => onRemoveMedia(index),
+                                    child: Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: const BoxDecoration(
+                                        color: Colors.black54,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.close,
+                                        size: 16,
+                                        color: Colors.white,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 22),
+              _ComposerIdentity(
+                isAnonymous: postType == PostComposerType.anonymous,
+              ),
+              const SizedBox(height: 22),
+              Text(
+                'Post format',
+                style: AppTheme.greyTextStyle.copyWith(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 46,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: PostComposerType.values.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final type = PostComposerType.values[index];
+                    final selected = type == postType;
+                    return ChoiceChip(
+                      avatar: Icon(
+                        _composerIcon(type),
+                        size: 16,
+                        color: selected
+                            ? AppColors.white
+                            : AppColors.textSecondary,
+                      ),
+                      label: Text(type.label),
+                      selected: selected,
+                      onSelected: enabled
+                          ? (_) {
+                              HapticFeedback.selectionClick();
+                              onPostTypeChanged(type);
+                            }
+                          : null,
+                      labelStyle: TextStyle(
+                        color: selected ? AppColors.white : AppColors.text,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      selectedColor: AppColors.primary,
+                      backgroundColor: AppColors.cardColor,
+                      side: BorderSide(color: AppColors.cardBorderColor),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              if (postType == PostComposerType.anonymous) ...[
+                const SizedBox(height: 14),
+                Text(
+                  'Anonymous category',
+                  style: AppTheme.blackTextStyle.copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
                   ),
-                ],
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    'Confession',
+                    'Advice',
+                    'Relationship',
+                    'Rant',
+                    'Question',
+                  ].map((category) {
+                    final selected =
+                        category.toLowerCase() == anonymousCategory;
+                    return FilterChip(
+                      label: Text(category),
+                      selected: selected,
+                      onSelected: enabled
+                          ? (_) => onAnonymousCategoryChanged(
+                                category.toLowerCase(),
+                              )
+                          : null,
+                      backgroundColor: AppColors.cardColor,
+                      selectedColor: AppColors.primary.withOpacity(0.14),
+                      labelStyle: TextStyle(
+                        color: selected ? AppColors.primary : AppColors.text,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      side: BorderSide(
+                        color: AppColors.border.withOpacity(0.7),
+                      ),
+                    );
+                  }).toList(),
+                ),
               ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Add media',
-            style: AppTheme.greyTextStyle.copyWith(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              _MediaButton(
-                icon: Icons.photo_library,
-                label: 'Gallery',
-                onTap: onPickImage,
-              ),
-              const SizedBox(width: 12),
-              _MediaButton(
-                icon: Icons.camera_alt,
-                label: 'Camera',
-                onTap: onPickCamera,
-              ),
-              const SizedBox(width: 12),
-              _MediaButton(
-                icon: Icons.videocam,
-                label: 'Video',
-                onTap: onPickVideo,
-              ),
             ],
           ),
-          const SizedBox(height: 24),
-          Divider(color: AppColors.cardBorderColor),
-          const SizedBox(height: 18),
-          Text(
-            'Topics',
-            style: AppTheme.greyTextStyle.copyWith(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 10),
-          _HashtagInput(
-            controller: hashtagController,
-            hashtags: hashtags,
-            enabled: enabled,
-            compact: true,
-            onAddHashtag: onAddHashtag,
-            onRemoveHashtag: onRemoveHashtag,
-            suggestionsBuilder: suggestionsBuilder,
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1303,41 +1229,230 @@ class _ComposerSection extends StatelessWidget {
         PostComposerType.question => 'Ask something worth answering...',
         PostComposerType.anonymous => 'Say what you need to say...',
       };
+
+  static IconData _composerIcon(PostComposerType type) => switch (type) {
+        PostComposerType.post => Icons.notes_rounded,
+        PostComposerType.poll => Icons.poll_outlined,
+        PostComposerType.question => Icons.help_outline_rounded,
+        PostComposerType.anonymous => Icons.visibility_off_outlined,
+      };
 }
 
-class _MediaButton extends StatelessWidget {
+class _ComposerIdentity extends StatelessWidget {
+  final bool isAnonymous;
+
+  const _ComposerIdentity({required this.isAnonymous});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<AuthBloc, AuthState, Map<String, dynamic>?>(
+      selector: (state) => state.user,
+      builder: (context, user) {
+        final name = isAnonymous
+            ? 'Anonymous'
+            : (user?['name']?.toString().trim().isNotEmpty == true
+                ? user!['name'].toString().trim()
+                : user?['username']?.toString().trim().isNotEmpty == true
+                    ? user!['username'].toString().trim()
+                    : 'You');
+        final avatar = user?['avatar']?.toString() ?? '';
+        final fallback =
+            name.isEmpty ? 'U' : name.characters.first.toUpperCase();
+
+        return Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isAnonymous
+                    ? AppColors.secondary.withOpacity(0.14)
+                    : AppColors.cardColor,
+                border: Border.all(
+                  color: AppColors.border.withOpacity(0.7),
+                ),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: isAnonymous
+                  ? const Icon(
+                      Icons.visibility_off_outlined,
+                      color: AppColors.secondary,
+                      size: 21,
+                    )
+                  : avatar.startsWith('http')
+                      ? AppNetworkImage(
+                          imageUrl: avatar,
+                          fit: BoxFit.cover,
+                          preset: AppNetworkImagePreset.avatar,
+                          errorBuilder: (_) => _InitialAvatar(fallback),
+                          placeholder: (_) => _InitialAvatar(fallback),
+                        )
+                      : _InitialAvatar(fallback),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTheme.blackTextStyle.copyWith(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Icon(
+                        isAnonymous
+                            ? Icons.shield_outlined
+                            : Icons.people_alt_outlined,
+                        size: 13,
+                        color: AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        isAnonymous
+                            ? 'Your identity stays hidden'
+                            : 'Visible in the Home feed',
+                        style: AppTheme.greyTextStyle.copyWith(fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _InitialAvatar extends StatelessWidget {
+  final String initial;
+
+  const _InitialAvatar(this.initial);
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: AppColors.primary.withOpacity(0.1),
+      child: Center(
+        child: Text(
+          initial,
+          style: const TextStyle(
+            color: AppColors.primary,
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ComposerToolbar extends StatelessWidget {
+  final bool enabled;
+  final VoidCallback onPickImage;
+  final VoidCallback onPickCamera;
+  final VoidCallback onPickVideo;
+  final VoidCallback onAddHashtag;
+
+  const _ComposerToolbar({
+    required this.enabled,
+    required this.onPickImage,
+    required this.onPickCamera,
+    required this.onPickVideo,
+    required this.onAddHashtag,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.backgroundColor,
+        border: Border(
+          top: BorderSide(color: AppColors.border.withOpacity(0.65)),
+        ),
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 680),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Add to your post',
+                    style: AppTheme.blackTextStyle.copyWith(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                _ToolbarAction(
+                  tooltip: 'Add photos',
+                  icon: Icons.image_outlined,
+                  enabled: enabled,
+                  onTap: onPickImage,
+                ),
+                _ToolbarAction(
+                  tooltip: 'Open camera',
+                  icon: Icons.photo_camera_outlined,
+                  enabled: enabled,
+                  onTap: onPickCamera,
+                ),
+                _ToolbarAction(
+                  tooltip: 'Add video',
+                  icon: Icons.video_library_outlined,
+                  enabled: enabled,
+                  onTap: onPickVideo,
+                ),
+                _ToolbarAction(
+                  tooltip: 'Add hashtag',
+                  icon: Icons.tag_rounded,
+                  enabled: enabled,
+                  onTap: onAddHashtag,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ToolbarAction extends StatelessWidget {
   final IconData icon;
-  final String label;
+  final String tooltip;
+  final bool enabled;
   final VoidCallback onTap;
 
-  const _MediaButton({
+  const _ToolbarAction({
     required this.icon,
-    required this.label,
+    required this.tooltip,
+    required this.enabled,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppColors.cardColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.cardBorderColor),
+    return Tooltip(
+      message: tooltip,
+      child: IconButton(
+        onPressed: enabled ? onTap : null,
+        style: IconButton.styleFrom(
+          foregroundColor: AppColors.primary,
+          disabledForegroundColor: AppColors.textHint,
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 18, color: AppColors.primary),
-            const SizedBox(width: 6),
-            Text(label,
-                style:
-                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-          ],
-        ),
+        icon: Icon(icon, size: 21),
       ),
     );
   }
@@ -1368,29 +1483,26 @@ class _PollComposerPanel extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.cardColor,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.cardBorderColor),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withOpacity(0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        color: AppColors.backgroundColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border.withOpacity(0.7)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.poll_rounded, color: AppColors.primary),
-              const SizedBox(width: 10),
+              const Icon(
+                Icons.poll_outlined,
+                color: AppColors.primary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
               Text(
                 'Poll Options',
                 style: AppTheme.blackTextStyle.copyWith(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const Spacer(),
@@ -1401,20 +1513,12 @@ class _PollComposerPanel extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            'Polls are active and will appear in the feed as soon as you post them.',
-            style: AppTheme.greyTextStyle.copyWith(
-              fontSize: 12,
-              height: 1.35,
-            ),
-          ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
               color: AppColors.primary.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
               children: [
@@ -1435,7 +1539,7 @@ class _PollComposerPanel extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           ...optionControllers.asMap().entries.map(
             (entry) {
               final index = entry.key;
@@ -1585,24 +1689,9 @@ class _QuestionPromptPanel extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.cardColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.cardBorderColor),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.cardColor,
-            AppColors.secondary.withOpacity(0.08),
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        color: AppColors.secondary.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.secondary.withOpacity(0.22)),
       ),
       child: Row(
         children: [
@@ -1611,7 +1700,7 @@ class _QuestionPromptPanel extends StatelessWidget {
             height: 42,
             decoration: BoxDecoration(
               color: AppColors.secondary.withOpacity(0.14),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
               Icons.question_mark_rounded,
@@ -1622,130 +1711,13 @@ class _QuestionPromptPanel extends StatelessWidget {
           Expanded(
             child: Text(
               enabled
-                  ? 'Write a sharp question and let the feed handle the discussion.'
-                  : 'Question cards are being prepared.',
+                  ? 'Questions invite replies. Keep yours clear and specific.'
+                  : 'Question publishing is temporarily unavailable.',
               style: AppTheme.greyTextStyle.copyWith(
                 color: AppColors.textSecondary,
                 fontSize: 13,
                 height: 1.4,
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HashtagInput extends StatelessWidget {
-  final TextEditingController controller;
-  final List<String> hashtags;
-  final bool enabled;
-  final bool compact;
-  final ValueChanged<String> onAddHashtag;
-  final ValueChanged<String> onRemoveHashtag;
-  final ComposerTokenSuggestionsBuilder suggestionsBuilder;
-
-  const _HashtagInput({
-    required this.controller,
-    required this.hashtags,
-    required this.enabled,
-    required this.compact,
-    required this.onAddHashtag,
-    required this.onRemoveHashtag,
-    required this.suggestionsBuilder,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        TokenSuggestionField(
-          controller: controller,
-          enabled: enabled,
-          suggestionsBuilder: suggestionsBuilder,
-          supportedTokenTypes: const [ComposerTokenType.hashtag],
-          textInputAction: TextInputAction.done,
-          onSubmitted: onAddHashtag,
-          style: AppTheme.blackTextStyle.copyWith(fontSize: 15),
-          textAlign: TextAlign.start,
-          decoration: InputDecoration(
-            hintText: 'Add hashtags',
-            hintStyle: AppTheme.greyTextStyle.copyWith(fontSize: 14),
-            border: InputBorder.none,
-            prefixIcon: const Icon(
-              Icons.tag_rounded,
-              color: AppColors.primary,
-              size: 18,
-            ),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            filled: true,
-            fillColor: AppColors.cardColor,
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: AppColors.cardBorderColor),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.primary),
-            ),
-          ),
-        ),
-        if (hashtags.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: hashtags.map((tag) {
-                return _HashtagChip(
-                  tag: tag,
-                  onRemove: () => onRemoveHashtag(tag),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _HashtagChip extends StatelessWidget {
-  final String tag;
-  final VoidCallback onRemove;
-
-  const _HashtagChip({required this.tag, required this.onRemove});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 7, 8, 7),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.14),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.primary.withOpacity(0.18)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '#$tag',
-            style: const TextStyle(
-              color: AppColors.primary,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(width: 6),
-          GestureDetector(
-            onTap: onRemove,
-            child: const Icon(
-              Icons.close_rounded,
-              size: 15,
-              color: AppColors.primary,
             ),
           ),
         ],

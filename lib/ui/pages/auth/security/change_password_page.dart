@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:clique/app/configs/colors.dart';
-import 'package:clique/app/configs/theme.dart';
+import 'package:clique/ui/pages/auth/auth_design.dart';
 
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
@@ -70,99 +70,73 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    return Scaffold(
-      backgroundColor:
-          isDarkMode ? AppColors.darkBackground : AppColors.lightBackground,
-      appBar: AppBar(
-        backgroundColor: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new,
-              color: isDarkMode ? AppColors.white : AppColors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Change Password',
-          style: TextStyle(
-            color: isDarkMode ? AppColors.white : AppColors.black,
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+    final palette = AuthPalette.of(context);
+    return AuthPageScaffold(
+      title: 'Change password',
+      subtitle: 'Use a strong, unique password you do not use elsewhere.',
+      icon: Icons.password_rounded,
+      child: AuthSectionCard(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: isDarkMode
-                      ? AppColors.darkBorderColor
-                      : AppColors.lightBorderColor.withOpacity(0.5),
-                ),
+            Text(
+              'Password details',
+              style: TextStyle(
+                color: palette.text,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
               ),
-              child: Column(
-                children: [
-                  _buildPasswordField(
-                    controller: _currentPasswordController,
-                    label: 'Current Password',
-                    hint: 'Enter your current password',
-                    obscure: _obscureCurrent,
-                    onToggle: () =>
-                        setState(() => _obscureCurrent = !_obscureCurrent),
-                    isDarkMode: isDarkMode,
+            ),
+            const SizedBox(height: 16),
+            _buildPasswordField(
+              controller: _currentPasswordController,
+              label: 'Current password',
+              hint: 'Enter current password',
+              obscure: _obscureCurrent,
+              onToggle: () =>
+                  setState(() => _obscureCurrent = !_obscureCurrent),
+            ),
+            const SizedBox(height: 14),
+            _buildPasswordField(
+              controller: _newPasswordController,
+              label: 'New password',
+              hint: 'At least 6 characters',
+              obscure: _obscureNew,
+              onToggle: () => setState(() => _obscureNew = !_obscureNew),
+            ),
+            const SizedBox(height: 14),
+            _buildPasswordField(
+              controller: _confirmPasswordController,
+              label: 'Confirm password',
+              hint: 'Repeat new password',
+              obscure: _obscureConfirm,
+              onToggle: () =>
+                  setState(() => _obscureConfirm = !_obscureConfirm),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _isLoading ? null : _changePassword,
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(50),
+                  backgroundColor: palette.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  const SizedBox(height: 20),
-                  _buildPasswordField(
-                    controller: _newPasswordController,
-                    label: 'New Password',
-                    hint: 'Enter new password',
-                    obscure: _obscureNew,
-                    onToggle: () => setState(() => _obscureNew = !_obscureNew),
-                    isDarkMode: isDarkMode,
-                  ),
-                  const SizedBox(height: 20),
-                  _buildPasswordField(
-                    controller: _confirmPasswordController,
-                    label: 'Confirm Password',
-                    hint: 'Confirm your new password',
-                    obscure: _obscureConfirm,
-                    onToggle: () =>
-                        setState(() => _obscureConfirm = !_obscureConfirm),
-                    isDarkMode: isDarkMode,
-                  ),
-                  const SizedBox(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _changePassword,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                ),
+                child: _isLoading
+                    ? const SizedBox.square(
+                        dimension: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.white,
                         ),
+                      )
+                    : const Text(
+                        'Update password',
+                        style: TextStyle(fontWeight: FontWeight.w800),
                       ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.white,
-                              ),
-                            )
-                          : const Text('Update Password'),
-                    ),
-                  ),
-                ],
               ),
             ),
           ],
@@ -177,45 +151,27 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     required String hint,
     required bool obscure,
     required VoidCallback onToggle,
-    required bool isDarkMode,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: AppTheme.blackTextStyle.copyWith(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
+    final palette = AuthPalette.of(context);
+    return TextField(
+      controller: controller,
+      obscureText: obscure,
+      style: TextStyle(color: palette.text, fontSize: 14),
+      decoration: authInputDecoration(
+        context,
+        label: label,
+        hint: hint,
+        icon: Icons.lock_outline_rounded,
+        suffix: IconButton(
+          tooltip: obscure ? 'Show password' : 'Hide password',
+          icon: Icon(
+            obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+            color: palette.muted,
+            size: 20,
           ),
+          onPressed: onToggle,
         ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          obscureText: obscure,
-          style: AppTheme.blackTextStyle.copyWith(fontSize: 15),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: AppTheme.greyTextStyle,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide.none,
-            ),
-            filled: true,
-            fillColor: isDarkMode
-                ? AppColors.darkBackground
-                : AppColors.lightBackground,
-            suffixIcon: IconButton(
-              icon: Icon(
-                obscure ? Icons.visibility_off : Icons.visibility,
-                color: AppColors.greyColor,
-              ),
-              onPressed: onToggle,
-            ),
-            contentPadding: const EdgeInsets.all(16),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
