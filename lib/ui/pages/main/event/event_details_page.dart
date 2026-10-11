@@ -110,7 +110,8 @@ class EventDetailsPage extends StatelessWidget {
             backgroundColor: AppColors.background,
             surfaceTintColor: Colors.transparent,
             elevation: 0,
-            title: const Text('Event details'),
+            titleSpacing: 0,
+            title: const Text('Event'),
             actions: [
               IconButton(
                 tooltip: 'Copy event details',
@@ -338,26 +339,55 @@ class _HeaderCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withOpacity(0.05),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border.withOpacity(0.7)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _EventHeroImage(imageUrl: event.imageUrl),
+          Stack(
+            children: [
+              _EventHeroImage(imageUrl: event.imageUrl),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        AppColors.transparent,
+                        AppColors.black.withOpacity(0.62),
+                      ],
+                      stops: const [0.45, 1],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 14,
+                right: 14,
+                bottom: 14,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _HeroDateBadge(date: event.startsAt),
+                    const Spacer(),
+                    if (event.isPrivate)
+                      const _OverlayBadge(
+                        icon: Icons.lock_outline_rounded,
+                        label: 'Private',
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
           Padding(
             padding: const EdgeInsets.all(18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (event.category.isNotEmpty || event.isPrivate || isOwner)
+                if (event.category.isNotEmpty || isOwner)
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -367,11 +397,9 @@ class _HeaderCard extends StatelessWidget {
                             label: 'Your event', icon: Icons.verified_outlined),
                       if (event.category.isNotEmpty)
                         _Chip(label: event.category, icon: Icons.sell_outlined),
-                      if (event.isPrivate)
-                        _Chip(label: 'Private', icon: Icons.lock_outline),
                     ],
                   ),
-                if (event.category.isNotEmpty || event.isPrivate || isOwner)
+                if (event.category.isNotEmpty || isOwner)
                   const SizedBox(height: 12),
                 Text(
                   event.title,
@@ -382,12 +410,6 @@ class _HeaderCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
-                _InfoRow(
-                  icon: Icons.event_outlined,
-                  title: _formatDate(event.startsAt),
-                  subtitle: _formatTimeRange(event.startsAt, event.endsAt),
-                ),
-                const SizedBox(height: 14),
                 Text(
                   event.description.isEmpty
                       ? 'No description provided.'
@@ -415,7 +437,7 @@ class _EventHeroImage extends StatelessWidget {
   Widget build(BuildContext context) {
     if (imageUrl.trim().startsWith('http')) {
       return AspectRatio(
-        aspectRatio: 16 / 10,
+        aspectRatio: 16 / 9,
         child: AppNetworkImage(
           imageUrl: imageUrl,
           fit: BoxFit.cover,
@@ -427,7 +449,7 @@ class _EventHeroImage extends StatelessWidget {
     }
 
     return AspectRatio(
-      aspectRatio: 16 / 10,
+      aspectRatio: 16 / 9,
       child: Container(
         color: AppColors.background,
         alignment: Alignment.center,
@@ -469,6 +491,96 @@ class _EventHeroImage extends StatelessWidget {
   }
 }
 
+class _HeroDateBadge extends StatelessWidget {
+  final DateTime date;
+
+  const _HeroDateBadge({required this.date});
+
+  @override
+  Widget build(BuildContext context) {
+    final local = date.toLocal();
+    const months = [
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MAY',
+      'JUN',
+      'JUL',
+      'AUG',
+      'SEP',
+      'OCT',
+      'NOV',
+      'DEC',
+    ];
+    return Container(
+      width: 54,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            months[local.month - 1],
+            style: const TextStyle(
+              color: AppColors.primary,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.5,
+            ),
+          ),
+          Text(
+            '${local.day}',
+            style: const TextStyle(
+              color: AppColors.black,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              height: 1.05,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OverlayBadge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _OverlayBadge({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppColors.black.withOpacity(0.55),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.white.withOpacity(0.18)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: AppColors.white),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SectionCard extends StatelessWidget {
   final String title;
   final Widget child;
@@ -485,8 +597,8 @@ class _SectionCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border.withOpacity(0.7)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -649,13 +761,14 @@ class _BottomActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasEnded = (event.endsAt ??
-            event.startsAt.add(const Duration(hours: 4)))
-        .isBefore(DateTime.now());
+    final hasEnded =
+        (event.endsAt ?? event.startsAt.add(const Duration(hours: 4)))
+            .isBefore(DateTime.now());
     return Material(
       color: AppColors.card,
-      elevation: 12,
-      shadowColor: AppColors.black.withOpacity(0.12),
+      shape: Border(
+        top: BorderSide(color: AppColors.border.withOpacity(0.7)),
+      ),
       child: SafeArea(
         top: false,
         child: Center(
@@ -663,7 +776,7 @@ class _BottomActionBar extends StatelessWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 760),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
               child: isOwner
                   ? FilledButton.icon(
                       onPressed: isBusy ? null : onEdit,
@@ -673,11 +786,11 @@ class _BottomActionBar extends StatelessWidget {
                     )
                   : hasEnded
                       ? Container(
-                          height: 54,
+                          height: 50,
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             color: AppColors.background,
-                            borderRadius: BorderRadius.circular(18),
+                            borderRadius: BorderRadius.circular(14),
                             border: Border.all(color: AppColors.border),
                           ),
                           child: Text(
@@ -733,9 +846,9 @@ class _BottomActionBar extends StatelessWidget {
                                   event.isInterested ? 'Saved' : 'Interested',
                                 ),
                                 style: OutlinedButton.styleFrom(
-                                  minimumSize: const Size(double.infinity, 54),
+                                  minimumSize: const Size(double.infinity, 50),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(18),
+                                    borderRadius: BorderRadius.circular(14),
                                   ),
                                 ),
                               ),
@@ -751,9 +864,9 @@ class _BottomActionBar extends StatelessWidget {
 
   ButtonStyle _filledStyle() {
     return FilledButton.styleFrom(
-      minimumSize: const Size(double.infinity, 54),
+      minimumSize: const Size(double.infinity, 50),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
       ),
     );
   }
@@ -784,8 +897,7 @@ class _EventStatusBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final end =
-        event.endsAt ?? event.startsAt.add(const Duration(hours: 4));
+    final end = event.endsAt ?? event.startsAt.add(const Duration(hours: 4));
     final hasEnded = end.isBefore(now);
     final isLive = !event.startsAt.isAfter(now) && end.isAfter(now);
     final start = event.startsAt.difference(now);

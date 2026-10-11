@@ -75,7 +75,7 @@ class PostActions extends StatelessWidget {
                           '${_formatCount(viewCount)} views',
                           style: TextStyle(
                             color: AppColors.textSecondary.withOpacity(0.85),
-                            fontSize: 10,
+                            fontSize: 11.0,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.1,
                           ),
@@ -104,7 +104,7 @@ class PostActions extends StatelessWidget {
                     ),
                   ],
                   _ResponsiveAction(
-                    icon: Icons.chat_bubble_outline_rounded,
+                    icon: Icons.comment_bank_rounded,
                     label: _formatCount(commentCount),
                     color: actionColor,
                     onTap: onComment,
@@ -186,10 +186,10 @@ class _ResponsiveAction extends StatelessWidget {
   Widget build(BuildContext context) {
     final shouldShowLabel = showLabel && label != null && label!.isNotEmpty;
 
-    final horizontalPadding = shouldShowLabel ? 6.0 : 7.0;
+    final horizontalPadding = shouldShowLabel ? 16.0 : 16.0;
     const verticalPadding = 7.0;
     final iconSize = compact ? 20.0 : 21.0;
-    const fontSize = 12.0;
+    const fontSize = 11.0;
 
     return Material(
       color: Colors.transparent,

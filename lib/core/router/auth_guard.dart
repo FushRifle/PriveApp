@@ -323,7 +323,7 @@ class _BootstrapperState extends State<_Bootstrapper> {
       setState(() {
         _loading = false;
         _error = error is TimeoutException
-            ? 'Loading your account took too long. Check your connection and try again.'
+            ? 'Sign in took too long. Check your connection and try again.'
             : 'We could not finish loading your account. Please try again.';
       });
     }
@@ -474,7 +474,16 @@ class _ErrorScreen extends StatelessWidget {
                 const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: onRetry,
-                  child: const Text('Retry'),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(120, 48),
+                  ),
+                  child: const Text(
+                    'Retry',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 TextButton(

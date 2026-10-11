@@ -10,7 +10,7 @@ import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/bloc/event/event_bloc.dart';
 import 'package:clique/core/models/event_model.dart';
 
-import 'package:clique/ui/widgets/common/app_page_header.dart';
+import 'package:clique/ui/widgets/common/main_tab_header.dart';
 import 'package:clique/ui/widgets/events/event_card.dart';
 import 'package:clique/ui/widgets/events/events_empty_state.dart';
 import 'package:clique/ui/widgets/events/events_loading_shimmer.dart';
@@ -69,9 +69,12 @@ class _EventsPageState extends State<EventsPage>
           previous.actionStatus != current.actionStatus,
       listener: _handleStateChange,
       builder: (context, state) {
-        final isInitialLoading =
-            state.status == EventStatus.loading && state.events.isEmpty;
-        final isEmpty = state.events.isEmpty && !isInitialLoading;
+        final hasEvents = state.events.isNotEmpty;
+        final isInitialLoading = !hasEvents &&
+            (state.status == EventStatus.initial ||
+                state.status == EventStatus.loading);
+        final isEmpty = !hasEvents && state.status == EventStatus.success;
+        final hasInitialError = !hasEvents && state.status == EventStatus.error;
         final isFiltered =
             state.query.trim().isNotEmpty || state.category.trim().isNotEmpty;
         final featured = _featuredEvent(state.events);
@@ -81,213 +84,222 @@ class _EventsPageState extends State<EventsPage>
 
         return Scaffold(
           backgroundColor: theme.scaffoldBackgroundColor,
-          body: RefreshIndicator(
-            onRefresh: _refresh,
-            color: AppColors.primary,
-            child: CustomScrollView(
-              controller: _scrollController,
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                // Header Section
-                SliverToBoxAdapter(
-                  child: _PageWidth(
-                    child: AppPageHeader(
-                      title: 'Events',
-                      subtitle: 'Find your next room, meetup, or night out.',
-                      leadingIcon: Icons.event_rounded,
-                      actionIcon: Icons.add_rounded,
-                      onActionTap: _openCreateEvent,
-                    ),
-                  ),
-                ),
-
-                if (!isInitialLoading && !isEmpty)
-                  SliverToBoxAdapter(
-                    child: _PageWidth(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                        child: _EventsOverview(
-                          count: state.events.length,
-                          goingCount: state.events
-                              .where((event) => event.isGoing)
-                              .length,
-                          interestedCount: state.events
-                              .where((event) => event.isInterested)
-                              .length,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                // Search & Filters
-                SliverToBoxAdapter(
-                  child: _PageWidth(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 18, 16, 20),
-                      child: EventsSearchAndFilters(
-                        searchController: _searchController,
-                        category: _category,
-                        onCategoryChanged: _changeCategory,
-                        onSearch: _search,
-                        onQueryChanged: _queueSearch,
-                        onClear: _clearSearch,
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Featured Section Label
-                if (!isEmpty)
-                  SliverToBoxAdapter(
-                    child: _PageWidth(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
-                        child: EventsSectionLabel(
-                          title: isFiltered ? 'Search results' : 'Up next',
-                          subtitle: isFiltered
-                              ? '${state.events.length} ${state.events.length == 1 ? 'event' : 'events'} found'
-                              : 'The closest upcoming event in your community',
-                        ),
-                      ),
-                    ),
-                  ),
-
-                // Background Update Indicator
-                if (state.status == EventStatus.loading &&
-                    state.events.isNotEmpty)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-                      child: const _BackgroundUpdatePill(),
-                    ),
-                  ),
-
-                // Loading State
-                if (isInitialLoading)
-                  const SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(20, 0, 20, 32),
-                      child: EventsLoadingShimmer(),
-                    ),
-                  )
-
-                // Empty State
-                else if (isEmpty)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: EventsEmptyState(
-                        onCreate: _openCreateEvent,
-                        isFiltered: isFiltered,
-                        onClearFilters: _clearFilters,
-                      ),
-                    ),
-                  )
-
-                // Events Content
-                else ...[
-                  // Featured Event Card
-                  SliverToBoxAdapter(
-                    child: _PageWidth(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Builder(
-                          builder: (context) {
-                            final currentFeatured = featured!;
-                            return EventCard(
-                              event: currentFeatured,
-                              compact: false,
-                              onTap: () => _openEventDetails(currentFeatured),
-                              isOwner: _isOwner(currentFeatured),
-                              onEdit: () => _openEditEvent(currentFeatured),
-                              isBusy: state.actionStatus ==
-                                      EventActionStatus.loading &&
-                                  state.activeEventId == currentFeatured.id,
-                              onGoing: () => context.read<EventBloc>().add(
-                                    RsvpEvent(
-                                      eventId: currentFeatured.id,
-                                      status: 'going',
-                                    ),
-                                  ),
-                              onInterested: () => context.read<EventBloc>().add(
-                                    RsvpEvent(
-                                      eventId: currentFeatured.id,
-                                      status: 'interested',
-                                    ),
-                                  ),
-                              onLeave: () => context.read<EventBloc>().add(
-                                    RsvpEvent(
-                                      eventId: currentFeatured.id,
-                                      status: 'not_going',
-                                    ),
-                                  ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // More Events Section
-                  SliverToBoxAdapter(
-                    child: _PageWidth(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 28, 16, 14),
-                        child: EventsSectionLabel(
-                          title: isFiltered ? 'Keep exploring' : 'More events',
-                          subtitle: remaining.isEmpty
-                              ? 'No additional events right now'
-                              : '${remaining.length} more ${remaining.length == 1 ? 'event' : 'events'} to explore',
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Remaining Events List
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-                    sliver: remaining.isEmpty
-                        ? const SliverToBoxAdapter(child: SizedBox.shrink())
-                        : SliverToBoxAdapter(
-                            child: _EventGrid(
-                              events: remaining,
-                              state: state,
-                              isOwner: _isOwner,
-                              onTap: _openEventDetails,
-                              onEdit: _openEditEvent,
-                              onRsvp: _rsvp,
-                            ),
-                          ),
+          body: Column(
+            children: [
+              MainTabHeader(
+                title: 'Events',
+                subtitle: 'Find your next room, meetup, or night out.',
+                actions: [
+                  MainTabHeaderAction(
+                    icon: Icons.add_rounded,
+                    tooltip: 'Create event',
+                    onTap: _openCreateEvent,
                   ),
                 ],
-
-                // Pagination Loader
-                if (!isInitialLoading &&
-                    !isEmpty &&
-                    state.isLoadingMore &&
-                    state.events.isNotEmpty)
-                  const SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.only(top: 8, bottom: 40),
-                      child: Center(
-                        child: SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: AppColors.primary,
+              ),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: _refresh,
+                  color: AppColors.primary,
+                  child: CustomScrollView(
+                    controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      // Search & Filters
+                      SliverToBoxAdapter(
+                        child: _PageWidth(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 18, 16, 20),
+                            child: EventsSearchAndFilters(
+                              searchController: _searchController,
+                              category: _category,
+                              onCategoryChanged: _changeCategory,
+                              onSearch: _search,
+                              onQueryChanged: _queueSearch,
+                              onClear: _clearSearch,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
 
-                // Bottom Safe Area
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: 100),
+                      // Featured Section Label
+                      if (hasEvents)
+                        SliverToBoxAdapter(
+                          child: _PageWidth(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
+                              child: EventsSectionLabel(
+                                title:
+                                    isFiltered ? 'Search results' : 'Up next',
+                                subtitle: isFiltered
+                                    ? '${state.events.length} ${state.events.length == 1 ? 'event' : 'events'} found'
+                                    : 'The closest upcoming event in your community',
+                              ),
+                            ),
+                          ),
+                        ),
+
+                      // Background Update Indicator
+                      if (state.status == EventStatus.loading &&
+                          state.events.isNotEmpty)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                            child: const _BackgroundUpdatePill(),
+                          ),
+                        ),
+
+                      // Loading State
+                      if (isInitialLoading)
+                        const SliverToBoxAdapter(
+                          child: _PageWidth(
+                            child: Padding(
+                              padding: EdgeInsets.fromLTRB(16, 0, 16, 32),
+                              child: EventsLoadingShimmer(),
+                            ),
+                          ),
+                        )
+
+                      // Failed Initial Load
+                      else if (hasInitialError)
+                        SliverToBoxAdapter(
+                          child: _PageWidth(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+                              child: _EventsLoadError(onRetry: _retry),
+                            ),
+                          ),
+                        )
+
+                      // Empty State
+                      else if (isEmpty)
+                        SliverToBoxAdapter(
+                          child: _PageWidth(
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
+                              child: EventsEmptyState(
+                                onCreate: _openCreateEvent,
+                                isFiltered: isFiltered,
+                                onClearFilters: _clearFilters,
+                              ),
+                            ),
+                          ),
+                        )
+
+                      // Events Content
+                      else ...[
+                        // Featured Event Card
+                        SliverToBoxAdapter(
+                          child: _PageWidth(
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
+                              child: Builder(
+                                builder: (context) {
+                                  final currentFeatured = featured!;
+                                  return EventCard(
+                                    event: currentFeatured,
+                                    compact: false,
+                                    onTap: () =>
+                                        _openEventDetails(currentFeatured),
+                                    isOwner: _isOwner(currentFeatured),
+                                    onEdit: () =>
+                                        _openEditEvent(currentFeatured),
+                                    isBusy: state.actionStatus ==
+                                            EventActionStatus.loading &&
+                                        state.activeEventId ==
+                                            currentFeatured.id,
+                                    onGoing: () =>
+                                        context.read<EventBloc>().add(
+                                              RsvpEvent(
+                                                eventId: currentFeatured.id,
+                                                status: 'going',
+                                              ),
+                                            ),
+                                    onInterested: () =>
+                                        context.read<EventBloc>().add(
+                                              RsvpEvent(
+                                                eventId: currentFeatured.id,
+                                                status: 'interested',
+                                              ),
+                                            ),
+                                    onLeave: () =>
+                                        context.read<EventBloc>().add(
+                                              RsvpEvent(
+                                                eventId: currentFeatured.id,
+                                                status: 'not_going',
+                                              ),
+                                            ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // More Events Section
+                        if (remaining.isNotEmpty)
+                          SliverToBoxAdapter(
+                            child: _PageWidth(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.fromLTRB(16, 28, 16, 14),
+                                child: EventsSectionLabel(
+                                  title: isFiltered
+                                      ? 'Keep exploring'
+                                      : 'More events',
+                                  subtitle:
+                                      '${remaining.length} more ${remaining.length == 1 ? 'event' : 'events'} to explore',
+                                ),
+                              ),
+                            ),
+                          ),
+
+                        // Remaining Events List
+                        if (remaining.isNotEmpty)
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                            sliver: SliverToBoxAdapter(
+                              child: _EventGrid(
+                                events: remaining,
+                                state: state,
+                                isOwner: _isOwner,
+                                onTap: _openEventDetails,
+                                onEdit: _openEditEvent,
+                                onRsvp: _rsvp,
+                              ),
+                            ),
+                          ),
+                      ],
+
+                      // Pagination Loader
+                      if (hasEvents && state.isLoadingMore)
+                        const SliverToBoxAdapter(
+                          child: Padding(
+                            padding: EdgeInsets.only(top: 8, bottom: 40),
+                            child: Center(
+                              child: SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                      // Bottom Safe Area
+                      const SliverToBoxAdapter(
+                        child: SizedBox(height: 100),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
@@ -399,14 +411,18 @@ class _EventsPageState extends State<EventsPage>
     }
   }
 
+  void _retry() {
+    context.read<EventBloc>().add(const LoadEvents(refresh: true));
+  }
+
   EventModel? _featuredEvent(List<EventModel> events) {
     if (events.isEmpty) return null;
     final now = DateTime.now();
     final upcoming = events
         .where(
-          (event) => (event.endsAt ??
-                  event.startsAt.add(const Duration(hours: 4)))
-              .isAfter(now),
+          (event) =>
+              (event.endsAt ?? event.startsAt.add(const Duration(hours: 4)))
+                  .isAfter(now),
         )
         .toList()
       ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
@@ -557,6 +573,65 @@ class _BackgroundUpdatePill extends StatelessWidget {
   }
 }
 
+class _EventsLoadError extends StatelessWidget {
+  final VoidCallback onRetry;
+
+  const _EventsLoadError({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border.withOpacity(0.7)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: AppColors.error.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.cloud_off_rounded,
+              color: AppColors.error,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Events couldn’t load',
+                  style: AppTheme.blackTextStyle.copyWith(
+                    fontSize: 15,
+                    fontWeight: AppTheme.bold,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Check your connection and try again.',
+                  style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          OutlinedButton(
+            onPressed: onRetry,
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _PageWidth extends StatelessWidget {
   final Widget child;
 
@@ -570,111 +645,6 @@ class _PageWidth extends StatelessWidget {
         constraints: const BoxConstraints(maxWidth: 980),
         child: child,
       ),
-    );
-  }
-}
-
-class _EventsOverview extends StatelessWidget {
-  final int count;
-  final int goingCount;
-  final int interestedCount;
-
-  const _EventsOverview({
-    required this.count,
-    required this.goingCount,
-    required this.interestedCount,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.primary.withOpacity(0.13),
-            AppColors.secondary.withOpacity(0.08),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.primary.withOpacity(0.12)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _OverviewItem(
-              icon: Icons.explore_outlined,
-              value: '$count',
-              label: 'discovered',
-            ),
-          ),
-          const _OverviewDivider(),
-          Expanded(
-            child: _OverviewItem(
-              icon: Icons.check_circle_outline_rounded,
-              value: '$goingCount',
-              label: 'you’re going',
-            ),
-          ),
-          const _OverviewDivider(),
-          Expanded(
-            child: _OverviewItem(
-              icon: Icons.bookmark_border_rounded,
-              value: '$interestedCount',
-              label: 'saved',
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _OverviewDivider extends StatelessWidget {
-  const _OverviewDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 1,
-      height: 38,
-      color: AppColors.border.withOpacity(0.8),
-    );
-  }
-}
-
-class _OverviewItem extends StatelessWidget {
-  final IconData icon;
-  final String value;
-  final String label;
-
-  const _OverviewItem({
-    required this.icon,
-    required this.value,
-    required this.label,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: AppColors.primary, size: 18),
-        const SizedBox(height: 5),
-        Text(
-          value,
-          style: AppTheme.blackTextStyle.copyWith(
-            fontSize: 17,
-            fontWeight: AppTheme.bold,
-          ),
-        ),
-        Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: AppTheme.greyTextStyle.copyWith(fontSize: 10),
-        ),
-      ],
     );
   }
 }

@@ -108,242 +108,227 @@ class _CreateEventPageState extends State<CreateEventPage> {
             backgroundColor: AppColors.background,
             surfaceTintColor: Colors.transparent,
             elevation: 0,
-            title: Text(_isEditing ? 'Edit event' : 'Create event'),
+            titleSpacing: 0,
+            title: Text(_isEditing ? 'Edit event' : 'New event'),
           ),
-          body: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.background,
-                  AppColors.primary.withOpacity(0.04),
-                  AppColors.secondary.withOpacity(0.04),
-                ],
-              ),
-            ),
-            child: SafeArea(
-              child: ListView(
-                padding: EdgeInsets.fromLTRB(
-                  16,
-                  14,
-                  16,
-                  32,
-                ),
-                children: [
-                  Align(
-                    alignment: Alignment.topCenter,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 760),
-                      child: Column(
-                        children: [
-                          _CreateEventHero(
-                            isPrivate: _isPrivate,
-                            isEditing: _isEditing,
-                          ),
-                          const SizedBox(height: 16),
-                          _SectionCard(
-                            title: 'Basics',
-                            subtitle: 'Name, description, location, and cover',
-                            child: Form(
-                              key: _formKey,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  TextFormField(
-                                    controller: _titleController,
-                                    maxLength: 80,
-                                    textInputAction: TextInputAction.next,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Title',
-                                      hintText:
-                                          'Sunday meetup, Launch party...',
-                                      prefixIcon: Icon(Icons.title_rounded),
-                                    ),
-                                    validator: (value) {
-                                      final text = value?.trim() ?? '';
-                                      if (text.length < 3) {
-                                        return 'Use at least 3 characters';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                  const SizedBox(height: 14),
-                                  TextFormField(
-                                    controller: _descriptionController,
-                                    minLines: 4,
-                                    maxLines: 6,
-                                    maxLength: 1000,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Description',
-                                      hintText:
-                                          'Tell people what this event is about.',
-                                      alignLabelWithHint: true,
-                                      prefixIcon: Icon(Icons.notes_rounded),
-                                    ),
-                                    validator: (value) {
-                                      final text = value?.trim() ?? '';
-                                      if (text.length < 12) {
-                                        return 'Add a clearer description';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                  const SizedBox(height: 14),
-                                  TextFormField(
-                                    controller: _locationController,
-                                    textInputAction: TextInputAction.next,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Location',
-                                      hintText:
-                                          'Lagos, Nigeria / Zoom / Rooftop Lounge',
-                                      prefixIcon: Icon(Icons.place_outlined),
-                                    ),
-                                    validator: (value) {
-                                      final text = value?.trim() ?? '';
-                                      if (text.length < 3) {
-                                        return 'Add a location';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                  const SizedBox(height: 14),
-                                  _CoverImageCard(
-                                    imageUrl: _imageController.text.trim(),
-                                    isUploading: _isUploadingCover,
-                                    onTap: _pickCoverImage,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          _SectionCard(
-                            title: 'Timing',
-                            subtitle: 'When the event starts and ends',
-                            child: Column(
-                              children: [
-                                _DateTimePickerCard(
-                                  label: 'Starts at',
-                                  value: _startsAt,
-                                  onTap: _pickStartsAt,
-                                ),
-                                const SizedBox(height: 12),
-                                _DateTimePickerCard(
-                                  label: 'Ends at',
-                                  value: _endsAt,
-                                  onTap: _pickEndsAt,
-                                ),
-                                const SizedBox(height: 12),
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
-                                    children: [
-                                      for (final hours in [1, 2, 3, 4])
-                                        ActionChip(
-                                          avatar: const Icon(
-                                            Icons.timelapse_rounded,
-                                            size: 16,
-                                          ),
-                                          label: Text('$hours hr'),
-                                          onPressed: () => _setDuration(hours),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          _SectionCard(
-                            title: 'Audience',
-                            subtitle: 'Who can see and find this event',
+          body: SafeArea(
+            child: ListView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+              children: [
+                Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 760),
+                    child: Column(
+                      children: [
+                        _CreateEventHero(
+                          isPrivate: _isPrivate,
+                          isEditing: _isEditing,
+                        ),
+                        const SizedBox(height: 16),
+                        _SectionCard(
+                          title: 'Event details',
+                          subtitle:
+                              'Make the important information easy to scan.',
+                          child: Form(
+                            key: _formKey,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'Category',
-                                  style: AppTheme.blackTextStyle.copyWith(
-                                    fontWeight: AppTheme.bold,
-                                    fontSize: 14,
-                                  ),
+                                _CoverImageCard(
+                                  imageUrl: _imageController.text.trim(),
+                                  isUploading: _isUploadingCover,
+                                  onTap: _pickCoverImage,
                                 ),
-                                const SizedBox(height: 10),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: [
-                                    for (final category in _categories)
-                                      ChoiceChip(
-                                        selected: _category == category,
-                                        label: Text(category),
-                                        onSelected: (_) => setState(() {
-                                          _category = category;
-                                        }),
-                                        selectedColor:
-                                            AppColors.primary.withOpacity(0.12),
-                                        backgroundColor: AppColors.background,
-                                        shape: StadiumBorder(
-                                          side: BorderSide(
-                                            color: _category == category
-                                                ? AppColors.primary
-                                                : AppColors.border,
-                                          ),
-                                        ),
-                                      ),
-                                  ],
+                                const SizedBox(height: 18),
+                                TextFormField(
+                                  controller: _titleController,
+                                  maxLength: 80,
+                                  textInputAction: TextInputAction.next,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Title',
+                                    hintText: 'Sunday meetup, Launch party...',
+                                    prefixIcon: Icon(Icons.title_rounded),
+                                  ),
+                                  validator: (value) {
+                                    final text = value?.trim() ?? '';
+                                    if (text.length < 3) {
+                                      return 'Use at least 3 characters';
+                                    }
+                                    return null;
+                                  },
                                 ),
-                                const SizedBox(height: 16),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: AppColors.background,
-                                    borderRadius: BorderRadius.circular(18),
-                                    border: Border.all(color: AppColors.border),
+                                const SizedBox(height: 14),
+                                TextFormField(
+                                  controller: _descriptionController,
+                                  minLines: 4,
+                                  maxLines: 6,
+                                  maxLength: 1000,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Description',
+                                    hintText:
+                                        'Tell people what this event is about.',
+                                    alignLabelWithHint: true,
+                                    prefixIcon: Icon(Icons.notes_rounded),
                                   ),
-                                  child: SwitchListTile.adaptive(
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 4,
-                                    ),
-                                    secondary: Icon(
-                                      _isPrivate
-                                          ? Icons.lock_outline_rounded
-                                          : Icons.public_rounded,
-                                      color: AppColors.primary,
-                                    ),
-                                    value: _isPrivate,
-                                    onChanged: (value) =>
-                                        setState(() => _isPrivate = value),
-                                    title: Text(
-                                      _isPrivate
-                                          ? 'Private event'
-                                          : 'Public event',
-                                      style: AppTheme.blackTextStyle.copyWith(
-                                        fontWeight: AppTheme.medium,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      _isPrivate
-                                          ? 'Only invited people can discover it.'
-                                          : 'Anyone in the community can discover it.',
-                                      style: AppTheme.greyTextStyle.copyWith(
-                                        fontSize: 12,
-                                      ),
-                                    ),
+                                  validator: (value) {
+                                    final text = value?.trim() ?? '';
+                                    if (text.length < 12) {
+                                      return 'Add a clearer description';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 14),
+                                TextFormField(
+                                  controller: _locationController,
+                                  textInputAction: TextInputAction.next,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Location',
+                                    hintText:
+                                        'Lagos, Nigeria / Zoom / Rooftop Lounge',
+                                    prefixIcon: Icon(Icons.place_outlined),
                                   ),
+                                  validator: (value) {
+                                    final text = value?.trim() ?? '';
+                                    if (text.length < 3) {
+                                      return 'Add a location';
+                                    }
+                                    return null;
+                                  },
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(height: 18),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 14),
+                        _SectionCard(
+                          title: 'Date and time',
+                          subtitle: 'Set a clear start and expected finish.',
+                          child: Column(
+                            children: [
+                              _DateTimePickerCard(
+                                label: 'Starts at',
+                                value: _startsAt,
+                                onTap: _pickStartsAt,
+                              ),
+                              const SizedBox(height: 12),
+                              _DateTimePickerCard(
+                                label: 'Ends at',
+                                value: _endsAt,
+                                onTap: _pickEndsAt,
+                              ),
+                              const SizedBox(height: 12),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    for (final hours in [1, 2, 3, 4])
+                                      ActionChip(
+                                        avatar: const Icon(
+                                          Icons.timelapse_rounded,
+                                          size: 16,
+                                        ),
+                                        label: Text('$hours hr'),
+                                        onPressed: () => _setDuration(hours),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        _SectionCard(
+                          title: 'Discovery',
+                          subtitle:
+                              'Choose where the event belongs and who can see it.',
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Category',
+                                style: AppTheme.blackTextStyle.copyWith(
+                                  fontWeight: AppTheme.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  for (final category in _categories)
+                                    ChoiceChip(
+                                      selected: _category == category,
+                                      label: Text(category),
+                                      onSelected: (_) => setState(() {
+                                        _category = category;
+                                      }),
+                                      selectedColor:
+                                          AppColors.primary.withOpacity(0.12),
+                                      backgroundColor: AppColors.background,
+                                      shape: StadiumBorder(
+                                        side: BorderSide(
+                                          color: _category == category
+                                              ? AppColors.primary
+                                              : AppColors.border,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: AppColors.background,
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: SwitchListTile.adaptive(
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 4,
+                                  ),
+                                  secondary: Icon(
+                                    _isPrivate
+                                        ? Icons.lock_outline_rounded
+                                        : Icons.public_rounded,
+                                    color: AppColors.primary,
+                                  ),
+                                  value: _isPrivate,
+                                  onChanged: (value) =>
+                                      setState(() => _isPrivate = value),
+                                  title: Text(
+                                    _isPrivate
+                                        ? 'Private event'
+                                        : 'Public event',
+                                    style: AppTheme.blackTextStyle.copyWith(
+                                      fontWeight: AppTheme.medium,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    _isPrivate
+                                        ? 'Only invited people can discover it.'
+                                        : 'Anyone in the community can discover it.',
+                                    style: AppTheme.greyTextStyle.copyWith(
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
           bottomNavigationBar: _CreateEventActionBar(
@@ -590,86 +575,33 @@ class _CreateEventHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.card,
-            AppColors.card.withOpacity(0.08),
-            AppColors.secondary.withOpacity(0.05),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withOpacity(0.04),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 4, 2, 2),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: (isPrivate ? AppColors.primary : AppColors.secondary)
-                  .withOpacity(0.14),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Icon(
-              isPrivate ? Icons.lock_outline : Icons.event_available_outlined,
-              color: isPrivate ? AppColors.primary : AppColors.secondary,
+          Text(
+            isEditing ? 'Keep everyone in the loop' : 'Bring people together',
+            style: AppTheme.blackTextStyle.copyWith(
+              fontSize: 22,
+              fontWeight: AppTheme.bold,
+              letterSpacing: -0.45,
             ),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isEditing
-                      ? 'Keep the details clear and up to date.'
-                      : 'Design an event people want to show up for.',
-                  style: AppTheme.blackTextStyle.copyWith(
-                    fontSize: 18,
-                    fontWeight: AppTheme.bold,
-                    height: 1.15,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  isEditing
-                      ? 'Changes are reflected anywhere this event appears.'
-                      : 'Keep the essentials in one place, then publish when the details feel right.',
-                  style: AppTheme.greyTextStyle.copyWith(
-                    fontSize: 12,
-                    height: 1.45,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _HeroBadge(
-                      icon: Icons.verified_outlined,
-                      label: isPrivate ? 'Private' : 'Public',
-                    ),
-                    _HeroBadge(
-                      icon: Icons.schedule_rounded,
-                      label: 'Fast setup',
-                    ),
-                  ],
-                ),
-              ],
+          const SizedBox(height: 5),
+          Text(
+            isEditing
+                ? 'Update anything that changed before guests arrive.'
+                : 'Add a cover, the essentials, and when people should arrive.',
+            style: AppTheme.greyTextStyle.copyWith(
+              fontSize: 13,
+              height: 1.4,
             ),
+          ),
+          const SizedBox(height: 11),
+          _HeroBadge(
+            icon: isPrivate ? Icons.lock_outline_rounded : Icons.public_rounded,
+            label: isPrivate ? 'Private event' : 'Public event',
           ),
         ],
       ),
@@ -692,26 +624,20 @@ class _CoverImageCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.background,
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: isUploading ? null : onTap,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         child: Container(
-          height: 170,
+          height: 190,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: AppColors.border),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColors.background,
-                AppColors.primary.withOpacity(0.05),
-              ],
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: AppColors.border.withOpacity(0.7),
             ),
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(18),
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -881,15 +807,8 @@ class _SectionCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withOpacity(0.03),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border.withOpacity(0.7)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -988,8 +907,6 @@ class _CreateEventActionBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.card,
-      elevation: 12,
-      shadowColor: AppColors.black.withOpacity(0.12),
       child: SafeArea(
         top: false,
         child: Center(
@@ -997,7 +914,7 @@ class _CreateEventActionBar extends StatelessWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 760),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
               child: FilledButton.icon(
                 onPressed: isSaving || isUploading ? null : onSubmit,
                 icon: isSaving || isUploading
@@ -1022,9 +939,9 @@ class _CreateEventActionBar extends StatelessWidget {
                           : (isEditing ? 'Save changes' : 'Create event'),
                 ),
                 style: FilledButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 56),
+                  minimumSize: const Size(double.infinity, 50),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                 ),
               ),

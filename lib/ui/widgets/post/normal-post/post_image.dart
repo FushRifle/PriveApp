@@ -54,7 +54,7 @@ class PostImage extends StatelessWidget {
           const ColoredBox(color: AppColors.black),
           AppNetworkImage(
             imageUrl: imageUrl,
-            fit: BoxFit.contain,
+            fit: BoxFit.cover,
             preset: AppNetworkImagePreset.card,
             placeholder: (_) => const ColoredBox(
               color: AppColors.black,

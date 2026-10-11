@@ -41,15 +41,8 @@ class _EventCardSkeleton extends StatelessWidget {
       margin: EdgeInsets.zero,
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.border.withOpacity(0.35)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withOpacity(0.03),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(

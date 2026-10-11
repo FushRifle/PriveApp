@@ -251,7 +251,10 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                   context,
                   labelText: 'Email address',
                   hintText: 'you@example.com',
-                  prefixIcon: const Icon(Icons.alternate_email_rounded),
+                  prefixIcon: const Icon(
+                    Icons.alternate_email_rounded,
+                    size: 15,
+                  ),
                   errorText: _emailError,
                 ),
                 validator: (value) => _emailError ?? _validateEmail(value),
@@ -278,7 +281,10 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                   hintText: _existingUser
                       ? 'Enter your password'
                       : '8–128 characters',
-                  prefixIcon: const Icon(Icons.lock_outline_rounded),
+                  prefixIcon: const Icon(
+                    Icons.lock_outline_rounded,
+                    size: 15,
+                  ),
                   errorText: _passwordError,
                   suffixIcon: IconButton(
                     tooltip:
@@ -291,7 +297,7 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                           ? Icons.visibility_outlined
                           : Icons.visibility_off_outlined,
                       color: colors.onSurfaceVariant,
-                      size: 20,
+                      size: 15,
                     ),
                   ),
                 ),
@@ -837,7 +843,7 @@ class _LegalLinks extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final baseStyle = theme.textTheme.bodySmall?.copyWith(
-      fontSize: 10,
+      fontSize: 8,
       height: 1.4,
     );
     final linkStyle = baseStyle?.copyWith(

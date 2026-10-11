@@ -24,16 +24,9 @@ class EventsEmptyState extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColors.card,
-                AppColors.primary.withOpacity(0.05),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: AppColors.border),
+            color: AppColors.card,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.border.withOpacity(0.7)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,

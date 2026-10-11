@@ -35,27 +35,22 @@ class EventCard extends StatelessWidget {
       builder: (context, constraints) {
         final isCompactWidth = constraints.maxWidth < 400;
         final isCompactImage = compact || isCompactWidth;
-        final hasEnded = (event.endsAt ??
-                event.startsAt.add(const Duration(hours: 4)))
-            .isBefore(DateTime.now());
+        final hasEnded =
+            (event.endsAt ?? event.startsAt.add(const Duration(hours: 4)))
+                .isBefore(DateTime.now());
 
         return Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(18),
             child: Container(
               decoration: BoxDecoration(
                 color: AppColors.card,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.border, width: 1),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.black.withOpacity(0.04),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: AppColors.border.withOpacity(0.7),
+                ),
               ),
               clipBehavior: Clip.antiAlias,
               child: Column(
@@ -184,7 +179,7 @@ class EventCard extends StatelessWidget {
                             ),
                             _MetaChip(
                               icon: Icons.favorite_border_rounded,
-                              label: '${event.interestedCount} interested',
+                              label: '${event.interestedCount} saved',
                             ),
                             if (event.host?.name.isNotEmpty == true)
                               _MetaChip(
@@ -433,14 +428,7 @@ class _EventImage extends StatelessWidget {
       height: height,
       width: double.infinity,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.primary.withOpacity(0.05),
-            AppColors.primary.withOpacity(0.1),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppColors.card,
       ),
       child: Center(
         child: Container(
@@ -475,9 +463,9 @@ class _MetaChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: AppColors.background.withOpacity(0.72),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.border, width: 1),
+        border: Border.all(color: AppColors.border.withOpacity(0.6)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
