@@ -498,7 +498,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
           else
             Container(
               color: surfaceColor,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
               child: SafeArea(
                 top: false,
                 child: Row(
@@ -512,16 +512,16 @@ class _ChatInputBarState extends State<ChatInputBar> {
                         onTap: _showAttachmentMenu,
                         customBorder: const CircleBorder(),
                         child: Container(
-                          width: 48,
-                          height: 48,
-                          decoration: const BoxDecoration(
-                            color: AppColors.primary,
-                            shape: BoxShape.circle,
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: AppColors.secondary.withOpacity(0.14),
+                            borderRadius: BorderRadius.circular(14),
                           ),
                           child: Icon(
-                            Icons.add_circle_outline,
-                            color: AppColors.white,
-                            size: 26,
+                            Icons.add_rounded,
+                            color: AppColors.secondary,
+                            size: 22,
                           ),
                         ),
                       ),

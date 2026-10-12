@@ -9,7 +9,7 @@ import 'package:clique/core/services/chat/chat_service.dart';
 import 'package:clique/core/router/named_routes.dart';
 import 'package:clique/ui/pages/main/chat/chat_page.dart';
 
-import 'package:clique/ui/widgets/common/app_page_header.dart';
+import 'package:clique/ui/widgets/common/main_tab_header.dart';
 import 'package:clique/ui/widgets/chat/inbox/inbox_loading_shimmer.dart';
 import 'package:clique/ui/widgets/chat/inbox/inbox_message_item.dart';
 import 'package:clique/ui/widgets/chat/inbox/inbox_toolbar.dart';
@@ -92,15 +92,19 @@ class _InboxPageState extends State<InboxPage> {
       backgroundColor: AppColors.background,
       body: Column(
         children: [
-          AppPageHeader(
+          MainTabHeader(
             title: 'Inbox',
-            subtitle: 'Chat With Your Clique.',
-            leadingIcon: Icons.message_outlined,
-            actionIcon: Icons.settings_rounded,
-            onActionTap: () {
-              HapticFeedback.lightImpact();
-              Navigator.pushNamed(context, NamedRoutes.settingsScreen);
-            },
+            subtitle: 'Chat with your Clique.',
+            actions: [
+              MainTabHeaderAction(
+                icon: Icons.settings_outlined,
+                tooltip: 'Settings',
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  NamedRoutes.settingsScreen,
+                ),
+              ),
+            ],
           ),
           InboxToolbar(
             controller: _searchController,

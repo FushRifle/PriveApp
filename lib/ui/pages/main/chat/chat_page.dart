@@ -679,12 +679,15 @@ class _ChatPageState extends State<ChatPage>
     final foregroundColor = isDark ? AppColors.darkText : AppColors.lightText;
 
     return AppBar(
-      backgroundColor: isDark ? AppColors.darkBackground : AppColors.white,
+      backgroundColor:
+          isDark ? AppColors.darkBackground : AppColors.lightBackground,
+      surfaceTintColor: AppColors.transparent,
       elevation: 0,
       leading: IconButton(
-        icon: Icon(Icons.arrow_back_ios_new, color: foregroundColor),
+        icon: Icon(Icons.arrow_back_rounded, color: foregroundColor, size: 22),
         onPressed: () => Navigator.pop(context),
       ),
+      titleSpacing: 2,
       title: GestureDetector(
         onTap: () => Navigator.push(
           context,
@@ -710,13 +713,13 @@ class _ChatPageState extends State<ChatPage>
         child: Row(
           children: [
             _buildAvatar(),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(widget.userName,
                     style: AppTheme.blackTextStyle
-                        .copyWith(fontWeight: FontWeight.w600, fontSize: 16)),
+                        .copyWith(fontWeight: FontWeight.w700, fontSize: 14)),
                 BlocBuilder<ChatBloc, ChatState>(
                   buildWhen: (previous, current) {
                     return previous.conversations != current.conversations;
@@ -782,15 +785,29 @@ class _ChatPageState extends State<ChatPage>
       actions: [
         if (!_isCliqueBot && widget.userId > 0) ...[
           IconButton(
-            icon: Icon(Icons.call_outlined, color: foregroundColor),
+            tooltip: 'Audio call',
+            icon: _headerAction(Icons.call_outlined),
             onPressed: () => _startCall('voice'),
           ),
           IconButton(
-            icon: Icon(Icons.videocam_outlined, color: foregroundColor),
+            tooltip: 'Video call',
+            icon: _headerAction(Icons.videocam_outlined),
             onPressed: () => _startCall('video'),
           ),
         ],
       ],
+    );
+  }
+
+  Widget _headerAction(IconData icon) {
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        color: AppColors.secondary.withOpacity(0.14),
+        borderRadius: BorderRadius.circular(11),
+      ),
+      child: Icon(icon, color: AppColors.secondary, size: 18),
     );
   }
 

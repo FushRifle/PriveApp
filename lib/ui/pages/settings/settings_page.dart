@@ -75,21 +75,23 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               return Scaffold(
                 backgroundColor: AppColors.background,
                 appBar: AppBar(
-                  backgroundColor: AppColors.transparent,
+                  backgroundColor: AppColors.background,
+                  surfaceTintColor: AppColors.transparent,
                   elevation: 0,
-                  centerTitle: true,
+                  centerTitle: false,
                   leading: IconButton(
                     onPressed: () => Navigator.pop(context),
                     icon: Icon(
-                      Icons.arrow_back_ios_new_rounded,
-                      color: AppColors.primary,
+                      Icons.arrow_back_rounded,
+                      color: AppColors.text,
+                      size: 22,
                     ),
                   ),
                   title: Text(
                     'Settings',
                     style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 17,
                       color: AppColors.text,
                     ),
                   ),
@@ -97,12 +99,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 body: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 20,
+                    horizontal: 16,
+                    vertical: 12,
                   ),
                   child: Column(
                     children: [
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 2),
                       _section(
                         'Premium',
                         [
@@ -118,12 +120,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               ),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(50),
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    AppColors.primary,
-                                    AppColors.secondary,
-                                  ],
-                                ),
+                                color: AppColors.secondary,
                               ),
                               child: const Text(
                                 'PREMIUM',
@@ -271,7 +268,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                       color: settingsState.getAppLockEnabled
                                           ? AppColors.primary
                                           : AppColors.greyColor,
-                                      fontSize: 14,
+                                      fontSize: 11,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -377,14 +374,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         ],
                         isDark,
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 6),
                       GestureDetector(
                         onTap: _isLoggingOut ? null : _logout,
                         child: Container(
                           width: double.infinity,
-                          height: 58,
+                          height: 48,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(14),
                             color: AppColors.redColor.withOpacity(0.08),
                             border: Border.all(
                               color: AppColors.redColor.withOpacity(0.2),
@@ -408,7 +405,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                         style: TextStyle(
                                           color: AppColors.redColor,
                                           fontWeight: FontWeight.w700,
-                                          fontSize: 15,
+                                          fontSize: 13,
                                         ),
                                       ),
                                     ],
@@ -418,13 +415,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                     style: TextStyle(
                                       color: AppColors.redColor,
                                       fontWeight: FontWeight.w700,
-                                      fontSize: 16,
+                                      fontSize: 13,
                                     ),
                                   ),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 24),
                     ],
                   ),
                 ),
@@ -464,32 +461,30 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     bool isDark,
   ) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 28),
+      padding: const EdgeInsets.only(bottom: 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
             padding: const EdgeInsets.only(
               left: 4,
-              bottom: 10,
+              bottom: 8,
             ),
             child: Text(
               title,
               style: TextStyle(
-                fontSize: 15,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: isDark ? AppColors.white : AppColors.black,
+                color: AppColors.textSecondary,
               ),
             ),
           ),
           Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              color: isDark ? AppColors.darkCard : AppColors.white,
+              borderRadius: BorderRadius.circular(16),
+              color: AppColors.cardColor,
               border: Border.all(
-                color: isDark
-                    ? AppColors.white10
-                    : AppColors.black.withOpacity(0.04),
+                color: AppColors.cardBorder.withOpacity(0.55),
               ),
             ),
             child: Column(
@@ -512,20 +507,21 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     return ListTile(
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 2,
+        horizontal: 12,
+        vertical: 0,
       ),
+      minTileHeight: 58,
       leading: Container(
         width: 32,
         height: 32,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          color: AppColors.secondary.withOpacity(0.8),
+          borderRadius: BorderRadius.circular(10),
+          color: AppColors.secondary.withOpacity(0.14),
         ),
         child: Icon(
           icon,
-          color: AppColors.white,
-          size: 20,
+          color: AppColors.secondary,
+          size: 18,
         ),
       ),
       title: Text(
@@ -533,19 +529,21 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         style: TextStyle(
           fontWeight: FontWeight.w600,
           color: AppColors.text,
+          fontSize: 13,
         ),
       ),
       subtitle: Text(
         subtitle,
         style: TextStyle(
-          fontSize: 12,
-          color: AppColors.grey,
+          fontSize: 11,
+          color: AppColors.textSecondary,
         ),
       ),
       trailing: trailing ??
           Icon(
             Icons.chevron_right_rounded,
-            color: AppColors.primary,
+            color: AppColors.textHint,
+            size: 20,
           ),
     );
   }
@@ -558,20 +556,21 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 2,
+        horizontal: 12,
+        vertical: 0,
       ),
+      minTileHeight: 58,
       leading: Container(
         width: 32,
         height: 32,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          color: AppColors.secondary.withOpacity(0.8),
+          borderRadius: BorderRadius.circular(10),
+          color: AppColors.secondary.withOpacity(0.14),
         ),
         child: Icon(
           icon,
-          color: AppColors.white,
-          size: 20,
+          color: AppColors.secondary,
+          size: 18,
         ),
       ),
       title: Text(
@@ -579,13 +578,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         style: TextStyle(
           fontWeight: FontWeight.w600,
           color: isDark ? AppColors.white : AppColors.black,
+          fontSize: 13,
         ),
       ),
       subtitle: Text(
         'System, light, or dark',
         style: TextStyle(
-          fontSize: 12,
-          color: AppColors.grey.shade500,
+          fontSize: 11,
+          color: AppColors.textSecondary,
         ),
       ),
       trailing: DropdownButtonHideUnderline(
@@ -600,7 +600,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           style: TextStyle(
             color: isDark ? AppColors.white : AppColors.black,
             fontWeight: FontWeight.w600,
-            fontSize: 14,
+            fontSize: 12,
           ),
           items: ThemeMode.values.map((mode) {
             return DropdownMenuItem<ThemeMode>(
@@ -635,19 +635,20 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       onChanged: onChanged,
       activeColor: AppColors.primary,
       contentPadding: const EdgeInsets.symmetric(
-        horizontal: 10,
+        horizontal: 12,
       ),
+      minTileHeight: 58,
       secondary: Container(
         width: 32,
         height: 32,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          color: AppColors.secondary.withOpacity(0.8),
+          borderRadius: BorderRadius.circular(10),
+          color: AppColors.secondary.withOpacity(0.14),
         ),
         child: Icon(
           icon,
-          color: AppColors.white,
-          size: 20,
+          color: AppColors.secondary,
+          size: 18,
         ),
       ),
       title: Text(
@@ -655,13 +656,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         style: TextStyle(
           fontWeight: FontWeight.w600,
           color: isDark ? AppColors.white : AppColors.black,
+          fontSize: 13,
         ),
       ),
       subtitle: Text(
         subtitle,
         style: TextStyle(
-          fontSize: 12,
-          color: AppColors.grey.shade500,
+          fontSize: 11,
+          color: AppColors.textSecondary,
         ),
       ),
     );
@@ -670,8 +672,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Widget _divider(bool isDark) {
     return Divider(
       height: 1,
-      indent: 78,
-      color: AppColors.cardBorder.withOpacity(0.8),
+      indent: 56,
+      endIndent: 12,
+      color: AppColors.cardBorder.withOpacity(0.45),
     );
   }
 

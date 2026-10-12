@@ -113,6 +113,8 @@ dependency_overrides:
   file_picker: ^12.0.0
 
 flutter:
+  config:
+    enable-swift-package-manager: false
   uses-material-design: true
 
   assets:
@@ -127,7 +129,7 @@ flutter_launcher_icons:
   android: true
   ios: true
   remove_alpha_ios: true
-  image_path: "iconikai-icon/ios/AppIcon-1024.png"
-  adaptive_icon_background: "#000000"
+  image_path: "assets/icons/cliquě-icon.png"
+  adaptive_icon_background: "#4ECDC4"
   adaptive_icon_padding: false
-  adaptive_icon_foreground: "iconikai-icon/android/playstore-icon.png"
+  adaptive_icon_foreground: "assets/icons/cliquě-icon.png"

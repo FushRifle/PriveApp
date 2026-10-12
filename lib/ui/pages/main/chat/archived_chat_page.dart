@@ -4,7 +4,6 @@ import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/bloc/chat/chat_bloc.dart';
 import 'package:clique/core/services/chat/chat_service.dart';
 import 'package:clique/ui/pages/main/chat/chat_page.dart';
-import 'package:clique/ui/widgets/common/app_page_header.dart';
 import 'package:clique/ui/widgets/common/app_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -41,26 +40,48 @@ class _ArchivedChatPageState extends State<ArchivedChatPage> {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
+      appBar: AppBar(
+        backgroundColor: AppColors.backgroundColor,
+        surfaceTintColor: AppColors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_rounded, size: 22),
+        ),
+        titleSpacing: 4,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Archived chats',
+              style: AppTheme.blackTextStyle.copyWith(
+                color: AppColors.text,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            Text(
+              '${conversations.length} conversations',
+              style: AppTheme.greyTextStyle.copyWith(fontSize: 11),
+            ),
+          ],
+        ),
+      ),
       body: Column(
         children: [
-          AppPageHeader(
-            title: 'Archived Chats',
-            subtitle: '${conversations.length} conversations',
-            leadingIcon: Icons.arrow_back_ios_new,
-            onLeadingTap: () => Navigator.pop(context),
-          ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
             child: TextField(
               controller: _searchController,
               onChanged: (value) => setState(() => _query = value),
               decoration: InputDecoration(
                 hintText: 'Search archived chats',
-                prefixIcon: const Icon(Icons.search_rounded),
+                prefixIcon: const Icon(Icons.manage_search_rounded, size: 20),
                 filled: true,
-                fillColor: AppColors.card,
+                fillColor: AppColors.cardColor,
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(14),
                   borderSide: BorderSide.none,
                 ),
               ),
@@ -70,9 +91,14 @@ class _ArchivedChatPageState extends State<ArchivedChatPage> {
             child: filtered.isEmpty
                 ? _emptyState()
                 : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    padding: const EdgeInsets.fromLTRB(0, 0, 0, 24),
                     itemCount: filtered.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    separatorBuilder: (_, __) => Divider(
+                      height: 1,
+                      indent: 76,
+                      endIndent: 16,
+                      color: AppColors.cardBorder.withOpacity(0.45),
+                    ),
                     itemBuilder: (context, index) {
                       return _ArchivedChatTile(
                         conversation: filtered[index],
@@ -200,14 +226,17 @@ class _ArchivedChatTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       onTap: onOpen,
-      tileColor: AppColors.card,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      contentPadding: const EdgeInsets.fromLTRB(16, 5, 8, 5),
+      minTileHeight: 66,
       leading: _avatar(),
       title: Text(
         conversation.name,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: AppTheme.blackTextStyle.copyWith(fontWeight: FontWeight.w700),
+        style: AppTheme.blackTextStyle.copyWith(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+        ),
       ),
       subtitle: Text(
         conversation.lastMessage.isEmpty
@@ -215,7 +244,7 @@ class _ArchivedChatTile extends StatelessWidget {
             : conversation.lastMessage,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: AppTheme.greyTextStyle.copyWith(fontSize: 13),
+        style: AppTheme.greyTextStyle.copyWith(fontSize: 11),
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -244,7 +273,19 @@ class _ArchivedChatTile extends StatelessWidget {
           IconButton(
             tooltip: 'Unarchive',
             onPressed: onUnarchive,
-            icon: const Icon(Icons.unarchive_outlined),
+            icon: Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: AppColors.secondary.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.unarchive_outlined,
+                color: AppColors.secondary,
+                size: 18,
+              ),
+            ),
           ),
         ],
       ),

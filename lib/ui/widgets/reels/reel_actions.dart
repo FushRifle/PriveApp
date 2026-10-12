@@ -32,47 +32,44 @@ class ActionButton extends StatelessWidget {
               HapticFeedback.mediumImpact();
               onLongPress!();
             },
-      child: Container(
-        width: 46,
-        height: 60,
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.04),
-          borderRadius: BorderRadius.circular(18),
-        ),
+      child: SizedBox(
+        width: 52,
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              color: color,
-              size: 24,
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: AppColors.black.withOpacity(0.36),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.white.withOpacity(0.14),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.black.withOpacity(0.18),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Icon(icon, color: color, size: 21),
             ),
             if (label.isNotEmpty) ...[
-              const SizedBox(height: 3),
-              Flexible(
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        height: 1,
-                        fontWeight: FontWeight.bold,
-                        shadows: [
-                          Shadow(
-                            color: Colors.black54,
-                            blurRadius: 3,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+              const SizedBox(height: 5),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.fade,
+                style: const TextStyle(
+                  color: AppColors.white,
+                  fontSize: 11,
+                  height: 1,
+                  fontWeight: FontWeight.w700,
+                  shadows: [
+                    Shadow(color: AppColors.black, blurRadius: 4),
+                  ],
                 ),
               ),
             ],

@@ -1,5 +1,7 @@
 import 'package:clique/core/models/calls.dart';
 import 'package:clique/core/services/calls/call_service.dart';
+import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/configs/theme.dart';
 import 'package:clique/ui/widgets/call/call_history_item.dart';
 import 'package:flutter/material.dart';
 
@@ -50,11 +52,40 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
-        title: const Text('Call History'),
+        backgroundColor: AppColors.backgroundColor,
+        surfaceTintColor: AppColors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_rounded, size: 22),
+        ),
+        titleSpacing: 4,
+        title: Text(
+          'Call history',
+          style: AppTheme.blackTextStyle.copyWith(
+            color: AppColors.text,
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
+            icon: Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: AppColors.secondary.withOpacity(0.14),
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: const Icon(
+                Icons.refresh_rounded,
+                color: AppColors.secondary,
+                size: 18,
+              ),
+            ),
             onPressed: _loadHistory,
           ),
         ],

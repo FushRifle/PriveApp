@@ -1,6 +1,6 @@
 # Clique
 
-# Clique Reader
+# Cliquě
 
 Welcome to Clique.
 
@@ -8,7 +8,7 @@ Clique is a social app for sharing posts, stories, reels, events, chats, and cre
 
 ## Start Here
 
-1. Open your invite link or sign in with the account tied to your wait-list entry.
+1. Open your invite link or sign in with the acěount tied to your wait-list entry.
 2. Finish your profile setup.
 3. Add a photo, a short bio, and a cover image.
 4. Choose a few interests so your feed is relevant from the start.
@@ -105,5 +105,5 @@ To get started, you need to have [Flutter](https://flutter.dev/docs/get-started/
 3. Run `flutter run` to build and run the debug app on your emulator/phone
 
 ## Credits
-- [Sajon](https://dribbble.com/sajon) for the original [Social Media App Design](https://dribbble.com/shots/15468493-Social-Media-App)
+- [Cliquě Official Website (https://clique.fishinc.cloud/) 
 - [Flutter](https://flutter.dev) for providing an amazing cross-platform framework.

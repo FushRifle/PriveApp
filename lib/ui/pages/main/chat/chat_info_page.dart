@@ -131,24 +131,38 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.background,
+        surfaceTintColor: AppColors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new, color: _text),
-          color: AppColors.primary,
+          icon: Icon(Icons.arrow_back_rounded, color: _text, size: 22),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          widget.userName,
+          'Conversation info',
           style: AppTheme.blackTextStyle.copyWith(
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
+            color: _text,
+            fontWeight: FontWeight.w800,
+            fontSize: 16,
           ),
         ),
-        centerTitle: true,
+        centerTitle: false,
+        titleSpacing: 4,
         actions: [
           IconButton(
-            icon: Icon(Icons.settings_outlined, color: _text),
-            color: AppColors.primary,
+            tooltip: 'Chat settings',
+            icon: Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: AppColors.secondary.withOpacity(0.14),
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: const Icon(
+                Icons.tune_rounded,
+                color: AppColors.secondary,
+                size: 18,
+              ),
+            ),
             onPressed: () {
               HapticFeedback.lightImpact();
               Navigator.push(
@@ -201,15 +215,15 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
           return SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               child: Column(
                 children: [
                   _buildProfileSection(conversation),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   _buildMediaSection(),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   _buildSharedFilesSection(),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   _buildPrivacySection(context, effectiveMuted),
                   const SizedBox(height: 32),
                 ],
@@ -227,7 +241,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
     final isOnline = conversation.isOnline;
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(18, 20, 18, 16),
       decoration: _cardDecoration(),
       child: Column(
         children: [
@@ -258,7 +272,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -266,25 +280,22 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                 _buildActionChip(
                     icon: Icons.call,
                     label: 'Audio',
-                    color: AppColors.primary,
                     onTap: () => _startCall('voice')),
-                const SizedBox(width: 16),
+                const SizedBox(width: 22),
                 _buildActionChip(
                     icon: Icons.videocam,
                     label: 'Video',
-                    color: AppColors.primary,
                     onTap: () => _startCall('video')),
-                const SizedBox(width: 16),
+                const SizedBox(width: 22),
               ],
               _buildActionChip(
                   icon: Icons.person_outline,
                   label: 'Profile',
-                  color: AppColors.primary,
                   onTap: _openProfile),
             ],
           ),
           if (!_isBot) ...[
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             GestureDetector(
               onTap: () {
                 HapticFeedback.lightImpact();
@@ -299,11 +310,11 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
-                  vertical: 14,
+                  vertical: 11,
                 ),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withOpacity(0.06),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: AppColors.primary.withOpacity(0.12),
                   ),
@@ -351,11 +362,14 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
       child: GestureDetector(
         onTap: _isBot ? null : _openProfile,
         child: Container(
-          width: 80,
-          height: 80,
+          width: 72,
+          height: 72,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: AppColors.primary, width: 3),
+            border: Border.all(
+              color: AppColors.secondary.withOpacity(0.65),
+              width: 2,
+            ),
             color: _surface,
           ),
           child: ClipOval(
@@ -373,7 +387,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                         child: Text(
                           fallbackText,
                           style: const TextStyle(
-                              fontSize: 32,
+                              fontSize: 28,
                               fontWeight: FontWeight.bold,
                               color: AppColors.primary),
                         ),
@@ -386,7 +400,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                       child: Text(
                         fallbackText,
                         style: TextStyle(
-                            fontSize: 32,
+                            fontSize: 28,
                             fontWeight: FontWeight.bold,
                             color: AppColors.primary),
                       ),
@@ -401,7 +415,6 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
   Widget _buildActionChip({
     required IconData icon,
     required String label,
-    required Color color,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
@@ -409,17 +422,17 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
       child: Column(
         children: [
           Container(
-            width: 52,
-            height: 52,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16)),
-            child: Icon(icon, color: color, size: 24),
+                color: AppColors.secondary.withOpacity(0.14),
+                borderRadius: BorderRadius.circular(14)),
+            child: Icon(icon, color: AppColors.secondary, size: 20),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(label,
               style: AppTheme.blackTextStyle
-                  .copyWith(fontSize: 12, fontWeight: FontWeight.w500)),
+                  .copyWith(fontSize: 11, fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -431,7 +444,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
     return BlocBuilder<ChatGalleryCubit, ChatGalleryState>(
       builder: (context, state) {
         return Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           decoration: _cardDecoration(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -442,7 +455,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                   Text('Shared Media',
                       style: AppTheme.blackTextStyle.copyWith(
                           fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                          fontSize: 14,
                           color: _text)),
                   if (state is ChatGalleryLoaded && state.images.isNotEmpty)
                     TextButton(
@@ -453,7 +466,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
                     ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               _buildMediaGrid(state),
             ],
           ),
@@ -474,7 +487,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
     if (state is ChatGalleryLoaded && state.images.isEmpty) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           child: Text('No shared media yet', style: AppTheme.greyTextStyle),
         ),
       );
@@ -524,8 +537,8 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
             children: [
               Text('Shared Files',
                   style: AppTheme.blackTextStyle.copyWith(
-                      fontWeight: FontWeight.bold, fontSize: 16, color: _text)),
-              const SizedBox(height: 16),
+                      fontWeight: FontWeight.bold, fontSize: 14, color: _text)),
+              const SizedBox(height: 12),
               if (state is ChatGalleryLoading)
                 const Center(
                     child: Padding(
@@ -595,7 +608,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
     final username = '@${widget.userName.toLowerCase().replaceAll(' ', '_')}';
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: _cardDecoration(),
       child: Column(
         children: [
@@ -637,15 +650,28 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
     required VoidCallback onTap,
   }) {
     return ListTile(
-      leading: Icon(icon, color: titleColor ?? _mutedText, size: 24),
+      leading: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: (titleColor ?? AppColors.secondary).withOpacity(0.12),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(
+          icon,
+          color: titleColor ?? AppColors.secondary,
+          size: 18,
+        ),
+      ),
       title: Text(title,
           style: AppTheme.blackTextStyle.copyWith(
-              fontWeight: FontWeight.w600, fontSize: 15, color: titleColor)),
+              fontWeight: FontWeight.w600, fontSize: 13, color: titleColor)),
       subtitle:
           Text(subtitle, style: AppTheme.greyTextStyle.copyWith(fontSize: 12)),
       trailing: Icon(Icons.chevron_right, color: _mutedText, size: 20),
       onTap: onTap,
       contentPadding: EdgeInsets.zero,
+      minTileHeight: 58,
     );
   }
 
@@ -653,14 +679,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
     return BoxDecoration(
       color: _surface,
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: _border),
-      boxShadow: [
-        BoxShadow(
-          color: AppColors.getShadowColor(_isDark),
-          blurRadius: 10,
-          offset: const Offset(0, 2),
-        ),
-      ],
+      border: Border.all(color: _border.withOpacity(0.65)),
     );
   }
 

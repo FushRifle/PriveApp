@@ -1012,61 +1012,53 @@ class _ReelItemState extends State<ReelItem>
       bottom: _bottomBarSpace,
       child: SafeArea(
         top: false,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-          decoration: BoxDecoration(
-            color: AppColors.transparent.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(28),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ActionButton(
-                icon: _isLiked
-                    ? (_selectedReactionIcon ?? Icons.favorite)
-                    : Icons.favorite_border,
-                label: formatCount(likeCount < 0 ? 0 : likeCount),
-                color: _isLiked
-                    ? (_selectedReactionColor ?? AppColors.redColor)
-                    : AppColors.white,
-                onTap: _handleLike,
-                onLongPress: _showReactionPicker,
-              ),
-              const SizedBox(height: 6),
-              ActionButton(
-                icon: Icons.mode_comment_outlined,
-                label: formatCount(commentCount < 0 ? 0 : commentCount),
-                onTap: _handleComment,
-              ),
-              const SizedBox(height: 6),
-              ActionButton(
-                icon: Icons.send_rounded,
-                label: formatCount(shareCount < 0 ? 0 : shareCount),
-                onTap: _handleShare,
-              ),
-              const SizedBox(height: 6),
-              ActionButton(
-                icon: Icons.bookmark_border_rounded,
-                label: '',
-                onTap: _saveReel,
-              ),
-              const SizedBox(height: 6),
-              ActionButton(
-                icon: _isReposted
-                    ? Icons.repeat_on_rounded
-                    : Icons.repeat_rounded,
-                label: formatCount(repostCount < 0 ? 0 : repostCount),
-                color: _isReposted ? AppColors.primary : AppColors.white,
-                onTap: _handleRepost,
-              ),
-              const SizedBox(height: 6),
-              ActionButton(
-                icon: Icons.more_horiz,
-                label: '',
-                onTap: _showMoreActions,
-              ),
-            ],
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ActionButton(
+              icon: _isLiked
+                  ? (_selectedReactionIcon ?? Icons.favorite_rounded)
+                  : Icons.favorite_border_rounded,
+              label: formatCount(likeCount < 0 ? 0 : likeCount),
+              color: _isLiked
+                  ? (_selectedReactionColor ?? AppColors.redColor)
+                  : AppColors.white,
+              onTap: _handleLike,
+              onLongPress: _showReactionPicker,
+            ),
+            const SizedBox(height: 6),
+            ActionButton(
+              icon: Icons.chat_bubble_outline_rounded,
+              label: formatCount(commentCount < 0 ? 0 : commentCount),
+              onTap: _handleComment,
+            ),
+            const SizedBox(height: 6),
+            ActionButton(
+              icon: Icons.near_me_outlined,
+              label: formatCount(shareCount < 0 ? 0 : shareCount),
+              onTap: _handleShare,
+            ),
+            const SizedBox(height: 6),
+            ActionButton(
+              icon: Icons.bookmark_add_outlined,
+              label: '',
+              onTap: _saveReel,
+            ),
+            const SizedBox(height: 6),
+            ActionButton(
+              icon:
+                  _isReposted ? Icons.repeat_on_rounded : Icons.repeat_rounded,
+              label: formatCount(repostCount < 0 ? 0 : repostCount),
+              color: _isReposted ? AppColors.primary : AppColors.white,
+              onTap: _handleRepost,
+            ),
+            const SizedBox(height: 6),
+            ActionButton(
+              icon: Icons.more_horiz_rounded,
+              label: '',
+              onTap: _showMoreActions,
+            ),
+          ],
         ),
       ),
     );
