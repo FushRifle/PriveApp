@@ -90,7 +90,7 @@ class MainTabHeaderAction extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: Material(
-        color: AppColors.secondary,
+        color: AppColors.primary,
         borderRadius: BorderRadius.circular(12),
         elevation: 0,
         child: InkWell(
@@ -202,7 +202,7 @@ class _HeaderAvatar extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: AppColors.secondary,
+        color: AppColors.primary,
       ),
       padding: const EdgeInsets.all(2),
       child: Container(

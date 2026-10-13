@@ -684,7 +684,7 @@ class _HeaderSaveButton extends StatelessWidget {
     return FilledButton(
       onPressed: enabled ? onPressed : null,
       style: FilledButton.styleFrom(
-        backgroundColor: AppColors.secondary,
+        backgroundColor: AppColors.primary,
         foregroundColor: AppColors.white,
         disabledBackgroundColor: AppColors.border.withOpacity(0.5),
         disabledForegroundColor: AppColors.textHint,

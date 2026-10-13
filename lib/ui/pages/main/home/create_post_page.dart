@@ -867,7 +867,7 @@ class _Header extends StatelessWidget {
             FilledButton(
               onPressed: canSubmit ? onSubmit : null,
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.secondary,
+                backgroundColor: AppColors.primary,
                 foregroundColor: AppColors.white,
                 disabledBackgroundColor: AppColors.border.withOpacity(0.55),
                 disabledForegroundColor: AppColors.textHint,
@@ -1329,7 +1329,7 @@ class _PostFormatOption extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
           decoration: BoxDecoration(
             color: selected
-                ? AppColors.secondary.withOpacity(0.14)
+                ? AppColors.primary.withOpacity(0.14)
                 : AppColors.transparent,
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
@@ -1345,7 +1345,7 @@ class _PostFormatOption extends StatelessWidget {
               Icon(
                 icon,
                 size: 16,
-                color: selected ? AppColors.secondary : AppColors.textSecondary,
+                color: selected ? AppColors.primary : AppColors.textSecondary,
               ),
               const SizedBox(width: 8),
               Text(
@@ -1353,7 +1353,7 @@ class _PostFormatOption extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: selected ? AppColors.secondary : AppColors.text,
+                  color: selected ? AppColors.primary : AppColors.text,
                   fontSize: 11.5,
                   fontWeight: FontWeight.w700,
                 ),
@@ -1462,8 +1462,8 @@ class _ToolbarAction extends StatelessWidget {
       child: IconButton(
         onPressed: enabled ? onTap : null,
         style: IconButton.styleFrom(
-          backgroundColor: AppColors.secondary.withOpacity(0.14),
-          foregroundColor: AppColors.secondary,
+          backgroundColor: AppColors.primary.withOpacity(0.14),
+          foregroundColor: AppColors.primary,
           disabledForegroundColor: AppColors.textHint,
           disabledBackgroundColor: AppColors.border.withOpacity(0.25),
           fixedSize: const Size.square(38),

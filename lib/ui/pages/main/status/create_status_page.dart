@@ -307,7 +307,7 @@ class _CreateStatusPageState extends State<CreateStatusPage>
             FilledButton(
               onPressed: _hasContent && !_isSubmitting ? _shareStatus : null,
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.secondary,
+                backgroundColor: AppColors.primary,
                 foregroundColor: AppColors.white,
                 disabledBackgroundColor: AppColors.border.withOpacity(0.55),
                 disabledForegroundColor: AppColors.textHint,

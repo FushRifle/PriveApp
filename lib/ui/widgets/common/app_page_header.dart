@@ -111,9 +111,7 @@ class _HeaderIconAction extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: Material(
-        color: enabled
-            ? AppColors.secondary
-            : AppColors.secondary.withOpacity(0.45),
+        color: enabled ? AppColors.primary : AppColors.textSecondary,
         borderRadius: BorderRadius.circular(12),
         elevation: 0,
         child: InkWell(
