@@ -34,6 +34,7 @@ class NamedRoutes {
   static const notificationsScreen = '/notifications-screen';
   static const searchScreen = '/search-screen';
   static const chatScreen = '/chat-screen';
+  static const globalChatSettingsScreen = '/chat-settings';
   static const reelsScreen = '/reels-screen';
 
   // Auth routes

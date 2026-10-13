@@ -145,8 +145,10 @@ class MainTabHeaderAction extends StatelessWidget {
   }
 }
 
-class _ProfileAction extends StatelessWidget {
-  const _ProfileAction();
+class MainTabProfileAction extends StatelessWidget {
+  final VoidCallback? onTap;
+
+  const MainTabProfileAction({super.key, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -165,7 +167,11 @@ class _ProfileAction extends StatelessWidget {
           child: InkWell(
             onTap: () {
               HapticFeedback.lightImpact();
-              Navigator.pushNamed(context, NamedRoutes.profileScreen);
+              if (onTap != null) {
+                onTap!();
+              } else {
+                Navigator.pushNamed(context, NamedRoutes.profileScreen);
+              }
             },
             customBorder: const CircleBorder(),
             child: _HeaderAvatar(
@@ -194,13 +200,9 @@ class _HeaderAvatar extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.primary, AppColors.secondary],
-        ),
+        color: AppColors.secondary,
       ),
       padding: const EdgeInsets.all(2),
       child: Container(

@@ -41,27 +41,21 @@ class NotificationGroupWidget extends StatelessWidget {
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isUnread ? accent.withOpacity(0.35) : AppColors.border,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withOpacity(isUnread ? 0.07 : 0.03),
-            blurRadius: isUnread ? 18 : 10,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        boxShadow: const [],
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         onTap: onTap,
         onLongPress: onLongPress,
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(11),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -69,7 +63,7 @@ class NotificationGroupWidget extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   _buildAvatar(avatar, actorName),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 11),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -91,7 +85,7 @@ class NotificationGroupWidget extends StatelessWidget {
                           hashtagColor: AppColors.primary,
                           mentionColor: AppColors.secondary,
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 5),
                         Row(
                           children: [
                             Icon(
@@ -196,22 +190,15 @@ class NotificationGroupWidget extends StatelessWidget {
       clipBehavior: Clip.none,
       children: [
         Container(
-          width: 52,
-          height: 52,
+          width: 44,
+          height: 44,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
               color: isUnread ? accent.withOpacity(0.45) : AppColors.border,
-              width: 2,
+              width: 1.5,
             ),
-            boxShadow: [
-              if (isUnread)
-                BoxShadow(
-                  color: accent.withOpacity(0.15),
-                  blurRadius: 8,
-                  spreadRadius: 1,
-                ),
-            ],
+            boxShadow: const [],
           ),
           child: ClipOval(
             child: avatar.isNotEmpty && avatar.startsWith('http')
@@ -231,8 +218,8 @@ class NotificationGroupWidget extends StatelessWidget {
           right: -2,
           bottom: -2,
           child: Container(
-            width: 22,
-            height: 22,
+            width: 19,
+            height: 19,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: accent,
@@ -248,7 +235,7 @@ class NotificationGroupWidget extends StatelessWidget {
             child: Icon(
               NotificationUtils.iconForType(
                   notification['type']?.toString() ?? 'general'),
-              size: 12,
+              size: 10,
               color: AppColors.white,
             ),
           ),

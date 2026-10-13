@@ -1066,7 +1066,7 @@ class _ReelItemState extends State<ReelItem>
 
   Widget _buildMuteButton() {
     return Positioned(
-      top: MediaQuery.paddingOf(context).top + 58,
+      top: MediaQuery.paddingOf(context).top + 18,
       right: 12,
       child: Material(
         color: AppColors.black.withOpacity(0.34),

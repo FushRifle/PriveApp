@@ -4,6 +4,10 @@ platform :ios, '15.0'
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
+# Keep FlutterFire on the locally cached native SDK. This avoids CocoaPods
+# cloning the full firebase-ios-sdk repository during every clean install.
+$FirebaseSDKVersion = '12.10.0'
+
 project 'Runner', {
   'Debug' => :debug,
   'Profile' => :release,

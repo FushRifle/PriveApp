@@ -25,10 +25,10 @@ class PostFooter extends StatelessWidget {
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        14,
-        isTextOnly ? 4 : 0,
-        14,
-        9,
+        12,
+        isTextOnly ? 5 : 1,
+        12,
+        10,
       ),
       child: EffectText(
         text: content,
@@ -36,8 +36,8 @@ class PostFooter extends StatelessWidget {
         overflow:
             maxLines == null ? TextOverflow.visible : TextOverflow.ellipsis,
         style: AppTheme.blackTextStyle.copyWith(
-          fontSize: isTextOnly ? 15.5 : 14,
-          height: 1.42,
+          fontSize: isTextOnly ? 15 : 14,
+          height: 1.4,
           fontWeight: isTextOnly ? FontWeight.w500 : FontWeight.w400,
         ),
       ),

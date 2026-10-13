@@ -23,15 +23,15 @@ class CreateStatusComposerTools extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFF181A25).withOpacity(0.94),
-      borderRadius: BorderRadius.circular(18),
-      elevation: 8,
+      color: AppColors.card.withOpacity(0.94),
+      borderRadius: BorderRadius.circular(16),
+      elevation: 2,
       child: Container(
         width: 58,
         padding: const EdgeInsets.all(3),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.border.withOpacity(0.7)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -90,7 +90,7 @@ class _ToolButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = destructive ? AppColors.redColor : AppColors.white;
+    final color = destructive ? AppColors.redColor : AppColors.text;
     return Tooltip(
       message: label,
       child: InkWell(
@@ -102,7 +102,17 @@ class _ToolButton extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 18, color: color),
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color:
+                      (destructive ? AppColors.redColor : AppColors.secondary)
+                          .withOpacity(0.14),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(icon, size: 17, color: color),
+              ),
               const SizedBox(height: 2),
               Text(
                 label,
@@ -156,14 +166,22 @@ class _AlignCycleButton extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 18, color: AppColors.white),
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: AppColors.secondary.withOpacity(0.14),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(icon, size: 17, color: AppColors.text),
+              ),
               const SizedBox(height: 2),
               Text(
                 label,
                 style: AppTheme.greyTextStyle.copyWith(
                   fontSize: 8,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.white,
+                  color: AppColors.text,
                 ),
               ),
             ],

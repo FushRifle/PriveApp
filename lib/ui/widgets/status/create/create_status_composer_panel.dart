@@ -21,7 +21,7 @@ class CreateStatusComposerPanel extends StatelessWidget {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       child: Padding(
-        padding: const EdgeInsets.only(top: 16),
+        padding: const EdgeInsets.only(top: 8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -30,36 +30,43 @@ class CreateStatusComposerPanel extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: textController,
-                    maxLines: 6,
-                    minLines: 5,
-                    cursorColor: AppColors.primary,
-                    textAlign: textAlign,
-                    textInputAction: TextInputAction.newline,
-                    keyboardType: TextInputType.multiline,
-                    style: AppTheme.blackTextStyle.copyWith(
-                      color: AppColors.text,
-                      fontSize: fontSize.clamp(18, 42).toDouble(),
-                      height: 1.45,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    decoration: InputDecoration(
-                      hintText:
-                          'Write something short, visual, and worth pausing for...',
-                      hintStyle: AppTheme.greyTextStyle.copyWith(
-                        color: AppColors.textSecondary.withOpacity(0.65),
-                        fontSize: 15,
-                        height: 1.4,
-                      ),
-                      filled: false,
-                      border: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      disabledBorder: InputBorder.none,
-                      isDense: true,
-                      contentPadding: const EdgeInsets.fromLTRB(0, 4, 74, 8),
-                    ),
+                  child: ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: textController,
+                    builder: (context, value, _) {
+                      return TextField(
+                        controller: textController,
+                        maxLines: 6,
+                        minLines: 5,
+                        cursorColor: AppColors.secondary,
+                        cursorHeight: 15,
+                        textAlign: textAlign,
+                        textInputAction: TextInputAction.newline,
+                        keyboardType: TextInputType.multiline,
+                        style: AppTheme.blackTextStyle.copyWith(
+                          color: AppColors.text,
+                          fontSize: fontSize.clamp(18, 42).toDouble(),
+                          height: 1.45,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        decoration: InputDecoration(
+                          hintText:
+                              value.text.isEmpty ? 'Write something...' : null,
+                          hintStyle: AppTheme.greyTextStyle.copyWith(
+                            color: AppColors.textSecondary.withOpacity(0.65),
+                            fontSize: 15,
+                            height: 1.4,
+                          ),
+                          filled: false,
+                          border: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          isDense: true,
+                          contentPadding:
+                              const EdgeInsets.fromLTRB(0, 4, 74, 8),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ],

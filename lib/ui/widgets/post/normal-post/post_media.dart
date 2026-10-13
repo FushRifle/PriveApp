@@ -29,42 +29,25 @@ class PostMedia extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final type = attachment.type.toLowerCase();
-    final double aspectRatio = isDetailView ? 0.92 : 1.0;
-
     return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+      padding: EdgeInsets.zero,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.zero,
         child: ColoredBox(
           color: AppColors.black,
-          child: AspectRatio(
-            aspectRatio: aspectRatio,
-            child: imageAttachments.length > 1
-                ? _ImageCollage(
+          child: imageAttachments.length > 1
+              ? AspectRatio(
+                  aspectRatio: isDetailView ? 0.92 : 1,
+                  child: _ImageCollage(
                     post: post,
                     attachments: imageAttachments,
-                  )
-                : switch (type) {
-                    'image' => PostImage(
-                        post: post,
-                        attachment: attachment,
-                      ),
-                    'video' => PostVideo(
-                        post: post,
-                        attachment: attachment,
-                        isActive: isActive,
-                      ),
-                    'document' || 'file' || 'pdf' => PostDocument(
-                        post: post,
-                        attachment: attachment,
-                      ),
-                    _ => PostDocument(
-                        post: post,
-                        attachment: attachment,
-                      ),
-                  },
-          ),
+                  ),
+                )
+              : _SinglePostMedia(
+                  post: post,
+                  attachment: attachment,
+                  isActive: isActive,
+                ),
         ),
       ),
     );
@@ -86,6 +69,45 @@ class PostMedia extends StatelessWidget {
     }
 
     return attachments.first;
+  }
+}
+
+class _SinglePostMedia extends StatelessWidget {
+  final FeedPost post;
+  final Attachment attachment;
+  final bool isActive;
+
+  const _SinglePostMedia({
+    required this.post,
+    required this.attachment,
+    required this.isActive,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final width = attachment.width;
+    final height = attachment.height;
+    final ratio = width != null && height != null && width > 0 && height > 0
+        ? width / height
+        : 4 / 5;
+    final type = attachment.type.toLowerCase();
+
+    return AspectRatio(
+      aspectRatio: ratio,
+      child: switch (type) {
+        'image' => PostImage(post: post, attachment: attachment),
+        'video' => PostVideo(
+            post: post,
+            attachment: attachment,
+            isActive: isActive,
+          ),
+        'document' ||
+        'file' ||
+        'pdf' =>
+          PostDocument(post: post, attachment: attachment),
+        _ => PostDocument(post: post, attachment: attachment),
+      },
+    );
   }
 }
 

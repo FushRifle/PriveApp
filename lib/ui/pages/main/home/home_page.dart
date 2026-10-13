@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:share_plus/share_plus.dart';
 
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/core/router/named_routes.dart';
@@ -18,11 +19,11 @@ import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/core/services/notification/notification_service.dart';
 
 import 'package:clique/ui/pages/main/status/create_status_page.dart';
-import 'package:clique/ui/pages/main/home/create_post_page.dart';
 import 'package:clique/ui/pages/main/status/status_view_page.dart';
 
 import 'package:clique/ui/widgets/home/home_feed_shimmer.dart';
 import 'package:clique/ui/widgets/home/people_you_may_know_dialog.dart';
+import 'package:clique/ui/widgets/home/quick_post_sheet.dart';
 import 'package:clique/ui/widgets/post/normal-post/repost_card.dart';
 import 'package:clique/ui/widgets/status/status_widget.dart';
 import 'package:clique/ui/widgets/common/app_network_image.dart';
@@ -257,6 +258,9 @@ class _HomePageState extends State<HomePage>
       value: palette.overlayStyle,
       child: Scaffold(
         backgroundColor: palette.background,
+        // Account drawer disabled. The header avatar opens Profile directly.
+        // endDrawer: const _HomeAccountDrawer(),
+        // drawerScrimColor: AppColors.black.withOpacity(0.42),
         body: DecoratedBox(
           decoration: BoxDecoration(
             color: palette.background,
@@ -280,105 +284,115 @@ class _HomePageState extends State<HomePage>
                         parent: AlwaysScrollableScrollPhysics(),
                       ),
                       slivers: [
-                  SliverToBoxAdapter(
-                    child: _HomeContentWidth(
-                      child: BlocBuilder<StoriesBloc, StoriesState>(
-                        buildWhen: (previous, current) {
-                          return previous.stories != current.stories ||
-                              previous.status != current.status ||
-                              previous.error != current.error;
-                        },
-                        builder: (context, state) {
-                          return _StoriesSection(
-                            palette: palette,
-                            groups: _getGroupedStories(state.stories),
-                            onCreateStory: () => _openCreateStatus(context),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: _HomeContentWidth(
-                      child: _HomeComposer(
-                        palette: palette,
-                        onCreatePost: () => _openCreatePost(context),
-                        onTopics: () => Navigator.pushNamed(
-                          context,
-                          NamedRoutes.topicsScreen,
-                        ),
-                      ),
-                    ),
-                  ),
-                  BlocBuilder<FeedBloc, FeedState>(
-                    buildWhen: (previous, current) {
-                      if (!_hasSamePostStructure(
-                        previous.posts,
-                        current.posts,
-                      )) {
-                        return true;
-                      }
-                      return current.posts.isEmpty &&
-                          (previous.postsStatus != current.postsStatus ||
-                              previous.postsError != current.postsError);
-                    },
-                    builder: (context, state) {
-                      final posts = state.posts;
-
-                      if (state.postsStatus == FeedStatus.loading &&
-                          posts.isEmpty) {
-                        return const SliverToBoxAdapter(
+                        SliverToBoxAdapter(
                           child: _HomeContentWidth(
-                            child: HomeFeedLoadingShimmer(),
-                          ),
-                        );
-                      }
-
-                      if (posts.isEmpty) {
-                        return const SliverToBoxAdapter(
-                          child: SizedBox.shrink(),
-                        );
-                      }
-
-                      return SliverMainAxisGroup(
-                        slivers: [
-                          SliverPadding(
-                            padding: const EdgeInsets.fromLTRB(10, 2, 10, 0),
-                            sliver: SliverList.separated(
-                              addAutomaticKeepAlives: false,
-                              itemCount: posts.length + (posts.length ~/ 6),
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(height: 10),
-                              itemBuilder: (context, index) {
-                                if ((index + 1) % 7 == 0) {
-                                  return _HomeContentWidth(
-                                    child: _PeopleYouMayKnowCard(
-                                      palette: palette,
-                                      suggestions: _suggestionsFuture,
-                                    ),
-                                  );
-                                }
-
-                                final postIndex = index - (index ~/ 7);
-                                final post = posts[postIndex];
-
-                                return _HomeContentWidth(
-                                  child: _FeedPostSlot(
-                                    key: ValueKey('post_${post.id}'),
-                                    postId: post.id,
-                                    fallback: post,
-                                  ),
+                            child: BlocBuilder<StoriesBloc, StoriesState>(
+                              buildWhen: (previous, current) {
+                                return previous.stories != current.stories ||
+                                    previous.status != current.status ||
+                                    previous.error != current.error;
+                              },
+                              builder: (context, state) {
+                                return _StoriesSection(
+                                  palette: palette,
+                                  groups: _getGroupedStories(state.stories),
+                                  onCreateStory: () =>
+                                      _openCreateStatus(context),
                                 );
                               },
                             ),
                           ),
-                        ],
-                      );
-                    },
-                  ),
-                  const SliverPadding(
-                    padding: EdgeInsets.only(bottom: 100),
-                  ),
+                        ),
+                        SliverToBoxAdapter(
+                          child: _HomeContentWidth(
+                            child: _HomeComposer(
+                              palette: palette,
+                              onTextPost: () => _openQuickPost(
+                                context,
+                                QuickPostMode.text,
+                              ),
+                              onMediaPost: () => _openQuickPost(
+                                context,
+                                QuickPostMode.media,
+                              ),
+                              onTopics: () => Navigator.pushNamed(
+                                context,
+                                NamedRoutes.topicsScreen,
+                              ),
+                            ),
+                          ),
+                        ),
+                        BlocBuilder<FeedBloc, FeedState>(
+                          buildWhen: (previous, current) {
+                            if (!_hasSamePostStructure(
+                              previous.posts,
+                              current.posts,
+                            )) {
+                              return true;
+                            }
+                            return current.posts.isEmpty &&
+                                (previous.postsStatus != current.postsStatus ||
+                                    previous.postsError != current.postsError);
+                          },
+                          builder: (context, state) {
+                            final posts = state.posts;
+
+                            if (state.postsStatus == FeedStatus.loading &&
+                                posts.isEmpty) {
+                              return const SliverToBoxAdapter(
+                                child: _HomeContentWidth(
+                                  child: HomeFeedLoadingShimmer(),
+                                ),
+                              );
+                            }
+
+                            if (posts.isEmpty) {
+                              return const SliverToBoxAdapter(
+                                child: SizedBox.shrink(),
+                              );
+                            }
+
+                            return SliverMainAxisGroup(
+                              slivers: [
+                                SliverPadding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(10, 2, 10, 0),
+                                  sliver: SliverList.separated(
+                                    addAutomaticKeepAlives: false,
+                                    itemCount:
+                                        posts.length + (posts.length ~/ 6),
+                                    separatorBuilder: (_, __) =>
+                                        const SizedBox(height: 10),
+                                    itemBuilder: (context, index) {
+                                      if ((index + 1) % 7 == 0) {
+                                        return _HomeContentWidth(
+                                          child: _PeopleYouMayKnowCard(
+                                            palette: palette,
+                                            suggestions: _suggestionsFuture,
+                                          ),
+                                        );
+                                      }
+
+                                      final postIndex = index - (index ~/ 7);
+                                      final post = posts[postIndex];
+
+                                      return _HomeContentWidth(
+                                        child: _FeedPostSlot(
+                                          key: ValueKey('post_${post.id}'),
+                                          postId: post.id,
+                                          fallback: post,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                        const SliverPadding(
+                          padding: EdgeInsets.only(bottom: 100),
+                        ),
                       ],
                     ),
                   ),
@@ -412,16 +426,21 @@ class _HomePageState extends State<HomePage>
     return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 
-  Future<void> _openCreatePost(BuildContext context) async {
+  Future<void> _openQuickPost(
+    BuildContext context,
+    QuickPostMode mode,
+  ) async {
     HapticFeedback.lightImpact();
 
-    final created = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => BlocProvider.value(
-          value: context.read<FeedBloc>(),
-          child: const CreatePostPage(),
-        ),
+    final created = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: AppColors.transparent,
+      barrierColor: AppColors.black.withOpacity(0.48),
+      builder: (_) => QuickPostSheet(
+        feedBloc: context.read<FeedBloc>(),
+        mode: mode,
       ),
     );
 
@@ -939,12 +958,14 @@ class _HomeContentWidth extends StatelessWidget {
 
 class _HomeComposer extends StatelessWidget {
   final _HomePalette palette;
-  final VoidCallback onCreatePost;
+  final VoidCallback onTextPost;
+  final VoidCallback onMediaPost;
   final VoidCallback onTopics;
 
   const _HomeComposer({
     required this.palette,
-    required this.onCreatePost,
+    required this.onTextPost,
+    required this.onMediaPost,
     required this.onTopics,
   });
 
@@ -972,7 +993,7 @@ class _HomeComposer extends StatelessWidget {
               color: palette.background,
               borderRadius: BorderRadius.circular(14),
               child: InkWell(
-                onTap: onCreatePost,
+                onTap: onTextPost,
                 borderRadius: BorderRadius.circular(14),
                 child: Container(
                   height: 40,
@@ -997,7 +1018,7 @@ class _HomeComposer extends StatelessWidget {
             icon: Icons.add_photo_alternate_outlined,
             label: 'Add media',
             color: palette.primary,
-            onTap: onCreatePost,
+            onTap: onMediaPost,
           ),
           _ComposerAction(
             icon: Icons.tag_rounded,
@@ -1086,6 +1107,7 @@ class _HomeAppBarState extends State<_HomeAppBar> {
           title: 'Clique',
           subtitle: '${_greeting()}, $firstName',
           actions: [
+            const MainTabProfileAction(),
             FutureBuilder<Map<String, dynamic>>(
               future: _notificationsFuture,
               builder: (context, snapshot) {
@@ -1117,6 +1139,255 @@ class _HomeAppBarState extends State<_HomeAppBar> {
     if (hour < 12) return 'Good morning';
     if (hour < 17) return 'Good afternoon';
     return 'Good evening';
+  }
+}
+
+// ignore: unused_element
+class _HomeAccountDrawer extends StatelessWidget {
+  const _HomeAccountDrawer();
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.topRight,
+      child: SafeArea(
+        bottom: false,
+        child: Material(
+          color: AppColors.background,
+          elevation: 18,
+          clipBehavior: Clip.antiAlias,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            bottomLeft: Radius.circular(24),
+          ),
+          child: SizedBox(
+            width: 200,
+            child: BlocSelector<UserBloc, UserState, Map<String, dynamic>?>(
+              selector: (state) => state.currentUser,
+              builder: (context, user) {
+                final name = _displayName(user);
+                final avatar = user?['avatar']?.toString().trim() ?? '';
+
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppColors.card,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: AppColors.border.withOpacity(0.55),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 52,
+                              height: 32,
+                              padding: const EdgeInsets.all(2),
+                              decoration: const BoxDecoration(
+                                color: AppColors.secondary,
+                                shape: BoxShape.circle,
+                              ),
+                              child: ClipOval(
+                                child: avatar.startsWith('http')
+                                    ? AppNetworkImage(
+                                        imageUrl: avatar,
+                                        fit: BoxFit.cover,
+                                        preset: AppNetworkImagePreset.avatar,
+                                        errorBuilder: (_) =>
+                                            _DrawerAvatarFallback(name),
+                                        placeholder: (_) =>
+                                            _DrawerAvatarFallback(name),
+                                      )
+                                    : _DrawerAvatarFallback(name),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: AppColors.text,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: -0.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      _AccountDrawerItem(
+                        icon: Icons.person_outline_rounded,
+                        label: 'Profile',
+                        onTap: () =>
+                            _openRoute(context, NamedRoutes.profileScreen),
+                      ),
+                      _AccountDrawerItem(
+                        icon: Icons.tune_rounded,
+                        label: 'Settings',
+                        onTap: () =>
+                            _openRoute(context, NamedRoutes.settingsScreen),
+                      ),
+                      _AccountDrawerItem(
+                        icon: Icons.group_add_outlined,
+                        label: 'Invite',
+                        onTap: () => _refer(context),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Divider(
+                          height: 1,
+                          color: AppColors.border.withOpacity(0.55),
+                        ),
+                      ),
+                      _AccountDrawerItem(
+                        icon: Icons.logout_rounded,
+                        label: 'Log out',
+                        destructive: true,
+                        showChevron: false,
+                        onTap: () => _logout(context),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  static String _displayName(Map<String, dynamic>? user) {
+    final name = user?['name']?.toString().trim() ?? '';
+    if (name.isNotEmpty) return name;
+    final username = user?['username']?.toString().trim() ?? '';
+    return username.isEmpty ? 'Clique member' : username;
+  }
+
+  void _openRoute(BuildContext context, String route) {
+    Navigator.pop(context);
+    Navigator.pushNamed(context, route);
+  }
+
+  Future<void> _refer(BuildContext context) async {
+    Navigator.pop(context);
+    await Share.share(
+      'Join me on Clique — a better place to share, connect, and find your people.',
+      subject: 'Join me on Clique',
+    );
+  }
+
+  void _logout(BuildContext context) {
+    final authBloc = context.read<AuthBloc>();
+    Navigator.pop(context);
+    HapticFeedback.mediumImpact();
+    authBloc.add(const SignOutRequested());
+  }
+}
+
+class _AccountDrawerItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool destructive;
+  final bool showChevron;
+
+  const _AccountDrawerItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.destructive = false,
+    this.showChevron = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = destructive ? AppColors.error : AppColors.secondary;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Material(
+        color: AppColors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 7),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: accent.withOpacity(0.13),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(icon, color: accent, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: destructive ? AppColors.error : AppColors.text,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (showChevron)
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.textHint,
+                    size: 20,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DrawerAvatarFallback extends StatelessWidget {
+  final String name;
+
+  const _DrawerAvatarFallback(this.name);
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = name.trim().isEmpty ? 'C' : name.trim()[0].toUpperCase();
+    return ColoredBox(
+      color: AppColors.card,
+      child: Center(
+        child: Text(
+          initial,
+          style: TextStyle(
+            color: AppColors.text,
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+    );
   }
 }
 

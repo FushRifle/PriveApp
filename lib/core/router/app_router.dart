@@ -28,6 +28,7 @@ import 'package:clique/ui/pages/main/home/edit_post_page.dart';
 import 'package:clique/ui/pages/main/home/post_detail_page.dart';
 import 'package:clique/ui/pages/main/topics/topics_page.dart';
 import 'package:clique/ui/pages/main/chat/chat_page.dart';
+import 'package:clique/ui/pages/main/chat/global_chat_settings_page.dart';
 import 'package:clique/ui/pages/main/community/create_community_page.dart';
 import 'package:clique/ui/pages/main/community/community_group_chat_page.dart';
 import 'package:clique/ui/pages/main/community/community_group_info_page.dart';
@@ -181,6 +182,14 @@ class AppRouter {
               maxOutgoingMessages: args['messageLimit'] as int? ?? 0,
               messageLimitHint: args['messageLimitHint'] as String?,
             ),
+          ),
+        );
+
+      case NamedRoutes.globalChatSettingsScreen:
+        return _page(
+          BlocProvider(
+            create: (_) => ChatBloc(),
+            child: const GlobalChatSettingsPage(),
           ),
         );
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/configs/theme.dart';
 
 enum InboxFilter { all, unread, pinned, archive }
 
@@ -20,104 +21,120 @@ class InboxToolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 10),
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Center(
+          Container(
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.border.withOpacity(0.5)),
+            ),
+            child: TextField(
+              controller: controller,
+              textInputAction: TextInputAction.search,
+              style: AppTheme.blackTextStyle.copyWith(fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'Search messages',
+                hintStyle: AppTheme.greyTextStyle.copyWith(fontSize: 12.5),
+                prefixIcon: Icon(
+                  Icons.search_rounded,
+                  size: 20,
+                  color: AppColors.textSecondary,
+                ),
+                suffixIcon: controller.text.trim().isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: 'Clear search',
+                        onPressed: onClearSearch,
+                        icon: Icon(
+                          Icons.close_rounded,
+                          size: 18,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                filled: false,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 11),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
             child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: InboxFilter.values.map((f) {
-                final isSelected = filter == f;
-                final label = switch (f) {
-                  InboxFilter.all => 'All',
+              children: InboxFilter.values.map((value) {
+                final isSelected = filter == value;
+                final label = switch (value) {
+                  InboxFilter.all => 'All chats',
                   InboxFilter.unread => 'Unread',
                   InboxFilter.pinned => 'Pinned',
-                  InboxFilter.archive => 'Archive',
+                  InboxFilter.archive => 'Archived',
+                };
+                final icon = switch (value) {
+                  InboxFilter.all => Icons.chat_bubble_outline_rounded,
+                  InboxFilter.unread => Icons.mark_chat_unread_outlined,
+                  InboxFilter.pinned => Icons.push_pin_outlined,
+                  InboxFilter.archive => Icons.archive_outlined,
                 };
 
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: GestureDetector(
-                    onTap: () => onFilterChanged(f),
-                    behavior: HitTestBehavior.opaque,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          label,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight:
-                                isSelected ? FontWeight.w600 : FontWeight.w400,
+                  padding: const EdgeInsets.only(right: 7),
+                  child: Material(
+                    color: isSelected
+                        ? AppColors.secondary.withOpacity(0.12)
+                        : AppColors.transparent,
+                    borderRadius: BorderRadius.circular(999),
+                    child: InkWell(
+                      onTap: () => onFilterChanged(value),
+                      borderRadius: BorderRadius.circular(999),
+                      child: Container(
+                        height: 34,
+                        padding: const EdgeInsets.symmetric(horizontal: 11),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
                             color: isSelected
-                                ? AppColors.primary
-                                : AppColors.textSecondary,
+                                ? AppColors.secondary.withOpacity(0.35)
+                                : AppColors.border.withOpacity(0.45),
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Container(
-                          height: 2,
-                          width: 28,
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? AppColors.primary
-                                : Colors.transparent,
-                          ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              icon,
+                              size: 15,
+                              color: isSelected
+                                  ? AppColors.secondary
+                                  : AppColors.textSecondary,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              label,
+                              style: AppTheme.blackTextStyle.copyWith(
+                                color: isSelected
+                                    ? AppColors.secondary
+                                    : AppColors.textSecondary,
+                                fontSize: 10.5,
+                                fontWeight: isSelected
+                                    ? AppTheme.bold
+                                    : AppTheme.medium,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 );
               }).toList(),
             ),
           ),
-          const SizedBox(height: 18),
-          TextField(
-            controller: controller,
-            textInputAction: TextInputAction.search,
-            style: const TextStyle(fontSize: 15),
-            decoration: InputDecoration(
-              hintText: 'Search conversations',
-              hintStyle: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 15,
-              ),
-              prefixIcon: Padding(
-                padding: const EdgeInsets.only(left: 4, right: 8),
-                child: Icon(
-                  Icons.search_rounded,
-                  size: 20,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              prefixIconConstraints:
-                  const BoxConstraints(minWidth: 0, minHeight: 0),
-              suffixIcon: controller.text.trim().isEmpty
-                  ? null
-                  : IconButton(
-                      tooltip: 'Clear search',
-                      onPressed: onClearSearch,
-                      icon: Icon(
-                        Icons.close_rounded,
-                        size: 18,
-                        color: AppColors.textSecondary,
-                      ),
-                      splashRadius: 18,
-                    ),
-              filled: false,
-              contentPadding: const EdgeInsets.symmetric(vertical: 12),
-              border: UnderlineInputBorder(
-                borderSide: BorderSide(color: AppColors.border),
-              ),
-              enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: AppColors.border),
-              ),
-              focusedBorder: const UnderlineInputBorder(
-                borderSide: BorderSide(color: AppColors.primary, width: 1.5),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
         ],
       ),
     );

@@ -12,10 +12,14 @@ import 'package:clique/ui/pages/main/notification/notification_details_page.dart
 
 class NotificationItem extends StatefulWidget {
   final Map<String, dynamic> notification;
+  final ValueChanged<List<int>>? onMarkAsRead;
+  final ValueChanged<List<int>>? onDelete;
 
   const NotificationItem({
     super.key,
     required this.notification,
+    this.onMarkAsRead,
+    this.onDelete,
   });
 
   @override
@@ -74,7 +78,11 @@ class _NotificationItemState extends State<NotificationItem> {
 
   Future<void> _markAsRead(int notificationId) async {
     try {
-      await _notificationService.markAsRead(notificationId);
+      if (widget.onMarkAsRead != null) {
+        widget.onMarkAsRead!([notificationId]);
+      } else {
+        await _notificationService.markAsRead(notificationId);
+      }
       if (!mounted) return;
 
       setState(() {
@@ -88,8 +96,12 @@ class _NotificationItemState extends State<NotificationItem> {
 
   Future<void> _markGroupAsRead(List<int> notificationIds) async {
     try {
-      for (final id in notificationIds) {
-        await _notificationService.markAsRead(id);
+      if (widget.onMarkAsRead != null) {
+        widget.onMarkAsRead!(notificationIds);
+      } else {
+        for (final id in notificationIds) {
+          await _notificationService.markAsRead(id);
+        }
       }
       if (!mounted) return;
 
@@ -108,7 +120,11 @@ class _NotificationItemState extends State<NotificationItem> {
 
   Future<void> _deleteNotification(int notificationId) async {
     try {
-      await _notificationService.deleteNotification(notificationId);
+      if (widget.onDelete != null) {
+        widget.onDelete!([notificationId]);
+      } else {
+        await _notificationService.deleteNotification(notificationId);
+      }
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -136,8 +152,12 @@ class _NotificationItemState extends State<NotificationItem> {
 
   Future<void> _deleteGroup(List<int> notificationIds) async {
     try {
-      for (final id in notificationIds) {
-        await _notificationService.deleteNotification(id);
+      if (widget.onDelete != null) {
+        widget.onDelete!(notificationIds);
+      } else {
+        for (final id in notificationIds) {
+          await _notificationService.deleteNotification(id);
+        }
       }
       if (!mounted) return;
 

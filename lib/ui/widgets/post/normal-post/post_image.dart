@@ -79,30 +79,7 @@ class PostImage extends StatelessWidget {
               );
             },
           ),
-          const _ImageGradient(),
         ],
-      ),
-    );
-  }
-}
-
-class _ImageGradient extends StatelessWidget {
-  const _ImageGradient();
-
-  @override
-  Widget build(BuildContext context) {
-    return const DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          stops: [0, 0.55, 1],
-          colors: [
-            Color.fromRGBO(0, 0, 0, 0.10),
-            AppColors.transparent,
-            Color.fromRGBO(0, 0, 0, 0.16),
-          ],
-        ),
       ),
     );
   }

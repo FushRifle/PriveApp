@@ -52,92 +52,140 @@ class PostActions extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isTiny = constraints.maxWidth < 340;
+        final hasEngagement = likeCount > 0 ||
+            commentCount > 0 ||
+            repostCount > 0 ||
+            shareCount > 0 ||
+            viewCount > 0;
+        final secondaryMetrics = <String>[
+          if (commentCount > 0)
+            '${_formatCount(commentCount)} ${commentCount == 1 ? 'comment' : 'comments'}',
+          if (repostCount > 0)
+            '${_formatCount(repostCount)} ${repostCount == 1 ? 'repost' : 'reposts'}',
+          if (shareCount > 0)
+            '${_formatCount(shareCount)} ${shareCount == 1 ? 'share' : 'shares'}',
+          if (viewCount > 0) '${_formatCount(viewCount)} views',
+        ];
 
         return Padding(
-          padding: const EdgeInsets.fromLTRB(10, 5, 10, 8),
+          padding: const EdgeInsets.fromLTRB(9, 0, 9, 6),
           child: Column(
             children: [
-              if (viewCount > 0)
+              if (hasEngagement)
                 Padding(
-                  padding: const EdgeInsets.only(right: 4, bottom: 1),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
+                  padding: const EdgeInsets.fromLTRB(4, 8, 4, 7),
+                  child: Row(
+                    children: [
+                      if (likeCount > 0) ...[
                         Icon(
-                          Icons.insights_outlined,
-                          size: 12,
-                          color: AppColors.textSecondary.withOpacity(0.75),
+                          Icons.favorite_rounded,
+                          size: 13,
+                          color: AppColors.primary,
                         ),
-                        const SizedBox(width: 5),
+                        const SizedBox(width: 4),
                         Text(
-                          '${_formatCount(viewCount)} views',
+                          '${_formatCount(likeCount)} ${likeCount == 1 ? 'reaction' : 'reactions'}',
                           style: TextStyle(
-                            color: AppColors.textSecondary.withOpacity(0.85),
-                            fontSize: 11.0,
+                            color: AppColors.textSecondary,
+                            fontSize: 10.5,
                             fontWeight: FontWeight.w600,
-                            letterSpacing: 0.1,
                           ),
                         ),
                       ],
-                    ),
+                      if (secondaryMetrics.isNotEmpty) ...[
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            secondaryMetrics.join('  ·  '),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ] else
+                        const Spacer(),
+                    ],
                   ),
                 ),
+              if (hasEngagement)
+                Divider(
+                  height: 1,
+                  thickness: 0.6,
+                  color: AppColors.border.withOpacity(0.5),
+                ),
+              const SizedBox(height: 1),
               Row(
                 children: [
                   if (showLikeAction) ...[
-                    _ResponsiveAction(
-                      key: likeActionKey,
-                      icon: isLiked
-                          ? (selectedReactionIcon ?? Icons.favorite_rounded)
-                          : Icons.favorite_border_rounded,
-                      label: _formatCount(likeCount),
-                      color: isLiked
-                          ? (selectedReactionColor ?? AppColors.redAccent)
-                          : actionColor,
-                      onTap: onLike,
-                      onLongPress: onLikeLongPress,
-                      showLabel: !isTiny,
-                      compact: true,
-                      emphasized: isLiked,
+                    Expanded(
+                      flex: isTiny ? 1 : 2,
+                      child: _ResponsiveAction(
+                        key: likeActionKey,
+                        icon: isLiked
+                            ? (selectedReactionIcon ?? Icons.favorite_rounded)
+                            : Icons.favorite_border_rounded,
+                        label: isLiked ? (_selectedLabelOrDefault()) : 'React',
+                        color: isLiked
+                            ? (selectedReactionColor ?? AppColors.redAccent)
+                            : actionColor,
+                        onTap: onLike,
+                        onLongPress: onLikeLongPress,
+                        showLabel: !isTiny,
+                        compact: true,
+                        emphasized: isLiked,
+                      ),
                     ),
                   ],
-                  _ResponsiveAction(
-                    icon: Icons.comment_bank_rounded,
-                    label: _formatCount(commentCount),
-                    color: actionColor,
-                    onTap: onComment,
-                    showLabel: !isTiny,
-                    compact: true,
+                  Expanded(
+                    flex: isTiny ? 1 : 2,
+                    child: _ResponsiveAction(
+                      icon: Icons.chat_bubble_outline_rounded,
+                      label: 'Reply',
+                      color: actionColor,
+                      onTap: onComment,
+                      showLabel: !isTiny,
+                      compact: true,
+                    ),
                   ),
-                  _ResponsiveAction(
-                    icon: Icons.repeat_rounded,
-                    label: repostCount > 0 ? _formatCount(repostCount) : null,
-                    color: isReposted ? AppColors.primary : actionColor,
-                    onTap: onRepost,
-                    showLabel: !isTiny,
-                    compact: true,
-                    emphasized: isReposted,
+                  Expanded(
+                    flex: isTiny ? 1 : 2,
+                    child: _ResponsiveAction(
+                      icon: Icons.repeat_rounded,
+                      label: 'Repost',
+                      color: isReposted ? AppColors.primary : actionColor,
+                      onTap: onRepost,
+                      showLabel: !isTiny,
+                      compact: true,
+                      emphasized: isReposted,
+                    ),
                   ),
-                  _ResponsiveAction(
-                    icon: Icons.send_rounded,
-                    label: shareCount > 0 ? _formatCount(shareCount) : null,
-                    color: actionColor,
-                    onTap: onShare,
-                    showLabel: !isTiny,
-                    compact: true,
+                  Expanded(
+                    child: _ResponsiveAction(
+                      icon: Icons.near_me_outlined,
+                      tooltip: 'Share',
+                      color: actionColor,
+                      onTap: onShare,
+                      showLabel: false,
+                      compact: true,
+                    ),
                   ),
-                  const Spacer(),
-                  _ResponsiveAction(
-                    icon: isSaved
-                        ? Icons.bookmark_rounded
-                        : Icons.bookmark_border_rounded,
-                    color: isSaved ? AppColors.primary : actionColor,
-                    onTap: onSave,
-                    showLabel: false,
-                    compact: true,
-                    emphasized: isSaved,
+                  Expanded(
+                    child: _ResponsiveAction(
+                      icon: isSaved
+                          ? Icons.bookmark_rounded
+                          : Icons.bookmark_border_rounded,
+                      tooltip: isSaved ? 'Remove bookmark' : 'Bookmark',
+                      color: isSaved ? AppColors.primary : actionColor,
+                      onTap: onSave,
+                      showLabel: false,
+                      compact: true,
+                      emphasized: isSaved,
+                    ),
                   ),
                 ],
               ),
@@ -158,11 +206,17 @@ class PostActions extends StatelessWidget {
     }
     return count.toString();
   }
+
+  String _selectedLabelOrDefault() {
+    final label = selectedReactionLabel?.trim();
+    return label == null || label.isEmpty ? 'React' : label;
+  }
 }
 
 class _ResponsiveAction extends StatelessWidget {
   final IconData icon;
   final String? label;
+  final String? tooltip;
   final Color color;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
@@ -174,6 +228,7 @@ class _ResponsiveAction extends StatelessWidget {
     super.key,
     required this.icon,
     this.label,
+    this.tooltip,
     required this.color,
     this.onTap,
     this.onLongPress,
@@ -186,12 +241,12 @@ class _ResponsiveAction extends StatelessWidget {
   Widget build(BuildContext context) {
     final shouldShowLabel = showLabel && label != null && label!.isNotEmpty;
 
-    final horizontalPadding = shouldShowLabel ? 16.0 : 16.0;
-    const verticalPadding = 7.0;
-    final iconSize = compact ? 20.0 : 21.0;
-    const fontSize = 11.0;
+    final horizontalPadding = shouldShowLabel ? 4.0 : 3.0;
+    const verticalPadding = 6.0;
+    final iconSize = compact ? 21.0 : 22.0;
+    const fontSize = 10.5;
 
-    return Material(
+    final action = Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap == null
@@ -206,10 +261,10 @@ class _ResponsiveAction extends StatelessWidget {
                 HapticFeedback.mediumImpact();
                 onLongPress?.call();
               },
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         child: Container(
           constraints: const BoxConstraints(
-            minHeight: 38,
+            minHeight: 40,
           ),
           padding: EdgeInsets.symmetric(
             horizontal: horizontalPadding,
@@ -227,14 +282,6 @@ class _ResponsiveAction extends StatelessWidget {
                   icon,
                   color: color,
                   size: iconSize,
-                  shadows: emphasized
-                      ? [
-                          Shadow(
-                            color: color.withOpacity(0.28),
-                            blurRadius: 8,
-                          ),
-                        ]
-                      : null,
                 ),
               ),
               if (shouldShowLabel) ...[
@@ -257,5 +304,8 @@ class _ResponsiveAction extends StatelessWidget {
         ),
       ),
     );
+
+    if (tooltip == null) return action;
+    return Tooltip(message: tooltip!, child: action);
   }
 }

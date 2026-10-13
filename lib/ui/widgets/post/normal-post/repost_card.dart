@@ -16,10 +16,6 @@ class RepostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardColor =
-        isDark ? const Color(0xFF121B25) : const Color(0xFFFCFDFE);
-
     if (!post.isReposted) {
       return CardPost(
         post: post,
@@ -30,7 +26,7 @@ class RepostCard extends StatelessWidget {
     return Container(
       margin: EdgeInsets.zero,
       decoration: BoxDecoration(
-        color: cardColor,
+        color: AppColors.card,
         border: Border(
           top: BorderSide(color: AppColors.border.withOpacity(0.45)),
           bottom: BorderSide(color: AppColors.border.withOpacity(0.45)),
@@ -43,7 +39,7 @@ class RepostCard extends StatelessWidget {
             margin: const EdgeInsets.fromLTRB(14, 10, 14, 0),
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
             decoration: BoxDecoration(
-              color: AppColors.teal.withOpacity(isDark ? 0.14 : 0.10),
+              color: AppColors.secondary.withOpacity(0.12),
               borderRadius: BorderRadius.circular(999),
             ),
             child: Row(

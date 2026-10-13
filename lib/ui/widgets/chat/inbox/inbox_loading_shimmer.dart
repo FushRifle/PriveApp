@@ -15,11 +15,10 @@ class InboxLoadingShimmer extends StatelessWidget {
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
         ),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+        padding: const EdgeInsets.fromLTRB(8, 4, 8, 28),
         children: [
           for (var i = 0; i < 8; i++) ...[
             const _ConversationSkeleton(),
-            if (i != 7) const SizedBox(height: 14),
           ],
         ],
       ),
@@ -33,47 +32,38 @@ class _ConversationSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
       decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.border.withOpacity(0.35)),
+        border: Border(
+          bottom: BorderSide(color: AppColors.border.withOpacity(0.38)),
+        ),
       ),
       child: Row(
         children: [
           Container(
-            width: 56,
-            height: 56,
+            width: 46,
+            height: 46,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.card,
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 11),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   width: 140,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    color: AppColors.card,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
                   height: 12,
                   decoration: BoxDecoration(
                     color: AppColors.card,
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 7),
                 Container(
-                  width: 92,
+                  width: double.infinity,
                   height: 10,
                   decoration: BoxDecoration(
                     color: AppColors.card,

@@ -37,6 +37,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     LoadNotifications event,
     Emitter<NotificationState> emit,
   ) async {
+    if (state.isLoading) return;
     if (state.notifications.isEmpty) {
       emit(state.copyWith(
         status: NotificationStatus.loading,
@@ -52,16 +53,13 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
         unreadOnly: event.unreadOnly,
       );
 
-      final notifications = (result['notifications'] as List?)
-              ?.map((n) => NotificationItem.fromJson(n))
-              .toList() ??
-          [];
+      final notifications = _parseNotifications(result['notifications']);
 
       emit(state.copyWith(
         notifications: notifications,
         hasMore: notifications.length >= _pageSize,
         currentPage: event.page,
-        totalUnreadCount: result['unreadCount'] ?? 0,
+        totalUnreadCount: _readInt(result['unreadCount']),
         status: NotificationStatus.success,
         isLoading: false,
         clearError: true,
@@ -92,16 +90,13 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
         unreadOnly: event.unreadOnly,
       );
 
-      final notifications = (result['notifications'] as List?)
-              ?.map((n) => NotificationItem.fromJson(n))
-              .toList() ??
-          [];
+      final notifications = _parseNotifications(result['notifications']);
 
       emit(state.copyWith(
         notifications: notifications,
         hasMore: notifications.length >= _pageSize,
         currentPage: 1,
-        totalUnreadCount: result['unreadCount'] ?? 0,
+        totalUnreadCount: _readInt(result['unreadCount']),
         status: NotificationStatus.success,
         isRefreshing: false,
         clearError: true,
@@ -134,10 +129,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
         pageSize: _pageSize,
       );
 
-      final newNotifications = (result['notifications'] as List?)
-              ?.map((n) => NotificationItem.fromJson(n))
-              .toList() ??
-          [];
+      final newNotifications = _parseNotifications(result['notifications']);
 
       final updatedNotifications = _dedupeNotifications([
         ...state.notifications,
@@ -485,4 +477,18 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
 
     return deduped;
   }
+
+  List<NotificationItem> _parseNotifications(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => NotificationItem.fromJson(
+              Map<String, dynamic>.from(item),
+            ))
+        .where((item) => item.id > 0)
+        .toList();
+  }
+
+  int _readInt(dynamic value) =>
+      value is num ? value.toInt() : int.tryParse('$value') ?? 0;
 }

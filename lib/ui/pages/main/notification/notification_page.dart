@@ -1,64 +1,131 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
 import 'package:clique/app/configs/colors.dart';
-import 'package:clique/core/services/notification/notification_service.dart';
-
+import 'package:clique/bloc/notification/notification_bloc.dart';
 import 'package:clique/ui/widgets/common/app_page_header.dart';
-import 'package:clique/ui/widgets/notification/notification_utils.dart';
 import 'package:clique/ui/widgets/notification/notification_list.dart';
+import 'package:clique/ui/widgets/notification/notification_utils.dart';
 
-class NotificationPage extends StatefulWidget {
+class NotificationPage extends StatelessWidget {
   const NotificationPage({super.key});
 
   @override
-  State<NotificationPage> createState() => _NotificationPageState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => NotificationBloc()..add(const LoadNotifications()),
+      child: const _NotificationView(),
+    );
+  }
 }
 
-class _NotificationPageState extends State<NotificationPage> {
-  final NotificationService _notificationService = NotificationService();
-
-  List<Map<String, dynamic>> _notifications = [];
-  List<Map<String, dynamic>> _groupedNotifications = [];
-  bool _isLoading = true;
+class _NotificationView extends StatelessWidget {
+  const _NotificationView();
 
   @override
-  void initState() {
-    super.initState();
-    final cached = _notificationService.getCachedNotifications();
-    final cachedItems = (cached?['notifications'] as List? ?? const [])
-        .whereType<Map>()
-        .map((item) => Map<String, dynamic>.from(item))
-        .toList();
-    if (cachedItems.isNotEmpty) {
-      _notifications = cachedItems;
-      _groupedNotifications = _groupNotifications(cachedItems);
-      _isLoading = false;
-    }
-    _loadNotifications();
-  }
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-  Future<void> _loadNotifications() async {
-    try {
-      final response = await _notificationService.getNotifications(
-        page: 1,
-        pageSize: 20,
-        forceRefresh: true,
-      );
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: AppColors.transparent,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+      ),
+      child: BlocConsumer<NotificationBloc, NotificationState>(
+        listenWhen: (previous, current) =>
+            previous.error != current.error &&
+            current.error != null &&
+            current.hasContent,
+        listener: (context, state) {
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              SnackBar(
+                content: Text(state.error!),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          context.read<NotificationBloc>().add(ClearNotificationError());
+        },
+        builder: (context, state) {
+          final grouped = _groupNotifications(
+            state.notifications
+                .map(
+                  (item) => <String, dynamic>{
+                    ...item.toJson(),
+                    'isUnread': !item.isRead,
+                  },
+                )
+                .toList(),
+          );
 
-      if (!mounted) return;
-
-      final notifications = (response['notifications'] as List? ?? [])
-          .cast<Map<String, dynamic>>();
-
-      setState(() {
-        _notifications = notifications;
-        _groupedNotifications = _groupNotifications(notifications);
-        _isLoading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-    }
+          return Scaffold(
+            backgroundColor: AppColors.backgroundColor,
+            body: Column(
+              children: [
+                AppPageHeader(
+                  title: 'Notifications',
+                  subtitle: state.notifications.isEmpty
+                      ? 'Recent activity'
+                      : state.totalUnreadCount == 0
+                          ? '${state.notifications.length} updates'
+                          : '${state.totalUnreadCount} unread',
+                  leadingIcon: Icons.arrow_back_ios_new_rounded,
+                  onLeadingTap: () => Navigator.pop(context),
+                  actionIcon: state.totalUnreadCount > 0
+                      ? Icons.done_all_rounded
+                      : null,
+                  onActionTap: state.totalUnreadCount > 0
+                      ? () {
+                          HapticFeedback.lightImpact();
+                          context
+                              .read<NotificationBloc>()
+                              .add(MarkAllNotificationsAsRead());
+                        }
+                      : null,
+                ),
+                Expanded(
+                  child: NotificationList(
+                    notifications: grouped,
+                    isLoading: state.isInitialLoading,
+                    isLoadingMore: state.isLoadingMore,
+                    hasMore: state.hasMore,
+                    error: state.error,
+                    onRefresh: () async {
+                      context
+                          .read<NotificationBloc>()
+                          .add(const RefreshNotifications());
+                      await context.read<NotificationBloc>().stream.firstWhere(
+                            (next) => !next.isRefreshing,
+                          );
+                    },
+                    onLoadMore: () => context
+                        .read<NotificationBloc>()
+                        .add(LoadMoreNotifications()),
+                    onMarkAsRead: (ids) {
+                      for (final id in ids) {
+                        context.read<NotificationBloc>().add(
+                              MarkNotificationAsRead(notificationId: id),
+                            );
+                      }
+                    },
+                    onDelete: (ids) {
+                      for (final id in ids) {
+                        context.read<NotificationBloc>().add(
+                              DeleteNotification(notificationId: id),
+                            );
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 
   List<Map<String, dynamic>> _groupNotifications(
@@ -73,122 +140,32 @@ class _NotificationPageState extends State<NotificationPage> {
         passthrough.add(item);
         continue;
       }
-
       final data = NotificationUtils.asMap(item['data']);
       final actorId = NotificationUtils.readInt(
         item['actorId'] ??
             data['actorId'] ??
             data['actorUserId'] ??
-            data['fromUserId'] ??
-            data['likerUserId'] ??
-            data['commenterUserId'] ??
-            data['followerUserId'],
+            data['fromUserId'],
       );
-
-      final key = '$type:$actorId';
-      grouped.putIfAbsent(key, () => []);
-      grouped[key]!.add(item);
+      grouped.putIfAbsent('$type:$actorId', () => []).add(item);
     }
 
     final result = <Map<String, dynamic>>[];
-
-    for (final entry in grouped.entries) {
-      final items = [...entry.value]..sort((a, b) {
-          final aTime = DateTime.tryParse(a['createdAt']?.toString() ?? '') ??
-              DateTime.fromMillisecondsSinceEpoch(0);
-          final bTime = DateTime.tryParse(b['createdAt']?.toString() ?? '') ??
-              DateTime.fromMillisecondsSinceEpoch(0);
-          return bTime.compareTo(aTime);
-        });
-
-      final representative = Map<String, dynamic>.from(items.first);
-      representative['groupItems'] = items;
-      representative['groupCount'] = items.length;
-      representative['isUnread'] =
-          items.any((item) => item['isUnread'] == true);
+    for (final items in grouped.values) {
+      items.sort((a, b) => _createdAt(b).compareTo(_createdAt(a)));
+      final representative = Map<String, dynamic>.from(items.first)
+        ..['groupItems'] = items
+        ..['groupCount'] = items.length
+        ..['isUnread'] = items.any((item) => item['isUnread'] == true);
       result.add(representative);
     }
-
     result.addAll(passthrough);
-
-    result.sort((a, b) {
-      final aTime = DateTime.tryParse(a['createdAt']?.toString() ?? '') ??
-          DateTime.fromMillisecondsSinceEpoch(0);
-      final bTime = DateTime.tryParse(b['createdAt']?.toString() ?? '') ??
-          DateTime.fromMillisecondsSinceEpoch(0);
-      return bTime.compareTo(aTime);
-    });
-
+    result.sort((a, b) => _createdAt(b).compareTo(_createdAt(a)));
     return result;
   }
 
-  Future<void> _markAllAsRead() async {
-    try {
-      await _notificationService.markAllAsRead();
-      if (!mounted) return;
-
-      setState(() {
-        for (var notification in _notifications) {
-          notification['isUnread'] = false;
-        }
-        _groupedNotifications = _groupNotifications(_notifications);
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('All notifications marked as read'),
-          backgroundColor: AppColors.card,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to mark all as read: $e'),
-          backgroundColor: AppColors.card,
-        ),
-      );
-    }
-  }
-
-  int get _unreadCount {
-    return _notifications.where((n) => n['isUnread'] == true).length;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: AppColors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-      ),
-    );
-
-    return Scaffold(
-      backgroundColor: AppColors.backgroundColor,
-      body: Column(
-        children: [
-          AppPageHeader(
-            title: 'Notifications',
-            subtitle: _notifications.isEmpty
-                ? 'Recent activity'
-                : '$_unreadCount unread',
-            leadingIcon: Icons.arrow_back_ios_new,
-            onLeadingTap: () => Navigator.pop(context),
-            actionIcon: _unreadCount > 0
-                ? Icons.done_all_rounded
-                : Icons.more_vert_rounded,
-            onActionTap: _unreadCount > 0 ? _markAllAsRead : null,
-          ),
-          Expanded(
-            child: NotificationList(
-              notifications: _groupedNotifications,
-              isLoading: _isLoading,
-              onRefresh: _loadNotifications,
-            ),
-          ),
-        ],
-      ),
-    );
+  DateTime _createdAt(Map<String, dynamic> item) {
+    return DateTime.tryParse(item['createdAt']?.toString() ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0);
   }
 }

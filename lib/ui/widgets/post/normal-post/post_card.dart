@@ -617,12 +617,6 @@ class _CardPostState extends State<CardPost> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardColor =
-        isDark ? const Color(0xFF121B25) : const Color(0xFFFCFDFE);
-    final borderColor =
-        isDark ? const Color(0xFF2A3746) : const Color(0xFFD9E1E8);
-
     return VisibilityDetector(
       key: ValueKey('post_visibility_${widget.post.id}'),
       onVisibilityChanged: _onVisibilityChanged,
@@ -630,18 +624,16 @@ class _CardPostState extends State<CardPost> {
         behavior: HitTestBehavior.opaque,
         onTap: _openDetail,
         child: Container(
-          margin: EdgeInsets.only(
-            bottom: 0,
-          ),
+          margin: EdgeInsets.zero,
           decoration: BoxDecoration(
-            color: cardColor,
+            color: AppColors.card,
             border: widget.showOuterDividers
                 ? Border(
                     top: BorderSide(
-                      color: borderColor.withOpacity(isDark ? 0.22 : 0.34),
+                      color: AppColors.border.withOpacity(0.42),
                     ),
                     bottom: BorderSide(
-                      color: borderColor.withOpacity(isDark ? 0.22 : 0.34),
+                      color: AppColors.border.withOpacity(0.42),
                     ),
                   )
                 : null,

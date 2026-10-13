@@ -31,21 +31,53 @@ class NotificationItem {
 
   factory NotificationItem.fromJson(Map<String, dynamic> json) {
     return NotificationItem(
-      id: json['id'] ?? 0,
+      id: _readInt(json['id']),
       type: json['type']?.toString() ?? 'general',
       title: json['title']?.toString() ?? '',
       message: json['message']?.toString() ?? '',
       imageUrl: json['imageUrl']?.toString(),
-      actorId: json['actorId'],
+      actorId: _readNullableInt(json['actorId'] ?? json['actor_id']),
       actorName: json['actorName']?.toString(),
       actorAvatar: json['actorAvatar']?.toString(),
-      targetId: json['targetId'],
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'].toString())
-          : DateTime.now(),
-      isRead: json['isRead'] == true || json['read'] == true,
-      data: json['data'] as Map<String, dynamic>?,
+      targetId: _readNullableInt(json['targetId'] ?? json['target_id']),
+      createdAt: DateTime.tryParse(
+            (json['createdAt'] ?? json['created_at'])?.toString() ?? '',
+          ) ??
+          DateTime.now(),
+      isRead: json['isRead'] == true ||
+          json['read'] == true ||
+          json['isUnread'] == false,
+      data: _readData(json),
     );
+  }
+
+  static int _readInt(dynamic value) =>
+      value is num ? value.toInt() : int.tryParse('$value') ?? 0;
+
+  static int? _readNullableInt(dynamic value) {
+    final parsed = _readInt(value);
+    return parsed > 0 ? parsed : null;
+  }
+
+  static Map<String, dynamic>? _readData(Map<String, dynamic> json) {
+    final data = json['data'] is Map
+        ? Map<String, dynamic>.from(json['data'] as Map)
+        : <String, dynamic>{};
+    const preservedKeys = [
+      'postImage',
+      'conversationId',
+      'conversation_id',
+      'requestId',
+      'friendRequestId',
+      'postId',
+      'reelId',
+      'storyId',
+      'statusId',
+    ];
+    for (final key in preservedKeys) {
+      if (json[key] != null) data[key] = json[key];
+    }
+    return data.isEmpty ? null : data;
   }
 
   Map<String, dynamic> toJson() => {
@@ -200,6 +232,13 @@ class NotificationState extends Equatable {
 
   // Helper getters
   int get unreadCount => notifications.where((n) => !n.isRead).length;
+  bool get hasContent => notifications.isNotEmpty;
+  bool get isInitialLoading =>
+      notifications.isEmpty &&
+      (status == NotificationStatus.initial ||
+          status == NotificationStatus.loading ||
+          isLoading);
+  bool get hasBlockingError => error != null && notifications.isEmpty;
   bool get hasFilters =>
       filterType != null || filterFromDate != null || filterToDate != null;
 

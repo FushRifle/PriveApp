@@ -26,30 +26,31 @@ class StyleControls extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const SizedBox(height: 5),
         Row(
           children: [
             Text(
               'Font size',
               style: TextStyle(
                 color: AppColors.text.withOpacity(0.82),
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const Spacer(),
             Text(
               fontSize.round().toString(),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
+              style: TextStyle(
+                color: AppColors.text.withOpacity(0.82),
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],
         ),
         Slider(
           value: fontSize.clamp(18, 42).toDouble(),
-          min: 20,
+          min: 22,
           max: 42,
           divisions: 12,
           activeColor: AppColors.primary,
@@ -57,16 +58,16 @@ class StyleControls extends StatelessWidget {
           onChanged: onFontSizeChanged,
           onChangeEnd: (_) => onFontSizeChangeEnd(),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 16),
         Text(
           'Background color',
           style: TextStyle(
             color: AppColors.text.withOpacity(0.82),
-            fontSize: 13,
+            fontSize: 14,
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         GridView.count(
           crossAxisCount: 5,
           shrinkWrap: true,

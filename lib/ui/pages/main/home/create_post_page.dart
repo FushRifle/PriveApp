@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
-import 'package:clique/bloc/auth/auth_bloc.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:clique/bloc/reels/reel_bloc.dart';
 import 'package:clique/core/clients/cloudinary_service.dart';
@@ -17,11 +16,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:clique/ui/widgets/common/app_network_image.dart';
 import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
 import 'package:clique/ui/pages/main/reels/create_reel_page.dart';
-
-enum _VideoPostDestination { post, reel }
 
 class CreatePostPage extends StatefulWidget {
   final Map<String, dynamic>? initialDraft;
@@ -250,6 +246,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                           }
                         });
                       },
+                      onCreateReel: _openReelComposer,
                       onAnonymousCategoryChanged: (cat) {
                         setState(() => _anonymousCategory = cat);
                       },
@@ -558,16 +555,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
         if (pickedFile == null) return;
         if (!mounted) return;
 
-        final destination = source == ImageSource.gallery
-            ? await _chooseVideoDestination()
-            : _VideoPostDestination.post;
-        if (destination == null || !mounted) return;
-
-        if (destination == _VideoPostDestination.reel) {
-          await _openReelComposer(pickedFile);
-          return;
-        }
-
         final bytes = kIsWeb ? await pickedFile.readAsBytes() : null;
         if (!mounted) return;
         setState(() {
@@ -589,54 +576,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
     }
   }
 
-  Future<_VideoPostDestination?> _chooseVideoDestination() {
-    return showModalBottomSheet<_VideoPostDestination>(
-      context: context,
-      backgroundColor: AppColors.cardColor,
-      showDragHandle: true,
-      builder: (sheetContext) {
-        return SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'How would you like to share it?',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                ListTile(
-                  leading: const Icon(Icons.post_add_rounded),
-                  title: const Text('Post as post'),
-                  subtitle: const Text('Add the video to your regular post'),
-                  onTap: () => Navigator.pop(
-                    sheetContext,
-                    _VideoPostDestination.post,
-                  ),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.play_circle_fill_rounded),
-                  title: const Text('Post as reel'),
-                  subtitle: const Text('Open the reel editor with this video'),
-                  onTap: () => Navigator.pop(
-                    sheetContext,
-                    _VideoPostDestination.reel,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _openReelComposer(XFile pickedFile) async {
+  Future<void> _openReelComposer() async {
     if (kIsWeb) {
       _showSnackBar(
         'Posting this video as a reel is not available on web yet.',
@@ -651,7 +591,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
         builder: (_) => BlocProvider(
           create: (_) => ReelBloc(),
           child: CreateReelPage(
-            initialVideoFile: File(pickedFile.path),
             initialCaption: _textController.text.trim(),
           ),
         ),
@@ -907,7 +846,12 @@ class _Header extends StatelessWidget {
             IconButton(
               tooltip: 'Close composer',
               onPressed: isSubmitting ? null : onBack,
-              icon: const Icon(Icons.close_rounded),
+              style: IconButton.styleFrom(
+                backgroundColor: AppColors.card,
+                foregroundColor: AppColors.text,
+                fixedSize: const Size.square(38),
+              ),
+              icon: const Icon(Icons.close_rounded, size: 20),
             ),
             const SizedBox(width: 4),
             Expanded(
@@ -923,9 +867,15 @@ class _Header extends StatelessWidget {
             FilledButton(
               onPressed: canSubmit ? onSubmit : null,
               style: FilledButton.styleFrom(
-                minimumSize: const Size(76, 38),
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                shape: const StadiumBorder(),
+                backgroundColor: AppColors.secondary,
+                foregroundColor: AppColors.white,
+                disabledBackgroundColor: AppColors.border.withOpacity(0.55),
+                disabledForegroundColor: AppColors.textHint,
+                minimumSize: const Size(88, 40),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 elevation: 0,
               ),
               child: isSubmitting
@@ -936,12 +886,19 @@ class _Header extends StatelessWidget {
                         color: AppColors.white,
                       ),
                     )
-                  : const Text(
-                      'Post',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
+                  : const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.send_rounded, size: 16),
+                        SizedBox(width: 7),
+                        Text(
+                          'Post',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
                     ),
             ),
           ],
@@ -961,6 +918,7 @@ class _ComposerSection extends StatelessWidget {
   final int pollExpirationHours;
   final bool enabled;
   final ValueChanged<PostComposerType> onPostTypeChanged;
+  final VoidCallback onCreateReel;
   final ValueChanged<String> onAnonymousCategoryChanged;
   final ValueChanged<int> onPollExpirationHoursChanged;
   final VoidCallback onAddPollOption;
@@ -978,6 +936,7 @@ class _ComposerSection extends StatelessWidget {
     required this.pollExpirationHours,
     required this.enabled,
     required this.onPostTypeChanged,
+    required this.onCreateReel,
     required this.onAnonymousCategoryChanged,
     required this.onPollExpirationHoursChanged,
     required this.onAddPollOption,
@@ -991,9 +950,9 @@ class _ComposerSection extends StatelessWidget {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: EdgeInsets.fromLTRB(
-        16,
-        18,
-        16,
+        12,
+        14,
+        12,
         24 + MediaQuery.viewInsetsOf(context).bottom,
       ),
       child: Center(
@@ -1004,16 +963,49 @@ class _ComposerSection extends StatelessWidget {
             children: [
               Container(
                 width: double.infinity,
-                padding: EdgeInsets.zero,
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(18),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: AppColors.secondary.withOpacity(0.14),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Icon(
+                            Icons.edit_note_rounded,
+                            color: AppColors.secondary,
+                            size: 19,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'What do you want to share?',
+                            style: AppTheme.blackTextStyle.copyWith(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
                     TokenSuggestionField(
                       controller: textController,
                       focusNode: composerFocusNode,
                       enabled: enabled,
                       suggestionsBuilder: suggestionsBuilder,
-                      minLines: 7,
+                      minLines: 6,
                       maxLines: null,
                       style: AppTheme.blackTextStyle.copyWith(
                         fontSize: 15,
@@ -1034,8 +1026,42 @@ class _ComposerSection extends StatelessWidget {
                         disabledBorder: InputBorder.none,
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.alternate_email_rounded,
+                          size: 14,
+                          color: AppColors.primary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Mention people',
+                          style: AppTheme.greyTextStyle.copyWith(
+                            color: AppColors.primary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Icon(
+                          Icons.tag_rounded,
+                          size: 14,
+                          color: AppColors.primary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Add topics',
+                          style: AppTheme.greyTextStyle.copyWith(
+                            color: AppColors.primary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
                     if (postType == PostComposerType.poll) ...[
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 18),
                       _PollComposerPanel(
                         enabled: enabled,
                         optionControllers: pollOptionControllers,
@@ -1051,10 +1077,10 @@ class _ComposerSection extends StatelessWidget {
                     ],
                     if (mediaItems.isNotEmpty) ...[
                       const SizedBox(height: 16),
-                      Divider(color: AppColors.cardBorderColor),
+                      Divider(color: AppColors.border.withOpacity(0.5)),
                       const SizedBox(height: 12),
                       SizedBox(
-                        height: 120,
+                        height: 128,
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemCount: mediaItems.length,
@@ -1064,12 +1090,10 @@ class _ComposerSection extends StatelessWidget {
                             return Stack(
                               children: [
                                 Container(
-                                  width: 100,
+                                  width: 112,
                                   decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: AppColors.cardBorderColor,
-                                    ),
+                                    color: AppColors.backgroundColor,
+                                    borderRadius: BorderRadius.circular(14),
                                   ),
                                   clipBehavior: Clip.antiAlias,
                                   child: item.type == MediaType.image
@@ -1084,7 +1108,31 @@ class _ComposerSection extends StatelessWidget {
                                                   fit: BoxFit.cover,
                                                 )
                                               : const Icon(Icons.image))
-                                      : const Icon(Icons.videocam, size: 40),
+                                      : Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            const Icon(
+                                              Icons.play_circle_fill_rounded,
+                                              color: AppColors.secondary,
+                                              size: 34,
+                                            ),
+                                            const SizedBox(height: 7),
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: 8,
+                                              ),
+                                              child: Text(
+                                                item.fileName ?? 'Video',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: AppTheme.greyTextStyle
+                                                    .copyWith(fontSize: 9),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                 ),
                                 Positioned(
                                   top: 4,
@@ -1115,65 +1163,8 @@ class _ComposerSection extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 22),
-              _ComposerIdentity(
-                isAnonymous: postType == PostComposerType.anonymous,
-              ),
-              const SizedBox(height: 22),
-              Text(
-                'Post format',
-                style: AppTheme.greyTextStyle.copyWith(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 46,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: PostComposerType.values.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (context, index) {
-                    final type = PostComposerType.values[index];
-                    final selected = type == postType;
-                    return ChoiceChip(
-                      avatar: Icon(
-                        _composerIcon(type),
-                        size: 16,
-                        color: selected
-                            ? AppColors.white
-                            : AppColors.textSecondary,
-                      ),
-                      label: Text(type.label),
-                      selected: selected,
-                      onSelected: enabled
-                          ? (_) {
-                              HapticFeedback.selectionClick();
-                              onPostTypeChanged(type);
-                            }
-                          : null,
-                      labelStyle: TextStyle(
-                        color: selected ? AppColors.white : AppColors.text,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      selectedColor: AppColors.primary,
-                      backgroundColor: AppColors.cardColor,
-                      side: BorderSide(color: AppColors.cardBorderColor),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    );
-                  },
-                ),
-              ),
+              const SizedBox(height: 18),
               if (postType == PostComposerType.anonymous) ...[
-                const SizedBox(height: 14),
                 Text(
                   'Anonymous category',
                   style: AppTheme.blackTextStyle.copyWith(
@@ -1202,7 +1193,7 @@ class _ComposerSection extends StatelessWidget {
                                 category.toLowerCase(),
                               )
                           : null,
-                      backgroundColor: AppColors.cardColor,
+                      backgroundColor: AppColors.transparent,
                       selectedColor: AppColors.primary.withOpacity(0.14),
                       labelStyle: TextStyle(
                         color: selected ? AppColors.primary : AppColors.text,
@@ -1210,12 +1201,86 @@ class _ComposerSection extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                       side: BorderSide(
-                        color: AppColors.border.withOpacity(0.7),
+                        color: selected
+                            ? AppColors.primary.withOpacity(0.55)
+                            : AppColors.border.withOpacity(0.7),
                       ),
+                      shape: const StadiumBorder(),
                     );
                   }).toList(),
                 ),
+                const SizedBox(height: 18),
               ],
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 5),
+                        Text(
+                          'Post format',
+                          style: AppTheme.blackTextStyle.copyWith(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Choose how people interact with this post',
+                          style:
+                              AppTheme.greyTextStyle.copyWith(fontSize: 10.5),
+                        ),
+                        const SizedBox(height: 5),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final cellWidth = (constraints.maxWidth - 8) / 2;
+                  return Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ...PostComposerType.values.map((type) {
+                        final selected = type == postType;
+                        return SizedBox(
+                          width: cellWidth,
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: _PostFormatOption(
+                              icon: _composerIcon(type),
+                              label: type.label,
+                              selected: selected,
+                              onTap: enabled
+                                  ? () {
+                                      HapticFeedback.selectionClick();
+                                      onPostTypeChanged(type);
+                                    }
+                                  : null,
+                            ),
+                          ),
+                        );
+                      }),
+                      SizedBox(
+                        width: cellWidth,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: _PostFormatOption(
+                            icon: Icons.movie_creation_outlined,
+                            label: 'Reels',
+                            selected: false,
+                            onTap: enabled ? onCreateReel : null,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ],
           ),
         ),
@@ -1238,117 +1303,62 @@ class _ComposerSection extends StatelessWidget {
       };
 }
 
-class _ComposerIdentity extends StatelessWidget {
-  final bool isAnonymous;
+class _PostFormatOption extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
 
-  const _ComposerIdentity({required this.isAnonymous});
+  const _PostFormatOption({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return BlocSelector<AuthBloc, AuthState, Map<String, dynamic>?>(
-      selector: (state) => state.user,
-      builder: (context, user) {
-        final name = isAnonymous
-            ? 'Anonymous'
-            : (user?['name']?.toString().trim().isNotEmpty == true
-                ? user!['name'].toString().trim()
-                : user?['username']?.toString().trim().isNotEmpty == true
-                    ? user!['username'].toString().trim()
-                    : 'You');
-        final avatar = user?['avatar']?.toString() ?? '';
-        final fallback =
-            name.isEmpty ? 'U' : name.characters.first.toUpperCase();
-
-        return Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isAnonymous
-                    ? AppColors.secondary.withOpacity(0.14)
-                    : AppColors.cardColor,
-                border: Border.all(
-                  color: AppColors.border.withOpacity(0.7),
+    return Material(
+      color: AppColors.transparent,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          decoration: BoxDecoration(
+            color: selected
+                ? AppColors.secondary.withOpacity(0.14)
+                : AppColors.transparent,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: selected
+                  ? AppColors.secondary.withOpacity(0.65)
+                  : AppColors.border.withOpacity(0.55),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: selected ? AppColors.secondary : AppColors.textSecondary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: selected ? AppColors.secondary : AppColors.text,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              clipBehavior: Clip.antiAlias,
-              child: isAnonymous
-                  ? const Icon(
-                      Icons.visibility_off_outlined,
-                      color: AppColors.secondary,
-                      size: 21,
-                    )
-                  : avatar.startsWith('http')
-                      ? AppNetworkImage(
-                          imageUrl: avatar,
-                          fit: BoxFit.cover,
-                          preset: AppNetworkImagePreset.avatar,
-                          errorBuilder: (_) => _InitialAvatar(fallback),
-                          placeholder: (_) => _InitialAvatar(fallback),
-                        )
-                      : _InitialAvatar(fallback),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTheme.blackTextStyle.copyWith(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Row(
-                    children: [
-                      Icon(
-                        isAnonymous
-                            ? Icons.shield_outlined
-                            : Icons.people_alt_outlined,
-                        size: 13,
-                        color: AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        isAnonymous
-                            ? 'Your identity stays hidden'
-                            : 'Visible in the Home feed',
-                        style: AppTheme.greyTextStyle.copyWith(fontSize: 11),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _InitialAvatar extends StatelessWidget {
-  final String initial;
-
-  const _InitialAvatar(this.initial);
-
-  @override
-  Widget build(BuildContext context) {
-    return ColoredBox(
-      color: AppColors.primary.withOpacity(0.1),
-      child: Center(
-        child: Text(
-          initial,
-          style: const TextStyle(
-            color: AppColors.primary,
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
+            ],
           ),
         ),
       ),
@@ -1384,7 +1394,7 @@ class _ComposerToolbar extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 680),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+            padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
             child: Row(
               children: [
                 Expanded(
@@ -1402,18 +1412,21 @@ class _ComposerToolbar extends StatelessWidget {
                   enabled: enabled,
                   onTap: onPickImage,
                 ),
+                const SizedBox(width: 6),
                 _ToolbarAction(
                   tooltip: 'Open camera',
                   icon: Icons.photo_camera_outlined,
                   enabled: enabled,
                   onTap: onPickCamera,
                 ),
+                const SizedBox(width: 6),
                 _ToolbarAction(
                   tooltip: 'Add video',
                   icon: Icons.video_library_outlined,
                   enabled: enabled,
                   onTap: onPickVideo,
                 ),
+                const SizedBox(width: 6),
                 _ToolbarAction(
                   tooltip: 'Add hashtag',
                   icon: Icons.tag_rounded,
@@ -1449,10 +1462,16 @@ class _ToolbarAction extends StatelessWidget {
       child: IconButton(
         onPressed: enabled ? onTap : null,
         style: IconButton.styleFrom(
-          foregroundColor: AppColors.primary,
+          backgroundColor: AppColors.secondary.withOpacity(0.14),
+          foregroundColor: AppColors.secondary,
           disabledForegroundColor: AppColors.textHint,
+          disabledBackgroundColor: AppColors.border.withOpacity(0.25),
+          fixedSize: const Size.square(38),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(11),
+          ),
         ),
-        icon: Icon(icon, size: 21),
+        icon: Icon(icon, size: 19),
       ),
     );
   }

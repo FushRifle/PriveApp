@@ -177,12 +177,12 @@ class _ProfileSavedPostsTabState extends State<ProfileSavedPostsTab> {
       color: AppColors.primary,
       onRefresh: () => _loadSavedPosts(refresh: true),
       child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 42),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 42),
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
         ),
         itemCount: _savedPosts.length + (_isRefreshing ? 1 : 0),
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
         itemBuilder: (context, index) {
           if (index >= _savedPosts.length) {
             return const Padding(
@@ -237,7 +237,7 @@ class _ProfileDraftsTabState extends State<ProfileDraftsTab> {
       color: AppColors.primary,
       onRefresh: () async => setState(_loadDrafts),
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 42),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 42),
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
         ),
@@ -284,54 +284,90 @@ class _DraftsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
       decoration: BoxDecoration(
-        color: AppColors.cardColor,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.cardBorderColor),
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border.withOpacity(0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.drafts_outlined, color: AppColors.primary, size: 20),
+              Container(
+                width: 32,
+                height: 32,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.secondary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.drafts_outlined,
+                  color: AppColors.secondary,
+                  size: 18,
+                ),
+              ),
               const SizedBox(width: 8),
               Text(
-                'Drafts (${drafts.length})',
+                '${drafts.length} ${drafts.length == 1 ? 'draft' : 'drafts'}',
                 style: AppTheme.blackTextStyle.copyWith(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          ...drafts.map((draft) {
+          ...drafts.indexed.map((entry) {
+            final index = entry.$1;
+            final draft = entry.$2;
             final id = draft['id']?.toString() ?? '';
             final text = draft['text']?.toString().trim() ?? '';
             final type = draft['postType']?.toString() ?? 'post';
             final updatedAt = draft['updatedAt']?.toString() ?? '';
-            return ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.edit_note_rounded),
-              title: Text(
-                text.isEmpty
-                    ? '${type[0].toUpperCase()}${type.substring(1)} draft'
-                    : text,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              subtitle: Text(
-                updatedAt.isEmpty
-                    ? 'Saved locally'
-                    : 'Saved ${_formatDraftTime(updatedAt)}',
-              ),
-              onTap: () => onOpen(draft),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete_outline_rounded),
-                onPressed: id.isEmpty ? null : () => onDelete(id),
-              ),
+            return Column(
+              children: [
+                if (index > 0)
+                  Divider(
+                    height: 1,
+                    color: AppColors.border.withOpacity(0.45),
+                  ),
+                ListTile(
+                  minTileHeight: 58,
+                  contentPadding: const EdgeInsets.only(left: 2),
+                  leading: Icon(
+                    Icons.edit_note_rounded,
+                    color: AppColors.textSecondary,
+                    size: 21,
+                  ),
+                  title: Text(
+                    text.isEmpty
+                        ? '${type[0].toUpperCase()}${type.substring(1)} draft'
+                        : text,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTheme.blackTextStyle.copyWith(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: Text(
+                    updatedAt.isEmpty
+                        ? 'Saved locally'
+                        : 'Saved ${_formatDraftTime(updatedAt)}',
+                    style: AppTheme.greyTextStyle.copyWith(fontSize: 10.5),
+                  ),
+                  onTap: () => onOpen(draft),
+                  trailing: IconButton(
+                    tooltip: 'Delete draft',
+                    icon: const Icon(Icons.delete_outline_rounded, size: 19),
+                    color: AppColors.textSecondary,
+                    onPressed: id.isEmpty ? null : () => onDelete(id),
+                  ),
+                ),
+              ],
             );
           }),
         ],
@@ -561,17 +597,17 @@ class ProfilePostsTab extends StatelessWidget {
 
           return GridView.builder(
             padding: EdgeInsets.fromLTRB(
-              constraints.maxWidth < 360 ? 10 : 14,
-              14,
-              constraints.maxWidth < 360 ? 10 : 14,
+              constraints.maxWidth < 360 ? 3 : 4,
+              5,
+              constraints.maxWidth < 360 ? 3 : 4,
               32,
             ),
             physics: const BouncingScrollPhysics(),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: columnCount,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              childAspectRatio: 0.78,
+              mainAxisSpacing: 4,
+              crossAxisSpacing: 4,
+              childAspectRatio: 1,
             ),
             itemCount: items.length + (isLoadingMore ? 1 : 0),
             itemBuilder: (context, index) {
@@ -625,18 +661,18 @@ class ProfileMediaGrid extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final columnCount = constraints.maxWidth >= 1200
-              ? 5
+              ? 6
               : constraints.maxWidth >= 900
-                  ? 4
-                  : constraints.maxWidth >= 600
-                      ? 3
-                      : 2;
-          final horizontalPadding = constraints.maxWidth < 360 ? 10.0 : 16.0;
+                  ? 5
+                  : constraints.maxWidth >= 620
+                      ? 4
+                      : 3;
+          final horizontalPadding = constraints.maxWidth < 360 ? 3.0 : 4.0;
 
           return GridView.builder(
             padding: EdgeInsets.fromLTRB(
               horizontalPadding,
-              14,
+              5,
               horizontalPadding,
               32,
             ),
@@ -644,9 +680,9 @@ class ProfileMediaGrid extends StatelessWidget {
             cacheExtent: 800,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: columnCount,
-              mainAxisSpacing: 14,
-              crossAxisSpacing: 14,
-              childAspectRatio: 0.84,
+              mainAxisSpacing: 4,
+              crossAxisSpacing: 4,
+              childAspectRatio: 1,
             ),
             itemCount: items.length + (isLoadingMore ? 1 : 0),
             itemBuilder: (context, index) {
@@ -678,7 +714,7 @@ class ProfileGalleryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(7),
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -694,24 +730,15 @@ class ProfileGalleryTile extends StatelessWidget {
                   Icon(Icons.broken_image_outlined, color: AppColors.greyColor),
             ),
           ),
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.transparent, Color(0x55000000)],
-              ),
-            ),
-          ),
           if (isVideo)
             const Positioned(
-              top: 10,
-              right: 10,
+              top: 6,
+              right: 6,
               child: ProfileBadge(icon: Icons.play_arrow),
             ),
           Positioned(
-            bottom: 10,
-            left: 10,
+            bottom: 6,
+            left: 6,
             child: ProfileBadge(
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -732,9 +759,9 @@ class ProfileGalleryTile extends StatelessWidget {
           ),
           if (gallery.caption?.isNotEmpty == true)
             Positioned(
-              left: 10,
-              right: isVideo ? 48 : 10,
-              bottom: 30,
+              left: 6,
+              right: isVideo ? 42 : 6,
+              bottom: 27,
               child: ProfileBadge(
                 child: Text(
                   gallery.caption!,
@@ -758,14 +785,14 @@ class ProfileLoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: ProfileLoadingAnimation(size: 120));
+    return const Center(child: ProfileLoadingAnimation(size: 64));
   }
 }
 
 class ProfileLoadingAnimation extends StatelessWidget {
   final double size;
 
-  const ProfileLoadingAnimation({super.key, this.size = 120});
+  const ProfileLoadingAnimation({super.key, this.size = 64});
 
   @override
   Widget build(BuildContext context) {
@@ -804,26 +831,51 @@ class ProfileEmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 48, color: AppColors.greyColor.withOpacity(0.55)),
-            const SizedBox(height: 12),
+            Container(
+              width: 50,
+              height: 50,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.secondary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(icon, size: 23, color: AppColors.secondary),
+            ),
+            const SizedBox(height: 13),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: AppTheme.greyTextStyle.copyWith(fontSize: 14),
+              style: AppTheme.blackTextStyle.copyWith(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             if (subtitle != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 5),
               Text(
                 subtitle!,
                 textAlign: TextAlign.center,
-                style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: AppTheme.greyTextStyle.copyWith(
+                  fontSize: 11,
+                  height: 1.4,
+                ),
               ),
             ],
             if (actionText != null && onAction != null) ...[
-              const SizedBox(height: 16),
-              FilledButton(
+              const SizedBox(height: 14),
+              TextButton.icon(
                 onPressed: onAction,
-                child: Text(actionText!),
+                icon: const Icon(Icons.refresh_rounded, size: 17),
+                label: Text(actionText!),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.secondary,
+                  textStyle: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ],
           ],

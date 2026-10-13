@@ -28,7 +28,7 @@ class ProfileCoverHeader extends StatelessWidget {
     final coverUrl = _coverUrl;
 
     return SliverAppBar(
-      expandedHeight: 184,
+      expandedHeight: 152,
       stretch: true,
       pinned: true,
       backgroundColor: AppColors.backgroundColor,
@@ -216,15 +216,9 @@ class ProfileHeaderCard extends StatelessWidget {
               ),
               decoration: BoxDecoration(
                 color: AppColors.card,
-                borderRadius: BorderRadius.circular(28),
+                borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: AppColors.border.withOpacity(0.55)),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.shadow.withOpacity(0.5),
-                    blurRadius: 24,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
+                boxShadow: const [],
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -233,25 +227,25 @@ class ProfileHeaderCard extends StatelessWidget {
                     clipBehavior: Clip.none,
                     alignment: Alignment.topCenter,
                     children: [
-                      const SizedBox(height: 68),
+                      const SizedBox(height: 52),
                       Positioned(
-                        top: -30,
+                        top: -22,
                         child: ProfileAvatarBubble(
                           profile: profile,
-                          radius: isCompact ? 50 : 58,
+                          radius: isCompact ? 42 : 48,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 12),
                   ProfileIdentityRow(
                     profile: profile,
                     isOwnProfile: isOwnProfile,
                     onOpenAccountSwitcher: onOpenAccountSwitcher,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 5),
                   ProfileBioRow(profile: profile),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 10),
                   ProfileActionRow(
                     profile: profile,
                     isOwnProfile: isOwnProfile,
@@ -261,7 +255,7 @@ class ProfileHeaderCard extends StatelessWidget {
                     onMessage: onMessage,
                     onOpenInsights: onOpenInsights,
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 10),
                   ProfileStatsRow(profile: profile, isOwnProfile: isOwnProfile),
                 ],
               ),
@@ -366,7 +360,7 @@ class ProfileIdentityRow extends StatelessWidget {
 
     return Column(
       children: [
-        const SizedBox(height: 10),
+        const SizedBox(height: 2),
         Text(
           profile.displayName ?? 'User',
           textAlign: TextAlign.center,
@@ -453,7 +447,7 @@ class ProfileBioRow extends StatelessWidget {
       children: [
         if (hasBio)
           Padding(
-            padding: const EdgeInsets.only(bottom: 15, top: 15),
+            padding: const EdgeInsets.only(bottom: 8, top: 8),
             child: Text(
               bio,
               textAlign: TextAlign.center,
@@ -467,8 +461,8 @@ class ProfileBioRow extends StatelessWidget {
         if (chips.isNotEmpty)
           Wrap(
             alignment: WrapAlignment.center,
-            spacing: 10,
-            runSpacing: 10,
+            spacing: 7,
+            runSpacing: 7,
             children: chips,
           ),
       ],
@@ -495,7 +489,7 @@ class ProfileInfoChip extends StatelessWidget {
         maxWidth: availableWidth.clamp(120.0, 420.0).toDouble(),
       ),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
         decoration: BoxDecoration(
           color: AppColors.card.withOpacity(0.82),
           borderRadius: BorderRadius.circular(999),
@@ -565,117 +559,58 @@ class ProfileStatsRow extends StatelessWidget {
               final totalLikes =
                   (feedLikes ?? 0) > 0 ? feedLikes! : galleryLikes;
 
-              return LayoutBuilder(
-                builder: (context, constraints) {
-                  final isCompact = constraints.maxWidth < 360;
-
-                  if (isCompact) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: AppColors.backgroundColor.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(
-                          color: AppColors.border.withOpacity(0.35),
-                        ),
-                      ),
-                      child: Wrap(
-                        alignment: WrapAlignment.spaceEvenly,
-                        runSpacing: 12,
-                        children: [
-                          SizedBox(
-                            width: constraints.maxWidth / 3 - 12,
-                            child: ProfileStatBlock(
-                              value: _formatCount(stats?.followingCount ?? 0),
-                              label: 'Following',
-                              onTap: isOwnProfile
-                                  ? () => _openFollowList(
-                                        context,
-                                        isFollowers: false,
-                                      )
-                                  : null,
-                            ),
-                          ),
-                          SizedBox(
-                            width: constraints.maxWidth / 3 - 12,
-                            child: ProfileStatBlock(
-                              value: _formatCount(stats?.followersCount ?? 0),
-                              label: 'Followers',
-                              onTap: isOwnProfile
-                                  ? () => _openFollowList(
-                                        context,
-                                        isFollowers: true,
-                                      )
-                                  : null,
-                            ),
-                          ),
-                          SizedBox(
-                            width: constraints.maxWidth / 3 - 12,
-                            child: ProfileStatBlock(
-                              value: _formatCount(totalLikes),
-                              label: 'Likes',
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  return Container(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      color: AppColors.backgroundColor.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(
-                        color: AppColors.border.withOpacity(0.35),
+              return Container(
+                padding: const EdgeInsets.symmetric(vertical: 5),
+                decoration: BoxDecoration(
+                  border: Border(
+                    top: BorderSide(
+                      color: AppColors.border.withOpacity(0.45),
+                    ),
+                    bottom: BorderSide(
+                      color: AppColors.border.withOpacity(0.45),
+                    ),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ProfileStatBlock(
+                        value: stats == null
+                            ? '—'
+                            : _formatCount(stats.followingCount),
+                        label: 'Following',
+                        onTap: isOwnProfile
+                            ? () => _openFollowList(
+                                  context,
+                                  isFollowers: false,
+                                )
+                            : null,
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: ProfileStatBlock(
-                            value: _formatCount(stats?.followingCount ?? 0),
-                            label: 'Following',
-                            onTap: isOwnProfile
-                                ? () => _openFollowList(
-                                      context,
-                                      isFollowers: false,
-                                    )
-                                : null,
-                          ),
-                        ),
-                        Container(
-                          width: 1,
-                          height: 28,
-                          color: AppColors.border,
-                        ),
-                        Expanded(
-                          child: ProfileStatBlock(
-                            value: _formatCount(stats?.followersCount ?? 0),
-                            label: 'Followers',
-                            onTap: isOwnProfile
-                                ? () => _openFollowList(
-                                      context,
-                                      isFollowers: true,
-                                    )
-                                : null,
-                          ),
-                        ),
-                        Container(
-                          width: 1,
-                          height: 28,
-                          color: AppColors.border,
-                        ),
-                        Expanded(
-                          child: ProfileStatBlock(
-                            value: _formatCount(totalLikes),
-                            label: 'Likes',
-                          ),
-                        ),
-                      ],
+                    const _ProfileStatDivider(),
+                    Expanded(
+                      child: ProfileStatBlock(
+                        value: stats == null
+                            ? '—'
+                            : _formatCount(stats.followersCount),
+                        label: 'Followers',
+                        onTap: isOwnProfile
+                            ? () => _openFollowList(
+                                  context,
+                                  isFollowers: true,
+                                )
+                            : null,
+                      ),
                     ),
-                  );
-                },
+                    const _ProfileStatDivider(),
+                    Expanded(
+                      child: ProfileStatBlock(
+                        value: _formatCount(totalLikes),
+                        label: 'Likes',
+                      ),
+                    ),
+                  ],
+                ),
               );
             },
           );
@@ -730,25 +665,28 @@ class ProfileStatBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = Column(
-      children: [
-        Text(
-          value,
-          style: AppTheme.blackTextStyle.copyWith(
-            fontSize: 17,
-            fontWeight: FontWeight.w900,
+    final content = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: AppTheme.blackTextStyle.copyWith(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.25,
+            ),
           ),
-        ),
-        const SizedBox(height: 3),
-        Text(
-          label,
-          style: AppTheme.greyTextStyle.copyWith(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.5,
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: AppTheme.greyTextStyle.copyWith(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
 
     if (onTap == null) {
@@ -760,11 +698,21 @@ class ProfileStatBlock extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: content,
-        ),
+        child: content,
       ),
+    );
+  }
+}
+
+class _ProfileStatDivider extends StatelessWidget {
+  const _ProfileStatDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      height: 28,
+      color: AppColors.border.withOpacity(0.55),
     );
   }
 }
@@ -798,8 +746,8 @@ class ProfileActionRow extends StatelessWidget {
         if (isOwnProfile) {
           return Wrap(
             alignment: WrapAlignment.center,
-            spacing: 12,
-            runSpacing: 12,
+            spacing: 8,
+            runSpacing: 8,
             children: [
               SizedBox(
                 width: isCompact ? 80 : 90,
@@ -856,7 +804,7 @@ class ProfileActionRow extends StatelessWidget {
                 onTap: onToggleFollow,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             Expanded(
               child: ProfileActionButton(
                 text: 'MESSAGE',
@@ -897,11 +845,11 @@ class ProfileActionButton extends StatelessWidget {
         onTap();
       },
       child: Container(
-        height: 42,
+        height: 38,
         constraints: const BoxConstraints(minWidth: 0),
         decoration: BoxDecoration(
           color: hasBorder ? backgroundColor : null,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: hasBorder ? AppColors.border : Colors.transparent,
           ),
@@ -997,20 +945,19 @@ class ProfileStickyTabBar extends StatelessWidget {
         LayoutBuilder(
           builder: (context, constraints) {
             final showIconAndLabel =
-                tabs.length <= 2 || constraints.maxWidth >= 620;
-            final iconOnly = tabs.length > 2 && constraints.maxWidth < 360;
+                tabs.length <= 2 || constraints.maxWidth >= 370;
 
             return Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 760),
                 child: Container(
-                  margin: const EdgeInsets.fromLTRB(12, 9, 12, 7),
+                  margin: const EdgeInsets.fromLTRB(12, 7, 12, 5),
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: AppColors.card,
-                    borderRadius: BorderRadius.circular(18),
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: AppColors.border.withOpacity(0.6),
+                      color: AppColors.border.withOpacity(0.48),
                     ),
                   ),
                   child: TabBar(
@@ -1018,25 +965,21 @@ class ProfileStickyTabBar extends StatelessWidget {
                     dividerColor: AppColors.transparent,
                     indicatorSize: TabBarIndicatorSize.tab,
                     indicator: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withOpacity(0.2),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                      color: AppColors.secondary.withOpacity(0.13),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: AppColors.secondary.withOpacity(0.24),
+                      ),
                     ),
-                    labelColor: AppColors.white,
+                    labelColor: AppColors.secondary,
                     unselectedLabelColor: AppColors.textSecondary,
                     labelStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
                     ),
                     unselectedLabelStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w500,
                     ),
                     splashFactory: NoSplash.splashFactory,
                     overlayColor: const WidgetStatePropertyAll<Color>(
@@ -1045,15 +988,15 @@ class ProfileStickyTabBar extends StatelessWidget {
                     tabs: tabs
                         .map(
                           (tab) => Tab(
-                            height: 42,
+                            height: 39,
                             child: Tooltip(
                               message: tab.label,
                               child: showIconAndLabel
                                   ? Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(tab.icon, size: 18),
-                                        const SizedBox(width: 7),
+                                        Icon(tab.icon, size: 17),
+                                        const SizedBox(width: 6),
                                         Flexible(
                                           child: Text(
                                             tab.label,
@@ -1063,13 +1006,7 @@ class ProfileStickyTabBar extends StatelessWidget {
                                         ),
                                       ],
                                     )
-                                  : iconOnly
-                                      ? Icon(tab.icon, size: 20)
-                                      : Text(
-                                          tab.label,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
+                                  : Icon(tab.icon, size: 19),
                             ),
                           ),
                         )
@@ -1080,7 +1017,7 @@ class ProfileStickyTabBar extends StatelessWidget {
             );
           },
         ),
-        62,
+        56,
       ),
     );
   }
@@ -1103,7 +1040,7 @@ class ProfileSliverHeaderDelegate extends SliverPersistentHeaderDelegate {
       BuildContext context, double shrinkOffset, bool overlapsContent) {
     return SizedBox.expand(
       child: ColoredBox(
-        color: AppColors.backgroundColor,
+        color: AppColors.card,
         child: child,
       ),
     );

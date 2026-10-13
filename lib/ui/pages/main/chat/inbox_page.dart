@@ -94,14 +94,14 @@ class _InboxPageState extends State<InboxPage> {
         children: [
           MainTabHeader(
             title: 'Inbox',
-            subtitle: 'Chat with your Clique.',
+            subtitle: 'Your conversations',
             actions: [
               MainTabHeaderAction(
                 icon: Icons.settings_outlined,
                 tooltip: 'Settings',
                 onTap: () => Navigator.pushNamed(
                   context,
-                  NamedRoutes.settingsScreen,
+                  NamedRoutes.globalChatSettingsScreen,
                 ),
               ),
             ],
@@ -175,31 +175,31 @@ class _InboxPageState extends State<InboxPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 72,
-                height: 72,
+                width: 54,
+                height: 54,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.06),
-                  borderRadius: BorderRadius.circular(20),
+                  color: AppColors.secondary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.chat_bubble_outline_rounded,
-                  size: 32,
-                  color: AppColors.primary.withOpacity(0.5),
+                  size: 24,
+                  color: AppColors.secondary,
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 14),
               Text(
                 'No messages yet',
                 style: AppTheme.blackTextStyle.copyWith(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                  fontWeight: AppTheme.bold,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 5),
               Text(
                 'Start a conversation with someone\nto see your messages here',
                 style: AppTheme.greyTextStyle.copyWith(
-                  fontSize: 13,
+                  fontSize: 11.5,
                   height: 1.4,
                 ),
                 textAlign: TextAlign.center,
@@ -219,44 +219,44 @@ class _InboxPageState extends State<InboxPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 72,
-              height: 72,
+              width: 54,
+              height: 54,
               decoration: BoxDecoration(
                 color: AppColors.redColor.withOpacity(0.06),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(
                 Icons.error_outline_rounded,
-                size: 32,
+                size: 24,
                 color: AppColors.redColor.withOpacity(0.5),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 14),
             Text(
               'Something went wrong',
               style: AppTheme.blackTextStyle.copyWith(
-                fontSize: 17,
-                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                fontWeight: AppTheme.bold,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 5),
             Text(
               error ?? 'Failed to load conversations',
               style: AppTheme.greyTextStyle.copyWith(
-                fontSize: 13,
+                fontSize: 11.5,
                 height: 1.4,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 14),
             OutlinedButton.icon(
               onPressed: _loadConversations,
               icon: const Icon(Icons.refresh_rounded, size: 18),
               label: const Text('Try Again'),
               style: OutlinedButton.styleFrom(
-                minimumSize: const Size(140, 42),
-                foregroundColor: AppColors.primary,
-                side: const BorderSide(color: AppColors.primary),
+                minimumSize: const Size(130, 40),
+                foregroundColor: AppColors.secondary,
+                side: const BorderSide(color: AppColors.secondary),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -305,15 +305,15 @@ class _InboxPageState extends State<InboxPage> {
           label,
           textAlign: TextAlign.center,
           style: AppTheme.blackTextStyle.copyWith(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
+            fontSize: 14,
+            fontWeight: AppTheme.bold,
           ),
         ),
         const SizedBox(height: 8),
         Text(
           subtitle,
           textAlign: TextAlign.center,
-          style: AppTheme.greyTextStyle.copyWith(fontSize: 13, height: 1.4),
+          style: AppTheme.greyTextStyle.copyWith(fontSize: 11.5, height: 1.4),
         ),
       ],
     );
@@ -525,7 +525,7 @@ class _InboxPageState extends State<InboxPage> {
     return ListView.builder(
       key: const PageStorageKey<String>('chat-inbox-list'),
       controller: _scrollController,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.fromLTRB(8, 2, 8, 24),
       physics: const AlwaysScrollableScrollPhysics(
         parent: BouncingScrollPhysics(),
       ),
@@ -762,7 +762,10 @@ class _InboxPageState extends State<InboxPage> {
             Expanded(
               child: Text(
                 message,
-                style: const TextStyle(color: AppColors.white),
+                style: AppTheme.whiteTextStyle.copyWith(
+                  color: AppColors.white,
+                  fontSize: 11.5,
+                ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -792,10 +795,10 @@ class _ActionIcon extends StatelessWidget {
       width: 38,
       height: 38,
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.1),
+        color: AppColors.secondary.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Icon(icon, color: AppColors.primary, size: 20),
+      child: Icon(icon, color: AppColors.secondary, size: 20),
     );
   }
 }

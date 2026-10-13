@@ -68,12 +68,14 @@ class InboxMessageItem extends StatelessWidget {
         onLongPress: onLongPress,
         behavior: HitTestBehavior.opaque,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
           decoration: BoxDecoration(
+            color: message.isUnread
+                ? AppColors.secondary.withOpacity(0.045)
+                : AppColors.transparent,
             border: Border(
               bottom: BorderSide(
-                color: AppColors.cardBorder,
-                width: 0.8,
+                color: AppColors.border.withOpacity(0.38),
               ),
             ),
           ),
@@ -82,15 +84,15 @@ class InboxMessageItem extends StatelessWidget {
               Stack(
                 children: [
                   Container(
-                    width: 48,
-                    height: 48,
+                    width: 46,
+                    height: 46,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
                         color: message.isUnread
-                            ? AppColors.primary.withOpacity(0.25)
-                            : Colors.transparent,
-                        width: 2,
+                            ? AppColors.secondary.withOpacity(0.6)
+                            : AppColors.border.withOpacity(0.45),
+                        width: 1.5,
                       ),
                     ),
                     child: ClipOval(
@@ -116,7 +118,7 @@ class InboxMessageItem extends StatelessWidget {
                     ),
                 ],
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 11),
 
               // Content
               Expanded(
@@ -133,9 +135,9 @@ class InboxMessageItem extends StatelessWidget {
                                   message.name,
                                   style: AppTheme.blackTextStyle.copyWith(
                                     fontWeight: message.isUnread
-                                        ? FontWeight.w700
-                                        : FontWeight.w600,
-                                    fontSize: 15,
+                                        ? AppTheme.bold
+                                        : AppTheme.semiBold,
+                                    fontSize: 13.5,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -146,7 +148,7 @@ class InboxMessageItem extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.all(2),
                                   decoration: BoxDecoration(
-                                    color: AppColors.primary,
+                                    color: AppColors.secondary,
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: const Icon(
@@ -161,7 +163,7 @@ class InboxMessageItem extends StatelessWidget {
                                 Icon(
                                   Icons.push_pin_rounded,
                                   size: 12,
-                                  color: AppColors.primary.withOpacity(0.6),
+                                  color: AppColors.secondary,
                                 ),
                               ],
                             ],
@@ -170,17 +172,17 @@ class InboxMessageItem extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           message.time,
-                          style: TextStyle(
+                          style: AppTheme.greyTextStyle.copyWith(
                             fontSize: 11,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: AppTheme.medium,
                             color: message.isUnread
-                                ? AppColors.primary
+                                ? AppColors.secondary
                                 : AppColors.textSecondary,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Row(
                       children: [
                         if (message.isMuted)
@@ -195,17 +197,17 @@ class InboxMessageItem extends StatelessWidget {
                         Expanded(
                           child: Text(
                             message.isTyping ? 'typing...' : message.message,
-                            style: TextStyle(
-                              fontSize: 13.5,
+                            style: AppTheme.greyTextStyle.copyWith(
+                              fontSize: 12,
                               height: 1.3,
                               color: message.isTyping
-                                  ? AppColors.primary
+                                  ? AppColors.secondary
                                   : message.isUnread
                                       ? AppColors.text
                                       : AppColors.textSecondary,
                               fontWeight: message.isTyping || message.isUnread
-                                  ? FontWeight.w500
-                                  : FontWeight.w400,
+                                  ? AppTheme.semiBold
+                                  : AppTheme.regular,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -217,17 +219,17 @@ class InboxMessageItem extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 3),
                             decoration: BoxDecoration(
-                              color: AppColors.primary,
+                              color: AppColors.secondary,
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
                               message.unreadCount > 99
                                   ? '99+'
                                   : '${message.unreadCount}',
-                              style: const TextStyle(
+                              style: AppTheme.whiteTextStyle.copyWith(
                                 color: AppColors.white,
                                 fontSize: 10,
-                                fontWeight: FontWeight.w700,
+                                fontWeight: AppTheme.bold,
                               ),
                             ),
                           ),
@@ -246,22 +248,14 @@ class InboxMessageItem extends StatelessWidget {
 
   Widget _buildAvatar(String firstLetter) {
     if (message.name.toLowerCase() == 'clique') {
-      return Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppColors.primary, AppColors.secondary],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: const Center(
-          child: Text(
-            'C',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: AppColors.white,
-            ),
+      return ColoredBox(
+        color: AppColors.card,
+        child: Padding(
+          padding: const EdgeInsets.all(5),
+          child: Image.asset(
+            'assets/icons/clique-new.png',
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => _avatarFallback('C'),
           ),
         ),
       );
@@ -284,23 +278,14 @@ class InboxMessageItem extends StatelessWidget {
 
   Widget _avatarFallback(String text) {
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.primary.withOpacity(0.08),
-            AppColors.primary.withOpacity(0.04),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
+      color: AppColors.secondary.withOpacity(0.1),
       child: Center(
         child: Text(
           text,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            color: AppColors.primary,
+          style: AppTheme.blackTextStyle.copyWith(
+            fontSize: 17,
+            fontWeight: AppTheme.bold,
+            color: AppColors.secondary,
           ),
         ),
       ),

@@ -16,6 +16,7 @@ import 'package:clique/core/clients/cloudinary_service.dart';
 import 'package:clique/core/services/media_service.dart';
 import 'package:clique/core/services/profile/profile_service.dart';
 import 'package:clique/ui/widgets/common/app_network_image.dart';
+import 'package:clique/ui/widgets/common/app_page_header.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({
@@ -501,7 +502,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
       SnackBar(
         content: Text(
           message,
-          style: TextStyle(color: AppColors.text),
+          style: AppTheme.blackTextStyle.copyWith(
+            color: AppColors.text,
+            fontSize: 12.5,
+          ),
         ),
         backgroundColor: AppColors.card,
         behavior: SnackBarBehavior.floating,
@@ -559,130 +563,151 @@ class _EditProfilePageState extends State<EditProfilePage> {
       ],
       child: Scaffold(
         backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.card,
-          elevation: 0,
-          leading: IconButton(
-            icon: Icon(
-              Icons.close,
-              color: AppColors.text,
+        body: Column(
+          children: [
+            AppPageHeader(
+              title: 'Edit profile',
+              subtitle: 'Keep your details up to date',
+              leadingIcon: Icons.arrow_back_rounded,
+              onLeadingTap: _isBusy ? null : () => Navigator.maybePop(context),
+              action: _HeaderSaveButton(
+                isSaving: _isSaving,
+                enabled: !_isBusy,
+                onPressed: _saveProfile,
+              ),
             ),
-            onPressed: _isBusy ? null : () => Navigator.pop(context),
-          ),
-          title: Text(
-            'Edit Profile',
-            style: AppTheme.blackTextStyle.copyWith(
-              fontWeight: AppTheme.bold,
-              fontSize: 18,
-            ),
-          ),
-          centerTitle: true,
-          actions: [
-            TextButton(
-              onPressed: _isBusy ? null : _saveProfile,
-              child: _isSaving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.primary,
-                      ),
-                    )
-                  : Text(
-                      'Save',
-                      style: AppTheme.blackTextStyle.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: AppTheme.bold,
-                      ),
-                    ),
+            Expanded(
+              child: BlocBuilder<ProfileBloc, ProfileState>(
+                buildWhen: (previous, current) {
+                  return previous.status != current.status ||
+                      previous.myProfile != current.myProfile;
+                },
+                builder: (context, profileState) {
+                  return BlocBuilder<UserBloc, UserState>(
+                    buildWhen: (previous, current) {
+                      return previous.status != current.status ||
+                          previous.currentUser != current.currentUser;
+                    },
+                    builder: (context, userState) {
+                      final profile = profileState.myProfile;
+                      final user = userState.currentUser;
+
+                      final loading = !_hasPopulatedForm &&
+                          (profileState.status == ProfileStatus.loading ||
+                              userState.status == UserStatus.loading);
+
+                      if (loading) {
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            color: AppColors.primary,
+                            strokeWidth: 2,
+                          ),
+                        );
+                      }
+
+                      _populateFormOnce(profile, user);
+
+                      return SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                        padding: const EdgeInsets.only(
+                          bottom: 32,
+                        ),
+                        child: Column(
+                          children: [
+                            _CoverImageSection(
+                              profile: profile,
+                              selectedCoverFile: _selectedCoverFile,
+                              isUploading: _isUploadingCover,
+                              isDisabled: _isBusy,
+                              onTap: () => _showImagePickerOptions(false),
+                            ),
+                            const SizedBox(height: 1),
+                            _ProfilePictureSection(
+                              profile: profile,
+                              selectedAvatarFile: _selectedAvatarFile,
+                              isUploading: _isUploadingAvatar,
+                              isDisabled: _isBusy,
+                              initial: _nameController.text.isNotEmpty
+                                  ? _nameController.text[0].toUpperCase()
+                                  : 'U',
+                              onTap: () => _showImagePickerOptions(true),
+                            ),
+                            const SizedBox(height: 24),
+                            _FormFields(
+                              nameController: _nameController,
+                              ageController: _ageController,
+                              bioController: _bioController,
+                              languagesController: _languagesController,
+                              countryController: _countryController,
+                              countryCodeController: _countryCodeController,
+                              mobileNumberController: _mobileNumberController,
+                              genderController: _genderController,
+                              genderOptions: _genderOptions,
+                              interestOptions: _interestOptions,
+                              selectedInterests: _selectedInterests,
+                              onGenderChanged: (value) {
+                                setState(() => _genderController.text = value);
+                              },
+                              onInterestToggle: _toggleInterest,
+                              enabled: !_isBusy,
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
             ),
           ],
         ),
-        body: BlocBuilder<ProfileBloc, ProfileState>(
-          buildWhen: (previous, current) {
-            return previous.status != current.status ||
-                previous.myProfile != current.myProfile;
-          },
-          builder: (context, profileState) {
-            return BlocBuilder<UserBloc, UserState>(
-              buildWhen: (previous, current) {
-                return previous.status != current.status ||
-                    previous.currentUser != current.currentUser;
-              },
-              builder: (context, userState) {
-                final profile = profileState.myProfile;
-                final user = userState.currentUser;
+      ),
+    );
+  }
+}
 
-                final loading = !_hasPopulatedForm &&
-                    (profileState.status == ProfileStatus.loading ||
-                        userState.status == UserStatus.loading);
+class _HeaderSaveButton extends StatelessWidget {
+  final bool isSaving;
+  final bool enabled;
+  final VoidCallback onPressed;
 
-                if (loading) {
-                  return const Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.primary,
-                      strokeWidth: 2,
-                    ),
-                  );
-                }
+  const _HeaderSaveButton({
+    required this.isSaving,
+    required this.enabled,
+    required this.onPressed,
+  });
 
-                _populateFormOnce(profile, user);
-
-                return SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: const EdgeInsets.only(
-                    bottom: 32,
-                  ),
-                  child: Column(
-                    children: [
-                      _CoverImageSection(
-                        profile: profile,
-                        selectedCoverFile: _selectedCoverFile,
-                        isUploading: _isUploadingCover,
-                        isDisabled: _isBusy,
-                        onTap: () => _showImagePickerOptions(false),
-                      ),
-                      const SizedBox(height: 1),
-                      _ProfilePictureSection(
-                        profile: profile,
-                        selectedAvatarFile: _selectedAvatarFile,
-                        isUploading: _isUploadingAvatar,
-                        isDisabled: _isBusy,
-                        initial: _nameController.text.isNotEmpty
-                            ? _nameController.text[0].toUpperCase()
-                            : 'U',
-                        onTap: () => _showImagePickerOptions(true),
-                      ),
-                      const SizedBox(height: 24),
-                      _FormFields(
-                        nameController: _nameController,
-                        ageController: _ageController,
-                        bioController: _bioController,
-                        languagesController: _languagesController,
-                        countryController: _countryController,
-                        countryCodeController: _countryCodeController,
-                        mobileNumberController: _mobileNumberController,
-                        genderController: _genderController,
-                        genderOptions: _genderOptions,
-                        interestOptions: _interestOptions,
-                        selectedInterests: _selectedInterests,
-                        onGenderChanged: (value) {
-                          setState(() => _genderController.text = value);
-                        },
-                        onInterestToggle: _toggleInterest,
-                        enabled: !_isBusy,
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton(
+      onPressed: enabled ? onPressed : null,
+      style: FilledButton.styleFrom(
+        backgroundColor: AppColors.secondary,
+        foregroundColor: AppColors.white,
+        disabledBackgroundColor: AppColors.border.withOpacity(0.5),
+        disabledForegroundColor: AppColors.textHint,
+        minimumSize: const Size(76, 38),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(11),
+        ),
+        textStyle: AppTheme.whiteTextStyle.copyWith(
+          fontSize: 12,
+          fontWeight: AppTheme.bold,
         ),
       ),
+      child: isSaving
+          ? const SizedBox.square(
+              dimension: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.white,
+              ),
+            )
+          : const Text('Save'),
     );
   }
 }
@@ -709,22 +734,16 @@ class _CoverImageSection extends StatelessWidget {
     return GestureDetector(
       onTap: isDisabled ? null : onTap,
       child: Container(
-        height: 180,
+        height: 168,
         width: double.infinity,
-        margin: const EdgeInsets.all(16),
+        margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           color: AppColors.card,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.shadow,
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          border: Border.all(color: AppColors.border.withOpacity(0.5)),
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(15),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -819,26 +838,18 @@ class _ProfilePictureSection extends StatelessWidget {
       child: Stack(
         children: [
           Container(
-            width: 110,
-            height: 110,
+            width: 96,
+            height: 96,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [
-                  AppColors.primary,
-                  AppColors.secondary,
-                ],
+              color: AppColors.card,
+              border: Border.all(
+                color: AppColors.secondary.withOpacity(0.65),
+                width: 2,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.shadow,
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
             ),
             child: Padding(
-              padding: const EdgeInsets.all(3),
+              padding: const EdgeInsets.all(2),
               child: ClipOval(
                 child: selectedAvatarFile != null
                     ? Image.file(
@@ -892,9 +903,9 @@ class _AvatarFallback extends StatelessWidget {
       child: Center(
         child: Text(
           initial,
-          style: const TextStyle(
+          style: AppTheme.blackTextStyle.copyWith(
             fontSize: 40,
-            fontWeight: FontWeight.bold,
+            fontWeight: AppTheme.bold,
             color: AppColors.primary,
           ),
         ),
@@ -919,19 +930,12 @@ class _CameraBadge extends StatelessWidget {
       height: size,
       padding: EdgeInsets.all(size <= 34 ? 7 : 10),
       decoration: BoxDecoration(
-        color: AppColors.primary,
+        color: AppColors.secondary,
         shape: BoxShape.circle,
         border: Border.all(
           color: AppColors.white,
           width: 2,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: isLoading
           ? const CircularProgressIndicator(
@@ -1080,30 +1084,271 @@ class _FormFields extends StatelessWidget {
           title: 'Interests',
           subtitle: 'Choose what you want to see more of',
           children: [
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: interestOptions.map((interest) {
-                final selected = selectedInterests.contains(interest);
-                return FilterChip(
-                  label: Text(interest),
-                  selected: selected,
-                  onSelected:
-                      enabled ? (_) => onInterestToggle(interest) : null,
-                  selectedColor: AppColors.primary.withOpacity(0.16),
-                  checkmarkColor: AppColors.primary,
-                  side: BorderSide(
-                    color: selected ? AppColors.primary : AppColors.border,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                );
-              }).toList(),
+            _InterestsSelector(
+              options: interestOptions,
+              selected: selectedInterests,
+              enabled: enabled,
+              onToggle: onInterestToggle,
             ),
           ],
         ),
       ],
+    );
+  }
+}
+
+class _InterestsSelector extends StatelessWidget {
+  final List<String> options;
+  final Set<String> selected;
+  final bool enabled;
+  final ValueChanged<String> onToggle;
+
+  const _InterestsSelector({
+    required this.options,
+    required this.selected,
+    required this.enabled,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final visibleInterests = selected.take(3).toList();
+    final hiddenCount = selected.length - visibleInterests.length;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 11, 8, 11),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border.withOpacity(0.5)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: selected.isEmpty
+                ? Text(
+                    'No interests selected',
+                    style: AppTheme.greyTextStyle.copyWith(
+                      fontSize: 11.5,
+                      fontWeight: AppTheme.medium,
+                    ),
+                  )
+                : Wrap(
+                    spacing: 5,
+                    runSpacing: 5,
+                    children: [
+                      ...visibleInterests.map(
+                        (interest) => _SelectedInterest(label: interest),
+                      ),
+                      if (hiddenCount > 0)
+                        _SelectedInterest(label: '+$hiddenCount'),
+                    ],
+                  ),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: enabled ? () => _openPicker(context) : null,
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.secondary,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              textStyle: AppTheme.blackTextStyle.copyWith(
+                fontSize: 11.5,
+                fontWeight: AppTheme.bold,
+              ),
+            ),
+            child: Text(selected.isEmpty ? 'Choose' : 'Edit'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openPicker(BuildContext context) async {
+    final workingSelection = <String>{...selected};
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return FractionallySizedBox(
+              heightFactor: 0.68,
+              child: Material(
+                color: AppColors.card,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(24)),
+                clipBehavior: Clip.antiAlias,
+                child: SafeArea(
+                  top: false,
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 9),
+                      Container(
+                        width: 34,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.textHint.withOpacity(0.45),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 13, 10, 10),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Choose interests',
+                                    style: AppTheme.blackTextStyle.copyWith(
+                                      fontSize: 16,
+                                      fontWeight: AppTheme.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${workingSelection.length} selected',
+                                    style: AppTheme.greyTextStyle.copyWith(
+                                      fontSize: 10.5,
+                                      fontWeight: AppTheme.medium,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColors.secondary,
+                                textStyle: AppTheme.blackTextStyle.copyWith(
+                                  fontSize: 12,
+                                  fontWeight: AppTheme.bold,
+                                ),
+                              ),
+                              child: const Text('Done'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Divider(
+                        height: 1,
+                        color: AppColors.border.withOpacity(0.5),
+                      ),
+                      Expanded(
+                        child: GridView.builder(
+                          padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: options.length,
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisExtent: 48,
+                            crossAxisSpacing: 8,
+                            mainAxisSpacing: 8,
+                          ),
+                          itemBuilder: (context, index) {
+                            final interest = options[index];
+                            final isSelected =
+                                workingSelection.contains(interest);
+
+                            return Material(
+                              color: isSelected
+                                  ? AppColors.secondary.withOpacity(0.12)
+                                  : AppColors.background,
+                              borderRadius: BorderRadius.circular(12),
+                              child: InkWell(
+                                onTap: () {
+                                  setSheetState(() {
+                                    if (!workingSelection.add(interest)) {
+                                      workingSelection.remove(interest);
+                                    }
+                                  });
+                                  onToggle(interest);
+                                },
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 11,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? AppColors.secondary
+                                              .withOpacity(0.45)
+                                          : AppColors.border.withOpacity(0.45),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          interest,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style:
+                                              AppTheme.blackTextStyle.copyWith(
+                                            color: isSelected
+                                                ? AppColors.secondary
+                                                : AppColors.text,
+                                            fontSize: 11.5,
+                                            fontWeight: isSelected
+                                                ? AppTheme.bold
+                                                : AppTheme.medium,
+                                          ),
+                                        ),
+                                      ),
+                                      if (isSelected)
+                                        const Icon(
+                                          Icons.check_rounded,
+                                          color: AppColors.secondary,
+                                          size: 17,
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _SelectedInterest extends StatelessWidget {
+  final String label;
+
+  const _SelectedInterest({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.secondary.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: AppTheme.blackTextStyle.copyWith(
+          color: AppColors.secondary,
+          fontSize: 10,
+          fontWeight: AppTheme.semiBold,
+        ),
+      ),
     );
   }
 }
@@ -1124,12 +1369,12 @@ class _EditSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(18),
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 15),
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border.withOpacity(0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1137,15 +1382,15 @@ class _EditSection extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 34,
+                height: 34,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.12),
-                  shape: BoxShape.circle,
+                  color: AppColors.secondary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: AppColors.primary, size: 20),
+                child: Icon(icon, color: AppColors.secondary, size: 18),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1153,21 +1398,24 @@ class _EditSection extends StatelessWidget {
                     Text(
                       title,
                       style: AppTheme.blackTextStyle.copyWith(
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: AppTheme.bold,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
+                      style: AppTheme.greyTextStyle.copyWith(
+                        fontSize: 10.5,
+                        fontWeight: AppTheme.medium,
+                      ),
                     ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 15),
           ...children,
         ],
       ),
@@ -1201,26 +1449,41 @@ class _ProfileDropdownField extends StatelessWidget {
           label,
           style: AppTheme.blackTextStyle.copyWith(
             fontWeight: AppTheme.medium,
-            fontSize: 14,
+            fontSize: 12,
           ),
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           value: value,
           isExpanded: true,
+          style: AppTheme.blackTextStyle.copyWith(fontSize: 13),
+          icon: Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: AppColors.textSecondary,
+            size: 20,
+          ),
           decoration: InputDecoration(
             filled: true,
             fillColor: AppColors.background,
             hintText: hint,
+            hintStyle: AppTheme.greyTextStyle.copyWith(fontSize: 12.5),
             contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: AppColors.border),
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: AppColors.border.withOpacity(0.55),
+              ),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: AppColors.border),
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: AppColors.border.withOpacity(0.55),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.secondary),
             ),
           ),
           items: options
@@ -1266,22 +1529,17 @@ class _ProfileTextField extends StatelessWidget {
           label,
           style: AppTheme.blackTextStyle.copyWith(
             fontWeight: AppTheme.medium,
-            fontSize: 14,
+            fontSize: 12,
           ),
         ),
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.card,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.shadow,
-                blurRadius: 4,
-                offset: const Offset(0, 1),
-              ),
-            ],
+            color: AppColors.background,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.border.withOpacity(0.55),
+            ),
           ),
           child: TextField(
             controller: controller,
@@ -1294,15 +1552,19 @@ class _ProfileTextField extends StatelessWidget {
                   ]
                 : null,
             style: AppTheme.blackTextStyle.copyWith(
-              fontSize: 15,
+              fontSize: 13,
             ),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: AppTheme.greyTextStyle.copyWith(
-                fontSize: 14,
+                fontSize: 12.5,
               ),
+              filled: false,
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.all(16),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 13,
+              ),
             ),
           ),
         ),
@@ -1327,9 +1589,15 @@ class _PickerTile extends StatelessWidget {
     return ListTile(
       leading: Icon(
         icon,
-        color: AppColors.primary,
+        color: AppColors.secondary,
       ),
-      title: Text(title),
+      title: Text(
+        title,
+        style: AppTheme.blackTextStyle.copyWith(
+          fontSize: 13,
+          fontWeight: AppTheme.semiBold,
+        ),
+      ),
       onTap: onTap,
     );
   }

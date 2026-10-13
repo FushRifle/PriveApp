@@ -9,27 +9,27 @@ class NotificationLoadingShimmer extends StatelessWidget {
   Widget build(BuildContext context) {
     return ShimmerEffect(
       child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        itemCount: 6,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        itemCount: 7,
         itemBuilder: (context, index) {
           return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: AppColors.background,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(14),
             ),
             child: Row(
               children: [
                 Container(
-                  width: 52,
-                  height: 52,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
                     color: AppColors.card,
                     shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 11),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

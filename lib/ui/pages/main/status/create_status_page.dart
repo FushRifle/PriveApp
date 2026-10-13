@@ -17,7 +17,6 @@ import 'package:clique/ui/widgets/status/create/create_status_composer_panel.dar
 import 'package:clique/ui/widgets/status/create/create_status_composer_tools.dart';
 import 'package:clique/ui/widgets/status/create/background_orb.dart';
 import 'package:clique/ui/widgets/status/create/hashtag_chip.dart';
-import 'package:clique/ui/widgets/status/create/icon_button_circle.dart';
 import 'package:clique/ui/widgets/status/create/loading_overlay.dart';
 import 'package:clique/ui/widgets/status/create/media_preview.dart';
 import 'package:clique/ui/widgets/status/create/style_controls.dart';
@@ -52,7 +51,7 @@ class _CreateStatusPageState extends State<CreateStatusPage>
   double _uploadProgress = 0.0;
 
   Color _selectedColor = const Color(0xFF1A1B2F);
-  double _fontSize = 28;
+  double _fontSize = 25;
   TextAlign _textAlign = TextAlign.center;
   final List<String> _hashtags = [];
 
@@ -178,7 +177,7 @@ class _CreateStatusPageState extends State<CreateStatusPage>
         }
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFF0F1119),
+        backgroundColor: AppColors.background,
         body: Stack(
           children: [
             _buildBackdrop(),
@@ -190,14 +189,14 @@ class _CreateStatusPageState extends State<CreateStatusPage>
                     child: SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+                        padding: const EdgeInsets.fromLTRB(10, 24, 10, 40),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 10),
                             if (_hasMedia) ...[
                               _buildMediaComposer(),
-                              const SizedBox(height: 20),
+                              const SizedBox(height: 10),
                             ],
                             if (!_hasMedia)
                               Align(
@@ -273,102 +272,77 @@ class _CreateStatusPageState extends State<CreateStatusPage>
   }
 
   Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      child: Row(
-        children: [
-          IconButtonCircle(
-            icon: Icons.arrow_back_ios_new_rounded,
-            onTap: _handleBack,
-            backgroundColor: AppColors.primary.withOpacity(0.9),
-            iconColor: Colors.white,
-            size: 44,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Create Story',
-                  style: AppTheme.blackTextStyle.copyWith(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.3,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  _hasContent ? 'Ready to share' : 'Add content to start',
-                  style: AppTheme.greyTextStyle.copyWith(
-                    color: Colors.white.withOpacity(0.5),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.backgroundColor,
+        border: Border(
+          bottom: BorderSide(color: AppColors.border.withOpacity(0.65)),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
+        child: Row(
+          children: [
+            IconButton(
+              tooltip: 'Close story composer',
+              onPressed: _isSubmitting ? null : _handleBack,
+              style: IconButton.styleFrom(
+                backgroundColor: AppColors.card,
+                foregroundColor: AppColors.text,
+                fixedSize: const Size.square(38),
+              ),
+              icon: const Icon(Icons.close_rounded, size: 20),
             ),
-          ),
-          const SizedBox(width: 12),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 160),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: _isSubmitting || !_hasContent ? null : _shareStatus,
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _hasContent
-                        ? AppColors.primary
-                        : Colors.white.withOpacity(0.12),
-                    boxShadow: _hasContent
-                        ? [
-                            BoxShadow(
-                              color: AppColors.primary.withOpacity(0.32),
-                              blurRadius: 16,
-                              offset: const Offset(0, 8),
-                            ),
-                          ]
-                        : null,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: _hasContent
-                          ? Colors.white.withOpacity(0.18)
-                          : Colors.white.withOpacity(0.12),
-                    ),
-                  ),
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Share',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                'Create story',
+                style: AppTheme.blackTextStyle.copyWith(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
                 ),
               ),
             ),
-          ),
-        ],
+            FilledButton(
+              onPressed: _hasContent && !_isSubmitting ? _shareStatus : null,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.secondary,
+                foregroundColor: AppColors.white,
+                disabledBackgroundColor: AppColors.border.withOpacity(0.55),
+                disabledForegroundColor: AppColors.textHint,
+                minimumSize: const Size(88, 40),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              child: _isSubmitting
+                  ? const SizedBox.square(
+                      dimension: 17,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.white,
+                      ),
+                    )
+                  : const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.send_rounded, size: 16),
+                        SizedBox(width: 7),
+                        Text(
+                          'Share',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -396,8 +370,8 @@ class _CreateStatusPageState extends State<CreateStatusPage>
           ),
         ),
         Positioned(
-          right: 10,
-          top: 8,
+          right: 5,
+          top: 5,
           child: _buildComposerTools(),
         ),
       ],
@@ -425,7 +399,7 @@ class _CreateStatusPageState extends State<CreateStatusPage>
           },
         ),
         Positioned(
-          right: 10,
+          right: 5,
           top: 62,
           child: _buildComposerTools(),
         ),
@@ -474,7 +448,7 @@ class _CreateStatusPageState extends State<CreateStatusPage>
             final drawerWidth =
                 (constraints.maxWidth * 0.72).clamp(240.0, 300.0);
             final drawerHeight =
-                (constraints.maxHeight * 0.48).clamp(300.0, 390.0);
+                (constraints.maxHeight * 0.48).clamp(200.0, 270.0);
 
             return Align(
               alignment: Alignment.centerRight,
@@ -514,27 +488,6 @@ class _CreateStatusPageState extends State<CreateStatusPage>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    'Text style',
-                                    style: AppTheme.blackTextStyle.copyWith(
-                                      color: AppColors.text,
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ),
-                                IconButton(
-                                  onPressed: _closeComposerOptions,
-                                  icon: const Icon(
-                                    Icons.close_rounded,
-                                    color: Colors.red,
-                                  ),
-                                ),
-                              ],
-                            ),
                             Expanded(
                               child: SingleChildScrollView(
                                 physics: const BouncingScrollPhysics(),

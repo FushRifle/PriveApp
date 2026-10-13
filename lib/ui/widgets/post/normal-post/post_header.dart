@@ -29,7 +29,7 @@ class PostHeader extends StatelessWidget {
     final canOpenProfile = post.user.id > 0 && !post.isAnonymousPost;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 12, 8, 8),
+      padding: const EdgeInsets.fromLTRB(12, 11, 7, 7),
       child: Row(
         children: [
           Expanded(
@@ -54,10 +54,11 @@ class PostHeader extends StatelessWidget {
                     name: name,
                     isOfficial: post.isAIPost,
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 9),
                   Expanded(
                     child: _PostUserInfo(
                       name: name,
+                      handle: post.user.handle,
                       time: post.time,
                       isVerified: post.user.verified,
                       isOfficial: post.isAIPost,
@@ -74,9 +75,15 @@ class PostHeader extends StatelessWidget {
                 HapticFeedback.lightImpact();
                 onMoreTap?.call();
               },
+              style: IconButton.styleFrom(
+                fixedSize: const Size.square(36),
+                minimumSize: const Size.square(36),
+                padding: EdgeInsets.zero,
+              ),
               icon: Icon(
                 Icons.more_horiz_rounded,
                 color: AppColors.textSecondary,
+                size: 21,
               ),
             ),
         ],
@@ -101,25 +108,17 @@ class _PostAvatar extends StatelessWidget {
     final fallback = name.isNotEmpty ? name[0].toUpperCase() : 'U';
 
     return Container(
-      width: 42,
-      height: 42,
+      width: 40,
+      height: 40,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          colors: [
-            AppColors.primary,
-            AppColors.secondary,
-          ],
+        color: AppColors.card,
+        border: Border.all(
+          color: AppColors.secondary.withOpacity(0.55),
+          width: 1.5,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.18),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
-      padding: const EdgeInsets.all(2),
+      padding: const EdgeInsets.all(1.5),
       child: ClipOval(
         child: isOfficial
             ? Image.asset(
@@ -175,6 +174,7 @@ class _AvatarFallback extends StatelessWidget {
 
 class _PostUserInfo extends StatelessWidget {
   final String name;
+  final String handle;
   final String time;
   final bool isVerified;
   final bool isOfficial;
@@ -182,6 +182,7 @@ class _PostUserInfo extends StatelessWidget {
 
   const _PostUserInfo({
     required this.name,
+    required this.handle,
     required this.time,
     required this.isVerified,
     required this.isOfficial,
@@ -190,6 +191,10 @@ class _PostUserInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final normalizedHandle = handle.trim().replaceFirst(RegExp(r'^@'), '');
+    final showTypeBadge =
+        badge.trim().isNotEmpty && badge.trim().toLowerCase() != 'post';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -201,35 +206,41 @@ class _PostUserInfo extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: AppTheme.blackTextStyle.copyWith(
-                  fontSize: 14,
+                  fontSize: 13.5,
                   color: AppColors.text,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ),
-            if (isVerified) ...[
+            if (isVerified || isOfficial) ...[
               const SizedBox(width: 5),
               const Icon(
                 Icons.verified_rounded,
                 size: 16,
-                color: AppColors.githubOrange,
+                color: AppColors.secondary,
               ),
-            ],
-            if (isOfficial) ...[
-              const SizedBox(width: 4),
-              const _OfficialBadge(),
             ],
           ],
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 1),
         Row(
           children: [
-            Icon(
-              Icons.public_rounded,
-              size: 11,
-              color: AppColors.textSecondary,
-            ),
-            const SizedBox(width: 4),
+            if (normalizedHandle.isNotEmpty) ...[
+              Flexible(
+                child: Text(
+                  '@$normalizedHandle',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTheme.greyTextStyle.copyWith(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 5),
+              _MetadataDot(),
+              const SizedBox(width: 5),
+            ],
             Text(
               time,
               maxLines: 1,
@@ -239,17 +250,12 @@ class _PostUserInfo extends StatelessWidget {
                 fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(width: 7),
-            Container(
-              width: 3,
-              height: 3,
-              decoration: BoxDecoration(
-                color: AppColors.textSecondary.withOpacity(0.6),
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 7),
-            _TypeBadge(label: badge),
+            if (showTypeBadge) ...[
+              const SizedBox(width: 5),
+              _MetadataDot(),
+              const SizedBox(width: 5),
+              _TypeBadge(label: badge),
+            ],
           ],
         ),
       ],
@@ -257,22 +263,17 @@ class _PostUserInfo extends StatelessWidget {
   }
 }
 
-class _OfficialBadge extends StatelessWidget {
-  const _OfficialBadge();
+class _MetadataDot extends StatelessWidget {
+  const _MetadataDot();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 4),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: const [
-          Icon(
-            Icons.verified_rounded,
-            size: 15,
-            color: AppColors.secondary,
-          ),
-        ],
+      width: 3,
+      height: 3,
+      decoration: BoxDecoration(
+        color: AppColors.textSecondary.withOpacity(0.55),
+        shape: BoxShape.circle,
       ),
     );
   }

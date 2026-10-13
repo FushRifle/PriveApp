@@ -156,8 +156,12 @@ class _CreateReelPageState extends State<CreateReelPage> {
       elevation: 0,
       leading: IconButton(
         icon: const Icon(
-          Icons.close,
+          Icons.close_rounded,
           color: AppColors.white,
+          size: 20,
+        ),
+        style: IconButton.styleFrom(
+          backgroundColor: AppColors.white10,
         ),
         onPressed: _isUploading ? null : () => Navigator.pop(context),
       ),
@@ -176,36 +180,39 @@ class _CreateReelPageState extends State<CreateReelPage> {
             horizontal: 12,
             vertical: 8,
           ),
-          child: ElevatedButton(
+          child: FilledButton.icon(
             onPressed: _canShare ? _uploadReel : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.secondary,
               foregroundColor: AppColors.white,
               disabledBackgroundColor: AppColors.grey.shade800,
               disabledForegroundColor: AppColors.grey.shade500,
-              shape: const StadiumBorder(),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               elevation: 0,
               padding: const EdgeInsets.symmetric(
                 horizontal: 20,
               ),
               minimumSize: const Size(70, 40),
             ),
-            child: _isUploading
+            icon: _isUploading
                 ? const SizedBox(
-                    width: 20,
-                    height: 20,
+                    width: 17,
+                    height: 17,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
                       color: AppColors.white,
                     ),
                   )
-                : const Text(
-                    'Share',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
+                : const Icon(Icons.ios_share_rounded, size: 17),
+            label: const Text(
+              'Share',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
           ),
         ),
       ],
@@ -256,33 +263,29 @@ class _CreateReelPageState extends State<CreateReelPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            GestureDetector(
-              onTap: _isPickingVideo ? null : _showVideoPickerOptions,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: AppColors.grey.shade900,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppColors.primary.withOpacity(0.7),
-                    width: 1.5,
-                  ),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                color: AppColors.secondary.withOpacity(0.14),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: AppColors.secondary.withOpacity(0.45),
                 ),
-                child: _isPickingVideo
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Icon(
-                        Icons.video_call,
-                        size: 52,
-                        color: AppColors.white,
-                      ),
               ),
+              child: _isPickingVideo
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.video_library_rounded,
+                      size: 34,
+                      color: AppColors.secondary,
+                    ),
             ),
             const SizedBox(height: 24),
             Text(
@@ -301,6 +304,23 @@ class _CreateReelPageState extends State<CreateReelPage> {
               style: TextStyle(
                 color: AppColors.grey.shade600,
                 fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 22),
+            FilledButton.icon(
+              onPressed: _isPickingVideo ? null : _showVideoPickerOptions,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.secondary,
+                foregroundColor: AppColors.white,
+                minimumSize: const Size(190, 46),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(13),
+                ),
+              ),
+              icon: const Icon(Icons.add_rounded, size: 20),
+              label: const Text(
+                'Choose video',
+                style: TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
           ],
