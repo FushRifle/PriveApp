@@ -105,6 +105,9 @@ class ProfileBody extends StatelessWidget {
         controller: tabController,
         physics: const BouncingScrollPhysics(),
         children: [
+          SizedBox(
+            height: 10,
+          ),
           ProfileGalleryTab(
             userId: userId,
             type: ProfileGalleryTabType.posts,

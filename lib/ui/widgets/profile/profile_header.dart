@@ -787,7 +787,7 @@ class ProfileActionRow extends StatelessWidget {
                     Navigator.pushNamed(context, NamedRoutes.settingsScreen),
               ),
               ProfileIconActionButton(
-                icon: Icons.insights_rounded,
+                icon: Icons.bar_chart_outlined,
                 color: AppColors.primary,
                 onTap: onOpenInsights ??
                     () => Navigator.pushNamed(
@@ -925,7 +925,7 @@ class ProfileIconActionButton extends StatelessWidget {
         width: 38,
         decoration: BoxDecoration(
           color: AppColors.card,
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(color: AppColors.border),
         ),
         child: Icon(icon, color: color, size: 18),

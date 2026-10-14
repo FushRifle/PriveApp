@@ -61,18 +61,17 @@ class AboutPage extends StatelessWidget {
           height: 100,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: AppColors.secondary,
           ),
           child: Center(
             child: Image.asset(
-              'assets/images/clique.png',
-              width: 32,
-              height: 32,
+              'assets/icons/cliquě-icon.png',
+              width: 62,
+              height: 62,
               errorBuilder: (_, __, ___) => const SizedBox(),
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 3),
         Text(
           'Clique',
           style: AppTheme.blackTextStyle.copyWith(
@@ -83,7 +82,7 @@ class AboutPage extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'Version 1.0.0',
+          'Version 1.0.5',
           style: AppTheme.greyTextStyle.copyWith(fontSize: 14),
         ),
       ],
