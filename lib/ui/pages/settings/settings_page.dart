@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:clique/ui/widgets/common/app_page_header.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -74,356 +75,367 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             builder: (context, settingsState) {
               return Scaffold(
                 backgroundColor: AppColors.background,
-                appBar: AppBar(
-                  backgroundColor: AppColors.background,
-                  surfaceTintColor: AppColors.transparent,
-                  elevation: 0,
-                  centerTitle: false,
-                  leading: IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(
-                      Icons.arrow_back_rounded,
-                      color: AppColors.text,
-                      size: 22,
+                body: Column(
+                  children: [
+                    AppPageHeader(
+                      title: 'Settings',
+                      subtitle: 'Account, privacy and preferences',
+                      leadingIcon: Icons.arrow_back_rounded,
+                      onLeadingTap: () => Navigator.maybePop(context),
                     ),
-                  ),
-                  title: Text(
-                    'Settings',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 17,
-                      color: AppColors.text,
-                    ),
-                  ),
-                ),
-                body: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 2),
-                      _section(
-                        'Premium',
-                        [
-                          _tile(
-                            isDark: isDark,
-                            icon: Icons.workspace_premium_rounded,
-                            title: 'Clique Premium',
-                            subtitle: 'Unlock exclusive features',
-                            trailing: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(50),
-                                color: AppColors.secondary,
-                              ),
-                              child: const Text(
-                                'PREMIUM',
-                                style: TextStyle(
-                                  color: AppColors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const SubscribePage(),
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                        isDark,
-                      ),
-                      _section(
-                        'Appearance',
-                        [
-                          _themeDropdownTile(
-                            isDark: isDark,
-                            icon: Icons.dark_mode_rounded,
-                            themeMode: themeMode,
-                            onChanged: (mode) async {
-                              if (mode == null) return;
-
-                              await ref
-                                  .read(themeModeProvider.notifier)
-                                  .setThemeMode(mode);
-                            },
-                          ),
-                          _divider(isDark),
-                          _tile(
-                            isDark: isDark,
-                            icon: Icons.language_rounded,
-                            title: 'Language',
-                            subtitle: selectedLanguage,
-                            onTap: _showLanguagePicker,
-                          ),
-                        ],
-                        isDark,
-                      ),
-                      _section(
-                        'Privacy',
-                        [
-                          _switchTile(
-                            isDark: isDark,
-                            icon: Icons.lock_outline_rounded,
-                            title: 'Private Account',
-                            subtitle:
-                                'Only approved users can see your content',
-                            value: privateAccount,
-                            onChanged: (v) {
-                              setState(() {
-                                privateAccount = v;
-                              });
-                            },
-                          ),
-                          _divider(isDark),
-                          _switchTile(
-                            isDark: isDark,
-                            icon: Icons.notifications_active_outlined,
-                            title: 'Notifications',
-                            subtitle: 'Push notifications',
-                            value: notificationsEnabled,
-                            onChanged: (v) {
-                              setState(() {
-                                notificationsEnabled = v;
-                              });
-                            },
-                          ),
-                        ],
-                        isDark,
-                      ),
-                      _section(
-                        'Security',
-                        [
-                          _switchTile(
-                            isDark: isDark,
-                            icon: Icons.security_rounded,
-                            title: 'Two Factor',
-                            subtitle: 'Extra security layer',
-                            value: twoFactor,
-                            onChanged: (v) {
-                              setState(() {
-                                twoFactor = v;
-                              });
-
-                              if (v) {
-                                Navigator.pushNamed(
-                                  context,
-                                  NamedRoutes.twoFactorScreen,
-                                );
-                              }
-                            },
-                          ),
-                          _divider(isDark),
-                          _tile(
-                            isDark: isDark,
-                            icon: Icons.password_rounded,
-                            title: 'Change Password',
-                            subtitle: 'Update password',
-                            onTap: () {
-                              Navigator.pushNamed(
-                                context,
-                                NamedRoutes.changePasswordScreen,
-                              );
-                            },
-                          ),
-                          _divider(isDark),
-                          _tile(
-                            isDark: isDark,
-                            icon: Icons.fingerprint_rounded,
-                            title: 'App Lock',
-                            subtitle: settingsState.getAppLockEnabled
-                                ? settingsState.getAppLockTimeoutSeconds > 0
-                                    ? 'Enabled • ${_formatLockTimeout(settingsState.getAppLockTimeoutSeconds)} timeout'
-                                    : 'Enabled with biometric/PIN'
-                                : 'Disabled',
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 5,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: settingsState.getAppLockEnabled
-                                        ? AppColors.primary.withOpacity(0.12)
-                                        : AppColors.greyColor.withOpacity(0.12),
-                                    borderRadius: BorderRadius.circular(999),
-                                  ),
-                                  child: Text(
-                                    settingsState.getAppLockEnabled
-                                        ? 'On'
-                                        : 'Off',
-                                    style: TextStyle(
-                                      color: settingsState.getAppLockEnabled
-                                          ? AppColors.primary
-                                          : AppColors.greyColor,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        child: Column(
+                          children: [
+                            const SizedBox(height: 2),
+                            _section(
+                              'Premium',
+                              [
+                                _tile(
+                                  isDark: isDark,
+                                  icon: Icons.workspace_premium_rounded,
+                                  title: 'Clique Premium',
+                                  subtitle: 'Unlock exclusive features',
+                                  trailing: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(50),
+                                      color: AppColors.secondary,
+                                    ),
+                                    child: const Text(
+                                      'PREMIUM',
+                                      style: TextStyle(
+                                        color: AppColors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                     ),
                                   ),
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const SubscribePage(),
+                                      ),
+                                    );
+                                  },
                                 ),
                               ],
+                              isDark,
                             ),
-                            onTap: () async {
-                              final settingsBloc = context.read<SettingsBloc>();
-                              final userId = _readInt(user?['id']);
-                              await Navigator.pushNamed(
-                                context,
-                                NamedRoutes.lockScreenScreen,
-                                arguments: userId > 0 ? userId : null,
-                              );
-                              if (!mounted) return;
-                              settingsBloc.add(
-                                LoadSettings(
-                                  userId:
-                                      userId > 0 ? userId : _currentUserId(),
-                                  silent: true,
+                            _section(
+                              'Appearance',
+                              [
+                                _themeDropdownTile(
+                                  isDark: isDark,
+                                  icon: Icons.dark_mode_rounded,
+                                  themeMode: themeMode,
+                                  onChanged: (mode) async {
+                                    if (mode == null) return;
+
+                                    await ref
+                                        .read(themeModeProvider.notifier)
+                                        .setThemeMode(mode);
+                                  },
                                 ),
-                              );
-                            },
-                          ),
-                        ],
-                        isDark,
-                      ),
-                      _section(
-                        'Storage',
-                        [
-                          _tile(
-                            isDark: isDark,
-                            icon: Icons.high_quality_rounded,
-                            title: 'Video Quality',
-                            subtitle: selectedQuality,
-                            onTap: _showQualityPicker,
-                          ),
-                          _divider(isDark),
-                          _tile(
-                            isDark: isDark,
-                            icon: Icons.download_rounded,
-                            title: 'Downloads',
-                            subtitle: 'Manage downloads',
-                            onTap: () {},
-                          ),
-                        ],
-                        isDark,
-                      ),
-                      _section(
-                        'About',
-                        [
-                          _tile(
-                            isDark: isDark,
-                            icon: Icons.info_outline_rounded,
-                            title: 'About Clique',
-                            subtitle: 'Version 1.0.0',
-                            onTap: () {
-                              Navigator.pushNamed(
-                                context,
-                                NamedRoutes.aboutScreen,
-                              );
-                            },
-                          ),
-                          _divider(isDark),
-                          _tile(
-                            isDark: isDark,
-                            icon: Icons.feedback_outlined,
-                            title: 'Feedback',
-                            subtitle: 'Report bugs or share ideas',
-                            onTap: () {
-                              Navigator.pushNamed(
-                                context,
-                                NamedRoutes.feedbackScreen,
-                              );
-                            },
-                          ),
-                          _divider(isDark),
-                          _tile(
-                            isDark: isDark,
-                            icon: Icons.description_outlined,
-                            title: 'Terms of Service',
-                            subtitle: 'Read our policies',
-                            onTap: () {
-                              Navigator.pushNamed(
-                                context,
-                                NamedRoutes.termsScreen,
-                              );
-                            },
-                          ),
-                          _divider(isDark),
-                          _tile(
-                            isDark: isDark,
-                            icon: Icons.privacy_tip_outlined,
-                            title: 'Privacy Policy',
-                            subtitle: 'Your privacy matters',
-                            onTap: () {
-                              Navigator.pushNamed(
-                                context,
-                                NamedRoutes.privacyScreen,
-                              );
-                            },
-                          ),
-                        ],
-                        isDark,
-                      ),
-                      const SizedBox(height: 6),
-                      GestureDetector(
-                        onTap: _isLoggingOut ? null : _logout,
-                        child: Container(
-                          width: double.infinity,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(14),
-                            color: AppColors.redColor.withOpacity(0.08),
-                            border: Border.all(
-                              color: AppColors.redColor.withOpacity(0.2),
+                                _divider(isDark),
+                                _tile(
+                                  isDark: isDark,
+                                  icon: Icons.language_rounded,
+                                  title: 'Language',
+                                  subtitle: selectedLanguage,
+                                  onTap: _showLanguagePicker,
+                                ),
+                              ],
+                              isDark,
                             ),
-                          ),
-                          child: Center(
-                            child: _isLoggingOut
-                                ? Row(
+                            _section(
+                              'Privacy',
+                              [
+                                _switchTile(
+                                  isDark: isDark,
+                                  icon: Icons.lock_outline_rounded,
+                                  title: 'Private Account',
+                                  subtitle:
+                                      'Only approved users can see your content',
+                                  value: privateAccount,
+                                  onChanged: (v) {
+                                    setState(() {
+                                      privateAccount = v;
+                                    });
+                                  },
+                                ),
+                                _divider(isDark),
+                                _switchTile(
+                                  isDark: isDark,
+                                  icon: Icons.notifications_active_outlined,
+                                  title: 'Notifications',
+                                  subtitle: 'Push notifications',
+                                  value: notificationsEnabled,
+                                  onChanged: (v) {
+                                    setState(() {
+                                      notificationsEnabled = v;
+                                    });
+                                  },
+                                ),
+                              ],
+                              isDark,
+                            ),
+                            _section(
+                              'Security',
+                              [
+                                _switchTile(
+                                  isDark: isDark,
+                                  icon: Icons.security_rounded,
+                                  title: 'Two Factor',
+                                  subtitle: 'Extra security layer',
+                                  value: twoFactor,
+                                  onChanged: (v) {
+                                    setState(() {
+                                      twoFactor = v;
+                                    });
+
+                                    if (v) {
+                                      Navigator.pushNamed(
+                                        context,
+                                        NamedRoutes.twoFactorScreen,
+                                      );
+                                    }
+                                  },
+                                ),
+                                _divider(isDark),
+                                _tile(
+                                  isDark: isDark,
+                                  icon: Icons.password_rounded,
+                                  title: 'Change Password',
+                                  subtitle: 'Update password',
+                                  onTap: () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      NamedRoutes.changePasswordScreen,
+                                    );
+                                  },
+                                ),
+                                _divider(isDark),
+                                _tile(
+                                  isDark: isDark,
+                                  icon: Icons.devices_rounded,
+                                  title: 'Active sessions',
+                                  subtitle: 'Review signed-in devices',
+                                  onTap: () => Navigator.pushNamed(
+                                    context,
+                                    NamedRoutes.activeSessionsScreen,
+                                  ),
+                                ),
+                                _divider(isDark),
+                                _tile(
+                                  isDark: isDark,
+                                  icon: Icons.fingerprint_rounded,
+                                  title: 'App Lock',
+                                  subtitle: settingsState.getAppLockEnabled
+                                      ? settingsState.getAppLockTimeoutSeconds >
+                                              0
+                                          ? 'Enabled • ${_formatLockTimeout(settingsState.getAppLockTimeoutSeconds)} timeout'
+                                          : 'Enabled with biometric/PIN'
+                                      : 'Disabled',
+                                  trailing: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      SizedBox.square(
-                                        dimension: 18,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: AppColors.redColor,
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 5,
                                         ),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Text(
-                                        'Logging out…',
-                                        style: TextStyle(
-                                          color: AppColors.redColor,
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13,
+                                        decoration: BoxDecoration(
+                                          color: settingsState.getAppLockEnabled
+                                              ? AppColors.primary
+                                                  .withOpacity(0.12)
+                                              : AppColors.greyColor
+                                                  .withOpacity(0.12),
+                                          borderRadius:
+                                              BorderRadius.circular(999),
+                                        ),
+                                        child: Text(
+                                          settingsState.getAppLockEnabled
+                                              ? 'On'
+                                              : 'Off',
+                                          style: TextStyle(
+                                            color:
+                                                settingsState.getAppLockEnabled
+                                                    ? AppColors.primary
+                                                    : AppColors.greyColor,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
                                       ),
                                     ],
-                                  )
-                                : Text(
-                                    'Logout',
-                                    style: TextStyle(
-                                      color: AppColors.redColor,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 13,
-                                    ),
                                   ),
-                          ),
+                                  onTap: () async {
+                                    final settingsBloc =
+                                        context.read<SettingsBloc>();
+                                    final userId = _readInt(user?['id']);
+                                    await Navigator.pushNamed(
+                                      context,
+                                      NamedRoutes.lockScreenScreen,
+                                      arguments: userId > 0 ? userId : null,
+                                    );
+                                    if (!mounted) return;
+                                    settingsBloc.add(
+                                      LoadSettings(
+                                        userId: userId > 0
+                                            ? userId
+                                            : _currentUserId(),
+                                        silent: true,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                              isDark,
+                            ),
+                            _section(
+                              'Storage',
+                              [
+                                _tile(
+                                  isDark: isDark,
+                                  icon: Icons.high_quality_rounded,
+                                  title: 'Video Quality',
+                                  subtitle: selectedQuality,
+                                  onTap: _showQualityPicker,
+                                ),
+                                _divider(isDark),
+                                _tile(
+                                  isDark: isDark,
+                                  icon: Icons.download_rounded,
+                                  title: 'Downloads',
+                                  subtitle: 'Manage downloads',
+                                  onTap: () => Navigator.pushNamed(
+                                    context,
+                                    NamedRoutes.downloadsScreen,
+                                  ),
+                                ),
+                              ],
+                              isDark,
+                            ),
+                            _section(
+                              'About',
+                              [
+                                _tile(
+                                  isDark: isDark,
+                                  icon: Icons.info_outline_rounded,
+                                  title: 'About Clique',
+                                  subtitle: 'Version 1.0.0',
+                                  onTap: () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      NamedRoutes.aboutScreen,
+                                    );
+                                  },
+                                ),
+                                _divider(isDark),
+                                _tile(
+                                  isDark: isDark,
+                                  icon: Icons.feedback_outlined,
+                                  title: 'Feedback',
+                                  subtitle: 'Report bugs or share ideas',
+                                  onTap: () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      NamedRoutes.feedbackScreen,
+                                    );
+                                  },
+                                ),
+                                _divider(isDark),
+                                _tile(
+                                  isDark: isDark,
+                                  icon: Icons.description_outlined,
+                                  title: 'Terms of Service',
+                                  subtitle: 'Read our policies',
+                                  onTap: () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      NamedRoutes.termsScreen,
+                                    );
+                                  },
+                                ),
+                                _divider(isDark),
+                                _tile(
+                                  isDark: isDark,
+                                  icon: Icons.privacy_tip_outlined,
+                                  title: 'Privacy Policy',
+                                  subtitle: 'Your privacy matters',
+                                  onTap: () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      NamedRoutes.privacyScreen,
+                                    );
+                                  },
+                                ),
+                              ],
+                              isDark,
+                            ),
+                            const SizedBox(height: 6),
+                            GestureDetector(
+                              onTap: _isLoggingOut ? null : _logout,
+                              child: Container(
+                                width: double.infinity,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(14),
+                                  color: AppColors.redColor.withOpacity(0.08),
+                                  border: Border.all(
+                                    color: AppColors.redColor.withOpacity(0.2),
+                                  ),
+                                ),
+                                child: Center(
+                                  child: _isLoggingOut
+                                      ? Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            SizedBox.square(
+                                              dimension: 18,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: AppColors.redColor,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Text(
+                                              'Logging out…',
+                                              style: TextStyle(
+                                                color: AppColors.redColor,
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ],
+                                        )
+                                      : Text(
+                                          'Logout',
+                                          style: TextStyle(
+                                            color: AppColors.redColor,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 24),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               );
             },
@@ -461,7 +473,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     bool isDark,
   ) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.only(bottom: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -473,7 +485,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             child: Text(
               title,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 10.5,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textSecondary,
               ),
@@ -481,10 +493,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
           Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(14),
               color: AppColors.cardColor,
               border: Border.all(
-                color: AppColors.cardBorder.withOpacity(0.55),
+                color: AppColors.border.withOpacity(0.5),
               ),
             ),
             child: Column(

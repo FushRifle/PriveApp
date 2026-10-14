@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:clique/core/services/reel/reel_service.dart';
+import 'package:clique/core/services/reaction_cache_service.dart';
 
 part 'reel_event.dart';
 part 'reel_state.dart';
@@ -236,6 +237,7 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
         status: ReelStatus.success,
         clearError: true,
       ));
+      await ReactionCacheService.clear('reel', event.reelId);
       if (event.completer?.isCompleted == false) {
         event.completer!.complete();
       }
@@ -262,10 +264,22 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
       ...Map<String, dynamic>.from(oldReel),
       'isLiked': true,
       'reaction': event.reaction,
-      'likes': _readInt(oldReel['likes']) + 1,
+      'myReaction': event.reaction,
+      'likes': _readBool(oldReel['isLiked'])
+          ? _readInt(oldReel['likes'])
+          : _readInt(oldReel['likes']) + 1,
     };
 
     emit(state.copyWith(reels: updatedReels));
+
+    unawaited(
+      ReactionCacheService.save(
+        'reel',
+        event.reelId,
+        reaction: event.reaction,
+        count: _readInt((updatedReels[event.index] as Map)['likes']),
+      ),
+    );
 
     try {
       await _reelService.likeReel(
@@ -273,6 +287,22 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
         reaction: event.reaction,
       );
     } catch (e) {
+      final oldReaction =
+          (oldReel['reaction'] ?? oldReel['myReaction'])?.toString().trim();
+      if (_readBool(oldReel['isLiked']) &&
+          oldReaction != null &&
+          oldReaction.isNotEmpty) {
+        unawaited(
+          ReactionCacheService.save(
+            'reel',
+            event.reelId,
+            reaction: oldReaction,
+            count: _readInt(oldReel['likes']),
+          ),
+        );
+      } else {
+        unawaited(ReactionCacheService.clear('reel', event.reelId));
+      }
       // Rollback on error
       final rolledBackReels = List<dynamic>.from(state.reels);
       rolledBackReels[event.index] = oldReel;
@@ -298,14 +328,31 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
       ...Map<String, dynamic>.from(oldReel),
       'isLiked': false,
       'reaction': null,
+      'myReaction': null,
       'likes': (_readInt(oldReel['likes']) - 1).clamp(0, 999999).toInt(),
     };
 
     emit(state.copyWith(reels: updatedReels));
 
+    unawaited(ReactionCacheService.clear('reel', event.reelId));
+
     try {
       await _reelService.unlikeReel(event.reelId);
     } catch (e) {
+      final oldReaction =
+          (oldReel['reaction'] ?? oldReel['myReaction'])?.toString().trim();
+      if (_readBool(oldReel['isLiked']) &&
+          oldReaction != null &&
+          oldReaction.isNotEmpty) {
+        unawaited(
+          ReactionCacheService.save(
+            'reel',
+            event.reelId,
+            reaction: oldReaction,
+            count: _readInt(oldReel['likes']),
+          ),
+        );
+      }
       // Rollback on error
       final rolledBackReels = List<dynamic>.from(state.reels);
       rolledBackReels[event.index] = oldReel;

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:ui';
 
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:flutter/material.dart';
@@ -772,47 +771,51 @@ class _PostAppBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return SliverAppBar(
-      floating: true,
+      floating: false,
       pinned: true,
       elevation: 0,
-      backgroundColor: AppColors.background.withOpacity(isDark ? 0.82 : 0.9),
+      backgroundColor: AppColors.background,
       foregroundColor: AppColors.text,
-      centerTitle: true,
-      toolbarHeight: 64,
-      title: Text(
-        'Thread',
-        style: AppTheme.blackTextStyle.copyWith(
-          color: AppColors.text,
-          fontSize: 16,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-      flexibleSpace: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(
-            sigmaX: 12,
-            sigmaY: 12,
+      centerTitle: false,
+      toolbarHeight: 68,
+      titleSpacing: 4,
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Post',
+            style: AppTheme.blackTextStyle.copyWith(
+              color: AppColors.text,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.5,
+            ),
           ),
-          child: Container(
-            color: AppColors.transparent,
+          Text(
+            'Conversation and replies',
+            style: AppTheme.greyTextStyle.copyWith(
+              color: AppColors.textSecondary,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-        ),
+        ],
       ),
+      leadingWidth: 58,
       leading: Padding(
-        padding: const EdgeInsets.all(8),
-        child: _AppBarCircleButton(
-          icon: Icons.arrow_back_ios_new,
+        padding: const EdgeInsets.only(left: 12, top: 15, bottom: 15),
+        child: _AppBarActionButton(
+          icon: Icons.arrow_back_rounded,
           onTap: () => Navigator.pop(context),
         ),
       ),
       actions: [
         Padding(
-          padding: const EdgeInsets.all(8),
-          child: _AppBarCircleButton(
-            icon: Icons.more_horiz,
+          padding: const EdgeInsets.only(right: 12, top: 15, bottom: 15),
+          child: _AppBarActionButton(
+            icon: Icons.more_horiz_rounded,
             onTap: onMore,
           ),
         ),
@@ -831,7 +834,7 @@ class _PostDetailSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 16, 14, 0),
+      padding: const EdgeInsets.fromLTRB(0, 4, 0, 0),
       child: RepostCard(
         post: post,
         isDetailView: true,
@@ -840,11 +843,11 @@ class _PostDetailSurface extends StatelessWidget {
   }
 }
 
-class _AppBarCircleButton extends StatelessWidget {
+class _AppBarActionButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
 
-  const _AppBarCircleButton({
+  const _AppBarActionButton({
     required this.icon,
     required this.onTap,
   });
@@ -852,16 +855,15 @@ class _AppBarCircleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.card.withOpacity(0.86),
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
+      color: AppColors.secondary,
+      borderRadius: BorderRadius.circular(12),
       child: InkWell(
-        customBorder: const CircleBorder(),
+        borderRadius: BorderRadius.circular(12),
         onTap: onTap,
-        child: Icon(
-          icon,
-          color: AppColors.text,
-          size: 20,
+        child: SizedBox(
+          width: 38,
+          height: 38,
+          child: Icon(icon, color: AppColors.white, size: 20),
         ),
       ),
     );
@@ -1495,29 +1497,24 @@ class _EmptyComments extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: 20,
-        vertical: 36,
-      ),
-      padding: const EdgeInsets.all(36),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.cardBorderColor),
+        color: AppColors.transparent,
       ),
       child: Column(
         children: [
           Container(
-            width: 66,
-            height: 66,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.secondary.withOpacity(0.1),
             ),
             child: Icon(
               Icons.chat_bubble_outline,
-              size: 32,
-              color: AppColors.primary.withOpacity(0.7),
+              size: 22,
+              color: AppColors.secondary,
             ),
           ),
           const SizedBox(height: 16),
@@ -1525,7 +1522,7 @@ class _EmptyComments extends StatelessWidget {
             'No comments yet',
             style: AppTheme.blackTextStyle.copyWith(
               color: AppColors.text,
-              fontSize: 16,
+              fontSize: 14,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -1533,7 +1530,7 @@ class _EmptyComments extends StatelessWidget {
           Text(
             'Be the first to comment',
             style: AppTheme.greyTextStyle.copyWith(
-              fontSize: 14,
+              fontSize: 11.5,
               color: AppColors.textSecondary,
             ),
           ),

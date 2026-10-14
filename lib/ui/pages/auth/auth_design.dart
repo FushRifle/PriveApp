@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:clique/app/configs/colors.dart';
+import 'package:clique/ui/widgets/common/app_page_header.dart';
 
 @immutable
 class AuthPalette {
@@ -37,19 +38,17 @@ class AuthPalette {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return AuthPalette(
       isDark: isDark,
-      background: isDark ? const Color(0xFF0B1118) : const Color(0xFFF4F7FA),
-      surface: isDark ? const Color(0xFF121B25) : const Color(0xFFFFFFFF),
-      raisedSurface: isDark ? const Color(0xFF182430) : const Color(0xFFFCFDFE),
-      inputSurface: isDark ? const Color(0xFF0F1720) : const Color(0xFFF0F4F7),
-      border: isDark ? const Color(0xFF2B3948) : const Color(0xFFDCE4EB),
-      text: isDark ? const Color(0xFFF2F6FA) : const Color(0xFF17212B),
-      muted: isDark ? const Color(0xFF9AA8B7) : const Color(0xFF607080),
-      subtle: isDark ? const Color(0xFF657587) : const Color(0xFF91A0AE),
+      background: AppColors.background,
+      surface: AppColors.card,
+      raisedSurface: AppColors.cardColor,
+      inputSurface: AppColors.backgroundColor,
+      border: AppColors.border,
+      text: AppColors.text,
+      muted: AppColors.textSecondary,
+      subtle: AppColors.textHint,
       primary: AppColors.primary,
       secondary: AppColors.secondary,
-      shadow: isDark
-          ? Colors.black.withOpacity(0.24)
-          : const Color(0xFF22364A).withOpacity(0.07),
+      shadow: AppColors.shadow,
     );
   }
 }
@@ -79,19 +78,7 @@ class AuthPageScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = AuthPalette.of(context);
-    final content = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _AuthPageHeading(
-          title: title,
-          subtitle: subtitle,
-          icon: icon,
-          palette: palette,
-        ),
-        const SizedBox(height: 18),
-        if (scrollable) child else Expanded(child: child),
-      ],
-    );
+    final content = scrollable ? child : Expanded(child: child);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
@@ -103,105 +90,39 @@ class AuthPageScaffold extends StatelessWidget {
       ),
       child: Scaffold(
         backgroundColor: palette.background,
-        appBar: AppBar(
-          backgroundColor: palette.background,
-          surfaceTintColor: Colors.transparent,
-          elevation: 0,
-          leadingWidth: 56,
-          leading: Navigator.canPop(context)
-              ? Padding(
-                  padding: const EdgeInsets.only(left: 8),
-                  child: IconButton(
-                    tooltip: 'Back',
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back_rounded),
-                    color: palette.text,
-                  ),
-                )
-              : null,
-          actions: actions,
-        ),
-        body: SafeArea(
-          top: false,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 680),
-              child: scrollable
-                  ? SingleChildScrollView(
-                      padding: padding,
-                      keyboardDismissBehavior:
-                          ScrollViewKeyboardDismissBehavior.onDrag,
-                      child: content,
-                    )
-                  : Padding(padding: padding, child: content),
+        body: Column(
+          children: [
+            AppPageHeader(
+              title: title,
+              subtitle: subtitle ?? 'Account security',
+              leadingIcon:
+                  Navigator.canPop(context) ? Icons.arrow_back_rounded : icon,
+              onLeadingTap: Navigator.canPop(context)
+                  ? () => Navigator.maybePop(context)
+                  : null,
+              action: actions == null
+                  ? null
+                  : Row(mainAxisSize: MainAxisSize.min, children: actions!),
             ),
-          ),
+            Expanded(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 680),
+                  child: scrollable
+                      ? SingleChildScrollView(
+                          padding: padding,
+                          keyboardDismissBehavior:
+                              ScrollViewKeyboardDismissBehavior.onDrag,
+                          child: content,
+                        )
+                      : Padding(padding: padding, child: content),
+                ),
+              ),
+            ),
+          ],
         ),
         bottomNavigationBar: bottom,
       ),
-    );
-  }
-}
-
-class _AuthPageHeading extends StatelessWidget {
-  final String title;
-  final String? subtitle;
-  final IconData? icon;
-  final AuthPalette palette;
-
-  const _AuthPageHeading({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.palette,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (icon != null) ...[
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: palette.primary.withOpacity(palette.isDark ? 0.16 : 0.1),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, color: palette.primary, size: 21),
-          ),
-          const SizedBox(width: 12),
-        ],
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  color: palette.text,
-                  fontSize: 25,
-                  height: 1.08,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.7,
-                ),
-              ),
-              if (subtitle != null) ...[
-                const SizedBox(height: 6),
-                Text(
-                  subtitle!,
-                  style: TextStyle(
-                    color: palette.muted,
-                    fontSize: 13,
-                    height: 1.45,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

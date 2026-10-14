@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
+import 'package:clique/ui/widgets/common/app_page_header.dart';
 
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
@@ -12,49 +13,42 @@ class AboutPage extends StatelessWidget {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor:
-          isDarkMode ? AppColors.darkBackground : AppColors.lightBackground,
-      appBar: AppBar(
-        backgroundColor: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new,
-              color: isDarkMode ? AppColors.white : AppColors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'About Clique',
-          style: TextStyle(
-            color: isDarkMode ? AppColors.white : AppColors.black,
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
+      backgroundColor: AppColors.background,
+      body: Column(
+        children: [
+          AppPageHeader(
+            title: 'About Clique',
+            subtitle: 'Product, version and useful links',
+            leadingIcon: Icons.arrow_back_rounded,
+            onLeadingTap: () => Navigator.maybePop(context),
           ),
-        ),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            _buildLogoSection(isDarkMode),
-            const SizedBox(height: 32),
-            _buildInfoCard(isDarkMode),
-            const SizedBox(height: 24),
-            _buildLinksCard(context, isDarkMode),
-            const SizedBox(height: 24),
-            _buildSocialCard(context, isDarkMode),
-            const SizedBox(height: 32),
-            Text(
-              'Fush Inc.',
-              style: AppTheme.greyTextStyle.copyWith(
-                  fontSize: 14,
-                  color: AppColors.blackTextColor,
-                  fontStyle: FontStyle.normal,
-                  fontWeight: FontWeight.bold),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(12, 6, 12, 32),
+              child: Column(
+                children: [
+                  _buildLogoSection(isDarkMode),
+                  const SizedBox(height: 32),
+                  _buildInfoCard(isDarkMode),
+                  const SizedBox(height: 24),
+                  _buildLinksCard(context, isDarkMode),
+                  const SizedBox(height: 24),
+                  _buildSocialCard(context, isDarkMode),
+                  const SizedBox(height: 32),
+                  Text(
+                    'Fush Inc.',
+                    style: AppTheme.greyTextStyle.copyWith(
+                        fontSize: 14,
+                        color: AppColors.blackTextColor,
+                        fontStyle: FontStyle.normal,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -67,18 +61,7 @@ class AboutPage extends StatelessWidget {
           height: 100,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: [AppColors.primary, AppColors.secondary],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withOpacity(0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 5),
-              ),
-            ],
+            color: AppColors.secondary,
           ),
           child: Center(
             child: Image.asset(
@@ -112,8 +95,8 @@ class AboutPage extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(8),
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isDarkMode
               ? AppColors.darkBorderColor

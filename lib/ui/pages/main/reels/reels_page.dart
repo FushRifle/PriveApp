@@ -21,7 +21,7 @@ class ReelsPage extends StatefulWidget {
   State<ReelsPage> createState() => _ReelsPageState();
 }
 
-class _ReelsPageState extends State<ReelsPage> {
+class _ReelsPageState extends State<ReelsPage> with WidgetsBindingObserver {
   late PageController _pageController;
   late final ReelBloc _reelBloc;
   int _currentIndex = 0;
@@ -29,6 +29,7 @@ class _ReelsPageState extends State<ReelsPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _pageController = PageController();
     _reelBloc = ReelBloc()..add(const LoadReels());
     _loadCurrentUser();
@@ -39,7 +40,23 @@ class _ReelsPageState extends State<ReelsPage> {
   }
 
   @override
+  void didUpdateWidget(covariant ReelsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.isVisible && widget.isVisible) {
+      _reelBloc.add(RefreshReels());
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && widget.isVisible) {
+      _reelBloc.add(RefreshReels());
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pageController.dispose();
     _reelBloc.close();
     super.dispose();

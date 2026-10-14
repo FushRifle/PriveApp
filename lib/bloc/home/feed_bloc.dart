@@ -4,6 +4,7 @@ import 'package:clique/core/services/home/feed_service.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:clique/core/models/feeds_models.dart';
+import 'package:clique/core/services/reaction_cache_service.dart';
 
 part 'feed_event.dart';
 part 'feed_state.dart';
@@ -76,7 +77,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
         emit(
           state.copyWith(
             postsStatus: FeedStatus.loaded,
-            posts: cachedResponse.posts,
+            posts: cachedResponse.posts.map(_restoreReaction).toList(),
             hasMorePosts: cachedResponse.hasMore,
             currentPage: cachedResponse.page,
             clearPostsError: true,
@@ -96,11 +97,13 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
         forceRefresh: event.refresh,
       );
 
+      final restoredPosts = response.posts.map(_restoreReaction).toList();
+
       final updatedPosts = event.page == 1 || event.refresh
-          ? _mergePosts(response.posts, state.posts)
+          ? _mergePosts(restoredPosts, state.posts)
           : [
               ...state.posts,
-              ..._dedupePosts(response.posts, state.posts),
+              ..._dedupePosts(restoredPosts, state.posts),
             ];
 
       emit(
@@ -179,13 +182,14 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
       final response = await _feedService.getPosts(
         page: nextPage,
       );
+      final restoredPosts = response.posts.map(_restoreReaction).toList();
 
       emit(
         state.copyWith(
           postsStatus: FeedStatus.loaded,
           posts: [
             ...state.posts,
-            ..._dedupePosts(response.posts, state.posts),
+            ..._dedupePosts(restoredPosts, state.posts),
           ],
           currentPage: nextPage,
           hasMorePosts: response.hasMore,
@@ -277,6 +281,18 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
       ),
     );
 
+    final reactedPost = updatedPosts.where((post) => post.id == event.postId);
+    if (reactedPost.isNotEmpty) {
+      unawaited(
+        ReactionCacheService.save(
+          'post',
+          event.postId,
+          reaction: event.reaction,
+          count: reactedPost.first.likes,
+        ),
+      );
+    }
+
     try {
       await _feedService.likePost(
         event.postId,
@@ -284,6 +300,19 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
       );
       await _cachePosts(state.posts);
     } catch (e) {
+      final original = originalPosts.where((post) => post.id == event.postId);
+      if (original.isNotEmpty && original.first.isLiked) {
+        unawaited(
+          ReactionCacheService.save(
+            'post',
+            event.postId,
+            reaction: original.first.reaction ?? 'Like',
+            count: original.first.likes,
+          ),
+        );
+      } else {
+        unawaited(ReactionCacheService.clear('post', event.postId));
+      }
       emit(
         state.copyWith(
           posts: originalPosts,
@@ -317,12 +346,25 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
       ),
     );
 
+    unawaited(ReactionCacheService.clear('post', event.postId));
+
     try {
       await _feedService.unlikePost(
         event.postId,
       );
       await _cachePosts(state.posts);
     } catch (e) {
+      final original = originalPosts.where((post) => post.id == event.postId);
+      if (original.isNotEmpty && original.first.isLiked) {
+        unawaited(
+          ReactionCacheService.save(
+            'post',
+            event.postId,
+            reaction: original.first.reaction ?? 'Like',
+            count: original.first.likes,
+          ),
+        );
+      }
       emit(
         state.copyWith(
           posts: originalPosts,
@@ -638,6 +680,28 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     );
 
     return combined;
+  }
+
+  FeedPost _restoreReaction(FeedPost post) {
+    if (post.isLiked && (post.reaction?.trim().isNotEmpty ?? false)) {
+      unawaited(
+        ReactionCacheService.save(
+          'post',
+          post.id,
+          reaction: post.reaction!,
+          count: post.likes,
+        ),
+      );
+      return post;
+    }
+
+    final cached = ReactionCacheService.read('post', post.id);
+    if (cached == null) return post;
+    return post.copyWith(
+      isLiked: true,
+      reaction: cached.reaction,
+      likes: cached.count > post.likes ? cached.count : post.likes,
+    );
   }
 
   Future<void> _onCreatePostComment(
@@ -1016,6 +1080,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
         event.postId,
       );
       await _feedService.removeCachedPost(event.postId);
+      await ReactionCacheService.clear('post', event.postId);
       if (event.completer?.isCompleted == false) {
         event.completer!.complete();
       }

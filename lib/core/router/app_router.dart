@@ -55,6 +55,7 @@ import 'package:clique/ui/pages/main/status/status_page.dart';
 import 'package:clique/ui/pages/settings/settings_page.dart';
 import 'package:clique/ui/pages/clique/feedback_page.dart';
 import 'package:clique/ui/pages/settings/subscribe_page.dart';
+import 'package:clique/ui/pages/settings/download_page.dart';
 
 import 'package:clique/ui/pages/Clique/about_page.dart';
 import 'package:clique/ui/pages/Clique/help_page.dart';
@@ -377,6 +378,11 @@ class AppRouter {
       case NamedRoutes.subscribeScreen:
         return _page(
           const SubscribePage(),
+        );
+
+      case NamedRoutes.downloadsScreen:
+        return _page(
+          const DownloadPage(),
         );
 
       case NamedRoutes.notificationScreen:

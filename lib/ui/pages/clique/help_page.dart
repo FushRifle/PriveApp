@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
+import 'package:clique/ui/widgets/common/app_page_header.dart';
 
 class HelpPage extends StatelessWidget {
   const HelpPage({super.key});
@@ -11,39 +12,32 @@ class HelpPage extends StatelessWidget {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor:
-          isDarkMode ? AppColors.darkBackground : AppColors.lightBackground,
-      appBar: AppBar(
-        backgroundColor: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new,
-              color: isDarkMode ? AppColors.white : AppColors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Help Center',
-          style: TextStyle(
-            color: isDarkMode ? AppColors.white : AppColors.black,
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
+      backgroundColor: AppColors.background,
+      body: Column(
+        children: [
+          AppPageHeader(
+            title: 'Help center',
+            subtitle: 'Answers, support and safety',
+            leadingIcon: Icons.arrow_back_rounded,
+            onLeadingTap: () => Navigator.maybePop(context),
           ),
-        ),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _buildSearchBar(isDarkMode),
-            const SizedBox(height: 24),
-            _buildFAQSection(context, isDarkMode),
-            const SizedBox(height: 24),
-            _buildContactSection(context, isDarkMode),
-            const SizedBox(height: 24),
-            _buildReportSection(context, isDarkMode),
-          ],
-        ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(12, 6, 12, 32),
+              child: Column(
+                children: [
+                  _buildSearchBar(isDarkMode),
+                  const SizedBox(height: 24),
+                  _buildFAQSection(context, isDarkMode),
+                  const SizedBox(height: 24),
+                  _buildContactSection(context, isDarkMode),
+                  const SizedBox(height: 24),
+                  _buildReportSection(context, isDarkMode),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -52,7 +46,7 @@ class HelpPage extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
             color: isDarkMode
                 ? AppColors.darkBorderColor

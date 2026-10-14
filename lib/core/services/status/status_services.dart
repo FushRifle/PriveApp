@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import '../../clients/api_service.dart';
 import '../../models/status_model.dart';
+import '../reaction_cache_service.dart';
 
 class SilentStatusFailure implements Exception {
   final int? statusCode;
@@ -42,6 +43,7 @@ class StatusService {
       if (data is List) {
         return data
             .map((json) => Story.fromJson(json))
+            .map(_restoreReaction)
             .where(_isVisibleToViewer)
             .toList();
       }
@@ -50,6 +52,7 @@ class StatusService {
         if (stories is List) {
           return stories
               .map((json) => Story.fromJson(json))
+              .map(_restoreReaction)
               .where(_isVisibleToViewer)
               .toList();
         }
@@ -132,6 +135,28 @@ class StatusService {
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to unlike story');
     }
+  }
+
+  Story _restoreReaction(Story story) {
+    final serverReaction = story.reaction?.trim() ?? '';
+    if (story.isLiked && serverReaction.isNotEmpty) {
+      ReactionCacheService.save(
+        'story',
+        story.id,
+        reaction: serverReaction,
+        count: story.likeCount,
+      );
+      return story;
+    }
+
+    final cached = ReactionCacheService.read('story', story.id);
+    if (cached == null) return story;
+    return story.copyWith(
+      isLiked: true,
+      reaction: cached.reaction,
+      likeCount:
+          cached.count > story.likeCount ? cached.count : story.likeCount,
+    );
   }
 
   Future<Map<String, dynamic>?> replyToStory({

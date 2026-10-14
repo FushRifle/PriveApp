@@ -29,7 +29,7 @@ class ProfileCoverHeader extends StatelessWidget {
 
     return SliverAppBar(
       expandedHeight: 152,
-      stretch: true,
+      stretch: false,
       pinned: true,
       backgroundColor: AppColors.backgroundColor,
       elevation: 0,
@@ -63,7 +63,7 @@ class ProfileCoverHeader extends StatelessWidget {
         ),
       ),
       flexibleSpace: FlexibleSpaceBar(
-        collapseMode: CollapseMode.parallax,
+        collapseMode: CollapseMode.pin,
         background: Stack(
           fit: StackFit.expand,
           children: [
@@ -113,24 +113,38 @@ class ProfileCoverImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppNetworkImage(
-      imageUrl: imageUrl,
-      fit: BoxFit.cover,
-      preset: AppNetworkImagePreset.card,
-      placeholder: (_) => Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.card.withOpacity(0.2),
-              AppColors.secondary.withOpacity(0.16),
-              AppColors.background.withOpacity(0.12),
-            ],
-          ),
+    final width = MediaQuery.sizeOf(context).width;
+    return RepaintBoundary(
+      child: Image(
+        image: appNetworkImageProvider(
+          context,
+          imageUrl,
+          preset: AppNetworkImagePreset.card,
+          logicalWidth: width,
+          logicalHeight: 180,
         ),
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: 180,
+        gaplessPlayback: true,
+        filterQuality: FilterQuality.medium,
+        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+          if (wasSynchronouslyLoaded || frame != null) return child;
+          return ColoredBox(
+            color: AppColors.card,
+            child: Center(
+              child: SizedBox.square(
+                dimension: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 1.5,
+                  color: AppColors.secondary.withOpacity(0.55),
+                ),
+              ),
+            ),
+          );
+        },
+        errorBuilder: (_, __, ___) => const ProfileCoverPlaceholder(),
       ),
-      errorBuilder: (_) => const ProfileCoverPlaceholder(),
     );
   }
 }

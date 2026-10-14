@@ -5,6 +5,7 @@ import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:clique/core/models/status_model.dart';
 import 'package:clique/core/services/status/status_services.dart';
+import 'package:clique/core/services/reaction_cache_service.dart';
 
 part 'stories_event.dart';
 part 'stories_state.dart';
@@ -174,6 +175,7 @@ class StoriesBloc extends Bloc<StoriesEvent, StoriesState> {
         stories: updatedStories,
         clearError: true,
       ));
+      await ReactionCacheService.clear('story', event.storyId);
       if (event.completer?.isCompleted == false) {
         event.completer!.complete();
       }
@@ -222,7 +224,9 @@ class StoriesBloc extends Bloc<StoriesEvent, StoriesState> {
     final previousStories = state.stories;
     emit(state.copyWith(
       stories: _updateStory(event.storyId, (story) {
-        if (story.isLiked) return story;
+        if (story.isLiked) {
+          return story.copyWith(reaction: event.reaction);
+        }
         return story.copyWith(
           isLiked: true,
           reaction: event.reaction,
@@ -232,9 +236,38 @@ class StoriesBloc extends Bloc<StoriesEvent, StoriesState> {
       clearError: true,
     ));
 
+    final reactedStories = state.stories.where(
+      (story) => story.id == event.storyId,
+    );
+    if (reactedStories.isNotEmpty) {
+      unawaited(
+        ReactionCacheService.save(
+          'story',
+          event.storyId,
+          reaction: event.reaction,
+          count: reactedStories.first.likeCount,
+        ),
+      );
+    }
+
     try {
       await _statusService.likeStory(event.storyId, reaction: event.reaction);
     } catch (e) {
+      final original = previousStories.where(
+        (story) => story.id == event.storyId,
+      );
+      if (original.isNotEmpty && original.first.isLiked) {
+        unawaited(
+          ReactionCacheService.save(
+            'story',
+            event.storyId,
+            reaction: original.first.reaction ?? 'Like',
+            count: original.first.likeCount,
+          ),
+        );
+      } else {
+        unawaited(ReactionCacheService.clear('story', event.storyId));
+      }
       emit(state.copyWith(stories: previousStories, error: e.toString()));
     }
   }
@@ -256,9 +289,24 @@ class StoriesBloc extends Bloc<StoriesEvent, StoriesState> {
       clearError: true,
     ));
 
+    unawaited(ReactionCacheService.clear('story', event.storyId));
+
     try {
       await _statusService.unlikeStory(event.storyId);
     } catch (e) {
+      final original = previousStories.where(
+        (story) => story.id == event.storyId,
+      );
+      if (original.isNotEmpty && original.first.isLiked) {
+        unawaited(
+          ReactionCacheService.save(
+            'story',
+            event.storyId,
+            reaction: original.first.reaction ?? 'Like',
+            count: original.first.likeCount,
+          ),
+        );
+      }
       emit(state.copyWith(stories: previousStories, error: e.toString()));
     }
   }

@@ -30,7 +30,7 @@ class StatusViewPage extends StatefulWidget {
 }
 
 class _StatusViewPageState extends State<StatusViewPage>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   static const _defaultStoryDuration = Duration(seconds: 5);
   static const _maximumVideoStoryDuration = Duration(minutes: 1);
 
@@ -47,6 +47,7 @@ class _StatusViewPageState extends State<StatusViewPage>
   bool _shouldResumeAfterInteraction = false;
   bool _isSendingReply = false;
   bool _showReplySent = false;
+  bool _isMuted = false;
   int _videoSeekRequest = 0;
   Duration _videoSeekOffset = Duration.zero;
   String? _completedVideoStoryId;
@@ -55,6 +56,7 @@ class _StatusViewPageState extends State<StatusViewPage>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     currentIndex = widget.initialIndex;
     _stories = List<Story>.from(widget.stories);
     _pageController = PageController(initialPage: currentIndex);
@@ -256,7 +258,15 @@ class _StatusViewPageState extends State<StatusViewPage>
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _storiesBlocOrNull()?.add(const GetStories(refresh: true, silent: true));
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _progressController.dispose();
     _pageController.dispose();
     _replyFocusNode.dispose();
@@ -441,6 +451,7 @@ class _StatusViewPageState extends State<StatusViewPage>
                         isActive:
                             story.id == _stories[_safeStoryIndex(_stories)].id,
                         isPaused: _isPaused,
+                        isMuted: _isMuted,
                         seekRequest: _videoSeekRequest,
                         seekOffset: _videoSeekOffset,
                         onDurationReady: (duration) {
@@ -679,6 +690,19 @@ class _StatusViewPageState extends State<StatusViewPage>
               ],
             ),
           ),
+          if (_isVideoStory(story))
+            IconButton(
+              tooltip: _isMuted ? 'Turn sound on' : 'Mute story',
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                setState(() => _isMuted = !_isMuted);
+              },
+              icon: Icon(
+                _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+                color: AppColors.white,
+                size: 23,
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.close, color: AppColors.white, size: 28),
             onPressed: () {
@@ -1435,6 +1459,7 @@ class _StatusVideoPlayer extends StatefulWidget {
   final String url;
   final bool isActive;
   final bool isPaused;
+  final bool isMuted;
   final int seekRequest;
   final Duration seekOffset;
   final ValueChanged<Duration> onDurationReady;
@@ -1444,6 +1469,7 @@ class _StatusVideoPlayer extends StatefulWidget {
     required this.url,
     required this.isActive,
     required this.isPaused,
+    required this.isMuted,
     required this.seekRequest,
     required this.seekOffset,
     required this.onDurationReady,
@@ -1475,6 +1501,7 @@ class _StatusVideoPlayerState extends State<_StatusVideoPlayer> {
     }
     if (oldWidget.isActive != widget.isActive ||
         oldWidget.isPaused != widget.isPaused ||
+        oldWidget.isMuted != widget.isMuted ||
         oldWidget.seekRequest != widget.seekRequest) {
       if (!oldWidget.isActive && widget.isActive) {
         final duration = _controller?.value.duration;
@@ -1484,6 +1511,9 @@ class _StatusVideoPlayerState extends State<_StatusVideoPlayer> {
       }
       if (oldWidget.seekRequest != widget.seekRequest) {
         _seekBy(widget.seekOffset);
+      }
+      if (oldWidget.isMuted != widget.isMuted) {
+        _controller?.setVolume(widget.isMuted ? 0 : 1);
       }
       _syncPlayback();
     }
@@ -1507,7 +1537,7 @@ class _StatusVideoPlayerState extends State<_StatusVideoPlayer> {
       await controller.initialize();
       controller.addListener(_handleControllerTick);
       await controller.setLooping(false);
-      await controller.setVolume(1);
+      await controller.setVolume(widget.isMuted ? 0 : 1);
       if (!mounted || _controller != controller) {
         await controller.dispose();
         return;

@@ -90,7 +90,7 @@ class _InsightsPageState extends State<InsightsPage>
                     physics: const AlwaysScrollableScrollPhysics(
                       parent: BouncingScrollPhysics(),
                     ),
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+                    padding: const EdgeInsets.fromLTRB(12, 4, 12, 32),
                     child: Center(
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 920),
@@ -108,14 +108,14 @@ class _InsightsPageState extends State<InsightsPage>
                             _buildPerformanceHero(state),
                             const SizedBox(height: 14),
                             _buildPeriodSelector(state),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 18),
                             _buildSectionTitle(
                               'Overview',
                               'A snapshot of your account performance',
                             ),
                             const SizedBox(height: 12),
                             _buildOverviewCards(state),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 18),
                             _buildChartSection(state),
                             const SizedBox(height: 24),
                             if (state.insights != null) ...[
@@ -262,17 +262,11 @@ class _InsightsPageState extends State<InsightsPage>
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.primary,
-            AppColors.secondary.withOpacity(0.9),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(24),
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border.withOpacity(0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -283,12 +277,12 @@ class _InsightsPageState extends State<InsightsPage>
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: AppColors.white.withOpacity(0.16),
-                  shape: BoxShape.circle,
+                  color: AppColors.secondary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
                   Icons.insights_rounded,
-                  color: AppColors.white,
+                  color: AppColors.secondary,
                   size: 22,
                 ),
               ),
@@ -297,13 +291,13 @@ class _InsightsPageState extends State<InsightsPage>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppColors.white.withOpacity(0.16),
+                  color: AppColors.secondary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
                   'Last ${state.currentPeriodDays} days',
                   style: const TextStyle(
-                    color: AppColors.white,
+                    color: AppColors.secondary,
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                   ),
@@ -311,22 +305,19 @@ class _InsightsPageState extends State<InsightsPage>
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          const Text(
+          const SizedBox(height: 16),
+          Text(
             'Performance dashboard',
-            style: TextStyle(
-              color: AppColors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
+            style: AppTheme.blackTextStyle.copyWith(
+              color: AppColors.text,
+              fontSize: 18,
+              fontWeight: AppTheme.bold,
             ),
           ),
           const SizedBox(height: 5),
           Text(
             'See how people discover and interact with your content.',
-            style: TextStyle(
-              color: AppColors.white.withOpacity(0.78),
-              fontSize: 13,
-            ),
+            style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
           ),
           if (state.realtimeStats != null) ...[
             const SizedBox(height: 18),
@@ -343,8 +334,8 @@ class _InsightsPageState extends State<InsightsPage>
                 const SizedBox(width: 8),
                 Text(
                   '$viewers ${viewers == 1 ? 'viewer' : 'viewers'} online now',
-                  style: const TextStyle(
-                    color: AppColors.white,
+                  style: TextStyle(
+                    color: AppColors.text,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -364,7 +355,7 @@ class _InsightsPageState extends State<InsightsPage>
         Text(
           title,
           style: AppTheme.blackTextStyle.copyWith(
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -514,8 +505,8 @@ class _InsightsPageState extends State<InsightsPage>
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: AppColors.cardColor,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: color.withOpacity(0.18)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border.withOpacity(0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -572,7 +563,7 @@ class _InsightsPageState extends State<InsightsPage>
           Text(
             value,
             style: AppTheme.blackTextStyle.copyWith(
-              fontSize: 24,
+              fontSize: 21,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -597,11 +588,11 @@ class _InsightsPageState extends State<InsightsPage>
     final selectedData = _getSelectedChartData(insights!.chartData);
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.cardColor,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border.withOpacity(0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

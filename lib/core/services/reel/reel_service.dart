@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../../clients/api_service.dart';
+import '../reaction_cache_service.dart';
 
 class ReelService {
   final ApiService _api = ApiService();
@@ -29,7 +30,7 @@ class ReelService {
             'includeOthers': true,
           },
           forceRefresh: forceRefresh);
-      final reels = _readList(response.data);
+      final reels = _readList(response.data).map(_restoreReaction).toList();
       _reelsCache[page] = reels;
       return reels;
     } on DioException catch (e) {
@@ -242,6 +243,54 @@ class ReelService {
     }
 
     return {};
+  }
+
+  dynamic _restoreReaction(dynamic value) {
+    if (value is! Map) return value;
+    final reel = Map<String, dynamic>.from(value);
+    final id = reel['id']?.toString() ?? '';
+    if (id.isEmpty) return reel;
+
+    final isLiked = _readBool(reel['isLiked'] ?? reel['is_liked']) == true;
+    final serverReaction = (reel['reaction'] ??
+            reel['myReaction'] ??
+            reel['my_reaction'] ??
+            reel['reactionType'] ??
+            reel['reaction_type'])
+        ?.toString()
+        .trim();
+    final count = _readInt(reel['likes'] ?? reel['likeCount']);
+
+    if (isLiked && serverReaction != null && serverReaction.isNotEmpty) {
+      ReactionCacheService.save(
+        'reel',
+        id,
+        reaction: serverReaction,
+        count: count,
+      );
+      return reel;
+    }
+
+    final cached = ReactionCacheService.read('reel', id);
+    if (cached == null) return reel;
+    reel['isLiked'] = true;
+    reel['reaction'] = cached.reaction;
+    reel['myReaction'] = cached.reaction;
+    reel['likes'] = cached.count > count ? cached.count : count;
+    return reel;
+  }
+
+  int _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  bool _readBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    final normalized = value?.toString().trim().toLowerCase();
+    return normalized == 'true' || normalized == '1';
   }
 
   String _readErrorMessage(DioException error, String fallback) {

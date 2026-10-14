@@ -17,8 +17,13 @@ import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
 void customBottomSheetComments(BuildContext context, {required int postId}) =>
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.transparent,
+      backgroundColor: AppColors.card,
       isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: false,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
       builder: (builder) => BlocProvider<FeedBloc>.value(
         value: context.read<FeedBloc>(),
         child: CommentBottomSheetContent(postId: postId),
@@ -401,62 +406,57 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
         padding:
             EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
         child: SizedBox(
-          height: MediaQuery.of(context).size.height * 0.88,
+          height: MediaQuery.of(context).size.height * 0.90,
           width: double.infinity,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: 40,
-                height: 6,
-                margin: const EdgeInsets.only(top: 16, bottom: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.backgroundColor,
-                  borderRadius: BorderRadius.circular(50),
-                ),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(22),
               ),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.only(top: 30),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(top: 10, bottom: 14),
                   decoration: BoxDecoration(
-                    color: AppColors.backgroundColor,
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(30),
-                    ),
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(99),
                   ),
-                  child: Column(
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 26),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              "Comments",
-                              style: AppTheme.blackTextStyle.copyWith(
-                                fontSize: 18,
-                                fontWeight: AppTheme.bold,
-                              ),
-                            ),
-                            Text(
-                              "${_comments.length} comments",
-                              style: AppTheme.greyTextStyle.copyWith(
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
+                      Text(
+                        'Comments',
+                        style: AppTheme.blackTextStyle.copyWith(
+                          fontSize: 16,
+                          fontWeight: AppTheme.bold,
                         ),
                       ),
-                      const SizedBox(height: 18),
-                      Expanded(
-                        child: _buildCommentsList(),
+                      const Spacer(),
+                      Text(
+                        '${_comments.length}',
+                        style: AppTheme.greyTextStyle.copyWith(fontSize: 11),
                       ),
-                      _buildCommentInput(),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        tooltip: 'Close',
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                        visualDensity: VisualDensity.compact,
+                      ),
                     ],
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Expanded(child: _buildCommentsList()),
+                _buildCommentInput(),
+              ],
+            ),
           ),
         ),
       ),
@@ -502,21 +502,21 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
           children: [
             Icon(
               Icons.chat_bubble_outline,
-              size: 64,
-              color: AppColors.greyColor.withOpacity(0.5),
+              size: 30,
+              color: AppColors.secondary,
             ),
             const SizedBox(height: 16),
             Text(
               'No comments yet',
               style: AppTheme.greyTextStyle.copyWith(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
+                fontSize: 14,
+                fontWeight: AppTheme.bold,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Be the first to comment!',
-              style: AppTheme.greyTextStyle.copyWith(fontSize: 14),
+              'Start the conversation',
+              style: AppTheme.greyTextStyle.copyWith(fontSize: 11.5),
             ),
           ],
         ),
@@ -533,7 +533,7 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
         return false;
       },
       child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 26),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         itemCount: threads.length + (_isLoadingMore ? 1 : 0),
         itemBuilder: (context, index) {
           if (index == threads.length) {
@@ -572,12 +572,12 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
 
   Widget _buildCommentInput() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.whiteColor,
+        color: AppColors.card,
         border: Border(
           top: BorderSide(
-            color: AppColors.dashedLineColor.withOpacity(0.3),
+            color: AppColors.border.withOpacity(0.5),
             width: 1,
           ),
         ),
@@ -629,7 +629,7 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
                       borderSide: BorderSide.none,
                     ),
                     filled: true,
-                    fillColor: AppColors.backgroundColor,
+                    fillColor: AppColors.background,
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 12,
@@ -654,7 +654,7 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
                   decoration: BoxDecoration(
                     color: _isRecordingVoice
                         ? AppColors.red
-                        : AppColors.primary.withOpacity(0.12),
+                        : AppColors.secondary.withOpacity(0.12),
                     shape: BoxShape.circle,
                   ),
                   child: _isStartingVoiceRecording
@@ -663,14 +663,14 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: AppColors.primary,
+                            color: AppColors.secondary,
                           ),
                         )
                       : Icon(
                           _isRecordingVoice ? Icons.stop : Icons.mic,
                           color: _isRecordingVoice
                               ? AppColors.white
-                              : AppColors.primary,
+                              : AppColors.secondary,
                           size: 20,
                         ),
                 ),
@@ -681,7 +681,7 @@ class _CommentBottomSheetContentState extends State<CommentBottomSheetContent> {
                 child: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.primary,
+                    color: AppColors.secondary,
                     shape: BoxShape.circle,
                   ),
                   child: _isPosting

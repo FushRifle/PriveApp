@@ -167,17 +167,10 @@ class CommentActionChip extends StatelessWidget {
       borderRadius: BorderRadius.circular(999),
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
         decoration: BoxDecoration(
-          color: selected
-              ? AppColors.primary.withOpacity(0.12)
-              : AppColors.backgroundColor.withOpacity(0.72),
+          color: AppColors.transparent,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: selected
-                ? AppColors.primary.withOpacity(0.18)
-                : AppColors.cardBorderColor,
-          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -185,7 +178,7 @@ class CommentActionChip extends StatelessWidget {
             Icon(
               icon,
               size: 15,
-              color: selected ? AppColors.primary : AppColors.textSecondary,
+              color: selected ? AppColors.secondary : AppColors.textSecondary,
             ),
             const SizedBox(width: 6),
             Text(
@@ -193,7 +186,7 @@ class CommentActionChip extends StatelessWidget {
               style: AppTheme.greyTextStyle.copyWith(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: selected ? AppColors.primary : AppColors.textSecondary,
+                color: selected ? AppColors.secondary : AppColors.textSecondary,
               ),
             ),
           ],
@@ -588,19 +581,13 @@ class CommentThreadCard extends StatelessWidget {
     final replies = thread.replies;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(15),
+      margin: EdgeInsets.zero,
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 2),
       decoration: BoxDecoration(
-        color: AppColors.card.withOpacity(0.94),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.cardBorderColor),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow.withOpacity(0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        color: AppColors.transparent,
+        border: Border(
+          bottom: BorderSide(color: AppColors.border.withOpacity(0.4)),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -624,7 +611,7 @@ class CommentThreadCard extends StatelessWidget {
                     width: 8,
                     height: 8,
                     decoration: const BoxDecoration(
-                      color: AppColors.primary,
+                      color: AppColors.secondary,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -700,7 +687,7 @@ class _ThreadCommentEntry extends StatelessWidget {
             child: Container(
               width: 1.5,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.18),
+                color: AppColors.secondary.withOpacity(0.18),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),

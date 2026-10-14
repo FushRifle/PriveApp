@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:clique/app/configs/colors.dart';
 import 'package:clique/app/configs/theme.dart';
+import 'package:clique/ui/widgets/common/app_page_header.dart';
 import 'package:clique/bloc/subscription/feature_access_cubit.dart';
 
 class SubscribePage extends StatefulWidget {
@@ -66,343 +67,348 @@ class _SubscribePageState extends State<SubscribePage> {
       },
       child: Scaffold(
         backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon:
-                const Icon(Icons.arrow_back_ios_new, color: AppColors.primary),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        body: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                // Crown icon
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      colors: [AppColors.primary, AppColors.secondary],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withOpacity(0.3),
-                        blurRadius: 30,
-                        offset: const Offset(0, 15),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.workspace_premium,
-                    size: 60,
-                    color: AppColors.white,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Upgrade to Premium',
-                  style: AppTheme.blackTextStyle.copyWith(
-                    fontWeight: AppTheme.bold,
-                    fontSize: 28,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Unlock all features and take your experience to the next level',
-                  style: AppTheme.greyTextStyle.copyWith(
-                    fontSize: 16,
-                    height: 1.4,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
-
-                // Plan toggle
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: AppColors.card,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
+        body: Column(
+          children: [
+            AppPageHeader(
+              title: 'Clique Premium',
+              subtitle: 'Choose the plan that works for you',
+              leadingIcon: Icons.arrow_back_rounded,
+              onLeadingTap: () => Navigator.maybePop(context),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedPlan = 0;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              color: _selectedPlan == 0
-                                  ? AppColors.primary
-                                  : AppColors.transparent,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Column(
-                              children: [
-                                Text(
-                                  'Monthly',
-                                  style: TextStyle(
-                                    color: _selectedPlan == 0
-                                        ? AppColors.white
-                                        : AppColors.blackColor,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '\$9.99/mo',
-                                  style: TextStyle(
-                                    color: _selectedPlan == 0
-                                        ? AppColors.white.withOpacity(0.8)
-                                        : AppColors.greyColor,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                      // Crown icon
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          color: AppColors.secondary.withOpacity(0.12),
+                        ),
+                        child: const Icon(
+                          Icons.workspace_premium,
+                          size: 34,
+                          color: AppColors.secondary,
                         ),
                       ),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedPlan = 1;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              color: _selectedPlan == 1
-                                  ? AppColors.primary
-                                  : AppColors.transparent,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Column(
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      'Yearly',
-                                      style: TextStyle(
-                                        color: _selectedPlan == 1
-                                            ? AppColors.white
-                                            : AppColors.blackColor,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: _selectedPlan == 1
-                                            ? AppColors.white.withOpacity(0.3)
-                                            : AppColors.greenColor,
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        'Save 50%',
+                      const SizedBox(height: 24),
+                      Text(
+                        'Upgrade to Premium',
+                        style: AppTheme.blackTextStyle.copyWith(
+                          fontWeight: AppTheme.bold,
+                          fontSize: 21,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Unlock all features and take your experience to the next level',
+                        style: AppTheme.greyTextStyle.copyWith(
+                          fontSize: 12.5,
+                          height: 1.4,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 32),
+
+                      // Plan toggle
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: AppColors.card,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _selectedPlan = 0;
+                                  });
+                                },
+                                child: Container(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: _selectedPlan == 0
+                                        ? AppColors.primary
+                                        : AppColors.transparent,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        'Monthly',
                                         style: TextStyle(
-                                          color: _selectedPlan == 1
+                                          color: _selectedPlan == 0
                                               ? AppColors.white
-                                              : AppColors.white,
-                                          fontSize: 10,
+                                              : AppColors.blackColor,
                                           fontWeight: FontWeight.bold,
+                                          fontSize: 14,
                                         ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '\$4.99/mo',
-                                  style: TextStyle(
-                                    color: _selectedPlan == 1
-                                        ? AppColors.white.withOpacity(0.8)
-                                        : AppColors.greyColor,
-                                    fontSize: 12,
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '\$9.99/mo',
+                                        style: TextStyle(
+                                          color: _selectedPlan == 0
+                                              ? AppColors.white.withOpacity(0.8)
+                                              : AppColors.greyColor,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ],
+                              ),
                             ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 32),
-
-                // Features list
-                _buildFeatureItem(
-                  icon: Icons.verified,
-                  title: 'Verified Badge',
-                  description: 'Get a blue checkmark and stand out',
-                  color: AppColors.blue,
-                ),
-                const SizedBox(height: 20),
-                _buildFeatureItem(
-                  icon: Icons.analytics,
-                  title: 'Advanced Analytics',
-                  description: 'Detailed insights about your content',
-                  color: AppColors.orange,
-                ),
-                const SizedBox(height: 20),
-                _buildFeatureItem(
-                  icon: Icons.ad_units,
-                  title: 'No Ads',
-                  description: 'Enjoy an ad-free experience',
-                  color: AppColors.green,
-                ),
-                const SizedBox(height: 20),
-                _buildFeatureItem(
-                  icon: Icons.cloud_upload,
-                  title: 'HD Uploads',
-                  description: 'Upload high-quality videos and photos',
-                  color: AppColors.primary,
-                ),
-
-                const SizedBox(height: 20),
-                _buildFeatureItem(
-                  icon: Icons.headphones,
-                  title: 'Priority Support',
-                  description: '24/7 dedicated customer support',
-                  color: AppColors.teal,
-                ),
-
-                const SizedBox(height: 20),
-                _buildFeatureItem(
-                  icon: Icons.schedule_send,
-                  title: 'Scheduled Posts',
-                  description: 'Plan posts ahead and publish at the right time',
-                  color: AppColors.cyan,
-                ),
-
-                const SizedBox(height: 20),
-                _buildFeatureItem(
-                  icon: Icons.video_collection,
-                  title: 'Long Reels',
-                  description: 'Upload longer reels for deeper stories',
-                  color: AppColors.attachmentAmber,
-                ),
-                const SizedBox(height: 20),
-                _buildFeatureItem(
-                  icon: Icons.palette,
-                  title: 'Premium Themes',
-                  description: 'Personalize Clique with exclusive themes',
-                  color: AppColors.storyPurple,
-                ),
-                const SizedBox(height: 20),
-                _buildFeatureItem(
-                  icon: Icons.query_stats,
-                  title: 'Story Insights',
-                  description: 'See deeper performance stats for your stories',
-                  color: AppColors.storyTeal,
-                ),
-                const SizedBox(height: 20),
-                _buildFeatureItem(
-                  icon: Icons.workspace_premium,
-                  title: 'Premium Access',
-                  description: 'Keep all premium-only tools unlocked',
-                  color: AppColors.primary,
-                ),
-                const SizedBox(height: 32),
-
-                // Subscribe button
-                BlocBuilder<FeatureAccessCubit, FeatureAccessState>(
-                  builder: (context, state) {
-                    final isBusy = state.isPurchasing || _isLoadingPackages;
-                    return GestureDetector(
-                      onTap: isBusy ? null : _purchaseSelectedPlan,
-                      child: Container(
-                        width: double.infinity,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [AppColors.primary, AppColors.secondary],
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withOpacity(0.3),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _selectedPlan = 1;
+                                  });
+                                },
+                                child: Container(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: _selectedPlan == 1
+                                        ? AppColors.primary
+                                        : AppColors.transparent,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            'Yearly',
+                                            style: TextStyle(
+                                              color: _selectedPlan == 1
+                                                  ? AppColors.white
+                                                  : AppColors.blackColor,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: _selectedPlan == 1
+                                                  ? AppColors.white
+                                                      .withOpacity(0.3)
+                                                  : AppColors.greenColor,
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              'Save 50%',
+                                              style: TextStyle(
+                                                color: _selectedPlan == 1
+                                                    ? AppColors.white
+                                                    : AppColors.white,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '\$4.99/mo',
+                                        style: TextStyle(
+                                          color: _selectedPlan == 1
+                                              ? AppColors.white.withOpacity(0.8)
+                                              : AppColors.greyColor,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                        child: Center(
-                          child: isBusy
-                              ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
-                                    color: AppColors.white,
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : Text(
-                                  state.access.isPremium
-                                      ? 'Premium Active'
-                                      : 'Subscribe Now',
-                                  style: AppTheme.whiteTextStyle.copyWith(
-                                    fontWeight: AppTheme.bold,
-                                    fontSize: 18,
-                                  ),
+                      ),
+                      const SizedBox(height: 32),
+
+                      // Features list
+                      _buildFeatureItem(
+                        icon: Icons.verified,
+                        title: 'Verified Badge',
+                        description: 'Get a blue checkmark and stand out',
+                        color: AppColors.blue,
+                      ),
+                      const SizedBox(height: 20),
+                      _buildFeatureItem(
+                        icon: Icons.analytics,
+                        title: 'Advanced Analytics',
+                        description: 'Detailed insights about your content',
+                        color: AppColors.orange,
+                      ),
+                      const SizedBox(height: 20),
+                      _buildFeatureItem(
+                        icon: Icons.ad_units,
+                        title: 'No Ads',
+                        description: 'Enjoy an ad-free experience',
+                        color: AppColors.green,
+                      ),
+                      const SizedBox(height: 20),
+                      _buildFeatureItem(
+                        icon: Icons.cloud_upload,
+                        title: 'HD Uploads',
+                        description: 'Upload high-quality videos and photos',
+                        color: AppColors.primary,
+                      ),
+
+                      const SizedBox(height: 20),
+                      _buildFeatureItem(
+                        icon: Icons.headphones,
+                        title: 'Priority Support',
+                        description: '24/7 dedicated customer support',
+                        color: AppColors.teal,
+                      ),
+
+                      const SizedBox(height: 20),
+                      _buildFeatureItem(
+                        icon: Icons.schedule_send,
+                        title: 'Scheduled Posts',
+                        description:
+                            'Plan posts ahead and publish at the right time',
+                        color: AppColors.cyan,
+                      ),
+
+                      const SizedBox(height: 20),
+                      _buildFeatureItem(
+                        icon: Icons.video_collection,
+                        title: 'Long Reels',
+                        description: 'Upload longer reels for deeper stories',
+                        color: AppColors.attachmentAmber,
+                      ),
+                      const SizedBox(height: 20),
+                      _buildFeatureItem(
+                        icon: Icons.palette,
+                        title: 'Premium Themes',
+                        description: 'Personalize Clique with exclusive themes',
+                        color: AppColors.storyPurple,
+                      ),
+                      const SizedBox(height: 20),
+                      _buildFeatureItem(
+                        icon: Icons.query_stats,
+                        title: 'Story Insights',
+                        description:
+                            'See deeper performance stats for your stories',
+                        color: AppColors.storyTeal,
+                      ),
+                      const SizedBox(height: 20),
+                      _buildFeatureItem(
+                        icon: Icons.workspace_premium,
+                        title: 'Premium Access',
+                        description: 'Keep all premium-only tools unlocked',
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(height: 32),
+
+                      // Subscribe button
+                      BlocBuilder<FeatureAccessCubit, FeatureAccessState>(
+                        builder: (context, state) {
+                          final isBusy =
+                              state.isPurchasing || _isLoadingPackages;
+                          return GestureDetector(
+                            onTap: isBusy ? null : _purchaseSelectedPlan,
+                            child: Container(
+                              width: double.infinity,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    AppColors.primary,
+                                    AppColors.secondary
+                                  ],
                                 ),
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.primary.withOpacity(0.3),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: isBusy
+                                    ? const SizedBox(
+                                        width: 22,
+                                        height: 22,
+                                        child: CircularProgressIndicator(
+                                          color: AppColors.white,
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : Text(
+                                        state.access.isPremium
+                                            ? 'Premium Active'
+                                            : 'Subscribe Now',
+                                        style: AppTheme.whiteTextStyle.copyWith(
+                                          fontWeight: AppTheme.bold,
+                                          fontSize: 18,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Cancel anytime. No commitments.',
+                        style: AppTheme.greyTextStyle.copyWith(fontSize: 13),
+                      ),
+                      const SizedBox(height: 32),
+
+                      // Restore purchases
+                      GestureDetector(
+                        onTap: () async {
+                          HapticFeedback.lightImpact();
+                          await context.read<FeatureAccessCubit>().restore();
+                        },
+                        child: Text(
+                          'Restore Purchases',
+                          style: AppTheme.blackTextStyle.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: AppTheme.bold,
+                            fontSize: 16,
+                          ),
                         ),
                       ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Cancel anytime. No commitments.',
-                  style: AppTheme.greyTextStyle.copyWith(fontSize: 13),
-                ),
-                const SizedBox(height: 32),
+                      const SizedBox(height: 16),
 
-                // Restore purchases
-                GestureDetector(
-                  onTap: () async {
-                    HapticFeedback.lightImpact();
-                    await context.read<FeatureAccessCubit>().restore();
-                  },
-                  child: Text(
-                    'Restore Purchases',
-                    style: AppTheme.blackTextStyle.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: AppTheme.bold,
-                      fontSize: 16,
-                    ),
+                      // Terms
+                      Text(
+                        'By subscribing you agree to our Terms of Service and Privacy Policy',
+                        style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 32),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
-
-                // Terms
-                Text(
-                  'By subscribing you agree to our Terms of Service and Privacy Policy',
-                  style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );

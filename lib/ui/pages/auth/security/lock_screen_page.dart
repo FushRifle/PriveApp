@@ -424,9 +424,46 @@ class _LockScreenPageState extends State<LockScreenPage> {
         backgroundColor: palette.background,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded, color: palette.text),
-          onPressed: () => Navigator.pop(context),
+        toolbarHeight: 68,
+        leadingWidth: 58,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12, top: 15, bottom: 15),
+          child: Material(
+            color: AppColors.secondary,
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => Navigator.maybePop(context),
+              child: const Icon(
+                Icons.arrow_back_rounded,
+                color: AppColors.white,
+                size: 20,
+              ),
+            ),
+          ),
+        ),
+        titleSpacing: 10,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'App lock',
+              style: TextStyle(
+                color: palette.text,
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.5,
+              ),
+            ),
+            Text(
+              'Biometrics, PIN and lock timeout',
+              style: TextStyle(
+                color: palette.muted,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ),
       body: SingleChildScrollView(

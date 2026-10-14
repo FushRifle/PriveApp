@@ -10,10 +10,12 @@ import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 
 import 'package:clique/app/configs/colors.dart';
+import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/reels/reel_bloc.dart';
 import 'package:clique/core/clients/cloudinary_service.dart';
 import 'package:clique/core/services/tagging/tagging_service.dart';
 import 'package:clique/ui/widgets/common/token_suggestion_field.dart';
+import 'package:clique/ui/widgets/common/app_page_header.dart';
 
 class CreateReelPage extends StatefulWidget {
   const CreateReelPage({
@@ -97,125 +99,105 @@ class _CreateReelPageState extends State<CreateReelPage> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.black,
-        appBar: _buildAppBar(),
-        body: BlocListener<ReelBloc, ReelState>(
-          listenWhen: (previous, current) {
-            return _isUploading &&
-                (previous.status != current.status ||
-                    previous.error != current.error);
-          },
-          listener: (context, state) {
-            if (state.status == ReelStatus.created) {
-              final createdReel =
-                  state.reels.isNotEmpty ? state.reels.first : null;
-              final reelId = _readId(createdReel);
-              if (reelId != null) {
-                unawaited(
-                  _syncUserTags(
-                    'reel',
-                    reelId,
-                    _captionController.text,
-                  ),
-                );
-              }
-              _showSnackBar('Reel uploaded successfully');
+        backgroundColor: AppColors.background,
+        body: Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: BlocListener<ReelBloc, ReelState>(
+                listenWhen: (previous, current) {
+                  return _isUploading &&
+                      (previous.status != current.status ||
+                          previous.error != current.error);
+                },
+                listener: (context, state) {
+                  if (state.status == ReelStatus.created) {
+                    final createdReel =
+                        state.reels.isNotEmpty ? state.reels.first : null;
+                    final reelId = _readId(createdReel);
+                    if (reelId != null) {
+                      unawaited(
+                        _syncUserTags(
+                          'reel',
+                          reelId,
+                          _captionController.text,
+                        ),
+                      );
+                    }
+                    _showSnackBar('Reel uploaded successfully');
 
-              if (!mounted) return;
+                    if (!mounted) return;
 
-              Navigator.pop(context, true);
-              return;
-            }
+                    Navigator.pop(context, true);
+                    return;
+                  }
 
-            if (state.status == ReelStatus.error &&
-                state.error != null &&
-                state.error!.isNotEmpty) {
-              _showSnackBar(
-                state.error!,
-                isError: true,
-              );
+                  if (state.status == ReelStatus.error &&
+                      state.error != null &&
+                      state.error!.isNotEmpty) {
+                    _showSnackBar(
+                      state.error!,
+                      isError: true,
+                    );
 
-              if (!mounted) return;
+                    if (!mounted) return;
 
-              setState(() {
-                _isUploading = false;
-              });
+                    setState(() {
+                      _isUploading = false;
+                    });
 
-              context.read<ReelBloc>().add(ClearReelError());
-            }
-          },
-          child: _buildBody(),
+                    context.read<ReelBloc>().add(ClearReelError());
+                  }
+                },
+                child: _buildBody(),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: AppColors.black,
-      elevation: 0,
-      leading: IconButton(
-        icon: const Icon(
-          Icons.close_rounded,
-          color: AppColors.white,
-          size: 20,
-        ),
-        style: IconButton.styleFrom(
-          backgroundColor: AppColors.white10,
-        ),
-        onPressed: _isUploading ? null : () => Navigator.pop(context),
-      ),
-      title: const Text(
-        'Create Reel',
-        style: TextStyle(
-          color: AppColors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 18,
-        ),
-      ),
-      centerTitle: true,
-      actions: [
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 8,
+  Widget _buildHeader() {
+    return AppPageHeader(
+      title: 'Create reel',
+      subtitle: _selectedVideoFile == null
+          ? 'Choose a video to get started'
+          : 'Preview, caption and share',
+      leadingIcon: Icons.arrow_back_rounded,
+      onLeadingTap: _isUploading ? null : () => Navigator.maybePop(context),
+      action: FilledButton.icon(
+        onPressed: _canShare ? _uploadReel : null,
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.secondary,
+          foregroundColor: AppColors.white,
+          disabledBackgroundColor: AppColors.border.withOpacity(0.5),
+          disabledForegroundColor: AppColors.textHint,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-          child: FilledButton.icon(
-            onPressed: _canShare ? _uploadReel : null,
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.secondary,
-              foregroundColor: AppColors.white,
-              disabledBackgroundColor: AppColors.grey.shade800,
-              disabledForegroundColor: AppColors.grey.shade500,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-              ),
-              minimumSize: const Size(70, 40),
-            ),
-            icon: _isUploading
-                ? const SizedBox(
-                    width: 17,
-                    height: 17,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: AppColors.white,
-                    ),
-                  )
-                : const Icon(Icons.ios_share_rounded, size: 17),
-            label: const Text(
-              'Share',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          minimumSize: const Size(76, 38),
+        ),
+        icon: _isUploading
+            ? const SizedBox(
+                width: 17,
+                height: 17,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.white,
+                ),
+              )
+            : const Icon(Icons.ios_share_rounded, size: 17),
+        label: const Text(
+          'Share',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
           ),
         ),
-      ],
+      ),
     );
   }
 
@@ -265,11 +247,11 @@ class _CreateReelPageState extends State<CreateReelPage> {
           children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              width: 88,
-              height: 88,
+              width: 72,
+              height: 72,
               decoration: BoxDecoration(
                 color: AppColors.secondary.withOpacity(0.14),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: AppColors.secondary.withOpacity(0.45),
                 ),
@@ -283,7 +265,7 @@ class _CreateReelPageState extends State<CreateReelPage> {
                     )
                   : const Icon(
                       Icons.video_library_rounded,
-                      size: 34,
+                      size: 29,
                       color: AppColors.secondary,
                     ),
             ),
@@ -291,20 +273,17 @@ class _CreateReelPageState extends State<CreateReelPage> {
             Text(
               'Select a video to create a reel',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.grey.shade300,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+              style: AppTheme.blackTextStyle.copyWith(
+                color: AppColors.text,
+                fontSize: 15,
+                fontWeight: AppTheme.bold,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'Choose from gallery or record a new video',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.grey.shade600,
-                fontSize: 14,
-              ),
+              style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
             ),
             const SizedBox(height: 22),
             FilledButton.icon(
@@ -333,7 +312,7 @@ class _CreateReelPageState extends State<CreateReelPage> {
     return Container(
       margin: const EdgeInsets.all(16),
       constraints: const BoxConstraints(
-        maxHeight: 560,
+        maxHeight: 520,
       ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
@@ -354,7 +333,7 @@ class _CreateReelPageState extends State<CreateReelPage> {
             children: [
               Positioned.fill(
                 child: Container(
-                  color: AppColors.grey,
+                  color: AppColors.black,
                 ),
               ),
               if (_isVideoInitialized && _videoController != null)
@@ -426,8 +405,8 @@ class _CreateReelPageState extends State<CreateReelPage> {
       child: TextField(
         controller: _captionController,
         enabled: !_isUploading,
-        style: const TextStyle(
-          color: AppColors.white,
+        style: TextStyle(
+          color: AppColors.text,
           fontSize: 15,
         ),
         maxLines: 3,
@@ -435,11 +414,11 @@ class _CreateReelPageState extends State<CreateReelPage> {
         decoration: InputDecoration(
           hintText: 'Write a caption...',
           hintStyle: TextStyle(
-            color: AppColors.grey.shade600,
+            color: AppColors.textHint,
           ),
           border: InputBorder.none,
           counterStyle: TextStyle(
-            color: AppColors.grey.shade600,
+            color: AppColors.textHint,
           ),
           contentPadding: const EdgeInsets.all(16),
         ),
@@ -453,14 +432,14 @@ class _CreateReelPageState extends State<CreateReelPage> {
       child: TextField(
         controller: _musicController,
         enabled: !_isUploading,
-        style: const TextStyle(
-          color: AppColors.white,
+        style: TextStyle(
+          color: AppColors.text,
           fontSize: 15,
         ),
         decoration: InputDecoration(
           hintText: 'Add music to your reel...',
           hintStyle: TextStyle(
-            color: AppColors.grey.shade600,
+            color: AppColors.textHint,
           ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.all(16),
@@ -480,19 +459,19 @@ class _CreateReelPageState extends State<CreateReelPage> {
             width: 260,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: AppColors.grey,
+              color: AppColors.card,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: AppColors.white.withOpacity(0.08),
+                color: AppColors.border.withOpacity(0.5),
               ),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
+                Text(
                   'Uploading reel',
                   style: TextStyle(
-                    color: AppColors.white,
+                    color: AppColors.text,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -501,7 +480,7 @@ class _CreateReelPageState extends State<CreateReelPage> {
                 LinearProgressIndicator(
                   value: _uploadProgress <= 0 ? null : _uploadProgress,
                   color: AppColors.primary,
-                  backgroundColor: AppColors.grey.shade800,
+                  backgroundColor: AppColors.border,
                   minHeight: 6,
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -509,7 +488,7 @@ class _CreateReelPageState extends State<CreateReelPage> {
                 Text(
                   '$percentage%',
                   style: TextStyle(
-                    color: AppColors.grey.shade400,
+                    color: AppColors.textSecondary,
                     fontSize: 13,
                   ),
                 ),
@@ -827,7 +806,7 @@ class _InputSection extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: AppColors.grey.shade400,
+              color: AppColors.textSecondary,
               fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
@@ -835,10 +814,10 @@ class _InputSection extends StatelessWidget {
           const SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
-              color: AppColors.grey.shade900,
+              color: AppColors.card,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: AppColors.grey.shade800,
+                color: AppColors.border.withOpacity(0.5),
               ),
             ),
             child: child,

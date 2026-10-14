@@ -3,6 +3,8 @@ import 'package:clique/app/configs/theme.dart';
 import 'package:clique/core/models/feeds_models.dart';
 import 'package:clique/core/services/home/feed_service.dart';
 import 'package:clique/ui/pages/main/topics/topic_details.dart';
+import 'package:clique/ui/widgets/common/app_network_image.dart';
+import 'package:clique/ui/widgets/common/app_page_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -30,6 +32,8 @@ class _TopicsPageState extends State<TopicsPage> {
 
   final List<String> _topics = [];
   final List<FeedPost> _posts = [];
+  final Map<String, String> _topicThumbnails = {};
+  final Map<String, int> _topicCounts = {};
 
   bool _loadingTopics = true;
   bool _loadingPosts = false;
@@ -63,6 +67,20 @@ class _TopicsPageState extends State<TopicsPage> {
           .map((item) => item['tag']?.toString().trim().toLowerCase() ?? '')
           .where((tag) => tag.isNotEmpty)
           .toList();
+
+      for (final item in trending) {
+        final tag = item['tag']?.toString().trim().toLowerCase() ?? '';
+        if (tag.isEmpty) continue;
+        final preview = _readPreviewUrl(item);
+        if (preview.isNotEmpty) _topicThumbnails[tag] = preview;
+        _topicCounts[tag] = _readInt(
+          item['postsCount'] ??
+              item['postCount'] ??
+              item['count'] ??
+              item['uses'] ??
+              (item['_count'] is Map ? item['_count']['posts'] : null),
+        );
+      }
 
       final topics = topicValues.isNotEmpty ? topicValues : _fallbackTopics;
 
@@ -127,6 +145,10 @@ class _TopicsPageState extends State<TopicsPage> {
           _page += 1;
         }
         _hasMore = response.hasMore;
+        if ((_topicThumbnails[topic] ?? '').isEmpty) {
+          final preview = _firstPreview(response.posts);
+          if (preview.isNotEmpty) _topicThumbnails[topic] = preview;
+        }
       });
     } catch (e) {
       if (!mounted) return;
@@ -175,113 +197,151 @@ class _TopicsPageState extends State<TopicsPage> {
     );
   }
 
+  String _readPreviewUrl(Map<String, dynamic> item) {
+    return _readPreviewValue(item);
+  }
+
+  String _readPreviewValue(dynamic value) {
+    if (value is String) {
+      final text = value.trim();
+      return text.startsWith('http') ? text : '';
+    }
+    if (value is List) {
+      for (final item in value) {
+        final url = _readPreviewValue(item);
+        if (url.isNotEmpty) return url;
+      }
+      return '';
+    }
+    if (value is Map) {
+      const keys = [
+        'thumbnail',
+        'thumbnailUrl',
+        'image',
+        'imageUrl',
+        'url',
+        'secureUrl',
+        'preview',
+        'attachments',
+        'media',
+        'topPost',
+        'latestPost',
+        'recentPost',
+        'post',
+      ];
+      for (final key in keys) {
+        final url = _readPreviewValue(value[key]);
+        if (url.isNotEmpty) return url;
+      }
+    }
+    return '';
+  }
+
+  int _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  String _firstPreview(List<FeedPost> posts) {
+    for (final post in posts) {
+      for (final attachment in post.attachments) {
+        if (attachment.url.trim().isNotEmpty) return attachment.url;
+      }
+    }
+    return '';
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
-      appBar: AppBar(
-        backgroundColor: AppColors.backgroundColor,
-        surfaceTintColor: AppColors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          tooltip: 'Back',
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_rounded, size: 22),
-        ),
-        titleSpacing: 4,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Topics',
-              style: AppTheme.blackTextStyle.copyWith(
-                color: AppColors.text,
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            Text(
-              _loadingTopics
-                  ? 'Finding conversations…'
-                  : '${_topics.length} conversations trending',
-              style: AppTheme.greyTextStyle.copyWith(
-                color: AppColors.textSecondary,
-                fontSize: 11,
-              ),
-            ),
-          ],
-        ),
-      ),
-      body: RefreshIndicator(
-        color: AppColors.secondary,
-        backgroundColor: isDark ? AppColors.cardColor : AppColors.white,
-        onRefresh: _refresh,
-        child: CustomScrollView(
-          controller: _scrollController,
-          physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
+      body: Column(
+        children: [
+          AppPageHeader(
+            title: 'Topics',
+            subtitle: _loadingTopics
+                ? 'Finding conversations…'
+                : '${_topics.length} conversations trending',
+            leadingIcon: Icons.arrow_back_rounded,
+            onLeadingTap: () => Navigator.maybePop(context),
           ),
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(18, 12, 18, 10),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: AppColors.secondary.withOpacity(0.14),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.trending_up_rounded,
-                        color: AppColors.secondary,
-                        size: 18,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'What people are talking about now',
-                        style: AppTheme.blackTextStyle.copyWith(
-                          color: AppColors.text,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
+          Expanded(
+            child: RefreshIndicator(
+              color: AppColors.secondary,
+              backgroundColor: isDark ? AppColors.cardColor : AppColors.white,
+              onRefresh: _refresh,
+              child: CustomScrollView(
+                controller: _scrollController,
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
                 ),
-              ),
-            ),
-            _TopicTrendList(
-              topics: _topics,
-              selectedTopic: _selectedTopic,
-              loading: _loadingTopics,
-              onSelectTopic: _selectTopic,
-              onOpenTopic: _openTopicDetails,
-            ),
-            if (_loadingMore)
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Center(
-                    child: SizedBox.square(
-                      dimension: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.primary,
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 12, 18, 10),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: AppColors.secondary.withOpacity(0.14),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.trending_up_rounded,
+                              color: AppColors.secondary,
+                              size: 18,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'What people are talking about now',
+                              style: AppTheme.blackTextStyle.copyWith(
+                                color: AppColors.text,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                ),
+                  _TopicTrendList(
+                    topics: _topics,
+                    thumbnails: _topicThumbnails,
+                    counts: _topicCounts,
+                    selectedTopic: _selectedTopic,
+                    loading: _loadingTopics,
+                    onSelectTopic: _selectTopic,
+                    onOpenTopic: _openTopicDetails,
+                  ),
+                  if (_loadingMore)
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Center(
+                          child: SizedBox.square(
+                            dimension: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
+                ],
               ),
-            const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
-          ],
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -289,6 +349,8 @@ class _TopicsPageState extends State<TopicsPage> {
 
 class _TopicTrendList extends StatelessWidget {
   final List<String> topics;
+  final Map<String, String> thumbnails;
+  final Map<String, int> counts;
   final String? selectedTopic;
   final bool loading;
   final ValueChanged<String> onSelectTopic;
@@ -296,6 +358,8 @@ class _TopicTrendList extends StatelessWidget {
 
   const _TopicTrendList({
     required this.topics,
+    required this.thumbnails,
+    required this.counts,
     required this.selectedTopic,
     required this.loading,
     required this.onSelectTopic,
@@ -348,6 +412,8 @@ class _TopicTrendList extends StatelessWidget {
         index: index,
         selected: topics[index] == selectedTopic,
         accent: _topicAccent(index),
+        thumbnail: thumbnails[topics[index]] ?? '',
+        postCount: counts[topics[index]] ?? 0,
         onTap: () {
           onSelectTopic(topics[index]);
           onOpenTopic(topics[index]);
@@ -362,6 +428,8 @@ class _TrendTile extends StatelessWidget {
   final int index;
   final bool selected;
   final Color accent;
+  final String thumbnail;
+  final int postCount;
   final VoidCallback onTap;
 
   const _TrendTile({
@@ -369,6 +437,8 @@ class _TrendTile extends StatelessWidget {
     required this.index,
     required this.selected,
     required this.accent,
+    required this.thumbnail,
+    required this.postCount,
     required this.onTap,
   });
 
@@ -386,20 +456,24 @@ class _TrendTile extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 38,
-              height: 38,
+              width: 52,
+              height: 52,
               decoration: BoxDecoration(
                 color: AppColors.secondary.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
-              alignment: Alignment.center,
-              child: Icon(
-                index < 3
-                    ? Icons.local_fire_department_rounded
-                    : Icons.tag_rounded,
-                color: index < 3 ? accent : AppColors.secondary,
-                size: 19,
-              ),
+              clipBehavior: Clip.antiAlias,
+              child: thumbnail.startsWith('http')
+                  ? AppNetworkImage(
+                      imageUrl: thumbnail,
+                      fit: BoxFit.cover,
+                      preset: AppNetworkImagePreset.thumbnail,
+                      errorBuilder: (_) => _TopicFallback(
+                        topic: topic,
+                        accent: accent,
+                      ),
+                    )
+                  : _TopicFallback(topic: topic, accent: accent),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -424,9 +498,11 @@ class _TrendTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    index < 3
-                        ? 'Popular right now'
-                        : 'Explore the conversation',
+                    postCount > 0
+                        ? '$postCount ${postCount == 1 ? 'post' : 'posts'} in this conversation'
+                        : index < 3
+                            ? 'Popular right now'
+                            : 'Explore the conversation',
                     style: AppTheme.greyTextStyle.copyWith(
                       color: AppColors.textSecondary,
                       fontSize: 12,
@@ -444,6 +520,30 @@ class _TrendTile extends StatelessWidget {
               size: 20,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TopicFallback extends StatelessWidget {
+  final String topic;
+  final Color accent;
+
+  const _TopicFallback({required this.topic, required this.accent});
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: accent.withOpacity(0.12),
+      child: Center(
+        child: Text(
+          '#${topic.isEmpty ? '' : topic[0].toUpperCase()}',
+          style: AppTheme.blackTextStyle.copyWith(
+            color: accent,
+            fontSize: 15,
+            fontWeight: AppTheme.bold,
+          ),
         ),
       ),
     );

@@ -3,6 +3,7 @@ import 'package:clique/app/configs/theme.dart';
 import 'package:clique/bloc/home/feed_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:clique/ui/widgets/common/app_page_header.dart';
 
 class EditPostPage extends StatefulWidget {
   final int postId;
@@ -131,154 +132,152 @@ class _EditPostPageState extends State<EditPostPage> {
 
         return Scaffold(
           backgroundColor: AppColors.background,
-          appBar: AppBar(
-            backgroundColor: AppColors.background,
-            surfaceTintColor: Colors.transparent,
-            elevation: 0,
-            title: const Text('Edit post'),
-            actions: [
-              TextButton(
-                onPressed: canEdit && !isSaving ? _save : null,
-                child: isSaving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Save'),
-              ),
-            ],
-          ),
-          body: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.background,
-                  AppColors.primary.withOpacity(0.04),
-                  AppColors.secondary.withOpacity(0.05),
-                ],
-              ),
-            ),
-            child: SafeArea(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                children: [
-                  _TopSummaryCard(
-                    canEdit: canEdit,
-                    remaining: remaining,
-                  ),
-                  const SizedBox(height: 14),
-                  _PostPreviewCard(
-                    content:
-                        draftText.isEmpty ? widget.initialContent : draftText,
-                    createdAt: widget.createdAt,
-                  ),
-                  const SizedBox(height: 14),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.cardColor,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: AppColors.cardBorderColor),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.black.withOpacity(0.04),
-                          blurRadius: 18,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
+          body: Column(
+            children: [
+              AppPageHeader(
+                title: 'Edit post',
+                subtitle: canEdit
+                    ? 'Refine your post before the window closes'
+                    : 'The editing window has closed',
+                leadingIcon: Icons.arrow_back_rounded,
+                onLeadingTap:
+                    isSaving ? null : () => Navigator.maybePop(context),
+                action: FilledButton(
+                  onPressed: canEdit && !isSaving ? _save : null,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.secondary,
+                    foregroundColor: AppColors.white,
+                    minimumSize: const Size(68, 38),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(11),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              'Edit content',
+                  ),
+                  child: isSaving
+                      ? const SizedBox.square(
+                          dimension: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.white,
+                          ),
+                        )
+                      : const Text('Save'),
+                ),
+              ),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(12, 6, 12, 24),
+                  children: [
+                    _TopSummaryCard(
+                      canEdit: canEdit,
+                      remaining: remaining,
+                    ),
+                    const SizedBox(height: 14),
+                    _PostPreviewCard(
+                      content:
+                          draftText.isEmpty ? widget.initialContent : draftText,
+                      createdAt: widget.createdAt,
+                    ),
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.cardColor,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: AppColors.border.withOpacity(0.5),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'Edit content',
+                                style: AppTheme.blackTextStyle.copyWith(
+                                  fontSize: 16,
+                                  fontWeight: AppTheme.bold,
+                                ),
+                              ),
+                              const Spacer(),
+                              Text(
+                                '${_controller.text.trim().length} chars',
+                                style: AppTheme.greyTextStyle.copyWith(
+                                  fontSize: 12,
+                                  fontWeight: AppTheme.medium,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: AppColors.backgroundColor,
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: AppColors.divider),
+                            ),
+                            child: TextField(
+                              controller: _controller,
+                              autofocus: canEdit,
+                              enabled: canEdit,
+                              readOnly: !canEdit,
+                              minLines: 8,
+                              maxLines: 12,
+                              textInputAction: TextInputAction.newline,
                               style: AppTheme.blackTextStyle.copyWith(
                                 fontSize: 16,
-                                fontWeight: AppTheme.bold,
+                                height: 1.5,
                               ),
-                            ),
-                            const Spacer(),
-                            Text(
-                              '${_controller.text.trim().length} chars',
-                              style: AppTheme.greyTextStyle.copyWith(
-                                fontSize: 12,
-                                fontWeight: AppTheme.medium,
+                              decoration: InputDecoration(
+                                border: InputBorder.none,
+                                hintText: canEdit
+                                    ? 'Refine your post copy...'
+                                    : 'Editing window has closed.',
                               ),
+                              onChanged: (_) => setState(() {}),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: AppColors.backgroundColor,
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: AppColors.divider),
                           ),
-                          child: TextField(
-                            controller: _controller,
-                            autofocus: canEdit,
-                            enabled: canEdit,
-                            readOnly: !canEdit,
-                            minLines: 8,
-                            maxLines: 12,
-                            textInputAction: TextInputAction.newline,
-                            style: AppTheme.blackTextStyle.copyWith(
-                              fontSize: 16,
-                              height: 1.5,
-                            ),
-                            decoration: InputDecoration(
-                              border: InputBorder.none,
-                              hintText: canEdit
-                                  ? 'Refine your post copy...'
-                                  : 'Editing window has closed.',
-                            ),
-                            onChanged: (_) => setState(() {}),
+                          const SizedBox(height: 12),
+                          Text(
+                            canEdit
+                                ? 'You can edit this post until the 2-hour window closes.'
+                                : 'This post can no longer be edited.',
+                            style:
+                                AppTheme.greyTextStyle.copyWith(fontSize: 12),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          canEdit
-                              ? 'You can edit this post until the 2-hour window closes.'
-                              : 'This post can no longer be edited.',
-                          style: AppTheme.greyTextStyle.copyWith(fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton.icon(
-                    onPressed: canEdit && !isSaving ? _save : null,
-                    icon: isSaving
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.white,
-                            ),
-                          )
-                        : const Icon(Icons.save_outlined),
-                    label: Text(
-                      canEdit
-                          ? (isSaving ? 'Saving...' : 'Save changes')
-                          : 'Editing closed',
-                    ),
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 54),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
+                        ],
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      onPressed: canEdit && !isSaving ? _save : null,
+                      icon: isSaving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.white,
+                              ),
+                            )
+                          : const Icon(Icons.save_outlined),
+                      label: Text(
+                        canEdit
+                            ? (isSaving ? 'Saving...' : 'Save changes')
+                            : 'Editing closed',
+                      ),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 54),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
         );
       },
